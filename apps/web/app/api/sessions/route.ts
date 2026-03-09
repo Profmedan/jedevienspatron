@@ -14,8 +14,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Récupère le profil pour obtenir l'organization_id
-    const { data: profile } = await supabase
+    // Récupère le profil via le service client (bypass RLS) pour garantir la lecture
+    const serviceClient = createServiceClient();
+    const { data: profile } = await serviceClient
       .from("profiles")
       .select("organization_id, role")
       .eq("id", user.id)
