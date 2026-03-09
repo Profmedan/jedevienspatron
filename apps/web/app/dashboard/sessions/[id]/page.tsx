@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 type Player = {
   id: string;
   guest_name: string | null;
