@@ -68,7 +68,7 @@ export default function NewSessionPage() {
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
             <strong>💡 Instruction pour les apprenants :</strong><br />
-            Allez sur <span className="font-mono font-semibold">kiclepatron.fr</span> → saisissez le code <strong className="font-mono">{result.room_code}</strong> → cliquez sur &quot;Rejoindre la session&quot;
+            Allez sur <span className="font-mono font-semibold">jedevienspatron.fr</span> → saisissez le code <strong className="font-mono">{result.room_code}</strong> → cliquez sur &quot;Rejoindre la session&quot;
           </div>
 
           <div className="flex gap-3">
