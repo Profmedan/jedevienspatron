@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  --color-immobilisations: #dfa66a;
+  --color-stocks: #d992b4;
+  --color-creances: #7fb1de;
+  --color-tresorerie: #8ecf8e;
+  --color-capitaux: #f2ce5c;
+  --color-emprunts: #f2aebf;
+  --color-dettes: #f59f6d;
+  --color-decouvert: #ff8a8a;
+  --color-charges: #e66b6b;
+  --color-produits: #5cb88a;
+  --color-primary: #a8dadc;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(92,184,138,.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(92,184,138,0); }
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(230,107,107,.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(230,107,107,0); }
+}
+@keyframes slide-in {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.animate-slide-in    { animation: slide-in 0.25s ease; }
+.animate-pulse-green { animation: pulse-green 1.5s infinite; }
+.animate-pulse-red   { animation: pulse-red 1.5s infinite; }
