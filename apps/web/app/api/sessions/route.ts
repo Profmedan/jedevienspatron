@@ -14,8 +14,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Récupère le profil via le service client (bypass RLS) pour garantir la lecture
+    // Service client pour bypasser RLS (route serveur de confiance)
     const serviceClient = createServiceClient();
+
+    // Récupère le profil
     const { data: profile } = await serviceClient
       .from("profiles")
       .select("organization_id, role")
@@ -35,37 +37,12 @@ export async function POST(request: NextRequest) {
       nb_tours?: number;
     };
 
-    // Vérifie la limite du plan gratuit
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("plan_type")
-      .eq("id", profile.organization_id)
-      .single();
-
-    if (org?.plan_type === "free") {
-      const { count: sessionCount } = await supabase
-        .from("game_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("teacher_id", user.id);
-
-      if ((sessionCount ?? 0) >= 3) {
-        return NextResponse.json(
-          {
-            error: "limit_reached",
-            message:
-              "Limite du plan gratuit atteinte (3 sessions). Passez à la version payante.",
-          },
-          { status: 403 }
-        );
-      }
-    }
-
     // Génère un room code unique via la fonction SQL
-    const { data: codeResult } = await supabase.rpc("generate_room_code");
+    const { data: codeResult } = await serviceClient.rpc("generate_room_code");
     const roomCode = codeResult as string;
 
     // Crée la session
-    const { data: session, error: insertError } = await supabase
+    const { data: session, error: insertError } = await serviceClient
       .from("game_sessions")
       .insert({
         teacher_id: user.id,
