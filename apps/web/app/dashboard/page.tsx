@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -28,32 +28,34 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
+  const serviceClient = createServiceClient();
+
+  const { data: profile } = await serviceClient
     .from("profiles")
     .select("*, organizations(name)")
     .eq("id", user.id)
     .single();
 
-  const { data: recentSessions } = await supabase
+  const { data: recentSessions } = await serviceClient
     .from("game_sessions")
     .select(`id, room_code, status, nb_tours, created_at, finished_at, classes(name), game_players(id, final_score, is_bankrupt)`)
     .eq("teacher_id", user.id)
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const { data: classes } = await supabase
+  const { data: classes } = await serviceClient
     .from("classes")
     .select(`id, name, created_at, class_members(id)`)
     .eq("teacher_id", user.id)
     .order("created_at", { ascending: false })
     .limit(6);
 
-  const { count: totalSessions } = await supabase
+  const { count: totalSessions } = await serviceClient
     .from("game_sessions")
     .select("*", { count: "exact", head: true })
     .eq("teacher_id", user.id);
 
-  const { count: totalPlayers } = await supabase
+  const { count: totalPlayers } = await serviceClient
     .from("game_players")
     .select("*, game_sessions!inner(teacher_id)", { count: "exact", head: true })
     .eq("game_sessions.teacher_id", user.id);

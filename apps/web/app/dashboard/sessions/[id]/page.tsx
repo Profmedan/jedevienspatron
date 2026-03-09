@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -33,13 +33,14 @@ export default async function SessionResultsPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: session } = await supabase
+  const { data: session } = await serviceClient
     .from("game_sessions")
     .select(
       `id, room_code, status, nb_tours, created_at, finished_at,
