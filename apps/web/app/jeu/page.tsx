@@ -69,7 +69,7 @@ function SetupScreen({ onStart }: { onStart: (players: PlayerSetup[]) => void })
       <p className="text-indigo-500 mb-8 text-sm">Choisissez le nombre de joueurs et configurez chaque équipe</p>
 
       <div className="flex gap-3 mb-8">
-        {[2, 3, 4].map((n) => (
+        {[1, 2, 3, 4].map((n) => (
           <button
             key={n}
             onClick={() => setNbJoueurs(n)}
