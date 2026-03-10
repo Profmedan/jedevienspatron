@@ -317,6 +317,57 @@ export const CARTES_DECISION: CarteDecision[] = [
     ],
   },
 
+  // ── NOUVELLES CARTES DÉCISION ──────────────────────────────
+
+  {
+    type: "decision",
+    id: "pret-bancaire",
+    titre: "Prêt Bancaire",
+    description: "Contractez un emprunt auprès de votre banque. Obtenez 5 de trésorerie immédiatement, mais payez 1 d'intérêts chaque trimestre. Montre l'effet de levier financier : l'actif et le passif augmentent simultanément.",
+    categorie: "financement",
+    effetsImmédiats: [
+      { poste: "tresorerie", delta: 5 },  // DÉBIT Trésorerie (encaissement du prêt)
+      { poste: "emprunts", delta: 5 },    // CRÉDIT Emprunts (dette financière)
+    ],
+    effetsRecurrents: [
+      { poste: "chargesInteret", delta: 1 },  // DÉBIT Charges d'intérêts
+      { poste: "tresorerie", delta: -1 },      // CRÉDIT Trésorerie (paiement intérêts)
+    ],
+  },
+  {
+    type: "decision",
+    id: "certification-iso",
+    titre: "Certification ISO 9001",
+    description: "Obtenez la certification qualité ISO 9001. Crédibilisez votre offre auprès des grandes entreprises et décrochez 1 grand compte supplémentaire par trimestre.",
+    categorie: "investissement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 4 },  // DÉBIT Immobilisations incorporelles
+      { poste: "tresorerie", delta: -4 },       // CRÉDIT Trésorerie
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Frais de maintien certification
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT Trésorerie
+    ],
+    clientParTour: "grand_compte",
+  },
+  {
+    type: "decision",
+    id: "application-mobile",
+    titre: "Application Mobile",
+    description: "Développez une application mobile pour vendre en ligne. Touchez directement les particuliers et doublez votre acquisition client numérique : +2 clients particuliers par trimestre.",
+    categorie: "investissement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 3 },  // DÉBIT Immobilisations incorporelles (développement)
+      { poste: "tresorerie", delta: -3 },       // CRÉDIT Trésorerie
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Hébergement & maintenance app
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT Trésorerie
+    ],
+    clientParTour: "particulier",
+    nbClientsParTour: 2,
+  },
+
   // ── PROTECTION ────────────────────────────────────────────
 
   {
@@ -460,5 +511,44 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: 3 },
     ],
     annulableParAssurance: false,
+  },
+
+  // ── NOUVEAUX ÉVÉNEMENTS (1 positif + 2 négatifs) ─────────────
+
+  {
+    type: "evenement",
+    id: "prix-pme-annee",
+    titre: "Prix PME de l'Année 🏆",
+    description:
+      "La Chambre de Commerce vous remet le Prix Régional PME de l'Année. Votre notoriété bondit et attire de nouveaux partenaires.",
+    effets: [
+      { poste: "revenusExceptionnels", delta: 2 },  // CRÉDIT Produits exceptionnels
+      { poste: "tresorerie", delta: 2 },             // DÉBIT Trésorerie (dotation prix)
+    ],
+    annulableParAssurance: false,
+  },
+  {
+    type: "evenement",
+    id: "rupture-stock-fournisseur",
+    titre: "Rupture Fournisseur 📦",
+    description:
+      "Votre fournisseur principal est en rupture de stock. Vous devez vous approvisionner en urgence à prix fort chez un concurrent.",
+    effets: [
+      { poste: "chargesExceptionnelles", delta: 2 },  // DÉBIT Charges exceptionnelles (surcoût)
+      { poste: "tresorerie", delta: -2 },              // CRÉDIT Trésorerie
+    ],
+    annulableParAssurance: false,
+  },
+  {
+    type: "evenement",
+    id: "litige-commercial",
+    titre: "Litige Commercial ⚖️",
+    description:
+      "Un client conteste la conformité de votre livraison et vous assigne en justice. Honoraires d'avocat et provision pour risque.",
+    effets: [
+      { poste: "chargesExceptionnelles", delta: 3 },  // DÉBIT Charges exceptionnelles (frais juridiques)
+      { poste: "tresorerie", delta: -3 },              // CRÉDIT Trésorerie
+    ],
+    annulableParAssurance: true,
   },
 ];

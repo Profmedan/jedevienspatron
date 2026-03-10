@@ -798,6 +798,8 @@ export default function JeuPage() {
     mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string }>,
     previewEtat: EtatJeu,
     etape: number,
+    // Optionnel : surcharge pour afficher le titre/description d'une carte spécifique (ex: événement aléatoire)
+    override?: { titre?: string; icone?: string; description?: string },
   ): ActiveStep {
     const info = ETAPE_INFO[etape];
     const entries: EntryLine[] = mods
@@ -810,7 +812,16 @@ export default function JeuPage() {
         applied: false,
         sens: getSens(m.poste, m.nouvelleValeur - m.ancienneValeur),
       }));
-    return { titre: info.titre, icone: info.icone, description: info.description, principe: info.principe, conseil: info.conseil, entries, baseEtat: cloneEtat(baseEtat), previewEtat };
+    return {
+      titre:       override?.titre       ?? info.titre,
+      icone:       override?.icone       ?? info.icone,
+      description: override?.description ?? info.description,
+      principe:    info.principe,
+      conseil:     info.conseil,
+      entries,
+      baseEtat: cloneEtat(baseEtat),
+      previewEtat,
+    };
   }
 
   // ─ Appliquer une écriture ────────────────────────────────────────────────
@@ -837,6 +848,8 @@ export default function JeuPage() {
     const next = cloneEtat(etat);
     const idx = next.joueurActif;
     let mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string }> = [];
+    // Pour l'étape 7, on capture la carte événement afin d'afficher son titre/description
+    let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
 
     switch (next.etapeTour) {
       case 0: {
@@ -873,6 +886,8 @@ export default function JeuPage() {
       case 7: {
         if (next.piocheEvenements.length > 0) {
           const carte = next.piocheEvenements[0];
+          // Capturer titre + description avant de retirer la carte de la pioche
+          evenementCapture = { titre: carte.titre, description: carte.description };
           const r = appliquerCarteEvenement(next, idx, carte);
           next.piocheEvenements = next.piocheEvenements.slice(1);
           if (r.succes) mods = r.modifications;
@@ -886,7 +901,7 @@ export default function JeuPage() {
       }
       default: break;
     }
-    setActiveStep(buildActiveStep(etat, mods, next, next.etapeTour));
+    setActiveStep(buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture));
   }
 
   // ─ Fin de tour ───────────────────────────────────────────────────────────
