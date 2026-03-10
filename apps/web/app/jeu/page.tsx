@@ -14,7 +14,7 @@ import {
   ResultatFinTour,
 } from "@/lib/game-engine/engine";
 import {
-  calculerScore, getTresorerie, getTotalActif, getTotalPassif,
+  calculerScore, getTresorerie, getTotalActif, getTotalPassif, calculerIndicateurs,
 } from "@/lib/game-engine/calculators";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
@@ -58,6 +58,54 @@ interface JournalEntry {
   titre: string;
   entries: EntryLine[];
   principe: string;
+}
+
+// ─── ANALYSE FINANCIÈRE FIN DE TRIMESTRE ─────────────────────────────────────
+
+interface MessageAnalyse {
+  niveau: "rouge" | "jaune" | "vert";
+  message: string;
+}
+
+function analyserSituationFinanciere(joueur: Joueur): MessageAnalyse[] {
+  const ind = calculerIndicateurs(joueur);
+  const msgs: MessageAnalyse[] = [];
+
+  // 1. Trésorerie nette
+  if (ind.tresorerieNette < 0) {
+    msgs.push({ niveau: "rouge", message: `⚠️ Votre trésorerie nette est négative (${ind.tresorerieNette}). Votre fonds de roulement ne couvre pas votre BFR : risque de rupture de trésorerie. Réduisez vos stocks et accélérez l'encaissement de vos créances.` });
+  } else if (ind.tresorerieNette < 5) {
+    msgs.push({ niveau: "jaune", message: `🔶 Votre trésorerie nette est faible (${ind.tresorerieNette}). Vous restez solvable mais la marge de sécurité est étroite. Surveillez vos délais d'encaissement.` });
+  } else {
+    msgs.push({ niveau: "vert", message: `✅ Votre trésorerie nette est positive (${ind.tresorerieNette}). Votre équilibre financier est maîtrisé.` });
+  }
+
+  // 2. Fonds de roulement
+  if (ind.fondsDeRoulement < 0) {
+    msgs.push({ niveau: "rouge", message: `⚠️ Votre fonds de roulement est négatif (${ind.fondsDeRoulement}). Vos ressources stables ne financent pas la totalité de vos immobilisations : fragilité structurelle.` });
+  } else if (ind.besoinFondsRoulement > ind.fondsDeRoulement) {
+    msgs.push({ niveau: "jaune", message: `🔶 Votre BFR (${ind.besoinFondsRoulement}) dépasse votre FR (${ind.fondsDeRoulement}). Pensez à négocier des délais fournisseurs ou à réduire vos stocks.` });
+  }
+
+  // 3. Résultat net
+  if (ind.resultatNet < 0) {
+    msgs.push({ niveau: "rouge", message: `📉 Votre résultat est déficitaire (${ind.resultatNet}). Vos charges dépassent vos produits. Identifiez les postes à réduire pour revenir à l'équilibre.` });
+  } else if (ind.resultatNet === 0) {
+    msgs.push({ niveau: "jaune", message: `⚖️ Votre résultat net est nul. Vous êtes à l'équilibre — mais sans bénéfice, vos capitaux propres ne se renforcent pas.` });
+  } else {
+    msgs.push({ niveau: "vert", message: `📈 Votre résultat net est bénéficiaire (${ind.resultatNet}). Vos capitaux propres progressent ce trimestre.` });
+  }
+
+  // 4. Solvabilité
+  if (ind.ratioSolvabilite < 20) {
+    msgs.push({ niveau: "rouge", message: `⚠️ Votre ratio de solvabilité est très faible (${ind.ratioSolvabilite.toFixed(0)}%). Les tiers financent l'essentiel de votre actif — votre indépendance financière est menacée.` });
+  } else if (ind.ratioSolvabilite < 33) {
+    msgs.push({ niveau: "jaune", message: `🔶 Votre solvabilité est acceptable (${ind.ratioSolvabilite.toFixed(0)}%) mais pourrait être renforcée par des bénéfices mis en réserve.` });
+  } else {
+    msgs.push({ niveau: "vert", message: `✅ Votre solvabilité est solide (${ind.ratioSolvabilite.toFixed(0)}%). Vos capitaux propres représentent une part significative du passif.` });
+  }
+
+  return msgs;
 }
 
 // ─── CLASSEMENT EMPLOI / RESSOURCE ───────────────────────────────────────────
@@ -940,18 +988,44 @@ export default function JeuPage() {
               </h2>
             </div>
             {/* Corps */}
-            <div className="px-6 py-5 space-y-3">
+            <div className="px-6 py-5 space-y-3 max-h-[60vh] overflow-y-auto">
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 leading-relaxed">
                 <strong>📊 Clôture effectuée :</strong> Le résultat net du trimestre {tourTransition.from} a été
                 intégré aux Capitaux propres. Le Compte de résultat repart à zéro.
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 leading-relaxed">
-                <strong>🎯 Ce trimestre :</strong> Tu peux choisir une nouvelle <strong>Carte Décision</strong>
-                (étape 7). Tes cartes d'investissement actives continuent à produire leurs effets récurrents.
+                <strong>🎯 Ce trimestre :</strong> Vous pouvez choisir une nouvelle <strong>Carte Décision</strong>
+                (étape 7). Vos cartes d'investissement actives continuent à produire leurs effets récurrents.
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800 leading-relaxed">
                 <strong>💡 Rappel :</strong> L'équation fondamentale reste <strong>ACTIF = PASSIF</strong>.
-                Chaque écriture que tu passes doit maintenir cet équilibre.
+                Chaque écriture que vous passez doit maintenir cet équilibre.
+              </div>
+
+              {/* Analyse financière personnalisée par joueur */}
+              <div className="border-t border-gray-100 pt-3 space-y-3">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">📊 Analyse de votre situation</div>
+                {etat.joueurs.map((j) => {
+                  const analyse = analyserSituationFinanciere(j);
+                  const colors = { rouge: "bg-red-50 border-red-200 text-red-800", jaune: "bg-amber-50 border-amber-200 text-amber-800", vert: "bg-green-50 border-green-200 text-green-800" };
+                  return (
+                    <div key={j.id} className="rounded-xl overflow-hidden border border-gray-100">
+                      <div className="bg-indigo-50 px-3 py-2 flex items-center gap-2">
+                        <span>{j.entreprise.icon}</span>
+                        <span className="font-bold text-indigo-900 text-sm">{j.pseudo}</span>
+                        {j.elimine && <span className="ml-auto text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">💀 Faillite</span>}
+                      </div>
+                      <div className="p-2 space-y-1.5">
+                        {j.elimine ? (
+                          <p className="text-xs text-gray-400 italic px-1">Cette entreprise est éliminée.</p>
+                        ) : analyse.map((m, i) => (
+                          <div key={i} className={`border rounded-lg px-2.5 py-1.5 text-xs leading-snug ${colors[m.niveau]}`}>{m.message}</div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-indigo-500 text-center">👉 Consultez l&apos;onglet <strong>Indicateurs</strong> pour le détail complet de vos ratios.</p>
               </div>
             </div>
             {/* Bouton démarrer */}
