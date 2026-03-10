@@ -240,9 +240,19 @@ export function appliquerEtape0(
     });
   };
 
-  // 1. Remboursement découvert (si découvert > 0, on prélève sur trésorerie)
+  // 0. Agios bancaires sur découvert (AVANT remboursement : les intérêts s'ajoutent au découvert)
   if (joueur.bilan.decouvert > 0) {
-    push("tresorerie", -joueur.bilan.decouvert, "Remboursement du découvert bancaire");
+    push(
+      "chargesInteret",
+      1,
+      `Agios bancaires : intérêts sur découvert de ${joueur.bilan.decouvert} → Charges d'intérêt +1`
+    );
+    push("decouvert", 1, "Agios ajoutés au découvert bancaire (+1)");
+  }
+
+  // 1. Remboursement découvert (trésorerie absorbe d'abord le découvert, puis les dettes)
+  if (joueur.bilan.decouvert > 0) {
+    push("tresorerie", -joueur.bilan.decouvert, "Remboursement du découvert bancaire (priorité sur les dettes)");
     push("decouvert", -joueur.bilan.decouvert, "Solde découvert remis à zéro");
   }
 

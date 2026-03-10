@@ -161,6 +161,109 @@ export function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers {
   };
 }
 
+// ─── SOLDES INTERMÉDIAIRES DE GESTION (SIG) ──────────────────
+
+export interface SIG {
+  // Cascade de formation du résultat
+  chiffreAffaires: number;
+  achats: number;
+  servicesExterieurs: number;
+  valeurAjoutee: number;
+  chargesPersonnel: number;
+  impotsTaxes: number;
+  ebe: number;
+  dotations: number;
+  resultatExploitation: number;
+  produitsFinanciers: number;
+  chargesInteret: number;
+  rcai: number;
+  revenusExceptionnels: number;
+  chargesExceptionnelles: number;
+  resultatExceptionnel: number;
+  resultatNet: number;
+  // Indicateurs de rentabilité
+  tauxMargeNette: number;       // Résultat net / CA × 100
+  tauxMargeEBE: number;         // EBE / CA × 100
+  roe: number;                  // Résultat net / Capitaux propres × 100
+  rentabiliteEconomique: number; // Résultat exploitation / Total actif × 100
+  // Ratios de gestion (en jours, annualisés ×4 pour les trimestres)
+  delaiClients: number;         // Créances × 360 / (CA annualisé)
+}
+
+export function calculerSIG(joueur: Joueur): SIG {
+  const cr  = joueur.compteResultat;
+  const ca  = cr.produits.ventes;
+  const achats = cr.charges.achats;
+  const servExt = cr.charges.servicesExterieurs;
+
+  // 1. Valeur Ajoutée = CA − Achats − Services extérieurs
+  const valeurAjoutee = ca - achats - servExt;
+
+  // 2. EBE = VA − Charges de personnel − Impôts & taxes
+  const chargesPerso = cr.charges.chargesPersonnel;
+  const impots       = cr.charges.impotsTaxes;
+  const ebe          = valeurAjoutee - chargesPerso - impots;
+
+  // 3. Résultat d'exploitation = EBE − Dotations aux amortissements
+  const dotations           = cr.charges.dotationsAmortissements;
+  const resultatExploitation = ebe - dotations;
+
+  // 4. RCAI = Résultat exploitation + Produits financiers − Charges d'intérêt
+  const prodFin       = cr.produits.produitsFinanciers;
+  const chargesInt    = cr.charges.chargesInteret;
+  const rcai          = resultatExploitation + prodFin - chargesInt;
+
+  // 5. Résultat exceptionnel = Revenus exceptionnels − Charges exceptionnelles
+  const revExc    = cr.produits.revenusExceptionnels;
+  const chargExc  = cr.charges.chargesExceptionnelles;
+  const resultatExceptionnel = revExc - chargExc;
+
+  // 6. Résultat net = RCAI + Résultat exceptionnel (pas d'IS dans le jeu)
+  const resultatNet = rcai + resultatExceptionnel;
+
+  // Capitaux propres (sans résultat inclus dans passifsBruts)
+  const capitauxPropres = joueur.bilan.passifs
+    .filter((p) => p.categorie === "capitaux")
+    .reduce((s, p) => s + p.valeur, 0);
+  const capitalAvecResultat = capitauxPropres + resultatNet;
+
+  const totalActif = getTotalActif(joueur);
+  const creances   = joueur.bilan.creancesPlus1 + joueur.bilan.creancesPlus2;
+
+  // Indicateurs de rentabilité
+  const tauxMargeNette       = ca > 0 ? (resultatNet / ca) * 100 : 0;
+  const tauxMargeEBE         = ca > 0 ? (ebe / ca) * 100 : 0;
+  const roe                  = capitalAvecResultat > 0 ? (resultatNet / capitalAvecResultat) * 100 : 0;
+  const rentabiliteEconomique = totalActif > 0 ? (resultatExploitation / totalActif) * 100 : 0;
+
+  // Délai clients en jours (créances × 360 / CA annualisé)
+  const delaiClients = ca > 0 ? (creances * 360) / (ca * 4) : 0;
+
+  return {
+    chiffreAffaires: ca,
+    achats,
+    servicesExterieurs: servExt,
+    valeurAjoutee,
+    chargesPersonnel: chargesPerso,
+    impotsTaxes: impots,
+    ebe,
+    dotations,
+    resultatExploitation,
+    produitsFinanciers: prodFin,
+    chargesInteret: chargesInt,
+    rcai,
+    revenusExceptionnels: revExc,
+    chargesExceptionnelles: chargExc,
+    resultatExceptionnel,
+    resultatNet,
+    tauxMargeNette,
+    tauxMargeEBE,
+    roe,
+    rentabiliteEconomique,
+    delaiClients,
+  };
+}
+
 // ─── SCORE FINAL ─────────────────────────────────────────────
 /**
  * Score = (Résultat Net × 3) + (Immobilisations × 2) + Trésorerie + Solvabilité

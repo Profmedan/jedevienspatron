@@ -693,6 +693,7 @@ export default function JeuPage() {
   const [tourTransition, setTourTransition] = useState<{ from: number; to: number } | null>(null);
   const [failliteInfo, setFailliteInfo] = useState<{ joueurNom: string; raison: string } | null>(null);
   const [overlayTab, setOverlayTab] = useState<"analyse" | "indicateurs" | "bilan" | "cr">("analyse");
+  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   // ─ Intégration Supabase — room code depuis l'URL + sauvegarde fin de partie ─
   const [roomCode, setRoomCode] = useState<string | null>(null);
@@ -982,7 +983,11 @@ export default function JeuPage() {
     if (!etat || !selectedDecision) return;
     const next = cloneEtat(etat);
     const r = acheterCarteDecision(next, next.joueurActif, selectedDecision);
-    if (!r.succes) return;
+    if (!r.succes) {
+      setDecisionError(r.messageErreur ?? "Impossible d'activer cette carte");
+      return;
+    }
+    setDecisionError(null);
 
     let mods = r.modifications;
 
@@ -1016,6 +1021,7 @@ export default function JeuPage() {
     setEtat(next);
     setShowCartes(false);
     setSelectedDecision(null);
+    setDecisionError(null);
   }
 
   // ─── RENDU ───────────────────────────────────────────────────────────────
@@ -1325,6 +1331,11 @@ export default function JeuPage() {
                       className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm py-2 rounded-xl font-medium">
                       {showCartes ? "▲ Masquer" : "▼ Voir les cartes disponibles"}
                     </button>
+                    {decisionError && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2 text-xs font-semibold">
+                        ❌ {decisionError}
+                      </div>
+                    )}
                     {selectedDecision && (
                       <button onClick={launchDecision}
                         className="w-full bg-green-600 text-white text-sm py-2 rounded-xl font-bold">
@@ -1591,11 +1602,25 @@ export default function JeuPage() {
             <div className="mt-4">
               <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Choisissez une carte Décision</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {cartesDisponibles.map(c => (
-                  <CarteView key={c.id} carte={c}
-                    onClick={() => setSelectedDecision(selectedDecision?.id === c.id ? null : c)}
-                    selected={selectedDecision?.id === c.id} />
-                ))}
+                {cartesDisponibles.map(c => {
+                  const dejaActive = joueur.cartesActives.some(a => a.id === c.id);
+                  return (
+                    <div key={c.id} className="relative">
+                      <div className={dejaActive ? "opacity-50 pointer-events-none" : ""}>
+                        <CarteView carte={c}
+                          onClick={() => { setSelectedDecision(selectedDecision?.id === c.id ? null : c); setDecisionError(null); }}
+                          selected={selectedDecision?.id === c.id} />
+                      </div>
+                      {dejaActive && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                            ✅ Déjà active
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
