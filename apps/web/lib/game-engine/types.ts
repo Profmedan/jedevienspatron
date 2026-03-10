@@ -158,6 +158,8 @@ export interface CarteDecision {
   effetsRecurrents: EffetCarte[];
   /** La carte rapporte-t-elle un client chaque tour ? */
   clientParTour?: "particulier" | "tpe" | "grand_compte";
+  /** Combien de clients générés par tour (défaut : 1) */
+  nbClientsParTour?: number;
   /** Nombre de cartes Décision bonus par tour (carte Berline) */
   carteDecisionBonus?: number;
   /** Catégorie pour l'affichage */

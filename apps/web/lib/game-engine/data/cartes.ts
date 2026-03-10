@@ -271,7 +271,8 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "servicesExterieurs", delta: 2 },
       { poste: "tresorerie", delta: -2 },
     ],
-    clientParTour: "particulier", // +2 si activée
+    clientParTour: "particulier",
+    nbClientsParTour: 2, // +2 clients particuliers par trimestre
   },
   {
     type: "decision",

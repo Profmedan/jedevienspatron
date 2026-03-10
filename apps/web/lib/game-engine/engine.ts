@@ -715,7 +715,8 @@ export function genererClientsParCommerciaux(joueur: Joueur): CarteClient[] {
       (c) => c.id === `client-${carte.clientParTour}`
     );
     if (clientCarte) {
-      for (let i = 0; i < 1; i++) {
+      const nb = carte.nbClientsParTour ?? 1;
+      for (let i = 0; i < nb; i++) {
         clients.push(clientCarte);
       }
     }

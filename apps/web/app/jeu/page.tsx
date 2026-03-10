@@ -151,6 +151,23 @@ function nomCompte(poste: string): string {
  * Utilisé pour mettre à jour le joueur d'affichage en temps réel
  * au fur et à mesure que le joueur clique sur chaque écriture.
  */
+function getPosteValue(j: Joueur, poste: string): number {
+  if (poste === "decouvert")      return j.bilan.decouvert;
+  if (poste === "creancesPlus1")  return j.bilan.creancesPlus1;
+  if (poste === "creancesPlus2")  return j.bilan.creancesPlus2;
+  if (poste === "dettes")         return j.bilan.dettes;
+  if (poste === "dettesFiscales") return j.bilan.dettesFiscales;
+  const actif = j.bilan.actifs.find(a => (a.categorie as string) === poste);
+  if (actif) return actif.valeur;
+  const passif = j.bilan.passifs.find(p => (p.categorie as string) === poste);
+  if (passif) return passif.valeur;
+  const charges = j.compteResultat.charges as Record<string, number>;
+  if (poste in charges) return charges[poste];
+  const produits = j.compteResultat.produits as Record<string, number>;
+  if (poste in produits) return produits[poste];
+  return 0;
+}
+
 function applyDeltaToJoueur(j: Joueur, poste: string, delta: number): void {
   // 1. Champs directs du bilan
   if (poste === "decouvert")     { j.bilan.decouvert     += delta; return; }
@@ -947,7 +964,30 @@ export default function JeuPage() {
     const next = cloneEtat(etat);
     const r = acheterCarteDecision(next, next.joueurActif, selectedDecision);
     if (!r.succes) return;
-    setActiveStep(buildActiveStep(etat, r.modifications, next, 6));
+
+    let mods = r.modifications;
+
+    // Cartes sans effets immédiats (ex: Publicité) : appliquer les effets
+    // récurrents dès l'activation pour que le joueur voie et clique les écritures.
+    // Pédagogiquement : le joueur comprend le coût dès la première utilisation.
+    if (mods.length === 0 && selectedDecision.effetsRecurrents.length > 0) {
+      const joueur = next.joueurs[next.joueurActif];
+      const syntheticMods: typeof mods = [];
+      for (const effet of selectedDecision.effetsRecurrents) {
+        const ancienneValeur = getPosteValue(joueur, effet.poste);
+        applyDeltaToJoueur(joueur, effet.poste, effet.delta);
+        syntheticMods.push({
+          joueurId: joueur.id,
+          poste: effet.poste,
+          ancienneValeur,
+          nouvelleValeur: ancienneValeur + effet.delta,
+          explication: `${selectedDecision.titre} — 1ʳᵉ activation (effet récurrent chaque trimestre)`,
+        });
+      }
+      mods = syntheticMods;
+    }
+
+    setActiveStep(buildActiveStep(etat, mods, next, 6));
   }
 
   function skipDecision() {
