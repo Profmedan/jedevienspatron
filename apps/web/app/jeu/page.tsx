@@ -692,6 +692,7 @@ export default function JeuPage() {
   const [showCartes, setShowCartes]   = useState(false);
   const [tourTransition, setTourTransition] = useState<{ from: number; to: number } | null>(null);
   const [failliteInfo, setFailliteInfo] = useState<{ joueurNom: string; raison: string } | null>(null);
+  const [overlayTab, setOverlayTab] = useState<"analyse" | "indicateurs" | "bilan" | "cr">("analyse");
 
   // ─ Intégration Supabase — room code depuis l'URL + sauvegarde fin de partie ─
   const [roomCode, setRoomCode] = useState<string | null>(null);
@@ -916,11 +917,14 @@ export default function JeuPage() {
         setFailliteInfo({ joueurNom, raison: fin.raisonFaillite ?? "Situation financière irrécupérable" });
         return;
       }
-      // Capturer l'ancien tour AVANT cloturerAnnee (qui remet tourActuel = 1)
       const oldTour = next.tourActuel;
-      cloturerAnnee(next);
-      // Correction bug : utiliser oldTour + 1 au lieu de next.tourActuel++
-      // (cloturerAnnee réinitialise tourActuel à 1, donc ++ donnerait toujours 2)
+      // Clôture fiscale uniquement en fin d'exercice (tous les 4 trimestres) :
+      // intégration du résultat net dans les capitaux propres + remise à zéro du CR.
+      // Entre les trimestres d'un même exercice, le CR continue à s'accumuler.
+      if (oldTour % 4 === 0) {
+        cloturerAnnee(next);
+      }
+      // Force tourActuel (cloturerAnnee() réinitialise tourActuel à 1, on surcharge)
       next.tourActuel = oldTour + 1;
       next.etapeTour = 0;
       next.joueurActif = 0;
@@ -1066,72 +1070,122 @@ export default function JeuPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
 
       {/* ─── OVERLAY TRANSITION DE TRIMESTRE ─── */}
-      {tourTransition && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-indigo-900/80 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
-            {/* En-tête coloré */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white text-center">
-              <div className="text-5xl mb-2">🔔</div>
-              <div className="text-xs font-bold uppercase tracking-widest opacity-75 mb-1">
-                Fin du Trimestre {tourTransition.from}
-              </div>
-              <h2 className="text-2xl font-bold">
-                Trimestre {tourTransition.to} — Prêt à démarrer !
-              </h2>
-            </div>
-            {/* Corps */}
-            <div className="px-6 py-5 space-y-3 max-h-[60vh] overflow-y-auto">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 leading-relaxed">
-                <strong>📊 Clôture effectuée :</strong> Le résultat net du trimestre {tourTransition.from} a été
-                intégré aux Capitaux propres. Le Compte de résultat repart à zéro.
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 leading-relaxed">
-                <strong>🎯 Ce trimestre :</strong> Vous pouvez choisir une nouvelle <strong>Carte Décision</strong>
-                (étape 7). Vos cartes d'investissement actives continuent à produire leurs effets récurrents.
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800 leading-relaxed">
-                <strong>💡 Rappel :</strong> L'équation fondamentale reste <strong>ACTIF = PASSIF</strong>.
-                Chaque écriture que vous passez doit maintenir cet équilibre.
+      {tourTransition && (() => {
+        const estClotureFiscale = tourTransition.from % 4 === 0;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-indigo-900/80 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden">
+
+              {/* En-tête coloré */}
+              <div className={`px-6 py-4 text-white text-center ${estClotureFiscale ? "bg-gradient-to-r from-purple-600 to-indigo-700" : "bg-gradient-to-r from-indigo-600 to-purple-600"}`}>
+                <div className="text-4xl mb-1">{estClotureFiscale ? "🏁" : "🔔"}</div>
+                <div className="text-xs font-bold uppercase tracking-widest opacity-75 mb-0.5">
+                  {estClotureFiscale ? `Clôture de l'exercice ${Math.floor(tourTransition.from / 4)}` : `Fin du Trimestre ${tourTransition.from}`}
+                </div>
+                <h2 className="text-xl font-bold">
+                  {estClotureFiscale
+                    ? `✅ Résultat intégré aux capitaux — Exercice ${Math.ceil(tourTransition.to / 4)} démarre`
+                    : `Trimestre ${tourTransition.to} — Prêt à démarrer !`}
+                </h2>
               </div>
 
-              {/* Analyse financière personnalisée par joueur */}
-              <div className="border-t border-gray-100 pt-3 space-y-3">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">📊 Analyse de votre situation</div>
-                {etat.joueurs.map((j) => {
-                  const analyse = analyserSituationFinanciere(j);
-                  const colors = { rouge: "bg-red-50 border-red-200 text-red-800", jaune: "bg-amber-50 border-amber-200 text-amber-800", vert: "bg-green-50 border-green-200 text-green-800" };
-                  return (
-                    <div key={j.id} className="rounded-xl overflow-hidden border border-gray-100">
-                      <div className="bg-indigo-50 px-3 py-2 flex items-center gap-2">
-                        <span>{j.entreprise.icon}</span>
-                        <span className="font-bold text-indigo-900 text-sm">{j.pseudo}</span>
-                        {j.elimine && <span className="ml-auto text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">💀 Faillite</span>}
+              {/* Onglets */}
+              <div className="flex border-b border-gray-200 bg-gray-50 px-4 gap-0.5 overflow-x-auto shrink-0">
+                {([
+                  ["analyse",     "📊 Analyse"],
+                  ["indicateurs", "📊 Indicateurs"],
+                  ["bilan",       "📋 Bilan"],
+                  ["cr",          "📈 Compte de résultat"],
+                ] as const).map(([tab, label]) => (
+                  <button
+                    key={tab}
+                    onClick={() => setOverlayTab(tab)}
+                    className={`px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
+                      overlayTab === tab
+                        ? "border-indigo-600 text-indigo-700 bg-white"
+                        : "border-transparent text-gray-500 hover:text-indigo-600 hover:border-indigo-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Corps — scrollable */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+
+                {overlayTab === "analyse" && (
+                  <div className="space-y-3">
+                    {/* Message contextuel : clôture ou simple transition */}
+                    {estClotureFiscale ? (
+                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm text-purple-800 leading-relaxed">
+                        <strong>🏁 Clôture de l&apos;exercice fiscal :</strong> Le résultat net du Trimestre&nbsp;{tourTransition.from} a été
+                        intégré aux Capitaux propres. Le Compte de résultat repart à zéro pour le nouvel exercice.
+                        Vérifiez l&apos;onglet <strong>Bilan</strong> pour voir l&apos;évolution de vos capitaux.
                       </div>
-                      <div className="p-2 space-y-1.5">
-                        {j.elimine ? (
-                          <p className="text-xs text-gray-400 italic px-1">Cette entreprise est éliminée.</p>
-                        ) : analyse.map((m, i) => (
-                          <div key={i} className={`border rounded-lg px-2.5 py-1.5 text-xs leading-snug ${colors[m.niveau]}`}>{m.message}</div>
-                        ))}
+                    ) : (
+                      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-800 leading-relaxed">
+                        <strong>📅 Fin du Trimestre {tourTransition.from} :</strong> Le Compte de résultat continue
+                        à s&apos;accumuler. La clôture fiscale (intégration résultat → capitaux propres) interviendra
+                        à la fin du Trimestre&nbsp;<strong>{Math.ceil(tourTransition.from / 4) * 4}</strong>.
+                        Consultez l&apos;onglet <strong>Compte de résultat</strong> pour voir le cumul en cours.
                       </div>
+                    )}
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 leading-relaxed">
+                      <strong>🎯 Ce trimestre :</strong> Vous pouvez choisir une nouvelle <strong>Carte Décision</strong>
+                      (étape 7). Vos cartes d&apos;investissement actives continuent à produire leurs effets récurrents.
                     </div>
-                  );
-                })}
-                <p className="text-xs text-indigo-500 text-center">👉 Consultez l&apos;onglet <strong>Indicateurs</strong> pour le détail complet de vos ratios.</p>
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800 leading-relaxed">
+                      <strong>💡 Rappel :</strong> L&apos;équation fondamentale reste <strong>ACTIF = PASSIF</strong>.
+                      Chaque écriture que vous passez doit maintenir cet équilibre.
+                    </div>
+
+                    {/* Analyse financière par joueur */}
+                    <div className="border-t border-gray-100 pt-3 space-y-3">
+                      <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">📊 Analyse de votre situation</div>
+                      {etat.joueurs.map((j) => {
+                        const analyse = analyserSituationFinanciere(j);
+                        const colors = { rouge: "bg-red-50 border-red-200 text-red-800", jaune: "bg-amber-50 border-amber-200 text-amber-800", vert: "bg-green-50 border-green-200 text-green-800" };
+                        return (
+                          <div key={j.id} className="rounded-xl overflow-hidden border border-gray-100">
+                            <div className="bg-indigo-50 px-3 py-2 flex items-center gap-2">
+                              <span>{j.entreprise.icon}</span>
+                              <span className="font-bold text-indigo-900 text-sm">{j.pseudo}</span>
+                              {j.elimine && <span className="ml-auto text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">💀 Faillite</span>}
+                            </div>
+                            <div className="p-2 space-y-1.5">
+                              {j.elimine ? (
+                                <p className="text-xs text-gray-400 italic px-1">Cette entreprise est éliminée.</p>
+                              ) : analyse.map((m, i) => (
+                                <div key={i} className={`border rounded-lg px-2.5 py-1.5 text-xs leading-snug ${colors[m.niveau]}`}>{m.message}</div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {overlayTab === "indicateurs" && <IndicateursPanel joueur={joueur} />}
+                {overlayTab === "bilan"       && <BilanPanel joueur={joueur} highlightedPoste={null} />}
+                {overlayTab === "cr"          && <CompteResultatPanel joueur={joueur} highlightedPoste={null} />}
+              </div>
+
+              {/* Bouton démarrer */}
+              <div className="px-6 py-4 border-t border-gray-100 shrink-0">
+                <button
+                  onClick={() => { setTourTransition(null); setOverlayTab("analyse"); }}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold py-3 rounded-xl text-lg shadow-sm transition-all"
+                >
+                  🚀 Démarrer le Trimestre {tourTransition.to}
+                </button>
               </div>
             </div>
-            {/* Bouton démarrer */}
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => setTourTransition(null)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold py-3 rounded-xl text-lg shadow-sm transition-all"
-              >
-                🚀 Démarrer le Trimestre {tourTransition.to}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ─── OVERLAY FAILLITE ─── */}
       {failliteInfo && (
