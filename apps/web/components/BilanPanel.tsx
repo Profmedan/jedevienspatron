@@ -3,7 +3,7 @@ import { Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif, getResultatNet } from "@/lib/game-engine/calculators";
 import { useState } from "react";
 
-interface Props { joueur: Joueur; }
+interface Props { joueur: Joueur; highlightedPoste?: string | null; }
 
 const TOOLTIPS: Record<string, { definition: string; exemple: string; couleur: string }> = {
   immobilisations: {
@@ -48,8 +48,8 @@ const TOOLTIPS: Record<string, { definition: string; exemple: string; couleur: s
   },
 };
 
-function TooltipPoste({ label, value, color, categorie, sub }: {
-  label: string; value: number; color?: string; categorie?: string; sub?: boolean;
+function TooltipPoste({ label, value, color, categorie, sub, highlighted }: {
+  label: string; value: number; color?: string; categorie?: string; sub?: boolean; highlighted?: boolean;
 }) {
   const [show, setShow] = useState(false);
   const info = categorie ? TOOLTIPS[categorie] : null;
@@ -57,8 +57,8 @@ function TooltipPoste({ label, value, color, categorie, sub }: {
   return (
     <div className="relative">
       <div
-        className={`flex justify-between items-center px-2 py-1 rounded mb-0.5 cursor-help ${sub ? "text-sm" : "font-medium"}`}
-        style={{ backgroundColor: color ? `${color}22` : undefined, borderLeft: color ? `3px solid ${color}` : undefined }}
+        className={`flex justify-between items-center px-2 py-1 rounded mb-0.5 cursor-help transition-all duration-300 ${sub ? "text-sm" : "font-medium"} ${highlighted ? "ring-2 ring-yellow-400 bg-yellow-50 scale-[1.02]" : ""}`}
+        style={{ backgroundColor: highlighted ? undefined : (color ? `${color}22` : undefined), borderLeft: color ? `3px solid ${color}` : undefined }}
         onMouseEnter={() => info && setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={() => info && setShow(s => !s)}
@@ -94,7 +94,7 @@ function Total({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function BilanPanel({ joueur }: Props) {
+export default function BilanPanel({ joueur, highlightedPoste }: Props) {
   const totalActif = getTotalActif(joueur);
   const resultat = getResultatNet(joueur);
   const totalPassif = getTotalPassif(joueur);
@@ -121,18 +121,18 @@ export default function BilanPanel({ joueur }: Props) {
             📤 ACTIF — Emplois
           </div>
           <SectionHeader label="Investissements durables" />
-          {immobilisations.map(a => <TooltipPoste key={a.nom} label={a.nom} value={a.valeur} color={TOOLTIPS.immobilisations.couleur} categorie="immobilisations" sub />)}
+          {immobilisations.map(a => <TooltipPoste key={a.nom} label={a.nom} value={a.valeur} color={TOOLTIPS.immobilisations.couleur} categorie="immobilisations" sub highlighted={highlightedPoste === "immobilisations"} />)}
           <SectionHeader label="Stocks" />
-          {stocks.map(a => <TooltipPoste key={a.nom} label={a.nom} value={a.valeur} color={TOOLTIPS.stocks.couleur} categorie="stocks" sub />)}
+          {stocks.map(a => <TooltipPoste key={a.nom} label={a.nom} value={a.valeur} color={TOOLTIPS.stocks.couleur} categorie="stocks" sub highlighted={highlightedPoste === "stocks"} />)}
           {(joueur.bilan.creancesPlus1 > 0 || joueur.bilan.creancesPlus2 > 0) && (
             <>
               <SectionHeader label="Créances clients" />
-              {joueur.bilan.creancesPlus1 > 0 && <TooltipPoste label="Créances C+1" value={joueur.bilan.creancesPlus1} color={TOOLTIPS.creances.couleur} categorie="creances" sub />}
-              {joueur.bilan.creancesPlus2 > 0 && <TooltipPoste label="Créances C+2" value={joueur.bilan.creancesPlus2} color={TOOLTIPS.creances.couleur} categorie="creances" sub />}
+              {joueur.bilan.creancesPlus1 > 0 && <TooltipPoste label="Créances C+1" value={joueur.bilan.creancesPlus1} color={TOOLTIPS.creances.couleur} categorie="creances" sub highlighted={highlightedPoste === "creancesPlus1"} />}
+              {joueur.bilan.creancesPlus2 > 0 && <TooltipPoste label="Créances C+2" value={joueur.bilan.creancesPlus2} color={TOOLTIPS.creances.couleur} categorie="creances" sub highlighted={highlightedPoste === "creancesPlus2"} />}
             </>
           )}
           <SectionHeader label="Trésorerie" />
-          {tresorerie && <TooltipPoste label="Trésorerie" value={tresorerie.valeur} color={TOOLTIPS.tresorerie.couleur} categorie="tresorerie" sub />}
+          {tresorerie && <TooltipPoste label="Trésorerie" value={tresorerie.valeur} color={TOOLTIPS.tresorerie.couleur} categorie="tresorerie" sub highlighted={highlightedPoste === "tresorerie"} />}
           <Total label="Total Actif" value={totalActif} />
         </div>
 
@@ -142,25 +142,25 @@ export default function BilanPanel({ joueur }: Props) {
             📥 PASSIF — Ressources
           </div>
           <SectionHeader label="Capitaux propres" />
-          {capitaux.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.capitaux.couleur} categorie="capitaux" sub />)}
+          {capitaux.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.capitaux.couleur} categorie="capitaux" sub highlighted={highlightedPoste === "capitaux"} />)}
           {resultat !== 0 && (
             <TooltipPoste label="Résultat net" value={resultat}
               color={resultat >= 0 ? "#22c55e" : "#ef4444"} sub />
           )}
           <SectionHeader label="Emprunts" />
-          {emprunts.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.emprunts.couleur} categorie="emprunts" sub />)}
+          {emprunts.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.emprunts.couleur} categorie="emprunts" sub highlighted={highlightedPoste === "emprunts"} />)}
           {(dettes.length > 0 || joueur.bilan.dettes > 0 || joueur.bilan.dettesFiscales > 0) && (
             <>
               <SectionHeader label="Dettes (court terme)" />
-              {dettes.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.dettes.couleur} categorie="dettes" sub />)}
-              {joueur.bilan.dettes > 0 && <TooltipPoste label="Dettes fournisseurs" value={joueur.bilan.dettes} color={TOOLTIPS.dettes.couleur} categorie="dettes" sub />}
-              {joueur.bilan.dettesFiscales > 0 && <TooltipPoste label="Dettes fiscales" value={joueur.bilan.dettesFiscales} color={TOOLTIPS.dettes.couleur} categorie="dettes" sub />}
+              {dettes.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.dettes.couleur} categorie="dettes" sub highlighted={highlightedPoste === "dettes"} />)}
+              {joueur.bilan.dettes > 0 && <TooltipPoste label="Dettes fournisseurs" value={joueur.bilan.dettes} color={TOOLTIPS.dettes.couleur} categorie="dettes" sub highlighted={highlightedPoste === "dettes"} />}
+              {joueur.bilan.dettesFiscales > 0 && <TooltipPoste label="Dettes fiscales" value={joueur.bilan.dettesFiscales} color={TOOLTIPS.dettes.couleur} categorie="dettes" sub highlighted={highlightedPoste === "dettesFiscales"} />}
             </>
           )}
           {joueur.bilan.decouvert > 0 && (
             <>
               <SectionHeader label="⚠️ Découvert bancaire" />
-              <TooltipPoste label="Découvert bancaire" value={joueur.bilan.decouvert} color={TOOLTIPS.decouvert.couleur} categorie="decouvert" sub />
+              <TooltipPoste label="Découvert bancaire" value={joueur.bilan.decouvert} color={TOOLTIPS.decouvert.couleur} categorie="decouvert" sub highlighted={highlightedPoste === "decouvert"} />
             </>
           )}
           <Total label="Total Passif" value={totalPassif} />

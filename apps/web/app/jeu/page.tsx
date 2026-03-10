@@ -270,7 +270,7 @@ function EntryCard({ entry, onApply }: { entry: EntryLine; onApply: () => void }
           <div className={`text-base font-bold ${entry.delta > 0 ? "text-blue-700" : "text-red-600"}`}>
             {entry.delta > 0 ? "+" : ""}{entry.delta}
           </div>
-          <div className="text-xs text-gray-400 leading-tight">{entry.description}</div>
+          <div className="text-sm text-gray-700 font-semibold mt-1.5 leading-snug">{entry.description}</div>
         </div>
         <div className="shrink-0 mt-1">
           {entry.applied ? (
@@ -295,12 +295,14 @@ function EntryPanel({
   activeStep,
   displayJoueur,
   onApply,
+  onApplyEntry,
   onConfirm,
   onCancel,
 }: {
   activeStep: ActiveStep;
   displayJoueur: Joueur;
   onApply: (id: string) => void;
+  onApplyEntry?: (poste: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -329,18 +331,18 @@ function EntryPanel({
       {activeStep.entries.length > 0 ? (
         <div>
           <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-            ✏️ Clique sur chaque écriture pour l'appliquer :
+            ✏️ Cliquez sur chaque écriture pour l'appliquer :
           </div>
           {debits.length > 0 && (
             <>
               <div className="text-xs text-blue-500 font-semibold mb-1">DÉBITS (Emplois)</div>
-              {debits.map(e => <EntryCard key={e.id} entry={e} onApply={() => onApply(e.id)} />)}
+              {debits.map(e => <EntryCard key={e.id} entry={e} onApply={() => { onApply(e.id); onApplyEntry?.(e.poste); }} />)}
             </>
           )}
           {credits.length > 0 && (
             <>
               <div className="text-xs text-orange-500 font-semibold mb-1 mt-2">CRÉDITS (Ressources)</div>
-              {credits.map(e => <EntryCard key={e.id} entry={e} onApply={() => onApply(e.id)} />)}
+              {credits.map(e => <EntryCard key={e.id} entry={e} onApply={() => { onApply(e.id); onApplyEntry?.(e.poste); }} />)}
             </>
           )}
         </div>
@@ -363,7 +365,7 @@ function EntryPanel({
         </div>
         <div className="mt-0.5">
           {canContinue
-            ? "✅ Bilan équilibré — tu peux continuer !"
+            ? "✅ Bilan équilibré — vous pouvez continuer !"
             : !allApplied
             ? `${pendingCount} écriture(s) restante(s) à saisir`
             : "⚠️ Déséquilibre détecté — vérifie tes écritures"}
@@ -666,6 +668,7 @@ export default function JeuPage() {
   const [journal, setJournal]         = useState<JournalEntry[]>([]);
   const [showJournal, setShowJournal] = useState(false);
   const [activeTab, setActiveTab]     = useState<"bilan" | "cr" | "indicateurs">("bilan");
+  const [highlightedPoste, setHighlightedPoste] = useState<string | null>(null);
   const [achatQte, setAchatQte]       = useState(2);
   const [achatMode, setAchatMode]     = useState<"tresorerie" | "dettes">("tresorerie");
   const [selectedDecision, setSelectedDecision] = useState<CarteDecision | null>(null);
@@ -728,6 +731,17 @@ export default function JeuPage() {
       entries,
       principe: info?.principe ?? "",
     }, ...prev.slice(0, 29)]);
+  }
+
+  // ─ Auto-switch onglet + surlignage quand une écriture est appliquée ──────
+  function handleApplyEntry(poste: string) {
+    if (ACTIF_KEYS.includes(poste) || PASSIF_KEYS.includes(poste)) {
+      setActiveTab("bilan");
+    } else if (CHARGES_KEYS.includes(poste) || PRODUITS_KEYS.includes(poste)) {
+      setActiveTab("cr");
+    }
+    setHighlightedPoste(poste);
+    setTimeout(() => setHighlightedPoste(null), 2000);
   }
 
   // ─ Démarrer une partie ───────────────────────────────────────────────────
@@ -1120,6 +1134,7 @@ export default function JeuPage() {
               activeStep={activeStep}
               displayJoueur={displayJoueur}
               onApply={applyEntry}
+              onApplyEntry={handleApplyEntry}
               onConfirm={confirmActiveStep}
               onCancel={() => setActiveStep(null)}
             />
@@ -1149,7 +1164,7 @@ export default function JeuPage() {
                     <div className="flex gap-2">
                       <button onClick={launchAchat} disabled={achatQte === 0}
                         className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm py-2 rounded-xl font-bold">
-                        🔍 Voir et comprendre
+                        📝 Exécuter & Comprendre
                       </button>
                       <button onClick={skipAchat} className="flex-1 bg-gray-200 text-gray-700 text-sm py-2 rounded-xl">
                         Passer
@@ -1166,7 +1181,7 @@ export default function JeuPage() {
                     {selectedDecision && (
                       <button onClick={launchDecision}
                         className="w-full bg-green-600 text-white text-sm py-2 rounded-xl font-bold">
-                        🔍 Voir et comprendre : {selectedDecision.titre}
+                        📝 Exécuter & Comprendre : {selectedDecision.titre}
                       </button>
                     )}
                     <button onClick={skipDecision} className="w-full bg-gray-200 text-gray-700 text-sm py-2 rounded-xl">
@@ -1206,7 +1221,7 @@ export default function JeuPage() {
                     )}
                     <button onClick={launchStep}
                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-sm transition-colors">
-                      🔍 Voir et comprendre cette étape
+                      📝 Exécuter & Comprendre cette étape
                     </button>
                   </div>
                 )}
@@ -1295,8 +1310,8 @@ export default function JeuPage() {
 
           {/* Contenu de l'onglet */}
           <div>
-            {activeTab === "bilan"       && <BilanPanel joueur={displayJoueur} />}
-            {activeTab === "cr"          && <CompteResultatPanel joueur={displayJoueur} />}
+            {activeTab === "bilan"       && <BilanPanel joueur={displayJoueur} highlightedPoste={highlightedPoste} />}
+            {activeTab === "cr"          && <CompteResultatPanel joueur={displayJoueur} highlightedPoste={highlightedPoste} />}
             {activeTab === "indicateurs" && <IndicateursPanel joueur={displayJoueur} />}
           </div>
 
