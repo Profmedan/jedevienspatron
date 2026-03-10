@@ -687,6 +687,28 @@ export default function JeuPage() {
     if (code) setRoomCode(code);
   }, []);
 
+  // Sauvegarde historique solo dans localStorage (sans room_code = partie libre)
+  useEffect(() => {
+    if (phase !== "gameover" || !etat || roomCode) return;
+    const j = etat.joueurs[0];
+    const indicateurs = calculerIndicateurs(j);
+    const partie = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      pseudo: j.pseudo,
+      entreprise: j.entreprise.nom,
+      score: calculerScore(j),
+      resultatNet: indicateurs.resultatNet,
+      tresorerie: getTresorerie(j),
+      trimestresJoues: etat.tourActuel,
+      faillite: j.elimine,
+    };
+    try {
+      const existant = JSON.parse(localStorage.getItem("jdp_historique_solo") ?? "[]");
+      localStorage.setItem("jdp_historique_solo", JSON.stringify([partie, ...existant].slice(0, 20)));
+    } catch { /* localStorage indisponible (mode privé strict) */ }
+  }, [phase, etat, roomCode]);
+
   // Sauvegarde automatique quand la partie est terminée ET qu'un room_code existe
   useEffect(() => {
     if (phase !== "gameover" || !etat || !roomCode || savedToDb) return;
@@ -969,10 +991,26 @@ export default function JeuPage() {
             <span>Résultats sauvegardés dans le tableau de bord enseignant</span>
           </div>
         )}
-        <button onClick={() => { setPhase("setup"); setEtat(null); setJournal([]); setSavedToDb(false); }}
-          className="bg-indigo-600 text-white font-bold px-10 py-3 rounded-2xl shadow">
-          🔄 Nouvelle partie
-        </button>
+        {!roomCode && (
+          <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl px-6 py-3 text-indigo-700 text-sm flex items-center gap-2">
+            <span>📊</span>
+            <span>Partie enregistrée dans votre historique local —{" "}
+              <Link href="/historique" className="font-semibold underline hover:text-indigo-900">voir mon historique</Link>
+            </span>
+          </div>
+        )}
+        <div className="flex gap-3 flex-wrap justify-center">
+          <button onClick={() => { setPhase("setup"); setEtat(null); setJournal([]); setSavedToDb(false); }}
+            className="bg-indigo-600 text-white font-bold px-10 py-3 rounded-2xl shadow">
+            🔄 Nouvelle partie
+          </button>
+          {!roomCode && (
+            <Link href="/historique"
+              className="bg-white border-2 border-indigo-300 text-indigo-700 font-bold px-6 py-3 rounded-2xl shadow hover:bg-indigo-50 transition-colors">
+              📊 Mon historique
+            </Link>
+          )}
+        </div>
       </div>
     );
   }

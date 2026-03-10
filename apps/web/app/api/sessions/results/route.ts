@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 // ─── POST /api/sessions/results — Sauvegarder fin de partie ──
 // Appelé par jeu/page.tsx à la fin d'une partie quand room_code présent
+// NOTE : utilise le service client pour bypasser RLS —
+// les apprenants jouent sans compte, donc pas d'auth.uid() côté RLS.
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const body = await request.json();
     const { room_code, joueurs } = body as {

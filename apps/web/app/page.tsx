@@ -33,17 +33,17 @@ export default function Home() {
         <p className="text-sm text-indigo-400">Jeu sérieux conçu par Pierre Médan · Terminale STMG / BTS / CCI</p>
       </div>
 
-      {/* DEUX BLOCS D'ACCÈS CÔTE À CÔTE */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl w-full">
+      {/* TROIS BLOCS D'ACCÈS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl w-full">
 
-        {/* Bloc : J'ai un code */}
+        {/* Bloc 1 : Apprenant avec code */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-indigo-200 p-6 flex flex-col gap-4">
           <div className="text-center">
             <div className="text-3xl mb-1">🔑</div>
-            <h2 className="font-bold text-indigo-800 text-lg">J&apos;ai un code d&apos;accès</h2>
-            <p className="text-xs text-gray-500 mt-1">Mon formateur m&apos;a donné un code</p>
+            <h2 className="font-bold text-indigo-800 text-lg">J&apos;ai un code</h2>
+            <p className="text-xs text-gray-500 mt-1">Mon formateur m&apos;a donné un code de session</p>
           </div>
-          <form onSubmit={handleCode} className="space-y-3">
+          <form onSubmit={handleCode} className="space-y-3 flex-1 flex flex-col justify-end">
             <input
               type="text"
               value={code}
@@ -64,35 +64,68 @@ export default function Home() {
           </form>
         </div>
 
-        {/* Bloc : Accès individuel */}
+        {/* Bloc 2 : Jouer seul */}
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-emerald-200 p-6 flex flex-col gap-4">
+          <div className="text-center">
+            <div className="text-3xl mb-1">🎮</div>
+            <h2 className="font-bold text-emerald-800 text-lg">Je joue seul</h2>
+            <p className="text-xs text-gray-500 mt-1">Découvrir le jeu sans inscription</p>
+          </div>
+          <div className="flex-1 flex flex-col justify-between gap-3">
+            <ul className="text-xs text-gray-500 space-y-1.5">
+              <li className="flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">✓</span> Partie complète en autonomie</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">✓</span> Bilan, compte de résultat, indicateurs</li>
+              <li className="flex items-start gap-1.5"><span className="text-gray-300 mt-0.5">✗</span> Résultats non sauvegardés</li>
+            </ul>
+            <Link
+              href="/jeu"
+              className="block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-center transition-colors"
+            >
+              Jouer maintenant →
+            </Link>
+            <Link
+              href="/historique"
+              className="block w-full text-center text-xs text-emerald-700 hover:text-emerald-900 py-1 transition-colors"
+            >
+              📊 Voir mon historique
+            </Link>
+          </div>
+        </div>
+
+        {/* Bloc 3 : Enseignant / Formateur */}
         <div className="bg-indigo-700 rounded-2xl shadow-sm p-6 flex flex-col gap-4 text-white">
           <div className="text-center">
-            <div className="text-3xl mb-1">🎯</div>
-            <h2 className="font-bold text-lg">Accès individuel</h2>
-            <p className="text-xs text-indigo-200 mt-1">Jouez en solo ou gérez votre groupe</p>
+            <div className="text-3xl mb-1">🏫</div>
+            <h2 className="font-bold text-lg">Enseignant / Formateur</h2>
+            <p className="text-xs text-indigo-200 mt-1">Créer des sessions et suivre les résultats</p>
           </div>
-          <div className="space-y-2">
-            <Link
-              href="/auth/login"
-              className="block w-full bg-white text-indigo-700 font-bold py-3 rounded-xl text-center hover:bg-indigo-50 transition-colors"
-            >
-              Se connecter
-            </Link>
-            <Link
-              href="/auth/register"
-              className="block w-full bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-3 rounded-xl text-center transition-colors border border-indigo-400"
-            >
-              Créer un compte
-            </Link>
+          <div className="flex-1 flex flex-col justify-between gap-3">
+            <ul className="text-xs text-indigo-200 space-y-1.5">
+              <li className="flex items-start gap-1.5"><span className="text-indigo-300 mt-0.5">✓</span> Générer un code de session (KIC-XXXX)</li>
+              <li className="flex items-start gap-1.5"><span className="text-indigo-300 mt-0.5">✓</span> Scores et classements en temps réel</li>
+              <li className="flex items-start gap-1.5"><span className="text-indigo-300 mt-0.5">✓</span> Gestion de vos groupes et classes</li>
+            </ul>
+            <div className="space-y-2">
+              <Link
+                href="/auth/login"
+                className="block w-full bg-white text-indigo-700 font-bold py-3 rounded-xl text-center hover:bg-indigo-50 transition-colors text-sm"
+              >
+                Se connecter
+              </Link>
+              <Link
+                href="/auth/register"
+                className="block w-full bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-2.5 rounded-xl text-center transition-colors border border-indigo-400 text-sm"
+              >
+                Créer un compte gratuit
+              </Link>
+            </div>
           </div>
-          <p className="text-xs text-indigo-300 text-center">
-            Accès solo · Gestion de groupes · Résultats sauvegardés
-          </p>
         </div>
+
       </div>
 
       {/* VIDÉO DE DÉMONSTRATION (placeholder) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-6 max-w-2xl w-full text-center">
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-6 max-w-4xl w-full text-center">
         <h2 className="font-bold text-indigo-800 text-lg mb-3">🎬 Comment ça marche ?</h2>
         <div className="bg-indigo-50 rounded-xl h-48 flex items-center justify-center border-2 border-dashed border-indigo-200">
           <div className="text-center text-indigo-400">
@@ -104,7 +137,7 @@ export default function Home() {
       </div>
 
       {/* 3 GRANDS PRINCIPES */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl w-full text-sm">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-indigo-100">
           <div className="text-2xl mb-2">⚖️</div>
           <strong className="text-indigo-800">ACTIF = PASSIF</strong>
