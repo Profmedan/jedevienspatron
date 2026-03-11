@@ -102,3 +102,87 @@ export function getDocument(poste: string): DocumentInfo {
 
   return { label: "?", detail: "", badge: "bg-gray-100 text-gray-500" };
 }
+
+// ─── MANIPULATION DU JOUEUR (pour saisie interactive) ─────────────────────────
+
+import { Joueur } from "@/lib/game-engine/types";
+import { calculerIndicateurs } from "@/lib/game-engine/calculators";
+
+/** Lit la valeur courante d'un poste sur le joueur */
+export function getPosteValue(j: Joueur, poste: string): number {
+  if (poste === "decouvert")      return j.bilan.decouvert;
+  if (poste === "creancesPlus1")  return j.bilan.creancesPlus1;
+  if (poste === "creancesPlus2")  return j.bilan.creancesPlus2;
+  if (poste === "dettes")         return j.bilan.dettes;
+  if (poste === "dettesFiscales") return j.bilan.dettesFiscales;
+  const actif = j.bilan.actifs.find(a => (a.categorie as string) === poste);
+  if (actif) return actif.valeur;
+  const passif = j.bilan.passifs.find(p => (p.categorie as string) === poste);
+  if (passif) return passif.valeur;
+  const charges = j.compteResultat.charges as Record<string, number>;
+  if (poste in charges) return charges[poste];
+  const produits = j.compteResultat.produits as Record<string, number>;
+  if (poste in produits) return produits[poste];
+  return 0;
+}
+
+/** Applique un delta sur un poste du joueur (bilan ou CR) */
+export function applyDeltaToJoueur(j: Joueur, poste: string, delta: number): void {
+  if (poste === "decouvert")     { j.bilan.decouvert     += delta; return; }
+  if (poste === "creancesPlus1") { j.bilan.creancesPlus1 += delta; return; }
+  if (poste === "creancesPlus2") { j.bilan.creancesPlus2 += delta; return; }
+  if (poste === "dettes")        { j.bilan.dettes         += delta; return; }
+  if (poste === "dettesFiscales"){ j.bilan.dettesFiscales += delta; return; }
+  const actif = j.bilan.actifs.find(a => (a.categorie as string) === poste);
+  if (actif) { actif.valeur += delta; return; }
+  const passif = j.bilan.passifs.find(p => (p.categorie as string) === poste);
+  if (passif) { passif.valeur += delta; return; }
+  if (poste in j.compteResultat.charges)
+    (j.compteResultat.charges as Record<string, number>)[poste] += delta;
+  else if (poste in j.compteResultat.produits)
+    (j.compteResultat.produits as Record<string, number>)[poste] += delta;
+}
+
+// ─── ANALYSE FINANCIÈRE FIN DE TRIMESTRE ──────────────────────────────────────
+
+export interface MessageAnalyse {
+  niveau: "rouge" | "jaune" | "vert";
+  message: string;
+}
+
+export function analyserSituationFinanciere(joueur: Joueur): MessageAnalyse[] {
+  const ind = calculerIndicateurs(joueur);
+  const msgs: MessageAnalyse[] = [];
+
+  if (ind.tresorerieNette < 0) {
+    msgs.push({ niveau: "rouge", message: `⚠️ Votre trésorerie nette est négative (${ind.tresorerieNette}). Votre fonds de roulement ne couvre pas votre BFR : risque de rupture de trésorerie.` });
+  } else if (ind.tresorerieNette < 5) {
+    msgs.push({ niveau: "jaune", message: `🔶 Votre trésorerie nette est faible (${ind.tresorerieNette}). La marge de sécurité est étroite.` });
+  } else {
+    msgs.push({ niveau: "vert", message: `✅ Votre trésorerie nette est positive (${ind.tresorerieNette}). Équilibre financier maîtrisé.` });
+  }
+
+  if (ind.fondsDeRoulement < 0) {
+    msgs.push({ niveau: "rouge", message: `⚠️ Fonds de roulement négatif (${ind.fondsDeRoulement}). Fragilité structurelle.` });
+  } else if (ind.besoinFondsRoulement > ind.fondsDeRoulement) {
+    msgs.push({ niveau: "jaune", message: `🔶 Votre BFR (${ind.besoinFondsRoulement}) dépasse votre FR (${ind.fondsDeRoulement}).` });
+  }
+
+  if (ind.resultatNet < 0) {
+    msgs.push({ niveau: "rouge", message: `📉 Résultat déficitaire (${ind.resultatNet}). Vos charges dépassent vos produits.` });
+  } else if (ind.resultatNet === 0) {
+    msgs.push({ niveau: "jaune", message: `⚖️ Résultat net nul. Vous êtes à l'équilibre sans bénéfice.` });
+  } else {
+    msgs.push({ niveau: "vert", message: `📈 Résultat net bénéficiaire (${ind.resultatNet}). Capitaux propres en hausse.` });
+  }
+
+  if (ind.ratioSolvabilite < 20) {
+    msgs.push({ niveau: "rouge", message: `🔴 Solvabilité très faible (${ind.ratioSolvabilite.toFixed(1)}%). Risque élevé de faillite.` });
+  } else if (ind.ratioSolvabilite < 40) {
+    msgs.push({ niveau: "jaune", message: `🟡 Solvabilité correcte (${ind.ratioSolvabilite.toFixed(1)}%). Vigilance.` });
+  } else {
+    msgs.push({ niveau: "vert", message: `🟢 Solvabilité solide (${ind.ratioSolvabilite.toFixed(1)}%).` });
+  }
+
+  return msgs;
+}
