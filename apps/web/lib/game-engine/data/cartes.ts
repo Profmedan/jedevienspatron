@@ -15,7 +15,7 @@ export const CARTES_COMMERCIAUX: CarteCommercial[] = [
     coutChargesPersonnel: 1,
     coutTresorerie: 1,
     typeClientRapporte: "particulier",
-    nbClientsParTour: 1,
+    nbClientsParTour: 2, // génère 2 Particuliers/tour → ventes +4, CMV −2, salary −1 = +1 net
   },
   {
     type: "commercial",
@@ -24,7 +24,7 @@ export const CARTES_COMMERCIAUX: CarteCommercial[] = [
     coutChargesPersonnel: 2,
     coutTresorerie: 2,
     typeClientRapporte: "tpe",
-    nbClientsParTour: 1,
+    nbClientsParTour: 1, // génère 1 TPE/tour → ventes +3, CMV −1, salary −2 = 0 net (C+1)
   },
   {
     type: "commercial",
@@ -33,7 +33,7 @@ export const CARTES_COMMERCIAUX: CarteCommercial[] = [
     coutChargesPersonnel: 3,
     coutTresorerie: 3,
     typeClientRapporte: "grand_compte",
-    nbClientsParTour: 1,
+    nbClientsParTour: 1, // génère 1 Grand Compte/tour → ventes +4, CMV −1, salary −3 = 0 net (C+2)
   },
 ];
 
@@ -45,24 +45,24 @@ export const CARTES_CLIENTS: CarteClient[] = [
     type: "client",
     id: "client-particulier",
     titre: "Client Particulier",
-    montantVentes: 1,
-    delaiPaiement: 0, // Paiement immédiat → Trésorerie +1
+    montantVentes: 2,
+    delaiPaiement: 0, // Paiement immédiat → Trésorerie +2
     consommeStocks: true,
   },
   {
     type: "client",
     id: "client-tpe",
     titre: "Client TPE",
-    montantVentes: 2,
-    delaiPaiement: 1, // Paiement différé → Créances C+1 +2
+    montantVentes: 3,
+    delaiPaiement: 1, // Paiement différé → Créances C+1 +3
     consommeStocks: true,
   },
   {
     type: "client",
     id: "client-grand-compte",
     titre: "Client Grand Compte",
-    montantVentes: 3,
-    delaiPaiement: 2, // Paiement très différé → Créances C+2 +3
+    montantVentes: 4,
+    delaiPaiement: 2, // Paiement très différé → Créances C+2 +4
     consommeStocks: true,
   },
 ];
@@ -76,7 +76,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "commercial-junior-dec",
     titre: "Commercial Junior",
-    description: "Recrutez un commercial junior qui vous rapporte 1 client particulier par tour.",
+    description: "Recrutez un commercial junior : salaire −1/trim, génère 2 clients Particuliers/trim (+2×2 ventes immédiates). Résultat net : +1/trim.",
     categorie: "commercial",
     effetsImmédiats: [
       { poste: "chargesPersonnel", delta: 1 },
@@ -87,12 +87,13 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "tresorerie", delta: -1 },
     ],
     clientParTour: "particulier",
+    nbClientsParTour: 2,
   },
   {
     type: "decision",
     id: "commercial-senior-dec",
     titre: "Commercial Senior",
-    description: "Recrutez un commercial senior qui vous rapporte 1 client TPE par tour.",
+    description: "Recrutez un commercial senior : salaire −2/trim, génère 1 client TPE/trim (+3 ventes en C+1). À l'équilibre sur le résultat, mais attention au BFR.",
     categorie: "commercial",
     effetsImmédiats: [
       { poste: "chargesPersonnel", delta: 2 },
@@ -108,7 +109,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "directrice-commerciale-dec",
     titre: "Directrice Commerciale",
-    description: "Recrutez une directrice commerciale qui rapporte 1 grand compte par tour.",
+    description: "Recrutez une directrice commerciale : salaire −3/trim, génère 1 Grand Compte/trim (+4 ventes en C+2). À l'équilibre sur le résultat, fort BFR à anticiper.",
     categorie: "commercial",
     effetsImmédiats: [
       { poste: "chargesPersonnel", delta: 3 },

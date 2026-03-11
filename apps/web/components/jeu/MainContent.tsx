@@ -163,17 +163,7 @@ export function MainContent({
                     );
                   })}
 
-                  {/* Hint recrutement */}
-                  {!sources.some((c) => c.categorie !== "commercial") && (
-                    <div className="border-2 border-dashed border-indigo-200 rounded-xl px-3 py-2.5 flex flex-col justify-center items-center min-w-[100px] text-center bg-indigo-50">
-                      <div className="text-2xl mb-0.5">➕</div>
-                      <div className="text-xs font-semibold text-indigo-600 leading-tight">
-                        Recruter
-                        <br />
-                        étape 6 🎯
-                      </div>
-                    </div>
-                  )}
+                  {/* Hint recrutement supprimé ici — déplacé sous les onglets */}
                 </div>
               )}
 
@@ -256,6 +246,22 @@ export function MainContent({
           );
         })}
       </div>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* Bannière recrutement — visible uniquement à l'étape 6 */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {etapeTour === 6 && !activeStep && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+          <span className="text-2xl">🎯</span>
+          <div className="flex-1">
+            <div className="text-sm font-bold text-indigo-800">C'est le moment de recruter !</div>
+            <div className="text-xs text-indigo-600 leading-snug mt-0.5">
+              Junior (+2 Particuliers/trim, +1 net) · Senior (+1 TPE/trim, 0 net, C+1) · Directrice (+1 Grand Compte/trim, 0 net, C+2)
+            </div>
+          </div>
+          <div className="text-xs text-indigo-400 font-medium">← panneau gauche</div>
+        </div>
+      )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* Contenu onglet */}
