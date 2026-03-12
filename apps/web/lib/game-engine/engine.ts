@@ -497,14 +497,36 @@ export function appliquerEffetsRecurrents(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 6 : Choix carte Décision ─────────────────────────
+// ─── ÉTAPE 6 : Recrutement garanti (toujours disponible) ────
 
+/**
+ * Retourne les cartes commerciales que le joueur peut encore recruter
+ * (celles qu'il n'a pas encore dans ses cartesActives).
+ * Indépendant de la pioche — toujours disponible chaque tour.
+ */
+export function obtenirCarteRecrutement(etat: EtatJeu, joueurIdx: number): CarteDecision[] {
+  const joueur = etat.joueurs[joueurIdx];
+  return CARTES_DECISION.filter(
+    (c) => c.categorie === "commercial" && !joueur.cartesActives.some((a) => a.id === c.id)
+  );
+}
+
+// ─── ÉTAPE 6 : Pioche Décision (hors commerciaux) ───────────
+
+/**
+ * Tire nb cartes de la pioche (les cartes commerciales sont exclues :
+ * elles passent par obtenirCarteRecrutement ci-dessus).
+ */
 export function tirerCartesDecision(etat: EtatJeu, nb: number = 3): CarteDecision[] {
+  // Filtrer les commerciaux de la pioche — ils ont leur propre section
+  etat.piocheDecision = etat.piocheDecision.filter((c) => c.categorie !== "commercial");
+
   const tirees = etat.piocheDecision.splice(0, nb);
+
   if (etat.piocheDecision.length < nb) {
-    // Recharger la pioche si vide (idem : exclure le Junior déjà distribué d'office)
+    // Recharger la pioche si vide (sans les commerciaux)
     etat.piocheDecision.push(
-      ...melangerTableau(CARTES_DECISION.filter((c) => c.id !== "commercial-junior-dec"))
+      ...melangerTableau(CARTES_DECISION.filter((c) => c.categorie !== "commercial"))
     );
   }
   return tirees;

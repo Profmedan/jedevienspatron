@@ -21,6 +21,8 @@ interface MainContentProps {
   selectedDecision: CarteDecision | null;
   setSelectedDecision: (val: CarteDecision | null) => void;
   cartesDisponibles: CarteDecision[];
+  /** Cartes commerciales disponibles au recrutement (toujours dispo, indépendant de la pioche) */
+  cartesRecrutement?: CarteDecision[];
 }
 
 const TABS: Array<[TabType, string]> = [
@@ -61,11 +63,14 @@ export function MainContent({
   selectedDecision,
   setSelectedDecision,
   cartesDisponibles,
+  cartesRecrutement: cartesRecrutementProp,
 }: MainContentProps) {
-  // Séparation des cartes disponibles (sélecteur étape 6)
-  const cartesRecrutement = cartesDisponibles.filter(
-    (c) => c.categorie === "commercial"
-  );
+  // Les cartes de recrutement viennent de la prop dédiée (obtenirCarteRecrutement)
+  // Si non fournie (rétrocompat), on filtre depuis cartesDisponibles
+  const cartesRecrutement = cartesRecrutementProp
+    ?? cartesDisponibles.filter((c) => c.categorie === "commercial");
+
+  // La pioche ne contient plus de commerciaux — uniquement investissements
   const cartesAutres = cartesDisponibles.filter(
     (c) => c.categorie !== "commercial"
   );
@@ -308,48 +313,39 @@ export function MainContent({
       {etapeTour === 6 && showCartes && !activeStep && (
         <div className="space-y-4">
 
-          {/* ── Section Recrutement ─────────────────────────────────── */}
-          {cartesRecrutement.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-px flex-1 bg-indigo-200" />
-                <div className="text-sm font-bold text-indigo-700 uppercase tracking-wider whitespace-nowrap">
-                  🧑‍💼 Recrutement
-                </div>
-                <div className="h-px flex-1 bg-indigo-200" />
+          {/* ── Section Recrutement — TOUJOURS visible à l'étape 6 ─── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-px flex-1 bg-indigo-200" />
+              <div className="text-sm font-bold text-indigo-700 uppercase tracking-wider whitespace-nowrap">
+                🧑‍💼 Recrutement
               </div>
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-2 mb-3 text-xs text-indigo-700 leading-relaxed">
-                💡 <strong>Effet différé :</strong> le recrutement est immédiat mais la prise de poste n'est effective qu'au <strong>trimestre suivant</strong>. Aucune écriture ce trimestre.
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {cartesRecrutement.map((c) => {
-                  const dejaActive = joueur.cartesActives.some((a) => a.id === c.id);
-                  return (
-                    <div key={c.id} className="relative">
-                      <div className={dejaActive ? "opacity-50 pointer-events-none" : ""}>
-                        <CarteView
-                          carte={c}
-                          onClick={() =>
-                            setSelectedDecision(
-                              selectedDecision?.id === c.id ? null : c
-                            )
-                          }
-                          selected={selectedDecision?.id === c.id}
-                        />
-                      </div>
-                      {dejaActive && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                            ✅ Déjà active
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <div className="h-px flex-1 bg-indigo-200" />
             </div>
-          )}
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-2 mb-3 text-xs text-indigo-700 leading-relaxed">
+              💡 <strong>Chaque trimestre, tu peux recruter un nouveau commercial.</strong>{" "}
+              La prise de poste est effective au trimestre suivant — pas d'écriture ce trimestre.
+            </div>
+
+            {cartesRecrutement.length === 0 ? (
+              <div className="text-center py-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 font-semibold">
+                ✅ Tous les commerciaux disponibles sont déjà dans votre équipe !
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {cartesRecrutement.map((c) => (
+                  <CarteView
+                    key={c.id}
+                    carte={c}
+                    onClick={() =>
+                      setSelectedDecision(selectedDecision?.id === c.id ? null : c)
+                    }
+                    selected={selectedDecision?.id === c.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* ── Section Investissements & Décisions ─────────────────── */}
           {cartesAutres.length > 0 && (

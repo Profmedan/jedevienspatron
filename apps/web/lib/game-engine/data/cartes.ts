@@ -24,7 +24,7 @@ export const CARTES_COMMERCIAUX: CarteCommercial[] = [
     coutChargesPersonnel: 2,
     coutTresorerie: 2,
     typeClientRapporte: "tpe",
-    nbClientsParTour: 1, // génère 1 TPE/tour → ventes +3, CMV −1, salary −2 = 0 net (C+1)
+    nbClientsParTour: 2, // génère 2 TPE/tour → ventes +6, CMV −2, salary −2 = +2 net (C+1 × 2 → BFR !)
   },
   {
     type: "commercial",
@@ -33,7 +33,7 @@ export const CARTES_COMMERCIAUX: CarteCommercial[] = [
     coutChargesPersonnel: 3,
     coutTresorerie: 3,
     typeClientRapporte: "grand_compte",
-    nbClientsParTour: 1, // génère 1 Grand Compte/tour → ventes +4, CMV −1, salary −3 = 0 net (C+2)
+    nbClientsParTour: 2, // génère 2 Grand Comptes/tour → ventes +8, CMV −2, salary −3 = +3 net (C+2 × 2 → BFR critique !)
   },
 ];
 
@@ -93,7 +93,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "commercial-senior-dec",
     titre: "Commercial Senior",
-    description: "Recrutez un commercial senior : salaire −2/trim, génère 1 client TPE/trim (+3 ventes en C+1). À l'équilibre sur le résultat, mais attention au BFR.",
+    description: "Recrutez un commercial senior : salaire −2/trim, génère 2 clients TPE/trim (+2×3 ventes en C+1). Résultat net : +2/trim — mais BFR élevé, gérez vos créances !",
     categorie: "commercial",
     effetsImmédiats: [
       { poste: "chargesPersonnel", delta: 2 },
@@ -104,12 +104,13 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "tresorerie", delta: -2 },
     ],
     clientParTour: "tpe",
+    nbClientsParTour: 2,
   },
   {
     type: "decision",
     id: "directrice-commerciale-dec",
     titre: "Directrice Commerciale",
-    description: "Recrutez une directrice commerciale : salaire −3/trim, génère 1 Grand Compte/trim (+4 ventes en C+2). À l'équilibre sur le résultat, fort BFR à anticiper.",
+    description: "Recrutez une directrice commerciale : salaire −3/trim, génère 2 Grands Comptes/trim (+2×4 ventes en C+2). Résultat net : +3/trim — BFR critique, risque de faillite si tréso insuffisante !",
     categorie: "commercial",
     effetsImmédiats: [
       { poste: "chargesPersonnel", delta: 3 },
@@ -120,6 +121,7 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "tresorerie", delta: -3 },
     ],
     clientParTour: "grand_compte",
+    nbClientsParTour: 2,
   },
 
   // ── VÉHICULES ──────────────────────────────────────────────

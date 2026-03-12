@@ -8,7 +8,7 @@ import {
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, tirerCartesDecision, acheterCarteDecision,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
-  ResultatFinTour,
+  obtenirCarteRecrutement, ResultatFinTour,
 } from "@/lib/game-engine/engine";
 import {
   calculerScore, getTresorerie, calculerIndicateurs,
@@ -465,7 +465,8 @@ export default function JeuPage() {
 
   const joueur        = etat.joueurs[etat.joueurActif];
   const displayJoueur = getDisplayJoueur() ?? joueur;
-  const cartesDisponibles = tirerCartesDecision(cloneEtat(etat), 4);
+  const cartesDisponibles  = tirerCartesDecision(cloneEtat(etat), 4);
+  const cartesRecrutement  = obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif);
   const etapeInfo     = ETAPE_INFO[etat.etapeTour];
 
   return (
@@ -541,6 +542,7 @@ export default function JeuPage() {
           selectedDecision={selectedDecision}
           setSelectedDecision={setSelectedDecision}
           cartesDisponibles={cartesDisponibles}
+          cartesRecrutement={cartesRecrutement}
         />
       </div>
     </div>
