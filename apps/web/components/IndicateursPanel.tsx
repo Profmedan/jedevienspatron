@@ -26,32 +26,37 @@ function SIGRow({
     : "pl-4";
 
   return (
-    <div className={`flex items-center justify-between py-1.5 px-3 ${baseClass} ${note ? "cursor-pointer" : ""}`}
-      onClick={() => note && setShowNote(s => !s)}>
-      <div className="flex items-center gap-2 flex-1">
-        {sign && (
-          <span className={`text-xs font-black w-4 text-center ${
-            sign === "=" ? "text-indigo-600" :
-            sign === "−" ? "text-red-500" : "text-green-600"
-          } ${isTotal ? "text-white opacity-70" : ""}`}>{sign}</span>
-        )}
-        <span className={`text-xs ${isTotal ? "font-bold text-white" : isSubtotal ? "font-semibold text-indigo-700" : "text-gray-600"}`}>
-          {label}
-        </span>
-        {note && <span className={`text-xs ${isTotal ? "text-white opacity-60" : "text-gray-300"}`}>ⓘ</span>}
-      </div>
-      <div className={`font-bold text-sm tabular-nums ${
-        isTotal
-          ? (positive ? "text-green-300" : "text-red-300")
-          : isSubtotal
-          ? (positive ? "text-indigo-700" : "text-red-600")
-          : (positive ? "text-gray-700" : "text-red-600")
-      }`}>
-        {value >= 0 ? "+" : ""}{value}
+    <div>
+      <div className={`flex items-center justify-between py-1.5 px-3 ${baseClass} ${note ? "cursor-pointer select-none" : ""}`}
+        onClick={() => note && setShowNote(s => !s)}>
+        <div className="flex items-center gap-2 flex-1">
+          {sign && (
+            <span className={`text-xs font-black w-4 text-center ${
+              sign === "=" ? "text-indigo-600" :
+              sign === "−" ? "text-red-500" : "text-green-600"
+            } ${isTotal ? "text-white opacity-70" : ""}`}>{sign}</span>
+          )}
+          <span className={`text-xs ${isTotal ? "font-bold text-white" : isSubtotal ? "font-semibold text-indigo-700" : "text-gray-600"}`}>
+            {label}
+          </span>
+          {note && (
+            <span className={`text-xs transition-transform ${showNote ? "rotate-0" : ""} ${isTotal ? "text-white opacity-60" : "text-indigo-400"}`}>
+              {showNote ? "▲" : "ⓘ"}
+            </span>
+          )}
+        </div>
+        <div className={`font-bold text-sm tabular-nums ${
+          isTotal
+            ? (positive ? "text-green-300" : "text-red-300")
+            : isSubtotal
+            ? (positive ? "text-indigo-700" : "text-red-600")
+            : (positive ? "text-gray-700" : "text-red-600")
+        }`}>
+          {value >= 0 ? "+" : ""}{value}
+        </div>
       </div>
       {showNote && note && (
-        <div className="absolute z-50 bg-white border border-indigo-200 rounded-xl shadow-xl p-3 text-xs text-gray-600 max-w-xs leading-relaxed mt-1"
-          style={{ top: "100%", left: 0 }}>
+        <div className="mx-2 mb-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-800 leading-relaxed">
           {note}
         </div>
       )}
