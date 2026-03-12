@@ -12,8 +12,8 @@ const TOOLTIPS: Record<string, { definition: string; exemple: string; couleur: s
     couleur: "#dfa66a",
   },
   stocks: {
-    definition: "Marchandises achetées mais pas encore vendues. Augmentent à l'achat, diminuent à la vente (CMV).",
-    exemple: "Ex : Tu achètes 4 unités → Stocks = 4. Tu en vends 2 → Stocks = 2, CMV = 2.",
+    definition: "Marchandises achetées mais pas encore vendues. Augmentent à l'achat, diminuent à la vente (le coût des marchandises vendues est comptabilisé en charge).",
+    exemple: "Ex : Tu achètes 4 unités → Stocks = 4. Tu en vends 2 → Stocks = 2, coût des ventes = 2.",
     couleur: "#d992b4",
   },
   tresorerie: {
@@ -22,8 +22,8 @@ const TOOLTIPS: Record<string, { definition: string; exemple: string; couleur: s
     couleur: "#6bc5a0",
   },
   creances: {
-    definition: "Créances clients : ventes effectuées mais pas encore encaissées. C+1 sera payé au tour prochain, C+2 dans deux tours.",
-    exemple: "Ex : Vente Grand Compte = +3 Ventes +3 Créances C+2 (payé dans 2 tours).",
+    definition: "Argent que vos clients vous doivent mais n'ont pas encore payé. 'Dans 1 trimestre' sera encaissé au tour suivant, 'dans 2 trimestres' dans deux tours.",
+    exemple: "Ex : Vente Grand Compte = +3 Ventes +3 Créances (encaissé dans 2 trimestres).",
     couleur: "#7ba7d4",
   },
   capitaux: {
@@ -85,11 +85,15 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted }: {
 function SectionHeader({ label }: { label: string }) {
   return <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mt-3 mb-1 px-1">{label}</div>;
 }
-function Total({ label, value }: { label: string; value: number }) {
+function Total({ label, value, isActif }: { label: string; value: number; isActif?: boolean }) {
   return (
-    <div className="flex justify-between items-center px-2 py-1.5 border-t border-gray-200 mt-2 font-bold text-base">
-      <span>{label}</span>
-      <span className={value < 0 ? "text-red-600" : "text-indigo-700"}>{value}</span>
+    <div className={`flex justify-between items-center px-3 py-2 rounded-lg mt-3 font-bold text-base border-t-2 ${
+      isActif
+        ? "bg-blue-50 border-blue-300 text-blue-900"
+        : "bg-orange-50 border-orange-300 text-orange-900"
+    }`}>
+      <span className="text-sm">{label}</span>
+      <span className={`text-xl font-black tabular-nums ${value < 0 ? "text-red-600" : ""}`}>{value}</span>
     </div>
   );
 }
@@ -111,14 +115,34 @@ export default function BilanPanel({ joueur, highlightedPoste }: Props) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-gray-800 tracking-wide">📋 BILAN</h3>
-        <span className="text-xs text-gray-400 italic">Passez la souris sur un poste pour l'explication ⓘ</span>
+        <span className="text-xs text-gray-400 italic">Passez la souris sur un poste ⓘ</span>
+      </div>
+
+      {/* ── Équation du bilan en haut — règle d'or ── */}
+      <div className={`mb-4 rounded-2xl p-3 border-2 ${equilibre ? "border-indigo-200 bg-gradient-to-r from-blue-50 via-white to-orange-50" : "border-red-300 bg-red-50"}`}>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-blue-100 rounded-xl py-2">
+            <div className="font-black text-2xl text-blue-700 tabular-nums">{totalActif}</div>
+            <div className="text-xs text-blue-500 font-bold uppercase tracking-wider mt-0.5">ACTIF</div>
+          </div>
+          <div className="flex items-center justify-center">
+            <span className="font-black text-2xl text-indigo-400">=</span>
+          </div>
+          <div className="bg-orange-100 rounded-xl py-2">
+            <div className="font-black text-2xl text-orange-700 tabular-nums">{totalPassif}</div>
+            <div className="text-xs text-orange-500 font-bold uppercase tracking-wider mt-0.5">PASSIF</div>
+          </div>
+        </div>
+        <div className={`mt-2 text-center text-xs font-bold py-1 rounded-lg ${equilibre ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>
+          {equilibre ? "✅ Bilan équilibré — règle d'or de la comptabilité" : `⚠️ Déséquilibre : écart ${(totalActif - totalPassif).toFixed(1)}`}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         {/* ACTIF */}
         <div>
           <div className="text-center text-xs font-bold text-blue-600 mb-2 uppercase tracking-widest border-b border-blue-100 pb-1">
-            📤 ACTIF — Emplois
+            ACTIF · Ce que vous possédez
           </div>
           <SectionHeader label="Investissements durables" />
           {immobilisations.map(a => <TooltipPoste key={a.nom} label={a.nom} value={a.valeur} color={TOOLTIPS.immobilisations.couleur} categorie="immobilisations" sub highlighted={highlightedPoste === "immobilisations"} />)}
@@ -127,19 +151,19 @@ export default function BilanPanel({ joueur, highlightedPoste }: Props) {
           {(joueur.bilan.creancesPlus1 > 0 || joueur.bilan.creancesPlus2 > 0) && (
             <>
               <SectionHeader label="Créances clients" />
-              {joueur.bilan.creancesPlus1 > 0 && <TooltipPoste label="Créances C+1" value={joueur.bilan.creancesPlus1} color={TOOLTIPS.creances.couleur} categorie="creances" sub highlighted={highlightedPoste === "creancesPlus1"} />}
-              {joueur.bilan.creancesPlus2 > 0 && <TooltipPoste label="Créances C+2" value={joueur.bilan.creancesPlus2} color={TOOLTIPS.creances.couleur} categorie="creances" sub highlighted={highlightedPoste === "creancesPlus2"} />}
+              {joueur.bilan.creancesPlus1 > 0 && <TooltipPoste label="Argent à recevoir (dans 1 trim.)" value={joueur.bilan.creancesPlus1} color={TOOLTIPS.creances.couleur} categorie="creances" sub highlighted={highlightedPoste === "creancesPlus1"} />}
+              {joueur.bilan.creancesPlus2 > 0 && <TooltipPoste label="Argent à recevoir (dans 2 trim.)" value={joueur.bilan.creancesPlus2} color={TOOLTIPS.creances.couleur} categorie="creances" sub highlighted={highlightedPoste === "creancesPlus2"} />}
             </>
           )}
           <SectionHeader label="Trésorerie" />
           {tresorerie && <TooltipPoste label="Trésorerie" value={tresorerie.valeur} color={TOOLTIPS.tresorerie.couleur} categorie="tresorerie" sub highlighted={highlightedPoste === "tresorerie"} />}
-          <Total label="Total Actif" value={totalActif} />
+          <Total label="Total Actif" value={totalActif} isActif />
         </div>
 
         {/* PASSIF */}
         <div>
           <div className="text-center text-xs font-bold text-orange-600 mb-2 uppercase tracking-widest border-b border-orange-100 pb-1">
-            📥 PASSIF — Ressources
+            PASSIF · D&apos;où vient le financement
           </div>
           <SectionHeader label="Capitaux propres" />
           {capitaux.map(p => <TooltipPoste key={p.nom} label={p.nom} value={p.valeur} color={TOOLTIPS.capitaux.couleur} categorie="capitaux" sub highlighted={highlightedPoste === "capitaux"} />)}
@@ -159,29 +183,26 @@ export default function BilanPanel({ joueur, highlightedPoste }: Props) {
           )}
           {joueur.bilan.decouvert > 0 && (
             <>
-              <SectionHeader label="⚠️ Découvert bancaire" />
-              <TooltipPoste label="Découvert bancaire" value={joueur.bilan.decouvert} color={TOOLTIPS.decouvert.couleur} categorie="decouvert" sub highlighted={highlightedPoste === "decouvert"} />
+              <SectionHeader label={joueur.bilan.decouvert > 5 ? "🔴 DÉCOUVERT BANCAIRE — FAILLITE !" : "⚠️ Découvert bancaire"} />
+              <div className={`px-3 py-2 rounded-lg border-2 mb-1 ${
+                joueur.bilan.decouvert > 5
+                  ? "bg-red-100 border-red-600 animate-pulse"
+                  : "bg-orange-50 border-orange-400"
+              }`}>
+                <TooltipPoste label="Découvert bancaire" value={joueur.bilan.decouvert} color={TOOLTIPS.decouvert.couleur} categorie="decouvert" sub highlighted={highlightedPoste === "decouvert"} />
+                <div className={`text-xs mt-1 font-semibold ${joueur.bilan.decouvert > 5 ? "text-red-700" : "text-orange-700"}`}>
+                  {joueur.bilan.decouvert > 5
+                    ? "🚨 Découvert > 5 : faillite si non régularisé !"
+                    : "Remboursez ce découvert au tour suivant."}
+                </div>
+              </div>
             </>
           )}
-          <Total label="Total Passif" value={totalPassif} />
+          <Total label="Total Passif" value={totalPassif} isActif={false} />
         </div>
       </div>
 
-      {/* Equation */}
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="bg-blue-50 rounded-lg py-2">
-          <div className="font-bold text-blue-700 text-base">{totalActif}</div>
-          <div className="text-blue-400">ACTIF</div>
-        </div>
-        <div className="flex items-center justify-center font-bold text-gray-400 text-lg">=</div>
-        <div className="bg-orange-50 rounded-lg py-2">
-          <div className="font-bold text-orange-700 text-base">{totalPassif}</div>
-          <div className="text-orange-400">PASSIF</div>
-        </div>
-      </div>
-      <div className={`mt-2 text-center text-xs font-bold py-1 rounded-lg ${equilibre ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-        {equilibre ? "✅ Bilan équilibré (Actif = Passif)" : `⚠️ Déséquilibre : écart ${(totalActif - totalPassif).toFixed(1)}`}
-      </div>
+      {/* Équation déplacée en haut du panneau — cf. bloc au-dessus du grid */}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Joueur, CarteDecision } from "@/lib/game-engine/types";
 import EtapeGuide from "@/components/EtapeGuide";
 import CarteView from "@/components/CarteView";
 import { EntryPanel, type ActiveStep } from "./EntryPanel";
+import { nomCompte, getDocument } from "./utils";
 
 interface JournalEntry {
   id: number;
@@ -237,25 +238,38 @@ export function LeftPanel({
                         : "border-purple-200 bg-purple-50 text-purple-800";
                   const delaiLabel =
                     client.delaiPaiement === 0
-                      ? "💵 Paiement immédiat"
+                      ? "💵 Encaissé immédiatement"
                       : client.delaiPaiement === 1
-                        ? "⏰ Paiement C+1"
-                        : "⏰⏰ Paiement C+2";
+                        ? "⏰ Encaissé dans 1 trimestre"
+                        : "⏰⏰ Encaissé dans 2 trimestres";
+
+                  const delaiExplication =
+                    client.delaiPaiement === 0
+                      ? "L'argent arrive directement en trésorerie."
+                      : client.delaiPaiement === 1
+                        ? "L'argent sera encaissé au trimestre prochain."
+                        : "L'argent sera encaissé dans 2 trimestres.";
 
                   return (
                     <div
                       key={i}
-                      className={`rounded-xl border-2 p-2.5 flex items-center justify-between mb-1.5 ${colorCls}`}
+                      className={`rounded-xl border-2 overflow-hidden mb-1.5 ${colorCls}`}
                     >
-                      <div>
+                      {/* Titre + montant */}
+                      <div className="px-2.5 pt-2 pb-1 flex items-center justify-between">
                         <div className="font-bold text-sm">{client.titre}</div>
-                        <div className="text-xs opacity-75">
-                          {delaiLabel} · 4 écritures
+                        <div className="text-right">
+                          <div className="font-bold text-lg">+{client.montantVentes}</div>
+                          <div className="text-[10px] opacity-60 font-medium -mt-0.5">chiffre d&apos;affaires</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-xl">+{client.montantVentes}</div>
-                        <div className="text-xs opacity-60 font-medium">de CA</div>
+                      {/* Timing + explication */}
+                      <div className="px-2.5 pb-2 space-y-0.5">
+                        <div className="text-xs font-semibold">{delaiLabel}</div>
+                        <div className="text-xs opacity-65 leading-snug">{delaiExplication}</div>
+                        <div className="text-[10px] opacity-50 mt-0.5 pt-0.5 border-t border-current border-opacity-20">
+                          Génère 4 écritures : Ventes ↑ · Stocks ↓ · Coût des ventes ↑ · Trésorerie ou Créance ↑
+                        </div>
                       </div>
                     </div>
                   );
@@ -300,20 +314,28 @@ export function LeftPanel({
                   <div className="text-gray-500 text-xs">{e.titre}</div>
                   {e.entries
                     .filter((en) => en.applied !== false || e.entries.length === 0)
-                    .map((en, i) => (
-                      <div
-                        key={i}
-                        className={`flex justify-between text-xs ${
-                          en.delta > 0 ? "text-blue-600" : "text-orange-600"
-                        }`}
-                      >
-                        <span>{en.poste}</span>
-                        <span>
-                          {en.delta > 0 ? "+" : ""}
-                          {en.delta}
-                        </span>
-                      </div>
-                    ))}
+                    .map((en, i) => {
+                      const doc = getDocument(en.poste);
+                      return (
+                        <div
+                          key={i}
+                          className={`flex items-center justify-between text-xs gap-2 ${
+                            en.delta > 0 ? "text-blue-600" : "text-orange-600"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="truncate">{nomCompte(en.poste)}</span>
+                            <span className={`shrink-0 text-[9px] font-semibold px-1 py-0.5 rounded-full ${doc.badge}`}>
+                              {doc.detail || doc.label}
+                            </span>
+                          </div>
+                          <span className="shrink-0 font-bold">
+                            {en.delta > 0 ? "+" : ""}
+                            {en.delta}
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               ))
             )}

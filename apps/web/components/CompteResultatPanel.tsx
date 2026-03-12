@@ -37,45 +37,55 @@ export default function CompteResultatPanel({ joueur, highlightedPoste }: Props)
       <h3 className="font-bold text-center text-gray-800 mb-3 tracking-wide">📈 COMPTE DE RÉSULTAT</h3>
       <div className="grid grid-cols-2 gap-4">
         {/* CHARGES */}
-        <div>
-          <div className="text-center text-sm font-bold text-red-400 mb-2 uppercase tracking-widest">Charges</div>
-          <Row label="Achats (CMV)" value={charges.achats} color="var(--color-charges)" highlighted={highlightedPoste === "achats"} />
+        <div className="bg-red-50 rounded-xl p-3 border-l-4 border-red-400">
+          <div className="text-center text-sm font-black text-red-600 mb-2 uppercase tracking-widest">− Charges</div>
+          <Row label="Coût des marchandises vendues" value={charges.achats} color="var(--color-charges)" highlighted={highlightedPoste === "achats"} />
           {charges.achats !== 0 && (
-            <NoteEcritureEquilibre texte="Le CMV (Coût des Marchandises Vendues) est calculé à partir de vos achats et de la variation de stock. C'est une écriture de régularisation qui permet de n'imputer en charges que ce qui a réellement été vendu." />
+            <NoteEcritureEquilibre texte="Le Coût des Marchandises Vendues (CMV) représente le coût réel des produits que vous avez vendus ce trimestre. Il diminue vos stocks et s'enregistre en charge : chaque vente a un coût." />
           )}
           <Row label="Services extérieurs" value={charges.servicesExterieurs} color="var(--color-charges)" highlighted={highlightedPoste === "servicesExterieurs"} />
           <Row label="Impôts & taxes" value={charges.impotsTaxes} color="var(--color-charges)" highlighted={highlightedPoste === "impotsTaxes"} />
           <Row label="Charges d'intérêt" value={charges.chargesInteret} color="var(--color-charges)" highlighted={highlightedPoste === "chargesInteret"} />
           <Row label="Charges de personnel" value={charges.chargesPersonnel} color="var(--color-charges)" highlighted={highlightedPoste === "chargesPersonnel"} />
           <Row label="Charges exceptionnelles" value={charges.chargesExceptionnelles} color="var(--color-charges)" highlighted={highlightedPoste === "chargesExceptionnelles"} />
-          <Row label="Dotations amortissements" value={charges.dotationsAmortissements} color="var(--color-charges)" highlighted={highlightedPoste === "dotationsAmortissements"} />
+          <Row label="Amortissements des immobilisations" value={charges.dotationsAmortissements} color="var(--color-charges)" highlighted={highlightedPoste === "dotationsAmortissements"} />
           {charges.dotationsAmortissements !== 0 && (
-            <NoteEcritureEquilibre texte="Les dotations aux amortissements ne correspondent à aucun décaissement réel. Ce sont des charges calculées qui constatent la perte de valeur des immobilisations dans le temps. Elles réduisent le résultat sans affecter la trésorerie." />
+            <NoteEcritureEquilibre texte="L'amortissement constate l'usure de vos équipements (machines, véhicules…). C'est une charge comptable, mais aucun argent ne sort de votre compte bancaire : la trésorerie n'est pas touchée." />
           )}
-          <div className="flex justify-between px-2 py-1.5 border-t border-gray-200 mt-2 font-bold">
-            <span>Total charges</span>
-            <span className="text-red-600">{totalCharges}</span>
+          <div className="flex justify-between px-2 py-2 border-t-2 border-red-300 mt-2 font-bold bg-red-100 rounded-lg">
+            <span className="text-sm text-red-900">Total charges</span>
+            <span className="text-lg font-black text-red-700 tabular-nums">{totalCharges}</span>
           </div>
         </div>
 
         {/* PRODUITS */}
-        <div>
-          <div className="text-center text-sm font-bold text-green-500 mb-2 uppercase tracking-widest">Produits</div>
+        <div className="bg-green-50 rounded-xl p-3 border-l-4 border-green-400">
+          <div className="text-center text-sm font-black text-green-600 mb-2 uppercase tracking-widest">+ Produits</div>
           <Row label="Ventes" value={produits.ventes} color="var(--color-produits)" highlighted={highlightedPoste === "ventes"} />
-          <Row label="Production stockée" value={produits.productionStockee} color="var(--color-produits)" highlighted={highlightedPoste === "productionStockee"} />
+          <Row label="Production non encore vendue (stockée)" value={produits.productionStockee} color="var(--color-produits)" highlighted={highlightedPoste === "productionStockee"} />
           <Row label="Produits financiers" value={produits.produitsFinanciers} color="var(--color-produits)" highlighted={highlightedPoste === "produitsFinanciers"} />
           <Row label="Revenus exceptionnels" value={produits.revenusExceptionnels} color="var(--color-produits)" highlighted={highlightedPoste === "revenusExceptionnels"} />
-          <div className="flex justify-between px-2 py-1.5 border-t border-gray-200 mt-2 font-bold">
-            <span>Total produits</span>
-            <span className="text-green-600">{totalProduits}</span>
+          <div className="flex justify-between px-2 py-2 border-t-2 border-green-300 mt-2 font-bold bg-green-100 rounded-lg">
+            <span className="text-sm text-green-900">Total produits</span>
+            <span className="text-lg font-black text-green-700 tabular-nums">{totalProduits}</span>
           </div>
         </div>
       </div>
 
       {/* Résultat net */}
-      <div className={`mt-3 flex justify-between items-center px-4 py-2 rounded-xl font-bold text-base ${resultat >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-        <span>{resultat >= 0 ? "✅ Bénéfice" : "⚠️ Perte"}</span>
-        <span className="text-lg">{resultat >= 0 ? "+" : ""}{resultat}</span>
+      <div className={`mt-4 rounded-xl font-bold border-2 overflow-hidden ${resultat >= 0 ? "border-green-400" : "border-red-400"}`}>
+        <div className={`flex justify-between items-center px-4 py-3 ${resultat >= 0 ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+          <div>
+            <div className="text-base font-black">{resultat >= 0 ? "✅ BÉNÉFICE" : "❌ PERTE"}</div>
+            <div className="text-xs font-normal opacity-80 mt-0.5">Produits − Charges = Résultat net</div>
+          </div>
+          <span className="text-3xl font-black tabular-nums ml-4">{resultat >= 0 ? "+" : ""}{resultat}</span>
+        </div>
+        <div className={`px-4 py-2 text-xs ${resultat >= 0 ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
+          {resultat >= 0
+            ? "Vos produits dépassent vos charges → les capitaux propres augmentent."
+            : "Vos charges dépassent vos produits → les capitaux propres diminuent."}
+        </div>
       </div>
     </div>
   );

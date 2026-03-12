@@ -23,8 +23,8 @@ const ETAPES: Array<{ titre: string; icon: string; description: string; conseil:
   {
     titre: "Avancement des créances",
     icon: "⏩",
-    description: "Les créances mûrissent : C+2 → C+1 → Trésorerie. Le moteur l'applique automatiquement.",
-    conseil: "💡 Une vente à C+2 n'est encaissée que 2 tours plus tard. Anticipez votre trésorerie !",
+    description: "Les clients qui payaient dans 2 trimestres passent à 1 trimestre, et ceux à 1 trimestre sont encaissés maintenant. Le moteur l'applique automatiquement.",
+    conseil: "💡 Si un client paie dans 2 trimestres, l'argent n'arrive en banque que 2 tours plus tard. Pensez à anticiper vos besoins de trésorerie !",
   },
   {
     titre: "Paiement des commerciaux",
@@ -35,8 +35,8 @@ const ETAPES: Array<{ titre: string; icon: string; description: string; conseil:
   {
     titre: "Cartes Client",
     icon: "🤝",
-    description: "Traitez les clients apportés par vos commerciaux. Chaque vente génère 4 écritures comptables : Ventes+, Stocks−, CMV+, et Tréso/Créances selon le délai.",
-    conseil: "💡 4 écritures pour une vente : produit → capitaux propres. C'est le principe de la partie double !",
+    description: "Traitez les clients apportés par vos commerciaux. Chaque vente génère 4 écritures : Ventes ↑ (revenu), Stocks ↓ (marchandises vendues), Coût des ventes ↑ (dépense), et Trésorerie ou Créance ↑ selon le délai de paiement.",
+    conseil: "💡 4 écritures pour 1 vente : chaque entrée d'argent a une contrepartie. C'est le principe de la partie double — chaque euro vient de quelque part et va quelque part !",
   },
   {
     titre: "Effets récurrents",

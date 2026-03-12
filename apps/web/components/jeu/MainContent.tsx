@@ -177,11 +177,11 @@ export function MainContent({
             <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
               <strong>Aucun commercial actif.</strong> Recrutez via une{" "}
               <span className="text-indigo-600 font-bold">Carte Décision</span> à
-              l&apos;étape 6 🎯 : Junior (+2 Particuliers/trim), Senior (+1
-              TPE/trim), Directrice (+1 Grand Compte/trim).
+              l&apos;étape 6 🎯 : Junior (1 client particulier/trim),
+              Senior (1 client TPE/trim), Directrice (1 grand compte/trim).
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {cartesCommerciales.map((c) => {
                 const icon =
                   c.clientParTour === "particulier"
@@ -189,32 +189,91 @@ export function MainContent({
                     : c.clientParTour === "tpe"
                       ? "🏠"
                       : "🏢";
-                const nb = c.nbClientsParTour ?? 1;
-                const col =
-                  c.clientParTour === "particulier"
-                    ? "bg-green-50 border-green-200 text-green-800"
-                    : c.clientParTour === "tpe"
-                      ? "bg-blue-50 border-blue-200 text-blue-800"
-                      : "bg-purple-50 border-purple-200 text-purple-800";
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const nb = (c as any).nbClientsParTour ?? 1;
                 const typeLabel =
                   c.clientParTour === "particulier"
-                    ? "Particulier"
+                    ? "client particulier"
                     : c.clientParTour === "tpe"
-                      ? "TPE"
-                      : "Grand Compte";
+                      ? "client TPE"
+                      : "grand compte";
+                const typeLabelPluriel =
+                  c.clientParTour === "particulier"
+                    ? "clients particuliers"
+                    : c.clientParTour === "tpe"
+                      ? "clients TPE"
+                      : "grands comptes";
                 const montant = MONTANT_PAR_TYPE[c.clientParTour ?? ""] ?? 1;
+                const caTotal = montant * nb;
+
+                // Extraire les coûts récurrents depuis effetsRecurrents
+                const coutCharges = (c.effetsRecurrents ?? [])
+                  .filter((e) => e.poste === "chargesPersonnel")
+                  .reduce((sum, e) => sum + e.delta, 0);
+                const coutTreso = (c.effetsRecurrents ?? [])
+                  .filter((e) => e.poste === "tresorerie")
+                  .reduce((sum, e) => sum + e.delta, 0);
+
+                // Couleur du header selon type de client
+                const headerBg =
+                  c.clientParTour === "particulier"
+                    ? "bg-green-600"
+                    : c.clientParTour === "tpe"
+                      ? "bg-blue-600"
+                      : "bg-purple-600";
+                const borderCol =
+                  c.clientParTour === "particulier"
+                    ? "border-green-300"
+                    : c.clientParTour === "tpe"
+                      ? "border-blue-300"
+                      : "border-purple-300";
+
                 return (
                   <div
                     key={c.id}
-                    className={`border-2 rounded-xl px-3 py-2.5 flex flex-col gap-1 min-w-[110px] ${col}`}
+                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-white min-w-[160px] shadow-sm`}
                   >
-                    <div className="font-bold text-sm leading-tight">{c.titre}</div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-lg">{Array(nb).fill(icon).join("")}</span>
-                      <div className="text-xs font-semibold leading-tight">
-                        <span className="font-black">{nb}×</span> {typeLabel}
-                        <br />
-                        <span className="opacity-70">+{montant * nb} CA / trim</span>
+                    {/* ── En-tête : titre du commercial ── */}
+                    <div className={`${headerBg} text-white px-3 py-2 flex items-center gap-1.5`}>
+                      <span className="text-base">🧑‍💼</span>
+                      <span className="font-bold text-sm leading-tight">{c.titre}</span>
+                    </div>
+
+                    {/* ── Coûts par trimestre (rouge) ── */}
+                    <div className="px-3 py-2 border-b border-red-100 bg-red-50">
+                      <div className="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">
+                        💸 Coût / trimestre
+                      </div>
+                      <div className="space-y-0.5">
+                        {coutCharges > 0 && (
+                          <div className="text-xs text-red-600 flex items-center gap-1">
+                            <span className="font-bold">↑</span>
+                            <span>+{coutCharges} charges personnel</span>
+                          </div>
+                        )}
+                        {coutTreso < 0 && (
+                          <div className="text-xs text-red-600 flex items-center gap-1">
+                            <span className="font-bold">↓</span>
+                            <span>{coutTreso} trésorerie</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ── Bénéfices par trimestre (vert) ── */}
+                    <div className="px-3 py-2 bg-green-50">
+                      <div className="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1">
+                        📈 Revenu / trimestre
+                      </div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-sm">{Array(nb).fill(icon).join("")}</span>
+                        <span className="text-xs text-green-700 font-semibold">
+                          +{nb} {nb > 1 ? typeLabelPluriel : typeLabel}
+                        </span>
+                      </div>
+                      <div className="text-xs text-green-800 font-bold flex items-center gap-1">
+                        <span className="text-green-500">→</span>
+                        <span>+{caTotal} de chiffre d&apos;affaires</span>
                       </div>
                     </div>
                   </div>

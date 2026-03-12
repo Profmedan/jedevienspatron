@@ -163,10 +163,10 @@ export default function IndicateursPanel({ joueur }: Props) {
   const sig = calculerSIG(joueur);
 
   const tabs: Array<[Tab, string]> = [
-    ["sig",         "📊 SIG"],
+    ["sig",         "📊 Formation du résultat"],
     ["rentabilite", "💹 Rentabilité"],
-    ["structure",   "🏗️ Structure"],
-    ["ratios",      "⏱️ Ratios"],
+    ["structure",   "🏗️ Structure financière"],
+    ["ratios",      "⏱️ Ratios de gestion"],
   ];
 
   return (
@@ -175,11 +175,13 @@ export default function IndicateursPanel({ joueur }: Props) {
         <h3 className="font-bold text-center text-gray-800 mb-1 tracking-wide">📊 INDICATEURS FINANCIERS</h3>
         <p className="text-center text-xs text-gray-400 mb-3">Clique sur un indicateur pour son explication détaillée ⓘ</p>
         {/* Onglets */}
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="flex gap-1 overflow-x-auto border-b border-gray-200 pb-0">
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-                tab === t ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              className={`text-xs font-bold px-3 py-2 rounded-t-lg whitespace-nowrap transition-all border-b-2 ${
+                tab === t
+                  ? "bg-indigo-50 text-indigo-700 border-indigo-600 shadow-sm"
+                  : "text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-700"
               }`}>
               {label}
             </button>
@@ -191,8 +193,9 @@ export default function IndicateursPanel({ joueur }: Props) {
         {/* ── ONGLET SIG ─────────────────────────────────────────────── */}
         {tab === "sig" && (
           <div className="space-y-0.5">
-            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">
-              Formation du résultat (Soldes Intermédiaires de Gestion)
+            <div className="mb-2">
+              <div className="text-xs font-bold text-gray-600 uppercase tracking-wider">Comment se forme votre résultat ?</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">Soldes Intermédiaires de Gestion (SIG) — cliquez sur chaque ligne ⓘ</div>
             </div>
 
             <SIGRow label="Chiffre d'affaires" value={sig.chiffreAffaires} sign="=" isSubtotal
@@ -245,9 +248,19 @@ export default function IndicateursPanel({ joueur }: Props) {
 
             {/* Rappel pédagogique */}
             <div className="mt-3 bg-indigo-50 rounded-xl p-3 text-xs text-indigo-700 leading-relaxed">
-              <strong>📚 À retenir :</strong> VA → EBE → Résultat exploitation → RCAI → Résultat net.
-              Chaque étape enlève une couche de charges. L'EBE est l'indicateur préféré des banquiers car il
-              mesure la capacité à générer du cash <em>avant</em> financement.
+              <strong>📚 À retenir — la cascade du résultat :</strong>
+              <div className="mt-1.5 space-y-0.5 font-mono text-[10px]">
+                <div>Valeur Ajoutée (VA)</div>
+                <div className="opacity-60 pl-2">↓ − charges de personnel, impôts</div>
+                <div>Excédent Brut d&apos;Exploitation (EBE)</div>
+                <div className="opacity-60 pl-2">↓ − amortissements des équipements</div>
+                <div>Résultat d&apos;exploitation</div>
+                <div className="opacity-60 pl-2">↓ ± intérêts d&apos;emprunt</div>
+                <div>Résultat Courant Avant Impôt (RCAI)</div>
+                <div className="opacity-60 pl-2">↓ ± exceptionnel</div>
+                <div className="font-bold">Résultat net</div>
+              </div>
+              <div className="mt-2 opacity-80">L&apos;EBE est l&apos;indicateur préféré des banques : il mesure la capacité à générer du cash <em>avant</em> financement et amortissements.</div>
             </div>
           </div>
         )}
@@ -483,29 +496,59 @@ export default function IndicateursPanel({ joueur }: Props) {
               Rotation stocks = Stocks × 360 / CMV.
             </div>
 
-            {/* Récap des 8 indicateurs essentiels */}
+            {/* Récap des 8 indicateurs essentiels — groupés par catégorie */}
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
                 🎓 Les 8 indicateurs essentiels à maîtriser
               </div>
-              <div className="grid grid-cols-1 gap-1.5">
-                {[
-                  ["1️⃣", "Valeur Ajoutée", sig.valeurAjoutee, ""],
-                  ["2️⃣", "EBE", sig.ebe, ""],
-                  ["3️⃣", "Résultat d'exploitation", sig.resultatExploitation, ""],
-                  ["4️⃣", "Résultat net", sig.resultatNet, ""],
-                  ["5️⃣", "Fonds de Roulement", ind.fondsDeRoulement, ""],
-                  ["6️⃣", "BFR", ind.besoinFondsRoulement, ""],
-                  ["7️⃣", "Trésorerie Nette", ind.tresorerieNette, ""],
-                  ["8️⃣", "Rentabilité financière (ROE)", parseFloat(sig.roe.toFixed(1)), "%"],
-                ].map(([num, label, val, unit]) => (
-                  <div key={label as string} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">{num} {label}</span>
-                    <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
-                      {(val as number) >= 0 ? "+" : ""}{val}{unit}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {/* Groupe 1 : Résultats */}
+                <div className="bg-indigo-50 rounded-lg p-2 border border-indigo-100">
+                  <div className="text-xs font-bold text-indigo-600 mb-1.5">📊 Résultats</div>
+                  {[
+                    ["1️⃣", "Valeur Ajoutée (VA)", sig.valeurAjoutee, ""],
+                    ["2️⃣", "Excédent Brut d'Exploitation (EBE)", sig.ebe, ""],
+                    ["3️⃣", "Résultat d'exploitation", sig.resultatExploitation, ""],
+                    ["4️⃣", "Résultat net", sig.resultatNet, ""],
+                  ].map(([num, label, val, unit]) => (
+                    <div key={label as string} className="flex items-center justify-between py-0.5">
+                      <span className="text-xs text-gray-600">{num} {label}</span>
+                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {(val as number) >= 0 ? "+" : ""}{val}{unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* Groupe 2 : Structure */}
+                <div className="bg-orange-50 rounded-lg p-2 border border-orange-100">
+                  <div className="text-xs font-bold text-orange-600 mb-1.5">🏗️ Structure</div>
+                  {[
+                    ["5️⃣", "Fonds de Roulement (FR)", ind.fondsDeRoulement, ""],
+                    ["6️⃣", "Besoin en Fonds de Roulement (BFR)", ind.besoinFondsRoulement, ""],
+                  ].map(([num, label, val, unit]) => (
+                    <div key={label as string} className="flex items-center justify-between py-0.5">
+                      <span className="text-xs text-gray-600">{num} {label}</span>
+                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {(val as number) >= 0 ? "+" : ""}{val}{unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* Groupe 3 : Trésorerie & Rentabilité */}
+                <div className="bg-green-50 rounded-lg p-2 border border-green-100">
+                  <div className="text-xs font-bold text-green-600 mb-1.5">💰 Trésorerie & Rentabilité</div>
+                  {[
+                    ["7️⃣", "Trésorerie Nette", ind.tresorerieNette, ""],
+                    ["8️⃣", "Rentabilité financière (ROE)", parseFloat(sig.roe.toFixed(1)), "%"],
+                  ].map(([num, label, val, unit]) => (
+                    <div key={label as string} className="flex items-center justify-between py-0.5">
+                      <span className="text-xs text-gray-600">{num} {label}</span>
+                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {(val as number) >= 0 ? "+" : ""}{val}{unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
