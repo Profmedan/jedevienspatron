@@ -41,11 +41,11 @@ export function HeaderJeu({
       </div>
 
       {/* Progression au centre */}
-      <div className="text-xs text-indigo-200 hidden sm:block text-center flex-1">
-        <div>
+      <div className="hidden sm:flex flex-col items-center flex-1 gap-1">
+        <div className="bg-white/20 rounded-full px-3 py-0.5 text-xs font-bold text-white tracking-wide">
           Trimestre {tourActuel}/{nbToursMax} · Étape {etapeTour + 1}/9
         </div>
-        <div className="text-indigo-100 text-xs mt-0.5">{etapeTitle}</div>
+        <div className="text-base font-bold text-white leading-tight">{etapeTitle}</div>
       </div>
 
       {/* Joueurs actifs */}
