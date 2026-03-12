@@ -253,7 +253,10 @@ export function LeftPanel({
                           {delaiLabel} · 4 écritures
                         </div>
                       </div>
-                      <div className="font-bold text-xl">+{client.montantVentes}</div>
+                      <div className="text-right">
+                        <div className="font-bold text-xl">+{client.montantVentes}</div>
+                        <div className="text-xs opacity-60 font-medium">de CA</div>
+                      </div>
                     </div>
                   );
                 })}
