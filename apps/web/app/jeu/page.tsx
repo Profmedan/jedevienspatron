@@ -202,7 +202,8 @@ export default function JeuPage() {
     if (ACTIF_KEYS.includes(poste) || PASSIF_KEYS.includes(poste)) setActiveTab("bilan");
     else if (CHARGES_KEYS.includes(poste) || PRODUITS_KEYS.includes(poste)) setActiveTab("cr");
     setHighlightedPoste(poste);
-    setTimeout(() => setHighlightedPoste(null), 2000);
+    // Durée augmentée à 4s pour laisser l'étudiant bien voir la modification
+    setTimeout(() => setHighlightedPoste(null), 4000);
   }
 
   // ─ Démarrer une partie ────────────────────────────────────────────────────
@@ -258,6 +259,8 @@ export default function JeuPage() {
     avancerEtape(next);
     setEtat({ ...next });
     setActiveStep(null);
+    // Effacer les modifications une fois l'étape validée (elles ont persisté pendant toute la saisie)
+    setRecentModifications([]);
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -306,8 +309,7 @@ export default function JeuPage() {
     setRecentModifications(modsFiltrees.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    // Effacer après 4 secondes (laisse le temps de voir l'étape + confirmer)
-    setTimeout(() => setRecentModifications([]), 4000);
+    // NB: recentModifications est effacé dans confirmActiveStep (persiste tant que la saisie est active)
 
     setActiveStep(buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture));
   }

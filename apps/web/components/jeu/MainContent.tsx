@@ -42,6 +42,31 @@ const MONTANT_PAR_TYPE: Record<string, number> = {
   grand_compte: 4,
 };
 
+/** Labels lisibles pour les postes du moteur */
+const POSTE_LABELS: Record<string, string> = {
+  tresorerie: "Trésorerie",
+  stocks: "Stocks",
+  immobilisations: "Immobilisations",
+  creancesPlus1: "Créances (1 trim.)",
+  creancesPlus2: "Créances (2 trim.)",
+  capitaux: "Capitaux propres",
+  emprunts: "Emprunts",
+  dettes: "Dettes fournisseurs",
+  dettesFiscales: "Dettes fiscales",
+  decouvert: "Découvert",
+  ventes: "Ventes",
+  achats: "Coût marchandises",
+  servicesExterieurs: "Services ext.",
+  impotsTaxes: "Impôts & taxes",
+  chargesInteret: "Charges intérêt",
+  chargesPersonnel: "Charges personnel",
+  chargesExceptionnelles: "Ch. exceptionnelles",
+  dotationsAmortissements: "Amortissements",
+  productionStockee: "Production stockée",
+  produitsFinanciers: "Produits financiers",
+  revenusExceptionnels: "Revenus except.",
+};
+
 /**
  * Contenu principal : affichage du bilan, CR, indicateurs, cartes actives et sélecteur de cartes.
  *
@@ -146,8 +171,43 @@ export function MainContent({
       </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 3. Contenu de l'onglet actif                      */}
+      {/* 3. Bandeau modifications + Contenu de l'onglet    */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+
+      {/* ── Bandeau récapitulatif des modifications (persistant pendant la saisie) ── */}
+      {activeStep && recentModifications && recentModifications.length > 0 && (
+        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-2.5">
+          <div className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1.5 flex items-center gap-1.5">
+            <span className="inline-block animate-pulse">🔄</span>
+            Modifications de cette étape
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {recentModifications.map((mod) => {
+              const delta = mod.nouvelleValeur - mod.ancienneValeur;
+              const up = delta > 0;
+              return (
+                <span
+                  key={mod.poste}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                    up
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                      : "bg-red-100 text-red-800 border-red-300"
+                  }`}
+                >
+                  <span>{POSTE_LABELS[mod.poste] ?? mod.poste}</span>
+                  <span className="opacity-60 line-through text-[10px] tabular-nums">{mod.ancienneValeur}</span>
+                  <span className="text-[10px]">→</span>
+                  <span className="font-black tabular-nums">{mod.nouvelleValeur}</span>
+                  <span className={`text-[10px] font-bold ml-0.5 ${up ? "text-emerald-600" : "text-red-600"}`}>
+                    ({up ? "+" : ""}{delta})
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div>
         {activeTab === "bilan" && (
           <BilanPanel
@@ -161,6 +221,7 @@ export function MainContent({
             joueur={displayJoueur}
             highlightedPoste={highlightedPoste}
             etapeTour={etapeTour}
+            hasActiveStep={!!activeStep}
             recentModifications={recentModifications}
           />
         )}

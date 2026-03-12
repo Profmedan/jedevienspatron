@@ -9,6 +9,8 @@ interface Props {
   highlightedPoste?: string | null;
   /** Étape du tour (0=début, 1-7=en cours, 8=fin) */
   etapeTour?: number;
+  /** Vrai si une étape de saisie est en cours (activeStep !== null) */
+  hasActiveStep?: boolean;
   /** Modifications récentes (avant/après) à afficher dans les lignes */
   recentModifications?: RecentMod[];
 }
@@ -89,6 +91,7 @@ export default function CompteResultatPanel({
   joueur,
   highlightedPoste,
   etapeTour,
+  hasActiveStep,
   recentModifications,
 }: Props) {
   const { charges, produits } = joueur.compteResultat;
@@ -96,9 +99,12 @@ export default function CompteResultatPanel({
   const totalProduits = getTotalProduits(produits);
   const resultat = getResultatNet(joueur);
 
-  // Résultat provisoire si saisie en cours (étape 1 à 7)
+  // Résultat provisoire si saisie en cours (activeStep !== null dans le parent)
+  // NB: etapeTour=0 correspond aux charges fixes (step 0), donc on ne peut pas se fier
+  // uniquement à etapeTour >= 1. On utilise hasActiveStep comme signal principal.
   const isProvisoire =
-    etapeTour !== undefined && etapeTour >= 1 && etapeTour <= 7;
+    hasActiveStep === true ||
+    (etapeTour !== undefined && etapeTour >= 1 && etapeTour <= 7);
 
   return (
     <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
