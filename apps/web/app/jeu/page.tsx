@@ -108,6 +108,9 @@ export default function JeuPage() {
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
   const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs">("bilan");
   const [highlightedPoste, setHighlightedPoste] = useState<string | null>(null);
+  const [recentModifications, setRecentModifications] = useState<Array<{
+    poste: string; ancienneValeur: number; nouvelleValeur: number;
+  }>>([]);
   const [achatQte, setAchatQte]           = useState(2);
   const [achatMode, setAchatMode]         = useState<"tresorerie" | "dettes">("tresorerie");
   const [selectedDecision, setSelectedDecision] = useState<CarteDecision | null>(null);
@@ -298,6 +301,14 @@ export default function JeuPage() {
       case 8: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
       default: break;
     }
+    // Stocker les modifications pour affichage avant/après dans les panneaux
+    const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
+    setRecentModifications(modsFiltrees.map(m => ({
+      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
+    })));
+    // Effacer après 4 secondes (laisse le temps de voir l'étape + confirmer)
+    setTimeout(() => setRecentModifications([]), 4000);
+
     setActiveStep(buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture));
   }
 
@@ -543,6 +554,7 @@ export default function JeuPage() {
           setSelectedDecision={setSelectedDecision}
           cartesDisponibles={cartesDisponibles}
           cartesRecrutement={cartesRecrutement}
+          recentModifications={recentModifications}
         />
       </div>
     </div>

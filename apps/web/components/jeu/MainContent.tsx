@@ -23,6 +23,8 @@ interface MainContentProps {
   cartesDisponibles: CarteDecision[];
   /** Cartes commerciales disponibles au recrutement (toujours dispo, indépendant de la pioche) */
   cartesRecrutement?: CarteDecision[];
+  /** Modifications récentes (avant/après) pour affichage dans les panneaux */
+  recentModifications?: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
 }
 
 const TABS: Array<[TabType, string]> = [
@@ -64,6 +66,7 @@ export function MainContent({
   setSelectedDecision,
   cartesDisponibles,
   cartesRecrutement: cartesRecrutementProp,
+  recentModifications,
 }: MainContentProps) {
   // Les cartes de recrutement viennent de la prop dédiée (obtenirCarteRecrutement)
   // Si non fournie (rétrocompat), on filtre depuis cartesDisponibles
@@ -147,12 +150,18 @@ export function MainContent({
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div>
         {activeTab === "bilan" && (
-          <BilanPanel joueur={displayJoueur} highlightedPoste={highlightedPoste} />
+          <BilanPanel
+            joueur={displayJoueur}
+            highlightedPoste={highlightedPoste}
+            recentModifications={recentModifications}
+          />
         )}
         {activeTab === "cr" && (
           <CompteResultatPanel
             joueur={displayJoueur}
             highlightedPoste={highlightedPoste}
+            etapeTour={etapeTour}
+            recentModifications={recentModifications}
           />
         )}
         {activeTab === "indicateurs" && (
