@@ -62,13 +62,17 @@ export function MainContent({
   setSelectedDecision,
   cartesDisponibles,
 }: MainContentProps) {
-  // Séparation des cartes disponibles
+  // Séparation des cartes disponibles (sélecteur étape 6)
   const cartesRecrutement = cartesDisponibles.filter(
     (c) => c.categorie === "commercial"
   );
   const cartesAutres = cartesDisponibles.filter(
     (c) => c.categorie !== "commercial"
   );
+
+  // Séparation des cartes ACTIVES (déjà achetées)
+  const cartesCommerciales = joueur.cartesActives.filter((c) => c.clientParTour);
+  const cartesAutresActives = joueur.cartesActives.filter((c) => !c.clientParTour);
 
   return (
     <main className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -152,172 +156,92 @@ export function MainContent({
       </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 4. Portefeuille Commerciaux & Clients              */}
+      {/* 4. Cartes actives : Commerciaux + Investissements  */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {(() => {
-        const sources = joueur.cartesActives.filter((c) => c.clientParTour);
-        const clientsEnAttente = joueur.clientsATrait;
-
-        return (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* En-tête */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                👥 Commerciaux & Clients
-              </div>
-              {clientsEnAttente.length > 0 && (
-                <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2 py-0.5 rounded-full">
-                  ⏳ {clientsEnAttente.length} client
-                  {clientsEnAttente.length > 1 ? "s" : ""} à traiter
-                </span>
-              )}
-            </div>
-
-            <div className="p-3">
-              {sources.length === 0 ? (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
-                  <strong>Aucun commercial actif !</strong> Vous obtenez{" "}
-                  <strong>0 client par trimestre</strong>. Recrutez via une{" "}
-                  <span className="text-indigo-600 font-bold">Carte Décision</span> à
-                  l&apos;étape 6 🎯 : Junior (+2 Particuliers/trim), Senior (+1
-                  TPE/trim), Directrice (+1 Grand Compte/trim).
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {sources.map((c) => {
-                    const icon =
-                      c.clientParTour === "particulier"
-                        ? "👤"
-                        : c.clientParTour === "tpe"
-                          ? "🏠"
-                          : "🏢";
-                    const nb = c.nbClientsParTour ?? 1;
-                    const col =
-                      c.clientParTour === "particulier"
-                        ? "bg-green-50 border-green-200 text-green-800"
-                        : c.clientParTour === "tpe"
-                          ? "bg-blue-50 border-blue-200 text-blue-800"
-                          : "bg-purple-50 border-purple-200 text-purple-800";
-                    const typeLabel =
-                      c.clientParTour === "particulier"
-                        ? "Particulier"
-                        : c.clientParTour === "tpe"
-                          ? "TPE"
-                          : "Grand Compte";
-                    const montant = MONTANT_PAR_TYPE[c.clientParTour ?? ""] ?? 1;
-
-                    return (
-                      <div
-                        key={c.id}
-                        className={`border-2 rounded-xl px-3 py-2.5 flex flex-col gap-1 min-w-[100px] ${col}`}
-                      >
-                        <div className="text-xs font-bold uppercase tracking-wide opacity-60">
-                          🧑‍💼 Commercial
-                        </div>
-                        <div className="font-bold text-sm leading-tight">{c.titre}</div>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-xl">
-                            {Array(nb).fill(icon).join("")}
-                          </span>
-                          <div className="text-xs font-semibold leading-tight">
-                            <span className="font-black text-base">{nb}×</span>{" "}
-                            {typeLabel}
-                            <br />
-                            <span className="opacity-70">
-                              +{montant * nb} CA / trim
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* File d'attente clients ce trimestre */}
-              {clientsEnAttente.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                    📋 File clients ce trimestre (étape 4)
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {clientsEnAttente.map((c, i) => {
-                      const colCl =
-                        c.delaiPaiement === 0
-                          ? "bg-green-50 border-green-300 text-green-800"
-                          : c.delaiPaiement === 1
-                            ? "bg-blue-50 border-blue-300 text-blue-800"
-                            : "bg-purple-50 border-purple-300 text-purple-800";
-                      const ic =
-                        c.id === "client-particulier"
-                          ? "👤"
-                          : c.id === "client-tpe"
-                            ? "🏠"
-                            : "🏢";
-                      const dl =
-                        c.delaiPaiement === 0
-                          ? "💵 immédiat"
-                          : c.delaiPaiement === 1
-                            ? "⏰ C+1"
-                            : "⏰⏰ C+2";
-
-                      return (
-                        <div
-                          key={i}
-                          className={`border-2 rounded-xl px-3 py-2 flex flex-col items-center gap-0.5 text-xs font-semibold ${colCl}`}
-                        >
-                          <span className="text-2xl">{ic}</span>
-                          <span>{c.titre}</span>
-                          <span className="font-black text-base">
-                            +{c.montantVentes}{" "}
-                            <span className="text-xs font-normal opacity-70">CA</span>
-                          </span>
-                          <span className="opacity-70 text-center">{dl}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 5. Cartes actives                                  */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {joueur.cartesActives.length > 0 && (
-        <div>
-          <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">
-            🎴 Cartes actives
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {joueur.cartesActives.map((c) => (
-              <div key={c.id}>
-                <CarteView carte={c} compact />
-                {c.clientParTour && (
-                  <div
-                    className={`mt-1 text-xs text-center rounded-lg py-0.5 px-1 font-semibold ${
-                      c.clientParTour === "particulier"
-                        ? "bg-green-100 text-green-700"
-                        : c.clientParTour === "tpe"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-purple-100 text-purple-700"
-                    }`}
-                  >
-                    {c.clientParTour === "particulier"
-                      ? "→ 👤 Particulier/tour"
-                      : c.clientParTour === "tpe"
-                        ? "→ 🏠 TPE/tour"
-                        : "→ 🏢 Grand Compte/tour"}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      <div className="space-y-3">
+        <div className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+          🎴 Cartes actives
         </div>
-      )}
+
+        {/* ── Sous-section Commerciaux ─────────────────────────── */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-px flex-1 bg-indigo-100" />
+            <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider whitespace-nowrap">
+              🧑‍💼 Commerciaux
+            </div>
+            <div className="h-px flex-1 bg-indigo-100" />
+          </div>
+
+          {cartesCommerciales.length === 0 ? (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
+              <strong>Aucun commercial actif.</strong> Recrutez via une{" "}
+              <span className="text-indigo-600 font-bold">Carte Décision</span> à
+              l&apos;étape 6 🎯 : Junior (+2 Particuliers/trim), Senior (+1
+              TPE/trim), Directrice (+1 Grand Compte/trim).
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {cartesCommerciales.map((c) => {
+                const icon =
+                  c.clientParTour === "particulier"
+                    ? "👤"
+                    : c.clientParTour === "tpe"
+                      ? "🏠"
+                      : "🏢";
+                const nb = c.nbClientsParTour ?? 1;
+                const col =
+                  c.clientParTour === "particulier"
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : c.clientParTour === "tpe"
+                      ? "bg-blue-50 border-blue-200 text-blue-800"
+                      : "bg-purple-50 border-purple-200 text-purple-800";
+                const typeLabel =
+                  c.clientParTour === "particulier"
+                    ? "Particulier"
+                    : c.clientParTour === "tpe"
+                      ? "TPE"
+                      : "Grand Compte";
+                const montant = MONTANT_PAR_TYPE[c.clientParTour ?? ""] ?? 1;
+                return (
+                  <div
+                    key={c.id}
+                    className={`border-2 rounded-xl px-3 py-2.5 flex flex-col gap-1 min-w-[110px] ${col}`}
+                  >
+                    <div className="font-bold text-sm leading-tight">{c.titre}</div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-lg">{Array(nb).fill(icon).join("")}</span>
+                      <div className="text-xs font-semibold leading-tight">
+                        <span className="font-black">{nb}×</span> {typeLabel}
+                        <br />
+                        <span className="opacity-70">+{montant * nb} CA / trim</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ── Sous-section Investissements & Décisions ─────────── */}
+        {cartesAutresActives.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-px flex-1 bg-gray-100" />
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                📋 Investissements & Décisions
+              </div>
+              <div className="h-px flex-1 bg-gray-100" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {cartesAutresActives.map((c) => (
+                <CarteView key={c.id} carte={c} compact />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* 6. Sélecteur de cartes Décision (étape 6)          */}
