@@ -192,11 +192,16 @@ export function creerJoueur(
     },
     bilan,
     compteResultat: creerCompteResultatVierge(),
-    // 1 Commercial Junior pré-embauché dès le départ :
-    // → montre dès T1 que recruter génère des clients et des charges de personnel.
-    // → le joueur peut ensuite recruter Senior / Directrice via l'étape 6a.
-    cartesActives: [CARTES_DECISION.find((c) => c.id === "commercial-junior-dec")!],
-    clientsATrait: [],
+    // Aucun commercial pré-embauché : les 3 niveaux (Junior/Senior/Directrice)
+    // restent visibles et recrutables dès le T1 via l'étape 6a.
+    cartesActives: [],
+    // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
+    // quelques clients avant le début du jeu — le joueur voit immédiatement
+    // une vente et son écriture sans attendre d'avoir recruté un commercial.
+    clientsATrait: (() => {
+      const cp = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
+      return cp ? [cp, cp] : [];
+    })(),
     elimine: false,
     publicitéCeTour: false,
   };
