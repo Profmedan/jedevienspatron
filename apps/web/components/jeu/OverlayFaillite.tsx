@@ -21,7 +21,7 @@ export function OverlayFaillite({
 }: OverlayFailliteProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-900/85 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
         {/* En-tête dramatique */}
         <div className="bg-gradient-to-br from-red-600 to-red-700 px-6 py-5 text-white text-center">
           <div className="text-5xl mb-2 animate-bounce">💥</div>
@@ -36,12 +36,12 @@ export function OverlayFaillite({
         {/* Corps */}
         <div className="px-6 py-5 space-y-3">
           {/* Raison */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800 leading-relaxed">
+          <div className="bg-red-950/30 border border-red-700/50 rounded-xl p-3 text-sm text-red-300 leading-relaxed">
             <strong>🚨 Raison :</strong> {raison}
           </div>
 
           {/* Leçon comptable */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 leading-relaxed">
+          <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-3 text-sm text-amber-300 leading-relaxed">
             <strong>📚 Leçon comptable :</strong> Une entreprise est en faillite quand
             elle ne peut plus faire face à ses décaissements. Un découvert bancaire
             excessif, des capitaux propres négatifs ou un surendettement conduisent
@@ -49,7 +49,7 @@ export function OverlayFaillite({
           </div>
 
           {/* Conseil */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 leading-relaxed">
+          <div className="bg-blue-950/30 border border-blue-700/50 rounded-xl p-3 text-sm text-blue-200 leading-relaxed">
             <strong>💡 Prochain essai :</strong> Surveille ton Fonds de Roulement et
             ta Trésorerie nette. N&apos;investis jamais plus que ce que tes revenus
             peuvent absorber.
@@ -67,7 +67,7 @@ export function OverlayFaillite({
           {canContinue && (
             <button
               onClick={onContinue}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-xl text-sm transition-all"
+              className="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold py-2 rounded-xl text-sm transition-all"
             >
               ▶️ Continuer à regarder la partie
             </button>

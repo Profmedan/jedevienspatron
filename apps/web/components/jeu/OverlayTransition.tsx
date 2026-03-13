@@ -109,7 +109,7 @@ export function OverlayTransition({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-indigo-900/80 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden">
         {/* En-tête coloré */}
         <div
           className={`px-6 py-4 text-white text-center ${
@@ -134,7 +134,7 @@ export function OverlayTransition({
         </div>
 
         {/* Onglets */}
-        <div className="flex border-b border-gray-200 bg-gray-50 px-4 gap-0.5 overflow-x-auto shrink-0">
+        <div className="flex border-b border-gray-700 bg-gray-800 px-4 gap-0.5 overflow-x-auto shrink-0">
           {(
             [
               ["analyse", "📊 Analyse"],
@@ -148,8 +148,8 @@ export function OverlayTransition({
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
                 activeTab === tab
-                  ? "border-indigo-600 text-indigo-700 bg-white"
-                  : "border-transparent text-gray-500 hover:text-indigo-600 hover:border-indigo-300"
+                  ? "border-indigo-500 text-indigo-300 bg-gray-900"
+                  : "border-transparent text-gray-400 hover:text-indigo-400 hover:border-indigo-600"
               }`}
             >
               {label}
@@ -163,47 +163,47 @@ export function OverlayTransition({
             <div className="space-y-3">
               {/* Message contextuel */}
               {estClotureFiscale ? (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm text-purple-800 leading-relaxed">
+                <div className="bg-purple-950/30 border border-purple-700/50 rounded-xl p-3 text-sm text-purple-200 leading-relaxed">
                   <strong>🏁 Clôture de l&apos;exercice fiscal :</strong> Le résultat net
                   a été intégré aux Capitaux propres. Le Compte de résultat repart à zéro.
                 </div>
               ) : (
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-800 leading-relaxed">
+                <div className="bg-indigo-950/30 border border-indigo-700/50 rounded-xl p-3 text-sm text-indigo-200 leading-relaxed">
                   <strong>📅 Fin du Trimestre {transitionInfo.from} :</strong> Le Compte
                   de résultat continue à s&apos;accumuler.
                 </div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 leading-relaxed">
+              <div className="bg-blue-950/30 border border-blue-700/50 rounded-xl p-3 text-sm text-blue-200 leading-relaxed">
                 <strong>🎯 Ce trimestre :</strong> Vous pouvez choisir une nouvelle{" "}
                 <strong>Carte Décision</strong>.
               </div>
 
               {/* Analyse financière */}
-              <div className="border-t border-gray-100 pt-3 space-y-3">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              <div className="border-t border-gray-700 pt-3 space-y-3">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                   📊 Analyse de votre situation
                 </div>
                 {joueurs.map((j) => {
                   const analyse = analyserSituationFinanciere(j);
                   const colors = {
-                    rouge: "bg-red-50 border-red-200 text-red-800",
-                    jaune: "bg-amber-50 border-amber-200 text-amber-800",
-                    vert: "bg-green-50 border-green-200 text-green-800",
+                    rouge: "bg-red-950/30 border-red-700/50 text-red-300",
+                    jaune: "bg-amber-950/30 border-amber-700/50 text-amber-300",
+                    vert: "bg-emerald-950/30 border-emerald-700/50 text-emerald-300",
                   };
 
                   return (
                     <div
                       key={j.id}
-                      className="rounded-xl overflow-hidden border border-gray-100"
+                      className="rounded-xl overflow-hidden border border-gray-700"
                     >
-                      <div className="bg-indigo-50 px-3 py-2 flex items-center gap-2">
+                      <div className="bg-indigo-950/40 px-3 py-2 flex items-center gap-2">
                         <span>{j.entreprise.icon}</span>
-                        <span className="font-bold text-indigo-900 text-sm">
+                        <span className="font-bold text-indigo-200 text-sm">
                           {j.pseudo}
                         </span>
                         {j.elimine && (
-                          <span className="ml-auto text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                          <span className="ml-auto text-xs bg-red-900/50 text-red-300 px-2 py-0.5 rounded-full">
                             💀 Faillite
                           </span>
                         )}
@@ -239,7 +239,7 @@ export function OverlayTransition({
         </div>
 
         {/* Bouton démarrer */}
-        <div className="px-6 py-4 border-t border-gray-100 shrink-0">
+        <div className="px-6 py-4 border-t border-gray-700 shrink-0">
           <button
             onClick={onContinue}
             className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-3 rounded-xl text-lg shadow-sm transition-all active:scale-95"

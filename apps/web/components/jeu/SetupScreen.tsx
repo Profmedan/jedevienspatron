@@ -49,7 +49,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
     new Set(active.map((p) => p.entreprise)).size === nbJoueurs;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-100">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-gray-950">
       {/* Retour */}
       <Link
         href="/"
@@ -59,8 +59,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       </Link>
 
       {/* Titre */}
-      <h2 className="text-3xl font-bold text-indigo-900 mb-2">🎮 Configuration</h2>
-      <p className="text-indigo-500 mb-8 text-sm">
+      <h2 className="text-3xl font-bold text-indigo-200 mb-2">🎮 Configuration</h2>
+      <p className="text-gray-500 mb-8 text-sm">
         Choisis le nombre de joueurs et configure ton entreprise
       </p>
 
@@ -73,13 +73,13 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             className={`w-12 h-12 rounded-xl font-bold text-lg transition-all ${
               nbJoueurs === n
                 ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg scale-110"
-                : "bg-white text-indigo-600 border-2 border-indigo-200 hover:border-indigo-400"
+                : "bg-gray-800 text-indigo-300 border-2 border-gray-600 hover:border-indigo-500 hover:bg-gray-700"
             }`}
           >
             {n}
           </button>
         ))}
-        <span className="text-indigo-400 text-sm ml-2">
+        <span className="text-gray-500 text-sm ml-2">
           joueur{nbJoueurs > 1 ? "s" : ""}
         </span>
       </div>
@@ -91,7 +91,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
           return (
             <div
               key={i}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 hover:shadow-md transition-shadow"
+              className="bg-gray-900 rounded-2xl p-4 border border-gray-700 hover:border-indigo-700 transition-colors"
             >
               {/* Pseudo input */}
               <div className="flex items-center gap-2 mb-3">
@@ -99,7 +99,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 <input
                   value={players[i].pseudo}
                   onChange={(e) => update(i, "pseudo", e.target.value)}
-                  className="flex-1 border-b-2 border-indigo-200 focus:border-indigo-500 outline-none px-1 py-0.5 font-bold text-gray-800 placeholder-gray-300"
+                  className="flex-1 border-b-2 border-gray-600 focus:border-indigo-500 outline-none px-1 py-0.5 font-bold text-gray-100 placeholder-gray-600 bg-transparent transition-colors"
                   placeholder="Ton prénom ou pseudo"
                   maxLength={20}
                   aria-label={`Pseudo du joueur ${i + 1}`}
@@ -112,7 +112,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 onChange={(e) =>
                   update(i, "entreprise", e.target.value as NomEntreprise)
                 }
-                className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full border border-gray-600 bg-gray-800 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 aria-label={`Entreprise du joueur ${i + 1}`}
               >
                 {allEntreprises.map((nom) => (
@@ -133,7 +133,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
               </select>
 
               {/* Info entreprise */}
-              <div className="mt-2 text-xs text-indigo-400">
+              <div className="mt-2 text-xs text-gray-500">
                 {ent.specialite} · <strong>{ent.type}</strong>
               </div>
             </div>
@@ -143,7 +143,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
       {/* Choix du nombre de trimestres */}
       <div className="flex gap-3 mb-8 items-center flex-wrap justify-center">
-        <span className="text-indigo-400 text-sm font-medium">
+        <span className="text-gray-500 text-sm font-medium">
           Durée de la partie :
         </span>
         {[4, 6, 8].map((n) => (
@@ -153,7 +153,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
               nbTours === n
                 ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg scale-105"
-                : "bg-white text-indigo-600 border-2 border-indigo-200 hover:border-indigo-400"
+                : "bg-gray-800 text-indigo-300 border-2 border-gray-600 hover:border-indigo-500 hover:bg-gray-700"
             }`}
           >
             <div>{n} trimestres</div>

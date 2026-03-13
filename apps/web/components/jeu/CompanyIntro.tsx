@@ -46,50 +46,50 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const steps = [
     /* ── Étape 0 : D'où vient l'argent ── */
     <div key={0} className="space-y-4">
-      <h3 className="font-bold text-indigo-900 text-lg">📥 D&apos;où vient l&apos;argent de départ ?</h3>
-      <p className="text-gray-600 text-sm leading-relaxed">
+      <h3 className="font-bold text-indigo-200 text-lg">📥 D&apos;où vient l&apos;argent de départ ?</h3>
+      <p className="text-gray-300 text-sm leading-relaxed">
         Toute entreprise naît grâce à des <strong>RESSOURCES</strong> : l&apos;argent
         investi par les propriétaires (<em>capitaux propres</em>) et/ou des emprunts
         bancaires. C&apos;est la colonne <strong>PASSIF</strong> du bilan.
       </p>
-      <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4">
-        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-3">
+      <div className="bg-orange-950/20 border border-orange-800/50 rounded-xl p-4">
+        <div className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-3">
           📥 RESSOURCES (Passif) — Qui finance ?
         </div>
         <div className="space-y-2">
           {capitaux && (
-            <div className="flex justify-between items-center bg-white rounded-lg p-2 border border-orange-100 hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-orange-900/40">
               <div>
                 <div className="font-medium text-sm">{capitaux.nom}</div>
                 <div className="text-xs text-gray-400">
                   Apport des associés — ressource permanente, ne se rembourse pas
                 </div>
               </div>
-              <span className="font-bold text-orange-700 text-lg">
+              <span className="font-bold text-orange-400 text-lg">
                 {capitaux.valeur}
               </span>
             </div>
           )}
           {emprunts && (
-            <div className="flex justify-between items-center bg-white rounded-lg p-2 border border-orange-100 hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-orange-900/40">
               <div>
                 <div className="font-medium text-sm">{emprunts.nom}</div>
                 <div className="text-xs text-gray-400">
                   Financement bancaire — remboursement de −1 par trimestre pendant {emprunts.valeur} trimestres
                 </div>
               </div>
-              <span className="font-bold text-orange-700 text-lg">
+              <span className="font-bold text-orange-400 text-lg">
                 {emprunts.valeur}
               </span>
             </div>
           )}
-          <div className="flex justify-between items-center bg-orange-100 rounded-lg p-2 font-bold text-orange-800">
+          <div className="flex justify-between items-center bg-orange-900/40 rounded-lg p-2 font-bold text-orange-200">
             <span>TOTAL RESSOURCES (Passif)</span>
             <span className="text-lg">{totalPassif}</span>
           </div>
         </div>
       </div>
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+      <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-3 text-xs text-amber-300 leading-relaxed">
         <span className="font-bold">💡 Pourquoi emprunter ?</span> Les emprunts ont permis d&apos;acheter
         les équipements productifs ({totalImmos} d&apos;immobilisations). Sans ces outils,
         pas de production ni de ventes possibles !
@@ -98,16 +98,16 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
     /* ── Étape 1 : Comment cet argent est utilisé ── */
     <div key={1} className="space-y-4">
-      <h3 className="font-bold text-indigo-900 text-lg">
+      <h3 className="font-bold text-indigo-200 text-lg">
         📤 Comment cet argent a-t-il été utilisé ?
       </h3>
-      <p className="text-gray-600 text-sm leading-relaxed">
+      <p className="text-gray-300 text-sm leading-relaxed">
         Avec ces ressources, l&apos;entreprise a acheté des <strong>EMPLOIS</strong> :
         biens durables (immobilisations), marchandises (stocks) et liquidités (trésorerie).
         C&apos;est la colonne <strong>ACTIF</strong> du bilan.
       </p>
-      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4">
-        <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
+      <div className="bg-blue-950/20 border border-blue-800/50 rounded-xl p-4">
+        <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
           📤 EMPLOIS (Actif) — À quoi sert l&apos;argent ?
         </div>
         <div className="space-y-2">
@@ -122,7 +122,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                 return (
                   <div
                     key={a.nom}
-                    className="flex justify-between items-center bg-white rounded-lg p-2 border border-blue-100 hover:shadow-sm transition-shadow"
+                    className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40"
                   >
                     <div>
                       <div className="font-medium text-sm">
@@ -131,13 +131,13 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                       <div className="text-xs text-gray-400">
                         {info?.description ?? "Investissement durable"}
                         {info && info.duree > 0 && (
-                          <span className="ml-1 text-amber-600 font-medium">
+                          <span className="ml-1 text-amber-400 font-medium">
                             · durée de vie : {info.duree} trimestres
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className="font-bold text-blue-700">{a.valeur}</span>
+                    <span className="font-bold text-blue-400">{a.valeur}</span>
                   </div>
                 );
               })}
@@ -152,13 +152,13 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               {stocks.map((a) => (
                 <div
                   key={a.nom}
-                  className="flex justify-between items-center bg-white rounded-lg p-2 border border-blue-100 hover:shadow-sm transition-shadow"
+                  className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40"
                 >
                   <div>
                     <div className="font-medium text-sm">📦 {a.nom}</div>
                     <div className="text-xs text-gray-400">Marchandises prêtes à être vendues ou transformées</div>
                   </div>
-                  <span className="font-bold text-blue-700">{a.valeur}</span>
+                  <span className="font-bold text-blue-400">{a.valeur}</span>
                 </div>
               ))}
             </>
@@ -169,16 +169,16 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2 mb-1">
                 💰 Trésorerie
               </div>
-              <div className="flex justify-between items-center bg-white rounded-lg p-2 border border-blue-100 hover:shadow-sm transition-shadow">
+              <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40">
                 <div>
                   <div className="font-medium text-sm">💰 {tresorerie.nom}</div>
                   <div className="text-xs text-gray-400">Liquidités disponibles pour payer les charges</div>
                 </div>
-                <span className="font-bold text-blue-700">{tresorerie.valeur}</span>
+                <span className="font-bold text-blue-400">{tresorerie.valeur}</span>
               </div>
             </>
           )}
-          <div className="flex justify-between items-center bg-blue-100 rounded-lg p-2 font-bold text-blue-800 mt-2">
+          <div className="flex justify-between items-center bg-blue-900/40 rounded-lg p-2 font-bold text-blue-200 mt-2">
             <span>TOTAL EMPLOIS (Actif)</span>
             <span className="text-lg">{totalActif}</span>
           </div>
@@ -188,30 +188,30 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
     /* ── Étape 2 : L'équilibre fondamental ── */
     <div key={2} className="space-y-4">
-      <h3 className="font-bold text-indigo-900 text-lg">
+      <h3 className="font-bold text-indigo-200 text-lg">
         ⚖️ L&apos;équilibre fondamental
       </h3>
-      <p className="text-gray-600 text-sm leading-relaxed">
+      <p className="text-gray-300 text-sm leading-relaxed">
         En comptabilité, le bilan est <strong>toujours équilibré</strong> : ACTIF =
         PASSIF. C&apos;est une loi mathématique maintenue grâce à la{" "}
         <strong>partie double</strong> — chaque opération affecte au moins deux postes.
       </p>
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-blue-700">{totalActif}</div>
-          <div className="text-sm font-bold text-blue-600 mt-1">TOTAL ACTIF</div>
+        <div className="bg-blue-950/30 border-2 border-blue-700 rounded-xl p-4 text-center">
+          <div className="text-3xl font-bold text-blue-400">{totalActif}</div>
+          <div className="text-sm font-bold text-blue-400 mt-1">TOTAL ACTIF</div>
           <div className="text-xs text-gray-400">(Emplois)</div>
         </div>
-        <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-orange-700">{totalPassif}</div>
-          <div className="text-sm font-bold text-orange-600 mt-1">TOTAL PASSIF</div>
+        <div className="bg-orange-950/30 border-2 border-orange-700 rounded-xl p-4 text-center">
+          <div className="text-3xl font-bold text-orange-300">{totalPassif}</div>
+          <div className="text-sm font-bold text-orange-400 mt-1">TOTAL PASSIF</div>
           <div className="text-xs text-gray-400">(Ressources)</div>
         </div>
       </div>
       <div
         className={`rounded-xl p-4 text-center font-bold text-lg transition-all ${
           totalActif === totalPassif
-            ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-2 border-green-300"
+            ? "bg-gradient-to-r bg-emerald-950/40 text-emerald-300 border-2 border-emerald-700"
             : "bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-2 border-red-300"
         }`}
       >
@@ -219,7 +219,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           ? "✅ ACTIF = PASSIF — Le bilan est équilibré !"
           : "⚠️ Déséquilibre !"}
       </div>
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-3 text-xs text-indigo-800 leading-relaxed border border-indigo-100 space-y-2">
+      <div className="bg-indigo-950/30 rounded-xl p-3 text-xs text-indigo-200 leading-relaxed border border-indigo-800/50 space-y-2">
         <p>
           <strong>🔄 Principe de la partie double :</strong> toute écriture comptable
           touche au moins deux comptes en sens opposés (débit ↔ crédit).
@@ -236,43 +236,43 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
     /* ── Étape 3 : Les amortissements ── */
     <div key={3} className="space-y-4">
-      <h3 className="font-bold text-indigo-900 text-lg">
+      <h3 className="font-bold text-indigo-200 text-lg">
         📉 Que sont les amortissements ?
       </h3>
-      <p className="text-gray-600 text-sm leading-relaxed">
+      <p className="text-gray-300 text-sm leading-relaxed">
         Chaque trimestre, tes immobilisations <strong>perdent de la valeur</strong> :
         une usine s&apos;use, un brevet expire, un ordinateur vieillit. On enregistre
         cette usure par une <strong>dotation aux amortissements</strong> (PCG, compte 681).
       </p>
 
       {/* Schéma visuel partie double */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-        <div className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 text-center">
+      <div className="bg-gray-800 border border-gray-600 rounded-xl p-4">
+        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
           ✍️ Écriture comptable chaque trimestre
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <div className="font-black text-red-700 text-base">DÉBIT</div>
-            <div className="text-xs text-red-600 mt-1 font-medium">681 — Dotation</div>
+          <div className="bg-red-950/30 border border-red-800/50 rounded-lg p-3 text-center">
+            <div className="font-black text-red-300 text-base">DÉBIT</div>
+            <div className="text-xs text-red-400 mt-1 font-medium">681 — Dotation</div>
             <div className="text-xs text-gray-500 mt-1">Charge au Compte de Résultat</div>
-            <div className="text-xl font-black text-red-700 mt-2">+{immos.length}</div>
+            <div className="text-xl font-black text-red-300 mt-2">+{immos.length}</div>
             <div className="text-xs text-gray-400">({immos.length} bien(s) × −1)</div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-            <div className="font-black text-blue-700 text-base">CRÉDIT</div>
-            <div className="text-xs text-blue-600 mt-1 font-medium">28x — Amort. immos</div>
+          <div className="bg-blue-950/30 border border-blue-800/50 rounded-lg p-3 text-center">
+            <div className="font-black text-blue-300 text-base">CRÉDIT</div>
+            <div className="text-xs text-blue-400 mt-1 font-medium">28x — Amort. immos</div>
             <div className="text-xs text-gray-500 mt-1">Valeur nette du Bilan</div>
-            <div className="text-xl font-black text-blue-700 mt-2">−{immos.length}</div>
+            <div className="text-xl font-black text-blue-300 mt-2">−{immos.length}</div>
             <div className="text-xs text-gray-400">(−1 par bien immobilisé)</div>
           </div>
         </div>
-        <div className="mt-3 text-xs text-center text-slate-500 font-medium">
+        <div className="mt-3 text-xs text-center text-gray-500 font-medium">
           ∑ Débits = ∑ Crédits → le bilan reste équilibré ✓
         </div>
       </div>
 
       <div className="space-y-2">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+        <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-3 text-xs text-amber-300 leading-relaxed">
           <span className="font-bold">💡 Clé PCG :</span> l&apos;amortissement est une
           charge <em>calculée</em>, pas une sortie de trésorerie ! L&apos;argent
           reste en banque mais le résultat net diminue.
@@ -280,7 +280,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           <span className="font-semibold">CAF = Résultat net + Dotations</span> —
           la Capacité d&apos;Autofinancement est donc supérieure au résultat.
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 leading-relaxed">
+        <div className="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3 text-xs text-emerald-300 leading-relaxed">
           <span className="font-bold">🎯 Dans le jeu :</span> chaque immobilisation
           perd −1 par trimestre. Tes équipements durent de 2 à 6 trimestres selon leur
           type. Investir dans de nouveaux équipements (via les Cartes Décision)
@@ -291,8 +291,8 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex flex-col items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-indigo-100">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6">
+      <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-700">
         {/* En-tête */}
         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 text-white p-4 flex items-center gap-3">
           <span className="text-3xl">{j.entreprise.icon}</span>
@@ -303,7 +303,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
         </div>
 
         {/* Progression */}
-        <div className="flex gap-2 justify-center p-3 border-b border-gray-100 bg-gray-50">
+        <div className="flex gap-2 justify-center p-3 border-b border-gray-700 bg-gray-800">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
@@ -322,7 +322,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {step > 0 && (
             <button
               onClick={() => setStep((s) => s - 1)}
-              className="flex-1 py-2 border border-gray-200 rounded-xl text-gray-500 text-sm hover:bg-gray-50 transition-colors font-medium"
+              className="flex-1 py-2 border border-gray-600 rounded-xl text-gray-400 text-sm hover:bg-gray-800 transition-colors font-medium"
             >
               ← Précédent
             </button>
