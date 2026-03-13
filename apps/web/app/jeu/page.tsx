@@ -483,7 +483,7 @@ export default function JeuPage() {
   const etapeInfo     = ETAPE_INFO[etat.etapeTour];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-950 flex flex-col">
 
       {/* ─── OVERLAYS ─── */}
       {tourTransition && (

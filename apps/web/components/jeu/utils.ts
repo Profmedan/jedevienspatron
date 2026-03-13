@@ -92,15 +92,15 @@ export interface DocumentInfo {
 
 export function getDocument(poste: string): DocumentInfo {
   if (ACTIF_KEYS.includes(poste))
-    return { label: "Bilan", detail: "Actif", badge: "bg-blue-100 text-blue-700" };
+    return { label: "Bilan", detail: "Actif", badge: "bg-blue-900/50 text-blue-300" };
   if (PASSIF_KEYS.includes(poste))
-    return { label: "Bilan", detail: "Passif", badge: "bg-orange-100 text-orange-700" };
+    return { label: "Bilan", detail: "Passif", badge: "bg-orange-900/50 text-orange-300" };
   if (CHARGES_KEYS.includes(poste))
-    return { label: "Compte de résultat", detail: "Charge", badge: "bg-red-100 text-red-700" };
+    return { label: "Compte de résultat", detail: "Charge", badge: "bg-red-900/50 text-red-300" };
   if (PRODUITS_KEYS.includes(poste))
-    return { label: "Compte de résultat", detail: "Produit", badge: "bg-green-100 text-green-700" };
+    return { label: "Compte de résultat", detail: "Produit", badge: "bg-green-900/50 text-green-300" };
 
-  return { label: "?", detail: "", badge: "bg-gray-100 text-gray-500" };
+  return { label: "?", detail: "", badge: "bg-gray-700 text-gray-400" };
 }
 
 /**

@@ -96,7 +96,7 @@ export function LeftPanel({
   // Si une étape est active, afficher EntryPanel
   if (activeStep) {
     return (
-      <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-200 bg-white overflow-y-auto">
+      <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
         <EntryPanel
           activeStep={activeStep}
           displayJoueur={joueur}
@@ -110,18 +110,18 @@ export function LeftPanel({
   }
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-200 bg-white overflow-y-auto">
+    <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
       {/* Guide de l'étape */}
       <EtapeGuide etape={etapeTour} tourActuel={tourActuel} nbTours={nbToursMax} />
 
       {/* Panneau d'action selon l'étape */}
-      <div className="bg-gradient-to-br from-white to-indigo-50 rounded-2xl border border-gray-100 p-3 shadow-sm">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-3 shadow-sm">
         {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {/* ÉTAPE 1 : Achats de marchandises */}
         {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {etapeTour === 1 && (
           <div className="space-y-3">
-            <div className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            <div className="text-sm font-bold text-gray-200 flex items-center gap-2">
               <span>📦</span>
               <span>Achats de marchandises</span>
             </div>
@@ -136,7 +136,7 @@ export function LeftPanel({
                 onChange={(e) =>
                   setAchatQte(Math.max(0, parseInt(e.target.value) || 0))
                 }
-                className="w-16 border border-indigo-200 rounded-lg px-2 py-1 text-center text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                className="w-16 border border-indigo-700 rounded-lg px-2 py-1 text-center text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none bg-gray-800 text-gray-100"
                 aria-label="Quantité à acheter"
               />
             </div>
@@ -149,7 +149,7 @@ export function LeftPanel({
                   className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${
                     achatMode === m
                       ? "bg-indigo-600 text-white shadow-sm"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                   }`}
                   aria-pressed={achatMode === m}
                 >
@@ -169,7 +169,7 @@ export function LeftPanel({
               </button>
               <button
                 onClick={onSkipAchat}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 rounded-xl font-medium transition-colors"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 rounded-xl font-medium transition-colors"
               >
                 Passer
               </button>
@@ -182,20 +182,20 @@ export function LeftPanel({
         {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {etapeTour === 6 && (
           <div className="space-y-2">
-            <div className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            <div className="text-sm font-bold text-gray-200 flex items-center gap-2">
               <span>🎯</span>
               <span>Carte Décision</span>
             </div>
 
             <button
               onClick={() => setShowCartes(!showCartes)}
-              className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm py-2 rounded-xl font-medium transition-colors border border-indigo-200"
+              className="w-full bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-300 text-sm py-2 rounded-xl font-medium transition-colors border border-indigo-700"
             >
               {showCartes ? "▲ Masquer" : "▼ Voir les cartes"}
             </button>
 
             {decisionError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2 text-xs font-semibold">
+              <div className="bg-red-950/40 border border-red-700 text-red-300 rounded-xl px-3 py-2 text-xs font-semibold">
                 ❌ {decisionError}
               </div>
             )}
@@ -211,7 +211,7 @@ export function LeftPanel({
 
             <button
               onClick={onSkipDecision}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 rounded-xl font-medium transition-colors"
+              className="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 rounded-xl font-medium transition-colors"
             >
               ⏭️ Passer (aucune carte)
             </button>
@@ -232,10 +232,10 @@ export function LeftPanel({
                 {joueur.clientsATrait.map((client, i) => {
                   const colorCls =
                     client.delaiPaiement === 0
-                      ? "border-green-200 bg-green-50 text-green-800"
+                      ? "border-green-700 bg-green-950/30 text-green-300"
                       : client.delaiPaiement === 1
-                        ? "border-blue-200 bg-blue-50 text-blue-800"
-                        : "border-purple-200 bg-purple-50 text-purple-800";
+                        ? "border-blue-700 bg-blue-950/30 text-blue-300"
+                        : "border-purple-700 bg-purple-950/30 text-purple-300";
                   const delaiLabel =
                     client.delaiPaiement === 0
                       ? "💵 Encaissé immédiatement"
@@ -289,10 +289,10 @@ export function LeftPanel({
       </div>
 
       {/* Journal comptable */}
-      <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-3">
         <button
           onClick={() => setShowJournal(!showJournal)}
-          className="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="w-full flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-gray-200 transition-colors"
         >
           <span>📖 Journal comptable ({journal.length})</span>
           <span className="text-lg">{showJournal ? "▲" : "▼"}</span>
@@ -306,9 +306,9 @@ export function LeftPanel({
               journal.map((e) => (
                 <div
                   key={e.id}
-                  className="bg-white rounded-lg p-2 border border-gray-100 text-xs space-y-1"
+                  className="bg-gray-900 rounded-lg p-2 border border-gray-700 text-xs space-y-1"
                 >
-                  <div className="font-bold text-indigo-700">
+                  <div className="font-bold text-indigo-400">
                     {e.joueurNom} — Tour {e.tour}, Étape {e.etape + 1}
                   </div>
                   <div className="text-gray-500 text-xs">{e.titre}</div>

@@ -114,10 +114,10 @@ export function MainContent({
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* 1. En-tête joueur                                 */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-white to-indigo-50 rounded-2xl shadow-sm border border-indigo-100">
+      <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-sm border border-gray-700">
         <span className="text-3xl">{joueur.entreprise.icon}</span>
         <div className="flex-1">
-          <div className="font-bold text-xl text-gray-800">{joueur.pseudo}</div>
+          <div className="font-bold text-xl text-gray-100">{joueur.pseudo}</div>
           <div className="text-sm text-gray-400">
             {joueur.entreprise.nom} · {joueur.entreprise.specialite}
           </div>
@@ -154,8 +154,8 @@ export function MainContent({
                 activeTab === tab
                   ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm"
                   : isLive
-                    ? "bg-white text-indigo-700 border-2 border-indigo-400 hover:border-indigo-500"
-                    : "bg-white text-gray-600 border border-gray-200 hover:border-indigo-300"
+                    ? "bg-gray-800 text-indigo-300 border-2 border-indigo-400 hover:border-indigo-500"
+                    : "bg-gray-800 text-gray-300 border border-gray-600 hover:border-indigo-400"
               }`}
               aria-pressed={activeTab === tab}
             >
@@ -177,8 +177,8 @@ export function MainContent({
 
       {/* ── Bandeau récapitulatif des modifications (persistant pendant la saisie) ── */}
       {activeStep && recentModifications && recentModifications.length > 0 && (
-        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-2.5">
-          <div className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1.5 flex items-center gap-1.5">
+        <div className="rounded-xl border-2 border-amber-600 bg-amber-950/30 px-3 py-2.5">
+          <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1.5 flex items-center gap-1.5">
             <span className="inline-block animate-pulse">🔄</span>
             Modifications de cette étape
           </div>
@@ -192,15 +192,15 @@ export function MainContent({
                   key={mod.poste}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
                     bon
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                      : "bg-red-100 text-red-800 border-red-300"
+                      ? "bg-emerald-900/40 text-emerald-300 border-emerald-700"
+                      : "bg-red-900/40 text-red-300 border-red-700"
                   }`}
                 >
                   <span>{POSTE_LABELS[mod.poste] ?? mod.poste}</span>
                   <span className="opacity-60 line-through text-[10px] tabular-nums">{mod.ancienneValeur}</span>
                   <span className="text-[10px]">→</span>
                   <span className="font-black tabular-nums">{mod.nouvelleValeur}</span>
-                  <span className={`text-[10px] font-bold ml-0.5 ${bon ? "text-emerald-600" : "text-red-600"}`}>
+                  <span className={`text-[10px] font-bold ml-0.5 ${bon ? "text-emerald-400" : "text-red-400"}`}>
                     ({delta > 0 ? "+" : ""}{delta})
                   </span>
                 </span>
@@ -236,22 +236,22 @@ export function MainContent({
       {/* 4. Cartes actives : Commerciaux + Investissements  */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div className="space-y-3">
-        <div className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+        <div className="text-sm font-bold text-gray-400 uppercase tracking-wider">
           🎴 Cartes actives
         </div>
 
         {/* ── Sous-section Commerciaux ─────────────────────────── */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-px flex-1 bg-indigo-100" />
-            <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider whitespace-nowrap">
+            <div className="h-px flex-1 bg-indigo-900/50" />
+            <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider whitespace-nowrap">
               🧑‍💼 Commerciaux
             </div>
-            <div className="h-px flex-1 bg-indigo-100" />
+            <div className="h-px flex-1 bg-indigo-900/50" />
           </div>
 
           {cartesCommerciales.length === 0 ? (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
+            <div className="rounded-xl bg-amber-950/30 border border-amber-700 p-3 text-xs text-amber-300 leading-relaxed">
               <strong>Aucun commercial actif.</strong> Recrutez via une{" "}
               <span className="text-indigo-600 font-bold">Carte Décision</span> à
               l&apos;étape 6 🎯 : Junior (1 client particulier/trim),
@@ -308,7 +308,7 @@ export function MainContent({
                 return (
                   <div
                     key={c.id}
-                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-white min-w-[160px] shadow-sm`}
+                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-gray-800 min-w-[160px] shadow-sm`}
                   >
                     {/* ── En-tête : titre du commercial ── */}
                     <div className={`${headerBg} text-white px-3 py-2 flex items-center gap-1.5`}>
@@ -317,19 +317,19 @@ export function MainContent({
                     </div>
 
                     {/* ── Coûts par trimestre (rouge) ── */}
-                    <div className="px-3 py-2 border-b border-red-100 bg-red-50">
-                      <div className="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">
+                    <div className="px-3 py-2 border-b border-red-900/40 bg-red-950/30">
+                      <div className="text-[10px] font-bold text-red-400 uppercase tracking-wide mb-1">
                         💸 Coût / trimestre
                       </div>
                       <div className="space-y-0.5">
                         {coutCharges > 0 && (
-                          <div className="text-xs text-red-600 flex items-center gap-1">
+                          <div className="text-xs text-red-300 flex items-center gap-1">
                             <span className="font-bold">↑</span>
                             <span>+{coutCharges} charges personnel</span>
                           </div>
                         )}
                         {coutTreso < 0 && (
-                          <div className="text-xs text-red-600 flex items-center gap-1">
+                          <div className="text-xs text-red-300 flex items-center gap-1">
                             <span className="font-bold">↓</span>
                             <span>{coutTreso} trésorerie</span>
                           </div>
@@ -338,18 +338,18 @@ export function MainContent({
                     </div>
 
                     {/* ── Bénéfices par trimestre (vert) ── */}
-                    <div className="px-3 py-2 bg-green-50">
-                      <div className="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1">
+                    <div className="px-3 py-2 bg-green-950/30">
+                      <div className="text-[10px] font-bold text-green-400 uppercase tracking-wide mb-1">
                         📈 Revenu / trimestre
                       </div>
                       <div className="flex items-center gap-1 mb-1">
                         <span className="text-sm">{Array(nb).fill(icon).join("")}</span>
-                        <span className="text-xs text-green-700 font-semibold">
+                        <span className="text-xs text-green-300 font-semibold">
                           +{nb} {nb > 1 ? typeLabelPluriel : typeLabel}
                         </span>
                       </div>
-                      <div className="text-xs text-green-800 font-bold flex items-center gap-1">
-                        <span className="text-green-500">→</span>
+                      <div className="text-xs text-green-200 font-bold flex items-center gap-1">
+                        <span className="text-green-400">→</span>
                         <span>+{caTotal} de chiffre d&apos;affaires</span>
                       </div>
                     </div>
@@ -364,11 +364,11 @@ export function MainContent({
         {cartesAutresActives.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="h-px flex-1 bg-gray-100" />
+              <div className="h-px flex-1 bg-gray-700" />
               <div className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 📋 Investissements & Décisions
               </div>
-              <div className="h-px flex-1 bg-gray-100" />
+              <div className="h-px flex-1 bg-gray-700" />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {cartesAutresActives.map((c) => (
@@ -388,19 +388,19 @@ export function MainContent({
           {/* ── Section Recrutement — TOUJOURS visible à l'étape 6 ─── */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-px flex-1 bg-indigo-200" />
-              <div className="text-sm font-bold text-indigo-700 uppercase tracking-wider whitespace-nowrap">
+              <div className="h-px flex-1 bg-indigo-900/50" />
+              <div className="text-sm font-bold text-indigo-400 uppercase tracking-wider whitespace-nowrap">
                 🧑‍💼 Recrutement
               </div>
-              <div className="h-px flex-1 bg-indigo-200" />
+              <div className="h-px flex-1 bg-indigo-900/50" />
             </div>
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-2 mb-3 text-xs text-indigo-700 leading-relaxed">
+            <div className="bg-indigo-950/30 border border-indigo-800/50 rounded-xl p-2 mb-3 text-xs text-indigo-300 leading-relaxed">
               💡 <strong>Chaque trimestre, tu peux recruter un nouveau commercial.</strong>{" "}
               La prise de poste est effective au trimestre suivant — pas d'écriture ce trimestre.
             </div>
 
             {cartesRecrutement.length === 0 ? (
-              <div className="text-center py-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 font-semibold">
+              <div className="text-center py-4 bg-green-950/30 border border-green-800/50 rounded-xl text-sm text-green-300 font-semibold">
                 ✅ Tous les commerciaux disponibles sont déjà dans votre équipe !
               </div>
             ) : (
@@ -423,11 +423,11 @@ export function MainContent({
           {cartesAutres.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="h-px flex-1 bg-gray-200" />
-                <div className="text-sm font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                <div className="h-px flex-1 bg-gray-700" />
+                <div className="text-sm font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                   💡 Investissements & Décisions
                 </div>
-                <div className="h-px flex-1 bg-gray-200" />
+                <div className="h-px flex-1 bg-gray-700" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {cartesAutres.map((c) => {

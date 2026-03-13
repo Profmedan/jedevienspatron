@@ -37,12 +37,12 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
   // ── État "saisi" — compact et célébratoire ────────────────────────────────
   if (entry.applied) {
     return (
-      <div className="mb-2 rounded-xl border-2 border-emerald-300 bg-emerald-50 flex items-center gap-2.5 px-3 py-2">
+      <div className="mb-2 rounded-xl border-2 border-emerald-700 bg-emerald-950/30 flex items-center gap-2.5 px-3 py-2">
         <span className="text-xl shrink-0">✅</span>
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-emerald-800 text-sm leading-tight">{nomCompte(entry.poste)}</div>
+          <div className="font-bold text-emerald-300 text-sm leading-tight">{nomCompte(entry.poste)}</div>
           {effetTexte && (
-            <div className="text-[10px] text-emerald-600 leading-tight mt-0.5">{effetTexte}</div>
+            <div className="text-[10px] text-emerald-400 leading-tight mt-0.5">{effetTexte}</div>
           )}
         </div>
         <span
@@ -62,8 +62,8 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
     <div
       className={`mb-2 rounded-xl border-2 transition-all hover:shadow-md ${
         isDebit
-          ? "bg-blue-50 border-blue-200 hover:border-blue-400"
-          : "bg-orange-50 border-orange-200 hover:border-orange-400"
+          ? "bg-blue-950/30 border-blue-800/60 hover:border-blue-500"
+          : "bg-orange-950/30 border-orange-800/60 hover:border-orange-500"
       }`}
       role="region"
       aria-label={`Écriture: ${nomCompte(entry.poste)}`}
@@ -71,13 +71,13 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
       {/* ── En-tête : sens + règle de la partie double ── */}
       <div
         className={`rounded-t-[10px] px-3 py-1.5 flex items-center justify-between gap-2 ${
-          isDebit ? "bg-blue-100" : "bg-orange-100"
+          isDebit ? "bg-blue-900/50" : "bg-orange-900/50"
         }`}
       >
-        <span className={`text-xs font-black uppercase tracking-wide ${isDebit ? "text-blue-800" : "text-orange-800"}`}>
+        <span className={`text-xs font-black uppercase tracking-wide ${isDebit ? "text-blue-200" : "text-orange-200"}`}>
           {isDebit ? "📤 DÉBIT — Emploi" : "📥 CRÉDIT — Ressource"}
         </span>
-        <span className={`text-[10px] font-normal opacity-75 text-right leading-tight hidden sm:block ${isDebit ? "text-blue-700" : "text-orange-700"}`}>
+        <span className={`text-[10px] font-normal opacity-75 text-right leading-tight hidden sm:block ${isDebit ? "text-blue-300" : "text-orange-300"}`}>
           {sensExplication}
         </span>
       </div>
@@ -86,7 +86,7 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
         <div className="flex-1 min-w-0">
 
           {/* ── Nom du compte ── */}
-          <div className="font-bold text-sm text-gray-900 mb-1.5 leading-tight">
+          <div className="font-bold text-sm text-gray-100 mb-1.5 leading-tight">
             {nomCompte(entry.poste)}
           </div>
 
@@ -99,8 +99,8 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
               <span
                 className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                   doc.detail === "Charge"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-emerald-100 text-emerald-700"
+                    ? "bg-red-900/50 text-red-300"
+                    : "bg-emerald-900/50 text-emerald-300"
                 }`}
               >
                 {doc.detail === "Charge" ? "↓ résultat net" : "↑ résultat net"}
@@ -111,7 +111,7 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
           {/* ── Montant : coloré selon l'impact financier réel ── */}
           <div
             className={`text-2xl font-black tabular-nums mb-1.5 ${
-              bon ? "text-emerald-600" : "text-red-600"
+              bon ? "text-emerald-400" : "text-red-400"
             }`}
           >
             {entry.delta > 0 ? "+" : ""}
@@ -123,8 +123,8 @@ export function EntryCard({ entry, onApply }: EntryCardProps) {
             <div
               className={`text-[11px] font-semibold mb-1.5 leading-tight rounded-lg px-2 py-1 ${
                 bon
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-red-50 text-red-700"
+                  ? "bg-emerald-900/40 text-emerald-300"
+                  : "bg-red-950/30 text-red-400"
               }`}
             >
               {effetTexte}

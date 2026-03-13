@@ -64,12 +64,12 @@ function BeforeAfterBadge({ mod }: { mod: RecentMod }) {
   const bon = isBonPourEntreprise(mod.poste, delta);
   return (
     <span className="inline-flex items-center gap-1">
-      <span className="line-through text-gray-400 text-xs tabular-nums">{mod.ancienneValeur}</span>
-      <span className="text-gray-400 text-xs">→</span>
-      <span className={`font-black text-sm tabular-nums ${bon ? "text-emerald-600" : "text-red-600"}`}>
+      <span className="line-through text-gray-500 text-xs tabular-nums">{mod.ancienneValeur}</span>
+      <span className="text-gray-500 text-xs">→</span>
+      <span className={`font-black text-sm tabular-nums ${bon ? "text-emerald-400" : "text-red-400"}`}>
         {mod.nouvelleValeur}
       </span>
-      <span className={`text-[10px] font-bold px-1 rounded-full ${bon ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+      <span className={`text-[10px] font-bold px-1 rounded-full ${bon ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"}`}>
         {delta > 0 ? "+" : ""}{delta}
       </span>
     </span>
@@ -95,21 +95,21 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
           sub ? "text-sm" : "font-semibold"
         } ${
           highlighted
-            ? "ring-2 ring-amber-400 bg-amber-50 shadow-lg scale-[1.03] -mx-0.5"
+            ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-lg shadow-amber-400/20 scale-[1.03] -mx-0.5"
             : ""
         }`}
         style={{
-          backgroundColor: highlighted ? undefined : (color ? `${color}1a` : undefined),
+          backgroundColor: highlighted ? undefined : (color ? `${color}28` : undefined),
           borderLeft: color ? `3px solid ${color}` : undefined,
         }}
         onMouseEnter={() => info && setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={() => info && setShow((s) => !s)}
       >
-        <span className="text-gray-700 flex items-center gap-1 text-sm">
+        <span className="text-gray-200 flex items-center gap-1 text-sm">
           {label}
           {info && (
-            <span className="text-[10px] text-gray-300 hover:text-gray-500 leading-none">ⓘ</span>
+            <span className="text-[10px] text-gray-500 hover:text-gray-300 leading-none">ⓘ</span>
           )}
         </span>
         <div className="flex items-center">
@@ -118,7 +118,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
           ) : (
             <span
               className={`font-bold tabular-nums text-sm ${
-                value < 0 ? "text-red-600" : "text-gray-800"
+                value < 0 ? "text-red-400" : "text-gray-100"
               }`}
             >
               {value >= 0 ? value : `(${Math.abs(value)})`}
@@ -128,12 +128,12 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
       </div>
 
       {show && info && (
-        <div className="absolute z-50 left-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-xs">
+        <div className="absolute z-50 left-0 top-full mt-1 w-64 bg-gray-800 border border-gray-600 rounded-xl shadow-xl p-3 text-xs">
           <div className="font-bold mb-1" style={{ color: info.couleur }}>
             {label}
           </div>
-          <p className="text-gray-600 mb-2 leading-relaxed">{info.definition}</p>
-          <p className="text-gray-400 italic border-t border-gray-100 pt-1">{info.exemple}</p>
+          <p className="text-gray-300 mb-2 leading-relaxed">{info.definition}</p>
+          <p className="text-gray-500 italic border-t border-gray-700 pt-1">{info.exemple}</p>
         </div>
       )}
     </div>
@@ -196,7 +196,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
   const dettes = joueur.bilan.passifs.filter((p) => p.categorie === "dettes");
 
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+    <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 overflow-hidden">
       {/* ── En-tête ── */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex items-center justify-between">
         <h3 className="font-black text-white text-base tracking-widest uppercase">📋 Bilan</h3>
@@ -207,8 +207,8 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
       <div
         className={`mx-4 mt-4 mb-3 rounded-2xl p-3 border-2 ${
           equilibre
-            ? "border-indigo-200 bg-gradient-to-r from-blue-50 via-white to-amber-50"
-            : "border-red-300 bg-red-50"
+            ? "border-indigo-700 bg-gradient-to-r from-blue-950/60 via-gray-800 to-amber-950/40"
+            : "border-red-700 bg-red-950/40"
         }`}
       >
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -230,7 +230,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         </div>
         <div
           className={`mt-2 text-center text-xs font-bold py-1 rounded-lg ${
-            equilibre ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
+            equilibre ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"
           }`}
         >
           {equilibre
@@ -241,8 +241,8 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
 
       <div className="grid grid-cols-2 gap-0 px-4 pb-4">
         {/* ── ACTIF ── */}
-        <div className="pr-3 border-r border-gray-100">
-          <div className="text-center text-[11px] font-black text-blue-700 mb-2 uppercase tracking-widest bg-blue-50 rounded-lg py-1">
+        <div className="pr-3 border-r border-gray-700">
+          <div className="text-center text-[11px] font-black text-blue-300 mb-2 uppercase tracking-widest bg-blue-900/40 rounded-lg py-1">
             ACTIF · Ce que vous possédez
           </div>
 
@@ -339,7 +339,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
 
         {/* ── PASSIF ── */}
         <div className="pl-3">
-          <div className="text-center text-[11px] font-black text-amber-700 mb-2 uppercase tracking-widest bg-amber-50 rounded-lg py-1">
+          <div className="text-center text-[11px] font-black text-amber-300 mb-2 uppercase tracking-widest bg-amber-900/40 rounded-lg py-1">
             PASSIF · D&apos;où vient le financement
           </div>
 
@@ -428,8 +428,8 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
               <div
                 className={`px-3 py-2 rounded-xl border-2 mb-1 ${
                   joueur.bilan.decouvert > 5
-                    ? "bg-red-100 border-red-600 animate-pulse"
-                    : "bg-orange-50 border-orange-400"
+                    ? "bg-red-950/70 border-red-600 animate-pulse"
+                    : "bg-orange-950/40 border-orange-500"
                 }`}
               >
                 <TooltipPoste
@@ -443,7 +443,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
                 />
                 <div
                   className={`text-xs mt-1 font-semibold ${
-                    joueur.bilan.decouvert > 5 ? "text-red-700" : "text-orange-700"
+                    joueur.bilan.decouvert > 5 ? "text-red-300" : "text-orange-300"
                   }`}
                 >
                   {joueur.bilan.decouvert > 5

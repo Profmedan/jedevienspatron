@@ -65,12 +65,12 @@ export function EntryPanel({
     <div className="space-y-3">
 
       {/* ── En-tête de l'étape ── */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-200 shadow-sm">
+      <div className="bg-gradient-to-br from-indigo-950/50 to-purple-950/30 rounded-xl p-3 border border-indigo-700 shadow-sm">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xl">{activeStep.icone}</span>
-          <span className="font-bold text-indigo-900 text-sm leading-tight">{activeStep.titre}</span>
+          <span className="font-bold text-indigo-200 text-sm leading-tight">{activeStep.titre}</span>
         </div>
-        <p className="text-xs text-gray-600 leading-relaxed">{activeStep.description}</p>
+        <p className="text-xs text-gray-300 leading-relaxed">{activeStep.description}</p>
       </div>
 
       {/* ── Bloc écritures ── */}
@@ -79,7 +79,7 @@ export function EntryPanel({
           {/* Barre de progression */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                 ✏️ Écritures à saisir
               </span>
               <span className={`text-xs font-black tabular-nums ${allApplied ? "text-emerald-600" : "text-indigo-600"}`}>
@@ -87,7 +87,7 @@ export function EntryPanel({
                 {allApplied ? " ✅" : ` — encore ${pendingCount}`}
               </span>
             </div>
-            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   allApplied ? "bg-emerald-500" : "bg-indigo-500"
@@ -100,7 +100,7 @@ export function EntryPanel({
           {/* Débits */}
           {debits.length > 0 && (
             <div className="mb-1">
-              <div className="text-xs font-black text-blue-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <div className="text-xs font-black text-blue-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 <span className="inline-block w-3 h-0.5 bg-blue-400 rounded" />
                 📤 Débits (Emplois)
                 <span className="font-normal text-blue-400 normal-case tracking-normal text-[10px]">
@@ -123,7 +123,7 @@ export function EntryPanel({
           {/* Crédits */}
           {credits.length > 0 && (
             <div className="mt-2">
-              <div className="text-xs font-black text-orange-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <div className="text-xs font-black text-orange-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 <span className="inline-block w-3 h-0.5 bg-orange-400 rounded" />
                 📥 Crédits (Ressources)
                 <span className="font-normal text-orange-400 normal-case tracking-normal text-[10px]">
@@ -148,19 +148,19 @@ export function EntryPanel({
             <div
               className={`mt-2 rounded-xl px-3 py-2 border flex items-center justify-between text-xs font-bold ${
                 partieDoubleOk
-                  ? "bg-indigo-50 border-indigo-200 text-indigo-800"
-                  : "bg-amber-50 border-amber-300 text-amber-800"
+                  ? "bg-indigo-950/50 border-indigo-700 text-indigo-300"
+                  : "bg-amber-950/40 border-amber-600 text-amber-300"
               }`}
             >
               <span>
-                <span className="text-blue-600">Σ Débits</span>{" "}
+                <span className="text-blue-400">Σ Débits</span>{" "}
                 <span className="font-black tabular-nums">{sumDebits}</span>
               </span>
               <span className={`text-base ${partieDoubleOk ? "text-indigo-500" : "text-amber-500"}`}>
                 {partieDoubleOk ? "=" : "≠"}
               </span>
               <span>
-                <span className="text-orange-600">Σ Crédits</span>{" "}
+                <span className="text-orange-400">Σ Crédits</span>{" "}
                 <span className="font-black tabular-nums">{sumCredits}</span>
               </span>
               <span className="text-[10px] font-normal opacity-70 ml-1">
@@ -170,7 +170,7 @@ export function EntryPanel({
           )}
         </div>
       ) : (
-        <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-500 text-center italic border border-gray-100">
+        <div className="bg-gray-800 rounded-xl p-3 text-xs text-gray-400 text-center italic border border-gray-700">
           Aucune écriture à passer pour cette étape.
         </div>
       )}
@@ -179,16 +179,16 @@ export function EntryPanel({
       <div
         className={`rounded-xl p-2.5 text-center text-xs font-bold transition-all border ${
           canContinue
-            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+            ? "bg-emerald-950/40 text-emerald-300 border-emerald-700"
             : !allApplied
-              ? "bg-gray-50 text-gray-400 border-gray-100"
-              : "bg-red-50 text-red-600 border-red-200"
+              ? "bg-gray-800 text-gray-400 border-gray-700"
+              : "bg-red-950/40 text-red-400 border-red-700"
         }`}
         role="status"
       >
         <div className="text-sm">
           ACTIF <strong className="tabular-nums">{totalActif}</strong>{" "}
-          <span className={balanced ? "text-emerald-600" : "text-red-500"}>{balanced ? "=" : "≠"}</span>{" "}
+          <span className={balanced ? "text-emerald-400" : "text-red-400"}>{balanced ? "=" : "≠"}</span>{" "}
           PASSIF <strong className="tabular-nums">{totalPassif}</strong>
         </div>
         <div className="mt-0.5 font-medium">
@@ -201,26 +201,26 @@ export function EntryPanel({
       </div>
 
       {/* ── Principe comptable ── */}
-      <div className="bg-indigo-50 rounded-xl p-2.5 border border-indigo-100 shadow-sm">
-        <div className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1">
+      <div className="bg-indigo-950/40 rounded-xl p-2.5 border border-indigo-800/50 shadow-sm">
+        <div className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">
           📚 Principe comptable
         </div>
-        <p className="text-xs text-indigo-800 leading-relaxed">{activeStep.principe}</p>
+        <p className="text-xs text-indigo-200 leading-relaxed">{activeStep.principe}</p>
       </div>
 
       {/* ── Conseil ── */}
-      <div className="bg-amber-50 rounded-xl p-2.5 border border-amber-100 shadow-sm">
-        <div className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">
+      <div className="bg-amber-950/30 rounded-xl p-2.5 border border-amber-800/50 shadow-sm">
+        <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1">
           💡 Conseil
         </div>
-        <p className="text-xs text-amber-800 leading-relaxed">{activeStep.conseil}</p>
+        <p className="text-xs text-amber-300 leading-relaxed">{activeStep.conseil}</p>
       </div>
 
       {/* ── Boutons d'action ── */}
       <div className="flex gap-2 pt-1">
         <button
           onClick={onCancel}
-          className="flex-1 py-2 border border-gray-200 rounded-xl text-gray-500 text-xs hover:bg-gray-50 transition-colors font-medium"
+          className="flex-1 py-2 border border-gray-600 rounded-xl text-gray-400 text-xs hover:bg-gray-800 transition-colors font-medium"
           aria-label="Revenir à l'étape"
         >
           ← Revenir

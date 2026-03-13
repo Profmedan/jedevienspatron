@@ -26,14 +26,14 @@ function BeforeAfterBadge({ mod }: { mod: RecentMod }) {
   const bon = isBonPourEntreprise(mod.poste, delta);
   return (
     <span className="inline-flex items-center gap-1">
-      <span className="line-through text-gray-400 text-xs tabular-nums">{mod.ancienneValeur}</span>
-      <span className="text-gray-400 text-[10px]">→</span>
-      <span className={`font-black text-sm tabular-nums ${bon ? "text-emerald-600" : "text-red-600"}`}>
+      <span className="line-through text-gray-500 text-xs tabular-nums">{mod.ancienneValeur}</span>
+      <span className="text-gray-500 text-[10px]">→</span>
+      <span className={`font-black text-sm tabular-nums ${bon ? "text-emerald-400" : "text-red-400"}`}>
         {mod.nouvelleValeur}
       </span>
       <span
         className={`text-[10px] font-bold px-1 rounded-full ${
-          bon ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+          bon ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"
         }`}
       >
         {delta > 0 ? "+" : ""}
@@ -60,19 +60,19 @@ function Row({
   return (
     <div
       className={`flex justify-between items-center px-2.5 py-1.5 text-sm rounded-lg mb-1 transition-all duration-300 ${
-        highlighted ? "ring-2 ring-amber-400 bg-amber-50 shadow-md scale-[1.02] -mx-0.5" : ""
+        highlighted ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-md shadow-amber-400/20 scale-[1.02] -mx-0.5" : ""
       }`}
       style={{
-        backgroundColor: highlighted ? undefined : `${color}18`,
+        backgroundColor: highlighted ? undefined : `${color}28`,
         borderLeft: `3px solid ${color}`,
       }}
     >
-      <span className="text-gray-600 text-xs">{label}</span>
+      <span className="text-gray-300 text-xs">{label}</span>
       <div className="flex items-center">
         {recentMod ? (
           <BeforeAfterBadge mod={recentMod} />
         ) : (
-          <span className="font-bold tabular-nums text-sm">{value}</span>
+          <span className="font-bold tabular-nums text-sm text-gray-100">{value}</span>
         )}
       </div>
     </div>
@@ -81,7 +81,7 @@ function Row({
 
 function NoteEcritureEquilibre({ texte }: { texte: string }) {
   return (
-    <div className="ml-1 mb-2 px-2.5 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 leading-snug">
+    <div className="ml-1 mb-2 px-2.5 py-1.5 bg-blue-950/40 border border-blue-900/50 rounded-lg text-xs text-blue-300 leading-snug">
       <span className="font-semibold">📚 Note pédagogique : </span>
       {texte}
     </div>
@@ -112,7 +112,7 @@ export default function CompteResultatPanel({
     (etapeTour !== undefined && etapeTour >= 1 && etapeTour <= 7);
 
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+    <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 overflow-hidden">
       {/* ── En-tête ── */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3">
         <h3 className="font-black text-white text-base tracking-widest uppercase text-center">
@@ -123,7 +123,7 @@ export default function CompteResultatPanel({
       <div className="p-4">
         <div className="grid grid-cols-2 gap-3">
           {/* ── CHARGES ── */}
-          <div className="bg-red-50 rounded-xl p-3 border border-red-200">
+          <div className="bg-red-950/20 rounded-xl p-3 border border-red-900/50">
             <div className="text-center text-xs font-black text-white mb-2.5 uppercase tracking-widest bg-red-600 rounded-lg py-1.5">
               − Charges
             </div>
@@ -185,14 +185,14 @@ export default function CompteResultatPanel({
               <NoteEcritureEquilibre texte="Dotation = somme de l'usure de chaque bien (-1/trimestre). Charge calculée : aucune sortie de trésorerie → la CAF > Résultat net." />
             )}
 
-            <div className="flex justify-between px-2.5 py-2 border-t-2 border-red-300 mt-2 font-bold bg-red-100 rounded-lg">
-              <span className="text-xs text-red-900 uppercase tracking-wide">Total charges</span>
-              <span className="text-xl font-black text-red-700 tabular-nums">{totalCharges}</span>
+            <div className="flex justify-between px-2.5 py-2 border-t-2 border-red-800 mt-2 font-bold bg-red-900/40 rounded-lg">
+              <span className="text-xs text-red-200 uppercase tracking-wide">Total charges</span>
+              <span className="text-xl font-black text-red-400 tabular-nums">{totalCharges}</span>
             </div>
           </div>
 
           {/* ── PRODUITS ── */}
-          <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200">
+          <div className="bg-emerald-950/20 rounded-xl p-3 border border-emerald-900/50">
             <div className="text-center text-xs font-black text-white mb-2.5 uppercase tracking-widest bg-emerald-600 rounded-lg py-1.5">
               + Produits
             </div>
@@ -226,9 +226,9 @@ export default function CompteResultatPanel({
               recentMod={findMod(recentModifications, "revenusExceptionnels")}
             />
 
-            <div className="flex justify-between px-2.5 py-2 border-t-2 border-emerald-300 mt-2 font-bold bg-emerald-100 rounded-lg">
-              <span className="text-xs text-emerald-900 uppercase tracking-wide">Total produits</span>
-              <span className="text-xl font-black text-emerald-700 tabular-nums">{totalProduits}</span>
+            <div className="flex justify-between px-2.5 py-2 border-t-2 border-emerald-800 mt-2 font-bold bg-emerald-900/40 rounded-lg">
+              <span className="text-xs text-emerald-200 uppercase tracking-wide">Total produits</span>
+              <span className="text-xl font-black text-emerald-400 tabular-nums">{totalProduits}</span>
             </div>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function CompteResultatPanel({
                 {resultat}
               </span>
             </div>
-            <div className="px-4 py-2 bg-amber-50 text-xs text-amber-800">
+            <div className="px-4 py-2 bg-amber-950/30 text-xs text-amber-300">
               💡 Les charges et produits sont enregistrés au fur et à mesure de la saisie.
               Le résultat final sera affiché une fois tous les postes saisis.
             </div>
@@ -282,7 +282,7 @@ export default function CompteResultatPanel({
             </div>
             <div
               className={`px-4 py-2 text-xs ${
-                resultat >= 0 ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
+                resultat >= 0 ? "bg-emerald-950/30 text-emerald-300" : "bg-red-950/30 text-red-300"
               }`}
             >
               {resultat >= 0
