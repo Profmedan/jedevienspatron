@@ -57,6 +57,20 @@ function formatDelta(delta: number): string {
   return delta >= 0 ? `+${delta}` : `${delta}`;
 }
 
+/** Postes où une hausse est une MAUVAISE nouvelle (charges, dettes) → affichés en rouge si positif */
+const POSTES_COUT = new Set([
+  "chargesPersonnel", "servicesExterieurs", "impotsTaxes",
+  "chargesInteret", "chargesExceptionnelles", "dotationsAmortissements",
+  "achats", "emprunts", "dettes", "dettesFiscales", "decouvert",
+]);
+
+/** Retourne la classe CSS de couleur en fonction du sens économique réel (pas juste le signe) */
+function colorEffet(poste: string, delta: number): string {
+  const estCout = POSTES_COUT.has(poste);
+  const isPositive = estCout ? delta < 0 : delta > 0; // hausse d'une charge = mauvais
+  return isPositive ? "text-emerald-700" : "text-red-700";
+}
+
 export default function CarteView({ carte, onClick, selected, disabled, compact }: Props) {
   const borderColor = carte.type === "decision"
     ? CATEGORIE_COLORS[(carte as CarteDecision).categorie] ?? "#ccc"
@@ -138,7 +152,7 @@ export default function CarteView({ carte, onClick, selected, disabled, compact 
                 <div>
                   <div className="text-xs font-semibold text-gray-500 mb-0.5">⚡ Effets immédiats :</div>
                   {(carte as CarteDecision).effetsImmédiats.map((e, i) => (
-                    <div key={i} className={`text-xs font-mono ${e.delta > 0 ? "text-emerald-700" : "text-red-700"}`}>
+                    <div key={i} className={`text-xs font-mono ${colorEffet(e.poste, e.delta)}`}>
                       {POSTE_LABELS[e.poste] ?? e.poste} {formatDelta(e.delta)}
                     </div>
                   ))}
@@ -148,20 +162,63 @@ export default function CarteView({ carte, onClick, selected, disabled, compact 
                 <div>
                   <div className="text-xs font-semibold text-gray-500 mb-0.5">🔄 Par trimestre :</div>
                   {(carte as CarteDecision).effetsRecurrents.map((e, i) => (
-                    <div key={i} className={`text-xs font-mono ${e.delta > 0 ? "text-emerald-700" : "text-red-700"}`}>
+                    <div key={i} className={`text-xs font-mono ${colorEffet(e.poste, e.delta)}`}>
                       {POSTE_LABELS[e.poste] ?? e.poste} {formatDelta(e.delta)}
                     </div>
                   ))}
                 </div>
               )}
-              {/* Clients générés par trimestre (chaîne investissement → ventes) */}
-              {(carte as CarteDecision).clientParTour && (
-                <div className="mt-1 pt-1 border-t border-gray-200">
-                  <div className="text-xs font-semibold text-indigo-600 mb-0.5">📈 Chaîne de valeur :</div>
+              {/* Résumé net pour cartes commerciales */}
+              {(carte as CarteDecision).clientParTour && (() => {
+                const dec = carte as CarteDecision;
+                const clientType = dec.clientParTour!;
+                const nbClients = dec.nbClientsParTour ?? 1;
+                const CLIENT_VENTES: Record<string, number> = { particulier: 2, tpe: 3, grand_compte: 4 };
+                const CLIENT_DELAI: Record<string, number>  = { particulier: 0, tpe: 1, grand_compte: 2 };
+                const montantVentes = CLIENT_VENTES[clientType] ?? 0;
+                const delai = CLIENT_DELAI[clientType] ?? 0;
+                const salary = dec.effetsRecurrents.find(e => e.poste === "chargesPersonnel")?.delta ?? 0;
+                const totalVentes = nbClients * montantVentes;
+                const totalCMV    = nbClients * 1;
+                const resultatNet = totalVentes - totalCMV - salary;
+                const tresoNet    = (delai === 0 ? totalVentes : 0) - salary;
+                const bfrLabel    = delai === 0
+                  ? "Aucun (paiement immédiat)"
+                  : `Créances C+${delai} × ${nbClients} (+${totalVentes})`;
+                return (
+                  <div className="mt-1 pt-1 border-t border-gray-200">
+                    <div className="text-xs font-semibold text-indigo-600 mb-1">📊 Impact net / trimestre :</div>
+                    <div className="grid grid-cols-3 gap-1 text-center">
+                      <div className="bg-indigo-50 rounded p-1">
+                        <div className="text-xs text-gray-500">Résultat</div>
+                        <div className={`text-sm font-black ${resultatNet >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                          {formatDelta(resultatNet)}
+                        </div>
+                      </div>
+                      <div className="bg-indigo-50 rounded p-1">
+                        <div className="text-xs text-gray-500">Tréso</div>
+                        <div className={`text-sm font-black ${tresoNet >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                          {formatDelta(tresoNet)}
+                        </div>
+                      </div>
+                      <div className="bg-indigo-50 rounded p-1">
+                        <div className="text-xs text-gray-500">BFR</div>
+                        <div className={`text-xs font-semibold ${delai > 0 ? "text-orange-600" : "text-emerald-600"}`}>
+                          {delai === 0 ? "✓ Aucun" : `⚠️ C+${delai}`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1 italic">{bfrLabel}</div>
+                  </div>
+                );
+              })()}
+              {/* Chaîne de valeur pour les cartes NON commerciales (investissements) */}
+              {(carte as CarteDecision).clientParTour && (carte as CarteDecision).categorie !== "commercial" && (
+                <div className="mt-1">
                   <div className="text-xs text-indigo-700 font-medium">
-                    🤝 +{(carte as CarteDecision).nbClientsParTour ?? 1} client(s){" "}
-                    <span className="capitalize">{CLIENT_LABELS[(carte as CarteDecision).clientParTour!] ?? (carte as CarteDecision).clientParTour}</span>
-                    /trimestre → ventes ↑ → stocks nécessaires ↑
+                    🤝 +{(carte as CarteDecision).nbClientsParTour ?? 1}{" "}
+                    {CLIENT_LABELS[(carte as CarteDecision).clientParTour!] ?? (carte as CarteDecision).clientParTour}
+                    /trim → ventes ↑ → stocks ↑
                   </div>
                 </div>
               )}
