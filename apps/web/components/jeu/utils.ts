@@ -103,6 +103,50 @@ export function getDocument(poste: string): DocumentInfo {
   return { label: "?", detail: "", badge: "bg-gray-100 text-gray-500" };
 }
 
+/**
+ * Retourne une phrase d'impact pédagogique (une ligne, concise)
+ * décrivant ce que fait concrètement cette variation pour l'entreprise.
+ * Utilisé dans EntryCard pour l'étudiant BTS.
+ */
+export function getEffetTexte(poste: string, delta: number): string {
+  const EFFETS: Record<string, { hausse: string; baisse: string }> = {
+    tresorerie:              { hausse: "💰 Entrée d'argent en banque",              baisse: "💸 Sortie d'argent en banque" },
+    stocks:                  { hausse: "📦 Votre stock augmente",                   baisse: "📦 Votre stock diminue (marchandises vendues)" },
+    immobilisations:         { hausse: "🏭 Nouvel équipement enregistré à l'actif", baisse: "🏭 Cession ou mise au rebut d'équipement" },
+    creancesPlus1:           { hausse: "📬 Le client vous paiera dans 1 trimestre", baisse: "📬 Créance encaissée (client a payé)" },
+    creancesPlus2:           { hausse: "📬 Le client vous paiera dans 2 trimestres",baisse: "📬 Créance encaissée" },
+    capitaux:                { hausse: "💼 Capitaux propres en hausse",             baisse: "💼 Capitaux propres en baisse" },
+    emprunts:                { hausse: "🏦 Nouvel emprunt contracté",               baisse: "🏦 Annuité remboursée — dette réduite" },
+    dettes:                  { hausse: "🔄 Achat à crédit — fournisseur à payer",   baisse: "🔄 Fournisseur payé" },
+    dettesFiscales:          { hausse: "📊 Impôts et taxes à régler",               baisse: "📊 Dette fiscale réglée" },
+    decouvert:               { hausse: "🚨 Trésorerie négative — attention !",      baisse: "🚨 Découvert réduit" },
+    achats:                  { hausse: "📉 Coût des marchandises vendues → réduit le résultat", baisse: "📈 Correction d'achats → améliore le résultat" },
+    servicesExterieurs:      { hausse: "📉 Charges fixes (loyer, énergie…) → réduit le résultat", baisse: "📈 Correction de charges" },
+    impotsTaxes:             { hausse: "📉 Impôts et taxes → réduit le résultat",   baisse: "📈 Correction fiscale" },
+    chargesInteret:          { hausse: "📉 Intérêts d'emprunt → réduit le résultat", baisse: "📈 Correction d'intérêts" },
+    chargesPersonnel:        { hausse: "📉 Salaires et charges sociales → réduit le résultat", baisse: "📈 Correction de personnel" },
+    chargesExceptionnelles:  { hausse: "📉 Charge non courante → réduit le résultat", baisse: "📈 Correction exceptionnelle" },
+    dotationsAmortissements: { hausse: "📉 Usure de l'équipement comptabilisée — pas de sortie d'argent", baisse: "📈 Reprise d'amortissement" },
+    ventes:                  { hausse: "📈 Chiffre d'affaires → améliore le résultat", baisse: "📉 Avoir client → réduit le CA" },
+    productionStockee:       { hausse: "📈 Production non vendue valorisée → améliore le résultat", baisse: "" },
+    produitsFinanciers:      { hausse: "📈 Revenus de placements → améliore le résultat", baisse: "" },
+    revenusExceptionnels:    { hausse: "📈 Revenu non courant → améliore le résultat", baisse: "" },
+  };
+
+  const effet = EFFETS[poste];
+  if (!effet) return "";
+  return delta >= 0 ? effet.hausse : effet.baisse;
+}
+
+/**
+ * Retourne l'explication concise du sens de l'écriture (partie double).
+ */
+export function getSensExplication(sens: SensEcriture): string {
+  return sens === "debit"
+    ? "Augmente un actif ou une charge"
+    : "Augmente un passif ou un produit · diminue un actif";
+}
+
 // ─── MANIPULATION DU JOUEUR (pour saisie interactive) ─────────────────────────
 
 import { Joueur } from "@/lib/game-engine/types";
