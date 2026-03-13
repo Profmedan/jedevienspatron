@@ -130,15 +130,15 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "camionnette",
     titre: "Camionnette",
-    description: "Achetez une camionnette de livraison — améliore votre logistique et attire 1 client Particulier/trimestre. Investissement immédiat : Immos +2, Tréso −2. Entretien : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 2 trimestres → Dotation aux amortissements +1 au CR.",
+    description: "Achetez une camionnette de livraison — améliore votre logistique et attire 1 client Particulier/trimestre. Investissement immédiat : Immos +8, Tréso −8. Entretien : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 8 trimestres → Dotation aux amortissements +1 au CR.",
     categorie: "vehicule",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 2 },
-      { poste: "tresorerie", delta: -2 },
+      { poste: "immobilisations", delta: 8 },
+      { poste: "tresorerie", delta: -8 },
     ],
     effetsRecurrents: [
-      { poste: "servicesExterieurs", delta: 2 }, // entretien
-      { poste: "tresorerie", delta: -2 },
+      { poste: "servicesExterieurs", delta: 1 }, // entretien
+      { poste: "tresorerie", delta: -1 },
     ],
     clientParTour: "particulier",
   },
@@ -146,11 +146,11 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "berline",
     titre: "Berline",
-    description: "Achetez une berline de représentation — facilite les démarches commerciales, +1 Carte Décision piochée par tour. Investissement : Immos +3, Tréso −3. Entretien : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation aux amortissements +1 au CR.",
+    description: "Achetez une berline de représentation — facilite les démarches commerciales, +1 Carte Décision piochée par tour. Investissement : Immos +8, Tréso −8. Entretien : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 8 trimestres → Dotation aux amortissements +1 au CR.",
     categorie: "vehicule",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 3 },
-      { poste: "tresorerie", delta: -3 },
+      { poste: "immobilisations", delta: 8 },
+      { poste: "tresorerie", delta: -8 },
     ],
     effetsRecurrents: [
       { poste: "servicesExterieurs", delta: 2 },
@@ -165,11 +165,11 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "site-internet",
     titre: "Site Internet",
-    description: "Créez votre vitrine en ligne — visibilité accrue, +1 client Particulier/trimestre. Investissement : Immos +3, Tréso −3. Maintenance : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR.",
+    description: "Créez votre vitrine en ligne — visibilité accrue, +1 client Particulier/trimestre. Investissement : Immos +4, Tréso −4. Maintenance : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 4 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 3 },  // DÉBIT Immobilisations
-      { poste: "tresorerie", delta: -3 },      // CRÉDIT Trésorerie (paiement comptant)
+      { poste: "immobilisations", delta: 4 },  // DÉBIT Immobilisations
+      { poste: "tresorerie", delta: -4 },      // CRÉDIT Trésorerie (paiement comptant)
     ],
     effetsRecurrents: [
       { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Charges maintenance
@@ -181,11 +181,11 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "rse",
     titre: "RSE",
-    description: "Engagez-vous dans la responsabilité sociale — crédibilité renforcée, +1 client Particulier/trim. Financé par emprunt : Immos +1, Emprunts +1 (aucune sortie de tréso immédiate !). Charges RSE : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 1 trimestre → Dotation +1 au CR.",
+    description: "Engagez-vous dans la responsabilité sociale — crédibilité renforcée, +1 client Particulier/trim. Financé par emprunt : Immos +2, Emprunts +2 (aucune sortie de tréso immédiate !). Charges RSE : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 2 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 1 }, // DÉBIT Immobilisations
-      { poste: "emprunts", delta: 1 },        // CRÉDIT Emprunts (financement par dette)
+      { poste: "immobilisations", delta: 2 }, // DÉBIT Immobilisations
+      { poste: "emprunts", delta: 2 },        // CRÉDIT Emprunts (financement par dette)
     ],
     effetsRecurrents: [
       { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Charges RSE
@@ -215,15 +215,15 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "expansion",
     titre: "Expansion",
-    description: "Agrandissez vos locaux — capacité d'accueil doublée, +1 Grand Compte/trimestre. Investissement : Immos +6, Tréso −6. Loyer et entretien : Services ext. +3/trim. 📉 Amortissement : −1/trim pendant 6 trimestres → Dotation +1 au CR.",
+    description: "Agrandissez vos locaux — capacité d'accueil doublée, +1 Grand Compte/trimestre. Investissement : Immos +8, Tréso −8. Loyer et entretien : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 8 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 6 },  // DÉBIT Immobilisations (nouveaux locaux)
-      { poste: "tresorerie", delta: -6 },       // CRÉDIT Trésorerie
+      { poste: "immobilisations", delta: 8 },  // DÉBIT Immobilisations (nouveaux locaux)
+      { poste: "tresorerie", delta: -8 },       // CRÉDIT Trésorerie
     ],
     effetsRecurrents: [
-      { poste: "servicesExterieurs", delta: 3 }, // DÉBIT Loyer, entretien locaux
-      { poste: "tresorerie", delta: -3 },         // CRÉDIT Trésorerie
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Loyer, entretien locaux
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT Trésorerie
     ],
     clientParTour: "grand_compte",
   },
@@ -341,11 +341,11 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "certification-iso",
     titre: "Certification ISO 9001",
-    description: "Obtenez la certification qualité — crédibilité auprès des grandes entreprises, +1 Grand Compte/trimestre. Investissement : Immos +4, Tréso −4. Maintien certification : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 4 trimestres → Dotation +1 au CR.",
+    description: "Obtenez la certification qualité — crédibilité auprès des grandes entreprises, +1 Grand Compte/trimestre. Investissement : Immos +5, Tréso −5. Maintien certification : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 5 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 4 },  // DÉBIT Immobilisations incorporelles
-      { poste: "tresorerie", delta: -4 },       // CRÉDIT Trésorerie
+      { poste: "immobilisations", delta: 5 },  // DÉBIT Immobilisations incorporelles
+      { poste: "tresorerie", delta: -5 },       // CRÉDIT Trésorerie
     ],
     effetsRecurrents: [
       { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Frais de maintien certification
@@ -357,11 +357,11 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "application-mobile",
     titre: "Application Mobile",
-    description: "Lancez votre app de vente en ligne — canal direct vers les consommateurs, +2 clients Particuliers/trimestre. Développement : Immos +3, Tréso −3. Hébergement & maintenance : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR.",
+    description: "Lancez votre app de vente en ligne — canal direct vers les consommateurs, +2 clients Particuliers/trimestre. Développement : Immos +4, Tréso −4. Hébergement & maintenance : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 4 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 3 },  // DÉBIT Immobilisations incorporelles (développement)
-      { poste: "tresorerie", delta: -3 },       // CRÉDIT Trésorerie
+      { poste: "immobilisations", delta: 4 },  // DÉBIT Immobilisations incorporelles (développement)
+      { poste: "tresorerie", delta: -4 },       // CRÉDIT Trésorerie
     ],
     effetsRecurrents: [
       { poste: "servicesExterieurs", delta: 1 }, // DÉBIT Hébergement & maintenance app
@@ -377,15 +377,252 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "assurance-prevoyance",
     titre: "Assurance Prévoyance",
-    description: "Souscrivez une assurance — annule les événements négatifs (incendie, grève, litige, contrôle fiscal…). Dépôt de garantie : Immos +1, Tréso −1. Prime annuelle : Services ext. +1/trim, Tréso −1/trim. 📉 Amortissement : −1/trim (1 trimestre).",
+    description: "Souscrivez une assurance — annule les événements négatifs (incendie, grève, litige, contrôle fiscal…). Dépôt de garantie : Immos +2, Tréso −2. Prime annuelle : Services ext. +1/trim, Tréso −1/trim. 📉 Amortissement : −1/trim (2 trimestres).",
     categorie: "protection",
     effetsImmédiats: [
-      { poste: "immobilisations", delta: 1 },
-      { poste: "tresorerie", delta: -1 },
+      { poste: "immobilisations", delta: 2 },
+      { poste: "tresorerie", delta: -2 },
     ],
     effetsRecurrents: [
       { poste: "servicesExterieurs", delta: 1 },
       { poste: "tresorerie", delta: -1 },
+    ],
+  },
+
+  // ════════════════════════════════════════════════════════════
+  // NOUVELLES CARTES — Session 3 (14 cartes supplémentaires)
+  // ════════════════════════════════════════════════════════════
+
+  // ── VÉHICULES SUPPLÉMENTAIRES ──────────────────────────────
+
+  {
+    type: "decision",
+    id: "fourgon-refrigere",
+    titre: "Fourgon Réfrigéré",
+    description: "Investissez dans un fourgon frigorifique — livraison de produits frais ou pharmaceutiques, +1 client TPE/trimestre. 💡 Immobilisation corporelle spécialisée (cpt 2182). Immos +6, Tréso −6. Entretien & carburant : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 6 trimestres → Dotation +1 au CR.",
+    categorie: "vehicule",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 6 },  // DÉBIT 2182 — Matériel de transport réfrigéré
+      { poste: "tresorerie", delta: -6 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 2 }, // DÉBIT 615 — Entretien & carburant spécialisé
+      { poste: "tresorerie", delta: -2 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "tpe",
+  },
+  {
+    type: "decision",
+    id: "velo-cargo",
+    titre: "Vélo Cargo Électrique",
+    description: "Optez pour la livraison verte en zone urbaine — zéro émission, image RSE valorisée, +1 client Particulier/trimestre. Faible investissement : Immos +3, Tréso −3. Entretien quasi nul : aucune charge récurrente. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR. 💡 Exemple d'investissement frugal à retour rapide.",
+    categorie: "vehicule",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 3 },  // DÉBIT 2182 — Matériel de transport (vélo cargo)
+      { poste: "tresorerie", delta: -3 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [],
+    clientParTour: "particulier",
+  },
+
+  // ── INVESTISSEMENTS SUPPLÉMENTAIRES ────────────────────────
+
+  {
+    type: "decision",
+    id: "erp",
+    titre: "ERP / Logiciel de Gestion",
+    description: "Centralisez votre gestion avec un progiciel intégré — crédibilité B2B accrue, +1 Grand Compte/trimestre. 💡 Immobilisation INCORPORELLE (cpt 205 — Logiciels). Immos +5, Tréso −5. Maintenance & mises à jour : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 5 trimestres → Dotation +1 au CR.",
+    categorie: "investissement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 5 },  // DÉBIT 205 — Logiciels et licences (immo incorporelle)
+      { poste: "tresorerie", delta: -5 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 615 — Maintenance & mises à jour
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "grand_compte",
+  },
+  {
+    type: "decision",
+    id: "marketplace",
+    titre: "Marketplace en Ligne",
+    description: "Référencez vos produits sur une grande place de marché — accès instantané à une clientèle massive, +2 clients Particuliers/trimestre. Développement boutique : Immos +4, Tréso −4. Commissions plateforme : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 4 trimestres → Dotation +1 au CR. 💡 Les commissions sont des charges d'exploitation (cpt 627).",
+    categorie: "investissement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 4 },  // DÉBIT 205 — Logiciels (boutique marketplace)
+      { poste: "tresorerie", delta: -4 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 627 — Services bancaires & commissions plateforme
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "particulier",
+    nbClientsParTour: 2,
+  },
+  {
+    type: "decision",
+    id: "entrepot-automatise",
+    titre: "Entrepôt Automatisé",
+    description: "Automatisez votre logistique — capacité de stockage doublée, délais divisés par deux, +1 Grand Compte/trimestre. Investissement lourd : Immos +8, Tréso −8. Énergie & maintenance robots : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 8 trimestres → Dotation +1 au CR. 💡 Investissement industriel à fort amortissement : ratio ROI long terme.",
+    categorie: "investissement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 8 },  // DÉBIT 2154 — Matériel industriel & robotique
+      { poste: "tresorerie", delta: -8 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 615 — Entretien robots & énergie
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "grand_compte",
+  },
+  {
+    type: "decision",
+    id: "label-qualite",
+    titre: "Label Qualité / Bio",
+    description: "Obtenez un label reconnu — différenciation sur des marchés de niche à forte valeur ajoutée, +1 client TPE/trimestre (distributeurs spécialisés). Certification : Immos +4, Tréso −4. Audits annuels : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 4 trimestres → Dotation +1 au CR. 💡 Le label est une immo incorporelle : il crée de la valeur durable dans le bilan.",
+    categorie: "investissement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 4 },  // DÉBIT 207 — Fonds commercial / label (immo incorporelle)
+      { poste: "tresorerie", delta: -4 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 622 — Honoraires auditeurs & frais de renouvellement
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "tpe",
+  },
+
+  // ── FINANCEMENT SUPPLÉMENTAIRE ──────────────────────────────
+
+  {
+    type: "decision",
+    id: "credit-bail",
+    titre: "Crédit-Bail (Leasing)",
+    description: "Utilisez un équipement professionnel sans l'acheter. 💡 Zéro apport immédiat — l'équipement est financé intégralement par dette : Immos +6, Emprunts +6. Loyers récurrents : Services ext. +2/trim, Tréso −2/trim. +1 client TPE/trim. 📉 Amortissement : −1/trim pendant 6 trimestres. ⚠️ Leasing ≠ gratuit : la dette crée une obligation de paiement sur 6 trimestres !",
+    categorie: "financement",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 6 },  // DÉBIT 212/215 — Immobilisation en crédit-bail (actif)
+      { poste: "emprunts", delta: 6 },          // CRÉDIT 167 — Dettes sur contrats de crédit-bail (passif)
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 2 }, // DÉBIT 612 — Redevances crédit-bail (charges locatives)
+      { poste: "tresorerie", delta: -2 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "tpe",
+  },
+  {
+    type: "decision",
+    id: "crowdfunding",
+    titre: "Crowdfunding",
+    description: "Financez votre projet par la communauté — apport en capital SANS remboursement ni intérêts ! Levée participative : Tréso +4, Capitaux +4. Frais plateforme récurrents : Services ext. +1/trim. 💡 Le crowdfunding renforce vos FONDS PROPRES (cpt 101) sans créer de dette — contrairement à l'emprunt bancaire (cpt 164) qui alourdit votre passif.",
+    categorie: "financement",
+    effetsImmédiats: [
+      { poste: "tresorerie", delta: 4 },  // DÉBIT 512 — Banque (encaissement levée participative)
+      { poste: "capitaux", delta: 4 },    // CRÉDIT 101 — Capital social / apport crowdfunding
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 623 — Frais plateforme & communication
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+  },
+
+  // ── TACTIQUE SUPPLÉMENTAIRE ─────────────────────────────────
+
+  {
+    type: "decision",
+    id: "programme-fidelite",
+    titre: "Programme de Fidélité",
+    description: "Récompensez vos meilleurs clients et augmentez votre taux de réachat — +1 client Particulier/trimestre. Logiciel de fidélité : Immos +3, Tréso −3 (immo incorporelle). Gestion du programme : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR. 💡 La fidélisation client réduit le coût d'acquisition : investissement rentable à moyen terme.",
+    categorie: "tactique",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 3 },  // DÉBIT 205 — Logiciel de gestion fidélité
+      { poste: "tresorerie", delta: -3 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 623 — Frais de communication & gestion programme
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "particulier",
+  },
+  {
+    type: "decision",
+    id: "export-international",
+    titre: "Export International",
+    description: "Prospectez de nouveaux marchés à l'étranger — +1 Grand Compte/trimestre (contrats internationaux). Frais capitalisés : Immos +5, Tréso −5. Frais récurrents (déplacements, douanes, traduction) : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 5 trimestres → Dotation +1 au CR. ⚠️ BFR élevé : les Grands Comptes paient en C+2, surveillez votre trésorerie !",
+    categorie: "tactique",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 5 },  // DÉBIT 207 — Frais de développement commercial export (capitalisés)
+      { poste: "tresorerie", delta: -5 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 2 }, // DÉBIT 625/626 — Frais déplacements, douanes, traduction
+      { poste: "tresorerie", delta: -2 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "grand_compte",
+  },
+  {
+    type: "decision",
+    id: "partenariat-commercial",
+    titre: "Partenariat Commercial",
+    description: "Signez un accord de distribution avec un réseau partenaire — accès à de nouveaux circuits sans investissement lourd, +1 client TPE/trimestre. Formalisation : Immos +2, Tréso −2 (frais juridiques capitalisés). Commissions réseau : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 2 trimestres → Dotation +1 au CR. 💡 Croissance indirecte via un réseau existant : coût d'acquisition mutualisé.",
+    categorie: "tactique",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 2 },  // DÉBIT 207 — Frais d'établissement partenariat (immo incorporelle)
+      { poste: "tresorerie", delta: -2 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 622 — Commissions & honoraires réseau partenaires
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+    clientParTour: "tpe",
+  },
+
+  // ── SERVICE SUPPLÉMENTAIRE ──────────────────────────────────
+
+  {
+    type: "decision",
+    id: "maintenance-preventive",
+    titre: "Contrat de Maintenance",
+    description: "Souscrivez un contrat de maintenance préventive externalisée — évitez les pannes coûteuses et annulez les événements techniques négatifs (panne, perte de données…). Abonnement SLA : Services ext. +1/trim, Tréso −1/trim. 💡 Coût fixe maîtrisé vs charges exceptionnelles imprévisibles : la prévention est toujours moins chère que la réparation d'urgence !",
+    categorie: "service",
+    effetsImmédiats: [],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 615 — Entretien externalisé (contrat de maintenance)
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+  },
+
+  // ── PROTECTION SUPPLÉMENTAIRE ───────────────────────────────
+
+  {
+    type: "decision",
+    id: "mutuelle-collective",
+    titre: "Mutuelle Collective",
+    description: "Protégez vos salariés avec une couverture santé — fidélisez vos équipes et réduisez le risque de grève. Logiciel RH : Immos +2, Tréso −2. Cotisation patronale récurrente : Charges personnel +1/trim, Tréso −1/trim. 💡 Les cotisations patronales sont comptabilisées en charges de personnel (cpt 645 PCG) et non en services extérieurs. 📉 Amortissement : −1/trim pendant 2 trimestres.",
+    categorie: "protection",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 2 },  // DÉBIT 205 — Logiciel SIRH (immo incorporelle)
+      { poste: "tresorerie", delta: -2 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "chargesPersonnel", delta: 1 },   // DÉBIT 645 — Cotisation patronale mutuelle santé
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
+    ],
+  },
+  {
+    type: "decision",
+    id: "cybersecurite",
+    titre: "Cybersécurité",
+    description: "Protégez vos données et systèmes contre les intrusions — annule les événements de type perte de données ou piratage. Licences & audit initial : Immos +3, Tréso −3. Abonnement protection active : Services ext. +1/trim, Tréso −1/trim. 💡 Les logiciels de sécurité sont des immo incorporelles (cpt 205). 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR.",
+    categorie: "protection",
+    effetsImmédiats: [
+      { poste: "immobilisations", delta: 3 },  // DÉBIT 205 — Licences cybersécurité (immo incorporelle)
+      { poste: "tresorerie", delta: -3 },       // CRÉDIT 512 — Banque
+    ],
+    effetsRecurrents: [
+      { poste: "servicesExterieurs", delta: 1 }, // DÉBIT 615 — Abonnement protection & audits périodiques
+      { poste: "tresorerie", delta: -1 },         // CRÉDIT 512 — Banque
     ],
   },
 ];

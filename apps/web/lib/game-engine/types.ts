@@ -65,10 +65,10 @@ export interface CompteResultat {
 // ─── ENTREPRISE ──────────────────────────────────────────────
 
 export type NomEntreprise =
-  | "Entreprise Orange"
-  | "Entreprise Violette"
-  | "Entreprise Bleue"
-  | "Entreprise Verte";
+  | "Manufacture Belvaux"
+  | "Véloce Transports"
+  | "Azura Commerce"
+  | "Synergia Lab";
 
 export interface EntrepriseTemplate {
   nom: NomEntreprise;
@@ -225,7 +225,7 @@ export type EtapeTour =
   | 3 // Paiement des commerciaux (+ quiz pédagogique)
   | 4 // Traitement des cartes Client
   | 5 // Application des effets récurrents des cartes Décision
-  | 6 // Choix d'une nouvelle carte Décision
+  | 6 // 6a Recrutement commercial (optionnel) + 6b Carte Décision (optionnel)
   | 7 // Pioche de la carte Événement
   | 8; // Vérification de l'équilibre + fin de tour
 
@@ -293,6 +293,6 @@ export const DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 �
 export const CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
 export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
 export const NB_TOURS_PAR_AN = 4;
-export const NB_TOURS_MAX = 6; // Valeur par défaut — configurable à 4, 6 ou 8 à l'initialisation
+export const NB_TOURS_MAX = 12; // Valeur par défaut — configurable à 6, 8 ou 12 à l'initialisation
 export const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export const SCORE_MULTIPLICATEUR_IMMO = 2;

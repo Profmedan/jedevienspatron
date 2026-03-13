@@ -27,6 +27,10 @@ interface MainContentProps {
   cartesRecrutement?: CarteDecision[];
   /** Modifications récentes (avant/après) pour affichage dans les panneaux */
   recentModifications?: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
+  /** Sous-étape de l'étape 6 : "recrutement" (6a) ou "investissement" (6b) */
+  subEtape6?: "recrutement" | "investissement";
+  /** Mode Rapide : étapes auto pré-cochées à partir du T3 */
+  modeRapide?: boolean;
 }
 
 const TABS: Array<[TabType, string]> = [
@@ -109,6 +113,8 @@ export function MainContent({
   cartesDisponibles,
   cartesRecrutement: cartesRecrutementProp,
   recentModifications,
+  subEtape6 = "recrutement",
+  modeRapide = false,
 }: MainContentProps) {
   // Les cartes de recrutement viennent de la prop dédiée (obtenirCarteRecrutement)
   // Si non fournie (rétrocompat), on filtre depuis cartesDisponibles
@@ -439,12 +445,45 @@ export function MainContent({
       </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* Badge Mode Rapide actif */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {modeRapide && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-950/30 border border-amber-700 rounded-xl text-xs text-amber-300">
+          <span className="text-base">⚡</span>
+          <div>
+            <span className="font-bold">Mode Accéléré actif</span>
+            <span className="text-amber-400 ml-1">— étapes comptables pré-cochées, tu n'as qu'à valider</span>
+          </div>
+        </div>
+      )}
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* 6. Sélecteur de cartes Décision (étape 6)          */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {etapeTour === 6 && showCartes && !activeStep && (
         <div className="space-y-4">
 
-          {/* ── Section Recrutement — TOUJOURS visible à l'étape 6 ─── */}
+          {/* Badge de progression 6a/6b */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`px-3 py-1 rounded-full font-bold border ${
+              subEtape6 === "recrutement"
+                ? "bg-indigo-600 text-white border-indigo-500"
+                : "bg-gray-800 text-gray-500 border-gray-700"
+            }`}>
+              6a 🧑‍💼 Recrutement
+            </span>
+            <span className="text-gray-600">→</span>
+            <span className={`px-3 py-1 rounded-full font-bold border ${
+              subEtape6 === "investissement"
+                ? "bg-amber-600 text-white border-amber-500"
+                : "bg-gray-800 text-gray-500 border-gray-700"
+            }`}>
+              6b 💡 Investissement
+            </span>
+          </div>
+
+          {/* ── Section Recrutement — visible si subEtape6 === "recrutement" ─── */}
+          {subEtape6 === "recrutement" && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="h-px flex-1 bg-indigo-900/50" />
@@ -477,9 +516,10 @@ export function MainContent({
               </div>
             )}
           </div>
+          )}
 
-          {/* ── Section Investissements & Décisions ─────────────────── */}
-          {cartesAutres.length > 0 && (
+          {/* ── Section Investissements & Décisions — visible si subEtape6 === "investissement" ─────────────────── */}
+          {subEtape6 === "investissement" && cartesAutres.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gray-700" />

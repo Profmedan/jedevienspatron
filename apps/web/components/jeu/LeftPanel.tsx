@@ -58,6 +58,12 @@ interface LeftPanelProps {
 
   // Journal
   journal: JournalEntry[];
+
+  /** Sous-étape de l'étape 6 : "recrutement" (6a) ou "investissement" (6b) */
+  subEtape6?: "recrutement" | "investissement";
+  /** Mode Rapide : pré-coche toutes les écritures pour les étapes automatiques */
+  modeRapide?: boolean;
+  setModeRapide?: (val: boolean) => void;
 }
 
 /**
@@ -90,6 +96,9 @@ export function LeftPanel({
   decisionError,
   onLaunchStep,
   journal,
+  subEtape6 = "recrutement",
+  modeRapide = false,
+  setModeRapide,
 }: LeftPanelProps) {
   const [showJournal, setShowJournal] = useState(false);
 
@@ -183,8 +192,8 @@ export function LeftPanel({
         {etapeTour === 6 && (
           <div className="space-y-2">
             <div className="text-sm font-bold text-gray-200 flex items-center gap-2">
-              <span>🎯</span>
-              <span>Carte Décision</span>
+              <span>{subEtape6 === "recrutement" ? "🧑‍💼" : "💡"}</span>
+              <span>{subEtape6 === "recrutement" ? "6a — Recrutement (optionnel)" : "6b — Investissement (optionnel)"}</span>
             </div>
 
             <button
@@ -213,7 +222,7 @@ export function LeftPanel({
               onClick={onSkipDecision}
               className="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 rounded-xl font-medium transition-colors"
             >
-              ⏭️ Passer (aucune carte)
+              {subEtape6 === "recrutement" ? "⏭️ Passer le recrutement → Investissement" : "⏭️ Passer (aucun investissement)"}
             </button>
           </div>
         )}
@@ -287,6 +296,34 @@ export function LeftPanel({
           </div>
         )}
       </div>
+
+      {/* Toggle Mode Rapide (disponible à partir du T3) */}
+      {tourActuel >= 3 && setModeRapide && (
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚡</span>
+              <span className="text-xs font-bold text-gray-300">Mode Accéléré</span>
+            </div>
+            <button
+              onClick={() => setModeRapide(!modeRapide)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                modeRapide ? "bg-amber-600" : "bg-gray-600"
+              }`}
+              aria-pressed={modeRapide}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                modeRapide ? "translate-x-6" : "translate-x-1"
+              }`} />
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 leading-tight">
+            {modeRapide
+              ? "✅ Actif — Les étapes 0, 2, 3, 4, 5 seront pré-cochées. Tu vois tout, tu valides d'un clic."
+              : "Les étapes comptables demanderont de cocher chaque écriture une par une."}
+          </p>
+        </div>
+      )}
 
       {/* Journal comptable */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-3">

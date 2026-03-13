@@ -119,6 +119,11 @@ export default function JeuPage() {
   const [failliteInfo, setFailliteInfo]   = useState<{ joueurNom: string; raison: string } | null>(null);
   const [decisionError, setDecisionError] = useState<string | null>(null);
 
+  // Sous-étape 6 : recrutement commercial (6a) puis carte décision/investissement (6b)
+  const [subEtape6, setSubEtape6] = useState<"recrutement" | "investissement">("recrutement");
+  // Mode Rapide : les étapes automatiques (0,2,3,4,5) pré-cochent toutes leurs écritures
+  const [modeRapide, setModeRapide] = useState(false);
+
   // ─ Supabase / room code ───────────────────────────────────────────────────
   const [roomCode, setRoomCode]   = useState<string | null>(null);
   const [savedToDb, setSavedToDb] = useState(false);
@@ -256,11 +261,25 @@ export default function JeuPage() {
     if (!activeStep || !etat) return;
     const next = activeStep.previewEtat;
     addToJournal(next, activeStep.entries, next.etapeTour);
+    const etapeAvantAvancement = next.etapeTour;
+
+    // Sous-étape 6a (recrutement) → passer à 6b (investissement) sans avancer à l'étape 7
+    if (etapeAvantAvancement === 6 && subEtape6 === "recrutement") {
+      setSubEtape6("investissement");
+      setEtat({ ...next });
+      setActiveStep(null);
+      setRecentModifications([]);
+      setSelectedDecision(null);
+      setShowCartes(false);
+      return;
+    }
+
     avancerEtape(next);
     setEtat({ ...next });
     setActiveStep(null);
-    // Effacer les modifications une fois l'étape validée (elles ont persisté pendant toute la saisie)
     setRecentModifications([]);
+    // Réinitialiser la sous-étape après la validation de l'investissement (6b)
+    if (etapeAvantAvancement === 6) setSubEtape6("recrutement");
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -311,7 +330,17 @@ export default function JeuPage() {
     })));
     // NB: recentModifications est effacé dans confirmActiveStep (persiste tant que la saisie est active)
 
-    setActiveStep(buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture));
+    const AUTO_ETAPES = [0, 2, 3, 4, 5]; // étapes automatisables en mode rapide
+    const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
+    if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
+      // Mode rapide : toutes les écritures pré-cochées, l'étudiant voit tout d'un coup
+      setActiveStep({
+        ...step,
+        entries: step.entries.map(e => ({ ...e, applied: true })),
+      });
+    } else {
+      setActiveStep(step);
+    }
   }
 
   // ─ Fin de tour ────────────────────────────────────────────────────────────
@@ -329,7 +358,7 @@ export default function JeuPage() {
         return;
       }
       if (fin.enFaillite) {
-        setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false);
+        setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
         setFailliteInfo({ joueurNom, raison: fin.raisonFaillite ?? "Situation financière irrécupérable" });
         return;
       }
@@ -338,13 +367,13 @@ export default function JeuPage() {
       next.tourActuel = oldTour + 1;
       next.etapeTour = 0;
       next.joueurActif = 0;
-      setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false);
+      setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
       setTourTransition({ from: oldTour, to: next.tourActuel });
     } else {
       avancerEtape(next);
       next.joueurActif = nextJoueurIdx;
       next.etapeTour = 0;
-      setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false);
+      setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
     }
   }
 
@@ -398,12 +427,22 @@ export default function JeuPage() {
 
   function skipDecision() {
     if (!etat) return;
+    // Sous-étape 6a : passer le recrutement → aller directement à 6b (investissement)
+    if (etat.etapeTour === 6 && subEtape6 === "recrutement") {
+      setSubEtape6("investissement");
+      setShowCartes(false);
+      setSelectedDecision(null);
+      setDecisionError(null);
+      return;
+    }
+    // Sous-étape 6b : passer l'investissement → avancer à l'étape 7
     const next = cloneEtat(etat);
     avancerEtape(next);
     setEtat(next);
     setShowCartes(false);
     setSelectedDecision(null);
     setDecisionError(null);
+    setSubEtape6("recrutement"); // reset pour le prochain tour
   }
 
   // ─── RENDU ────────────────────────────────────────────────────────────────
@@ -541,6 +580,9 @@ export default function JeuPage() {
           decisionError={decisionError}
           onLaunchStep={launchStep}
           journal={journal}
+          subEtape6={subEtape6}
+          modeRapide={modeRapide}
+          setModeRapide={setModeRapide}
         />
 
         <MainContent
@@ -557,6 +599,8 @@ export default function JeuPage() {
           cartesDisponibles={cartesDisponibles}
           cartesRecrutement={cartesRecrutement}
           recentModifications={recentModifications}
+          subEtape6={subEtape6}
+          modeRapide={modeRapide}
         />
       </div>
     </div>

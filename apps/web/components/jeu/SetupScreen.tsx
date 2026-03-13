@@ -20,13 +20,13 @@ interface SetupScreenProps {
  */
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [nbJoueurs, setNbJoueurs] = useState(1);
-  const [nbTours, setNbTours] = useState(6);
+  const [nbTours, setNbTours] = useState(12);
 
   const defaults: PlayerSetup[] = [
-    { pseudo: "", entreprise: "Entreprise Orange" },
-    { pseudo: "", entreprise: "Entreprise Violette" },
-    { pseudo: "", entreprise: "Entreprise Bleue" },
-    { pseudo: "", entreprise: "Entreprise Verte" },
+    { pseudo: "", entreprise: "Manufacture Belvaux" },
+    { pseudo: "", entreprise: "Véloce Transports" },
+    { pseudo: "", entreprise: "Azura Commerce" },
+    { pseudo: "", entreprise: "Synergia Lab" },
   ];
 
   const [players, setPlayers] = useState<PlayerSetup[]>(defaults);
@@ -146,7 +146,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         <span className="text-gray-500 text-sm font-medium">
           Durée de la partie :
         </span>
-        {[4, 6, 8].map((n) => (
+        {[6, 8, 12].map((n) => (
           <button
             key={n}
             onClick={() => setNbTours(n)}
@@ -158,7 +158,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
           >
             <div>{n} trimestres</div>
             <div className="text-xs font-normal opacity-70">
-              {n === 4 ? "~1h" : n === 6 ? "~1h30 ✓" : "~2h"}
+              {n === 6 ? "~1h30" : n === 8 ? "~2h" : "~3h ✓"}
             </div>
           </button>
         ))}

@@ -51,7 +51,7 @@ export const ETAPE_INFO: Record<
     principe:
       "DÉBIT Charges de personnel / CRÉDIT Trésorerie. Les salaires sont une charge d'exploitation qui réduit le résultat. Mais les commerciaux génèrent des ventes futures qui compensent.",
     conseil:
-      "🤝 Chaque commercial génère automatiquement ses clients : Junior → 2 Particuliers/trim, Senior → 2 TPE/trim, Directrice → 2 Grands Comptes/trim. Pour recruter de nouveaux commerciaux, achetez une Carte Décision à l'étape 6 🎯.",
+      "🤝 Chaque commercial génère automatiquement ses clients : Junior → 2 Particuliers/trim (CA +4, tréso immédiate), Senior → 2 TPE/trim (CA +6, C+1), Directrice → 2 Grands Comptes/trim (CA +8, C+2). Pour recruter, utilisez l'étape 6a 🎯.",
   },
   4: {
     icone: "🤝",
@@ -75,13 +75,13 @@ export const ETAPE_INFO: Record<
   },
   6: {
     icone: "🎯",
-    titre: "Choix d'une carte Décision",
+    titre: "6a Recrutement + 6b Investissement",
     description:
-      "Tu peux investir dans une carte Décision ce trimestre. Chaque carte a des effets immédiats (ce tour) et des effets récurrents (chaque tour suivant). Ce choix est OPTIONNEL mais stratégique.",
+      "Ce trimestre se divise en deux actions OPTIONNELLES et indépendantes. 6a : recruter un nouveau commercial (Junior, Senior ou Directrice). 6b : activer une carte Décision (investissement, financement, protection…). Tu peux faire les deux, l'un, ou passer les deux.",
     principe:
-      "Investissement : DÉBIT Autres Immobilisations (actif ↑) / CRÉDIT Trésorerie (actif ↓). La chaîne de valeur de l'investissement : Nouvel équipement → capacité accrue → plus de clients générés par tour → plus de ventes → plus de stocks nécessaires → plus de revenus → résultat net amélioré. Mais attention : l'investissement génère une dotation aux amortissements supplémentaire (+1/trimestre) tant que sa valeur est > 0.",
+      "Recrutement (6a) : DÉBIT Charges de personnel / CRÉDIT Trésorerie (salaire de prise de poste). Investissement (6b) : DÉBIT Autres Immobilisations (actif ↑) / CRÉDIT Trésorerie. La chaîne de valeur : Investissement → clients générés → ventes → revenus → résultat amélioré. Attention : chaque immobilisation génère +1 dotation/trimestre, réduisant le résultat (charge calculée sans sortie tréso).",
     conseil:
-      "🛡️ La carte Assurance Prévoyance protège des événements négatifs. La Levée de Fonds apporte des capitaux. La R&D bénéficie du Crédit d'Impôt Recherche. Anticipe tes besoins de stocks : chaque nouveau client consomme 1 unité de stock par vente !",
+      "🧑‍💼 Recruter tôt (dès T1/T2) maximise le nombre de trimestres de revenus. 💡 Investir tôt amortit sur plus de tours. Exemple optimal : Junior T1 + Senior T2 + Directrice T5. 🛡️ L'Assurance Prévoyance protège des événements négatifs. La R&D bénéficie du CIR (Crédit d'Impôt Recherche). Anticipe tes stocks : chaque client consomme 1 unité par vente !",
   },
   7: {
     icone: "🎲",

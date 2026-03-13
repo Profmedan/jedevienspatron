@@ -176,11 +176,6 @@ export function creerJoueur(
       : "dettes",
   }));
 
-  // Le Commercial Junior est distribué d'office à chaque joueur
-  const commercialJunior = CARTES_DECISION.find(
-    (c) => c.id === "commercial-junior-dec"
-  );
-
   return {
     id,
     pseudo,
@@ -197,7 +192,7 @@ export function creerJoueur(
     },
     bilan,
     compteResultat: creerCompteResultatVierge(),
-    cartesActives: commercialJunior ? [commercialJunior] : [],
+    cartesActives: [], // Aucun commercial automatique — le joueur recrute librement dès T1
     clientsATrait: [],
     elimine: false,
     publicitéCeTour: false,
@@ -206,7 +201,7 @@ export function creerJoueur(
 
 export function initialiserJeu(
   joueursDefs: Array<{ pseudo: string; nomEntreprise: NomEntreprise }>,
-  nbToursMax: number = 6 // 4 = session courte, 6 = standard (défaut), 8 = session longue
+  nbToursMax: number = 12 // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
 ): EtatJeu {
   const joueurs = joueursDefs.map((def, i) =>
     creerJoueur(i, def.pseudo, def.nomEntreprise)
@@ -221,12 +216,12 @@ export function initialiserJeu(
     nbJoueurs: joueurs.length,
     nbToursMax, // configurable : 4, 6 ou 8 trimestres
     piocheDecision: melangerTableau(
-      CARTES_DECISION.filter((c) => c.id !== "commercial-junior-dec")
+      CARTES_DECISION.filter((c) => c.categorie !== "commercial") // les commerciaux passent par obtenirCarteRecrutement
     ),
     piocheEvenements: melangerTableau([...CARTES_EVENEMENTS]),
     historiqueEvenements: [],
     messages: [
-      `Bienvenue dans KICLEPATRON ! Trimestre 1/${nbToursMax} — Étape 1 : Remboursements et charges fixes.`,
+      `Bienvenue dans KICLEPATRON ! Trimestre 1/${nbToursMax} — 3 exercices comptables de ${Math.round(nbToursMax/3)} trimestres chacun. Étape 0 : Charges fixes et amortissements.`,
     ],
   };
 }
@@ -305,6 +300,8 @@ export function appliquerEtape0(
   // 6. Amortissement de chaque bien immobilisé (-1 par bien, Dotations = total)
   // Règle PCG : DÉBIT Dotations aux amortissements / CRÉDIT Immobilisations nettes
   // La dotation doit être ÉGALE à la somme des amortissements appliqués à chaque bien.
+  // Post-amortissement (PCG) : les biens dont valeur nette = 0 restent au bilan (VNC = 0)
+  // et continuent de générer leurs effets (clients, entretien) — seule la dotation s'arrête.
   const immoAmortissables = joueur.bilan.actifs.filter(
     (a) => a.categorie === "immobilisations" && a.valeur > 0
   );
@@ -542,9 +539,10 @@ export function appliquerEffetsRecurrents(
 // ─── ÉTAPE 6 : Recrutement garanti (toujours disponible) ────
 
 /**
- * Retourne les cartes commerciales que le joueur peut encore recruter
- * (celles qu'il n'a pas encore dans ses cartesActives).
- * Indépendant de la pioche — toujours disponible chaque tour.
+ * Retourne les cartes commerciales que le joueur peut encore recruter.
+ * Aucun commercial n'est distribué automatiquement — le joueur choisit librement.
+ * Disponible dès le Tour 1 pour tous les commerciaux (Junior, Senior, Directrice).
+ * Anti-doublon : impossible d'avoir 2 fois le même commercial.
  */
 export function obtenirCarteRecrutement(etat: EtatJeu, joueurIdx: number): CarteDecision[] {
   const joueur = etat.joueurs[joueurIdx];
@@ -747,7 +745,8 @@ export function cloturerAnnee(etat: EtatJeu): void {
     // Réinitialiser compte de résultat
     joueur.compteResultat = creerCompteResultatVierge();
 
-    // Ne garder que Commercial Junior + cartes d'investissement long terme
+    // Clôture exercice : garder les commerciaux + investissements long terme actifs
+    // Supprimer uniquement les cartes tactiques (usage court terme) et financement (usage unique)
     joueur.cartesActives = joueur.cartesActives.filter(
       (c) => c.categorie !== "tactique" && c.categorie !== "financement"
     );

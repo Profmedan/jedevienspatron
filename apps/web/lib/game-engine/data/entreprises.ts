@@ -8,13 +8,14 @@
 // Chaque bien immobilisé perd -1 par trimestre (durée de vie = valeur initiale).
 // Dotation aux amortissements = somme des amortissements de chaque bien.
 // Durées de vie indicatives (en trimestres de jeu) :
-//   • Matériel de production / Usine     : 6T  ≈ 3 ans simplifiés
-//   • Machine logistique                 : 6T
-//   • Véhicule utilitaire / Camionnette  : 2T  ≈ cycle court, renouvellement fréquent
-//   • Agencement commercial (Showroom)   : 5T  ≈ 2,5 ans
-//   • Brevet / Propriété intellectuelle  : 5T  ≈ 5 ans (droit fiscal)
-//   • Matériel informatique              : 3T  ≈ 3 ans (taux PC)
-//   • Voiture de démonstration           : 3T
+//   • Usine (machine industrielle)       : 8T  ≈ 2 ans
+//   • Camionnette (véhicule utilitaire)  : 8T  ≈ 2 ans
+//   • Camion (poids lourd)               : 10T ≈ 2,5 ans
+//   • Machine (manutention)              : 6T  ≈ 1,5 an
+//   • Showroom (agencement commercial)   : 8T  ≈ 2 ans
+//   • Voiture (démonstration)            : 8T  ≈ 2 ans
+//   • Brevet (propriété intellectuelle)  : 8T  ≈ 2 ans (simplifié)
+//   • Matériel informatique              : 5T  ≈ 1,25 an (simplifié)
 // L'item "Autres Immobilisations" démarre à 0 — il reçoit les investissements
 // achetés via les Cartes Décision et commence alors à s'amortir.
 //
@@ -28,17 +29,17 @@ import { EntrepriseTemplate } from "@/lib/game-engine/types";
 
 export const ENTREPRISES: EntrepriseTemplate[] = [
   {
-    nom: "Entreprise Orange",
+    nom: "Manufacture Belvaux",
     couleur: "#e8751a",
     icon: "🏭",
     type: "Production",
     specialite: "⚡ Produit à chaque tour",
     actifs: [
       // IMMOBILISATIONS
-      // Usine : matériel industriel → vie 6T (≈ 3 ans simplifiés, taux 33 %/an)
-      { nom: "Usine", valeur: 6 },
-      // Camionnette : véhicule utilitaire → vie 2T (cycle court)
-      { nom: "Camionnette", valeur: 2 },
+      // Usine : matériel industriel → vie 8T (≈ 2 ans)
+      { nom: "Usine", valeur: 8 },
+      // Camionnette : véhicule utilitaire → vie 8T (≈ 2 ans)
+      { nom: "Camionnette", valeur: 8 },
       // Autres : réservé aux investissements via Cartes Décision
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
@@ -57,17 +58,17 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
   },
 
   {
-    nom: "Entreprise Violette",
+    nom: "Véloce Transports",
     couleur: "#7b2d8b",
     icon: "🚚",
     type: "Logistique",
     specialite: "🚀 Livraison rapide",
     actifs: [
       // IMMOBILISATIONS
-      // Camion : poids lourd → vie 6T (durée élevée pour logistique)
-      { nom: "Camion", valeur: 6 },
-      // Machine : équipement de manutention → vie 2T (usure intensive)
-      { nom: "Machine", valeur: 2 },
+      // Camion : poids lourd → vie 10T (≈ 2,5 ans)
+      { nom: "Camion", valeur: 10 },
+      // Machine : équipement de manutention → vie 6T (≈ 1,5 an)
+      { nom: "Machine", valeur: 6 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
@@ -83,17 +84,17 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
   },
 
   {
-    nom: "Entreprise Bleue",
+    nom: "Azura Commerce",
     couleur: "#1565c0",
     icon: "🏪",
     type: "Commerce",
     specialite: "👥 Attire les particuliers",
     actifs: [
       // IMMOBILISATIONS
-      // Showroom : agencement commercial → vie 5T (5-10 ans PCG, ici simplifié)
-      { nom: "Showroom", valeur: 5 },
-      // Voiture de démonstration → vie 3T (usage intensif, dépréciation rapide)
-      { nom: "Voiture", valeur: 3 },
+      // Showroom : agencement commercial → vie 8T (≈ 2 ans)
+      { nom: "Showroom", valeur: 8 },
+      // Voiture de démonstration → vie 8T (≈ 2 ans)
+      { nom: "Voiture", valeur: 8 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
@@ -109,17 +110,17 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
   },
 
   {
-    nom: "Entreprise Verte",
+    nom: "Synergia Lab",
     couleur: "#2e7d32",
     icon: "💡",
     type: "Innovation",
     specialite: "💎 Revenus de licence",
     actifs: [
       // IMMOBILISATIONS
-      // Brevet : propriété intellectuelle → vie 5T (amortissement sur 5 ans, art. 39 CGI)
-      { nom: "Brevet", valeur: 5 },
-      // Matériel informatique → vie 3T (durée fiscale standard 3 ans)
-      { nom: "Matériel informatique", valeur: 3 },
+      // Brevet : propriété intellectuelle → vie 8T (≈ 2 ans simplifié)
+      { nom: "Brevet", valeur: 8 },
+      // Matériel informatique → vie 5T (≈ 1,25 an simplifié)
+      { nom: "Matériel informatique", valeur: 5 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
