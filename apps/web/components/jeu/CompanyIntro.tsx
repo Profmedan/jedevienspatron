@@ -60,7 +60,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {capitaux && (
             <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-orange-900/40">
               <div>
-                <div className="font-medium text-sm">{capitaux.nom}</div>
+                <div className="font-medium text-sm text-gray-100">{capitaux.nom}</div>
                 <div className="text-xs text-gray-400">
                   Apport des associés — ressource permanente, ne se rembourse pas
                 </div>
@@ -73,7 +73,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {emprunts && (
             <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-orange-900/40">
               <div>
-                <div className="font-medium text-sm">{emprunts.nom}</div>
+                <div className="font-medium text-sm text-gray-100">{emprunts.nom}</div>
                 <div className="text-xs text-gray-400">
                   Financement bancaire — remboursement de −1 par trimestre pendant {emprunts.valeur} trimestres
                 </div>
@@ -125,7 +125,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                     className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40"
                   >
                     <div>
-                      <div className="font-medium text-sm">
+                      <div className="font-medium text-sm text-gray-100">
                         {info?.icon ?? "🔧"} {a.nom}
                       </div>
                       <div className="text-xs text-gray-400">
@@ -155,7 +155,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                   className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40"
                 >
                   <div>
-                    <div className="font-medium text-sm">📦 {a.nom}</div>
+                    <div className="font-medium text-sm text-gray-100">📦 {a.nom}</div>
                     <div className="text-xs text-gray-400">Marchandises prêtes à être vendues ou transformées</div>
                   </div>
                   <span className="font-bold text-blue-400">{a.valeur}</span>
@@ -171,7 +171,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               </div>
               <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40">
                 <div>
-                  <div className="font-medium text-sm">💰 {tresorerie.nom}</div>
+                  <div className="font-medium text-sm text-gray-100">💰 {tresorerie.nom}</div>
                   <div className="text-xs text-gray-400">Liquidités disponibles pour payer les charges</div>
                 </div>
                 <span className="font-bold text-blue-400">{tresorerie.valeur}</span>
@@ -212,7 +212,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
         className={`rounded-xl p-4 text-center font-bold text-lg transition-all ${
           totalActif === totalPassif
             ? "bg-gradient-to-r bg-emerald-950/40 text-emerald-300 border-2 border-emerald-700"
-            : "bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-2 border-red-300"
+            : "bg-red-950/40 text-red-300 border-2 border-red-700"
         }`}
       >
         {totalActif === totalPassif
@@ -308,7 +308,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
             <div
               key={i}
               className={`h-2 w-8 rounded-full transition-all ${
-                i <= step ? "bg-indigo-600" : "bg-gray-200"
+                i <= step ? "bg-indigo-500" : "bg-gray-600"
               }`}
             />
           ))}
