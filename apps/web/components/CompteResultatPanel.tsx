@@ -1,6 +1,7 @@
 "use client";
 import { Joueur } from "@/lib/game-engine/types";
 import { getTotalCharges, getTotalProduits, getResultatNet } from "@/lib/game-engine/calculators";
+import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };
 
@@ -15,23 +16,27 @@ interface Props {
   recentModifications?: RecentMod[];
 }
 
-/** Badge avant → après affiché à la place de la valeur courante */
+/** Badge avant → après affiché à la place de la valeur courante.
+ *  Couleur basée sur l'impact financier réel (PCG français) :
+ *  - charges en hausse → rouge (appauvrissement)
+ *  - produits en hausse → vert (enrichissement)
+ */
 function BeforeAfterBadge({ mod }: { mod: RecentMod }) {
   const delta = mod.nouvelleValeur - mod.ancienneValeur;
-  const up = delta > 0;
+  const bon = isBonPourEntreprise(mod.poste, delta);
   return (
     <span className="inline-flex items-center gap-1">
       <span className="line-through text-gray-400 text-xs tabular-nums">{mod.ancienneValeur}</span>
       <span className="text-gray-400 text-[10px]">→</span>
-      <span className={`font-black text-sm tabular-nums ${up ? "text-emerald-600" : "text-red-600"}`}>
+      <span className={`font-black text-sm tabular-nums ${bon ? "text-emerald-600" : "text-red-600"}`}>
         {mod.nouvelleValeur}
       </span>
       <span
         className={`text-[10px] font-bold px-1 rounded-full ${
-          up ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+          bon ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
         }`}
       >
-        {up ? "+" : ""}
+        {delta > 0 ? "+" : ""}
         {delta}
       </span>
     </span>

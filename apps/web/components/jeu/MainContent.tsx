@@ -2,6 +2,7 @@
 
 import { Joueur, CarteDecision } from "@/lib/game-engine/types";
 import { getTresorerie } from "@/lib/game-engine/calculators";
+import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
@@ -184,12 +185,13 @@ export function MainContent({
           <div className="flex flex-wrap gap-1.5">
             {recentModifications.map((mod) => {
               const delta = mod.nouvelleValeur - mod.ancienneValeur;
-              const up = delta > 0;
+              // Couleur basée sur l'impact financier réel (PCG) — pas uniquement le signe du delta
+              const bon = isBonPourEntreprise(mod.poste, delta);
               return (
                 <span
                   key={mod.poste}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                    up
+                    bon
                       ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                       : "bg-red-100 text-red-800 border-red-300"
                   }`}
@@ -198,8 +200,8 @@ export function MainContent({
                   <span className="opacity-60 line-through text-[10px] tabular-nums">{mod.ancienneValeur}</span>
                   <span className="text-[10px]">→</span>
                   <span className="font-black tabular-nums">{mod.nouvelleValeur}</span>
-                  <span className={`text-[10px] font-bold ml-0.5 ${up ? "text-emerald-600" : "text-red-600"}`}>
-                    ({up ? "+" : ""}{delta})
+                  <span className={`text-[10px] font-bold ml-0.5 ${bon ? "text-emerald-600" : "text-red-600"}`}>
+                    ({delta > 0 ? "+" : ""}{delta})
                   </span>
                 </span>
               );
