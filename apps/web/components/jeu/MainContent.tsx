@@ -259,8 +259,8 @@ export function MainContent({
             <div className="rounded-xl bg-amber-950/30 border border-amber-700 p-3 text-xs text-amber-300 leading-relaxed">
               <strong>Aucun commercial actif.</strong> Recrutez via une{" "}
               <span className="text-indigo-600 font-bold">Carte Décision</span> à
-              l&apos;étape 6 🎯 : Junior (1 client particulier/trim),
-              Senior (1 client TPE/trim), Directrice (1 grand compte/trim).
+              l&apos;étape 6 🎯 : Junior (2 particuliers/trim),
+              Senior (2 TPE/trim), Directrice (2 grands comptes/trim).
             </div>
           ) : (
             <div className="flex flex-wrap gap-3">

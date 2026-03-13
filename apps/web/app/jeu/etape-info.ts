@@ -51,7 +51,7 @@ export const ETAPE_INFO: Record<
     principe:
       "DÉBIT Charges de personnel / CRÉDIT Trésorerie. Les salaires sont une charge d'exploitation qui réduit le résultat. Mais les commerciaux génèrent des ventes futures qui compensent.",
     conseil:
-      "🤝 Chaque commercial génère automatiquement ses clients : Junior → 1 Particulier/trim, Senior → 1 TPE/trim, Directrice → 1 Grand Compte/trim. Pour recruter de nouveaux commerciaux, achetez une Carte Décision à l'étape 6 🎯.",
+      "🤝 Chaque commercial génère automatiquement ses clients : Junior → 2 Particuliers/trim, Senior → 2 TPE/trim, Directrice → 2 Grands Comptes/trim. Pour recruter de nouveaux commerciaux, achetez une Carte Décision à l'étape 6 🎯.",
   },
   4: {
     icone: "🤝",
