@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
 import { EntryCard, type EntryLine } from "./EntryCard";
@@ -27,11 +28,12 @@ interface EntryPanelProps {
 /**
  * Panneau interactif de saisie des écritures comptables.
  *
- * Améliorations pédagogiques :
- *  - Compteur de progression (N/M écritures saisies) avec barre de progrès
- *  - Visualisation de la règle de la partie double : Σ Débits = Σ Crédits
- *  - Indicateur d'équilibre du bilan en temps réel
- *  - Principe comptable + conseil mis en valeur
+ * UX Accordion séquentiel :
+ *  - Chaque écriture est une "fenêtre" qui se déplie / replie
+ *  - Une seule fenêtre ouverte à la fois (accordion)
+ *  - Auto-avance : après saisie d'une écriture, la suivante s'ouvre automatiquement
+ *  - Groupes visuels : section Débits puis section Crédits
+ *  - Indicateur Σ Débits = Σ Crédits + équilibre bilan en temps réel
  */
 export function EntryPanel({
   activeStep,
@@ -41,6 +43,32 @@ export function EntryPanel({
   onConfirm,
   onCancel,
 }: EntryPanelProps) {
+  // ── Accordion : id de la fenêtre actuellement ouverte ──────────────────
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(() => {
+    const first = activeStep.entries.find((e) => !e.applied);
+    return first?.id ?? null;
+  });
+
+  // Reset lors du changement d'étape (nouvelle activeStep)
+  const prevTitreRef = useRef(activeStep.titre);
+  useEffect(() => {
+    if (prevTitreRef.current !== activeStep.titre) {
+      prevTitreRef.current = activeStep.titre;
+      const first = activeStep.entries.find((e) => !e.applied);
+      setActiveEntryId(first?.id ?? null);
+    }
+  }, [activeStep.titre, activeStep.entries]);
+
+  // ── Handler Saisir avec auto-avance ────────────────────────────────────
+  function handleApply(entryId: string, poste: string) {
+    onApply(entryId);
+    onApplyEntry?.(poste);
+    // Calcul du prochain non-saisi (exclut l'entrée en cours qui va devenir applied)
+    const remaining = activeStep.entries.filter((e) => !e.applied && e.id !== entryId);
+    setActiveEntryId(remaining[0]?.id ?? null);
+  }
+
+  // ── Stats globales ──────────────────────────────────────────────────────
   const totalCount   = activeStep.entries.length;
   const appliedCount = activeStep.entries.filter((e) => e.applied).length;
   const pendingCount = totalCount - appliedCount;
@@ -54,12 +82,14 @@ export function EntryPanel({
   const debits  = activeStep.entries.filter((e) => e.sens === "debit");
   const credits = activeStep.entries.filter((e) => e.sens === "credit");
 
-  // Somme des valeurs absolues pour visualiser la règle Σ Débits = Σ Crédits
   const sumDebits  = debits.reduce((s, e) => s + Math.abs(e.delta), 0);
   const sumCredits = credits.reduce((s, e) => s + Math.abs(e.delta), 0);
   const partieDoubleOk = Math.abs(sumDebits - sumCredits) < 0.01;
 
   const progressPct = totalCount > 0 ? Math.round((appliedCount / totalCount) * 100) : 0;
+
+  const allDebitsApplied  = debits.every((e) => e.applied);
+  const allCreditsApplied = credits.every((e) => e.applied);
 
   return (
     <div className="space-y-3">
@@ -82,7 +112,7 @@ export function EntryPanel({
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                 ✏️ Écritures à saisir
               </span>
-              <span className={`text-xs font-black tabular-nums ${allApplied ? "text-emerald-600" : "text-indigo-600"}`}>
+              <span className={`text-xs font-black tabular-nums ${allApplied ? "text-emerald-400" : "text-indigo-400"}`}>
                 {appliedCount}/{totalCount}
                 {allApplied ? " ✅" : ` — encore ${pendingCount}`}
               </span>
@@ -97,47 +127,61 @@ export function EntryPanel({
             </div>
           </div>
 
-          {/* Débits */}
+          {/* ── Section DÉBITS ── */}
           {debits.length > 0 && (
-            <div className="mb-1">
-              <div className="text-xs font-black text-blue-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <div className="mb-3">
+              <div className={`flex items-center gap-2 mb-2 px-1 ${allDebitsApplied ? "opacity-60" : ""}`}>
                 <span className="inline-block w-3 h-0.5 bg-blue-400 rounded" />
-                📤 Débits (Emplois)
-                <span className="font-normal text-blue-400 normal-case tracking-normal text-[10px]">
-                  — ce qu&apos;on utilise / ce qui augmente
+                <span className="text-xs font-black text-blue-400 uppercase tracking-wider">
+                  📤 Débits
                 </span>
+                <span className="text-[10px] font-normal text-blue-500 normal-case tracking-normal">
+                  — emplois / ce qui augmente
+                </span>
+                {allDebitsApplied && (
+                  <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
+                )}
               </div>
+
               {debits.map((e) => (
                 <EntryCard
                   key={e.id}
                   entry={e}
-                  onApply={() => {
-                    onApply(e.id);
-                    onApplyEntry?.(e.poste);
-                  }}
+                  isExpanded={activeEntryId === e.id}
+                  onToggle={() =>
+                    setActiveEntryId(activeEntryId === e.id ? null : e.id)
+                  }
+                  onApply={() => handleApply(e.id, e.poste)}
                 />
               ))}
             </div>
           )}
 
-          {/* Crédits */}
+          {/* ── Section CRÉDITS ── */}
           {credits.length > 0 && (
-            <div className="mt-2">
-              <div className="text-xs font-black text-orange-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <div className="mb-2">
+              <div className={`flex items-center gap-2 mb-2 px-1 ${allCreditsApplied ? "opacity-60" : ""}`}>
                 <span className="inline-block w-3 h-0.5 bg-orange-400 rounded" />
-                📥 Crédits (Ressources)
-                <span className="font-normal text-orange-400 normal-case tracking-normal text-[10px]">
-                  — d&apos;où vient le financement
+                <span className="text-xs font-black text-orange-400 uppercase tracking-wider">
+                  📥 Crédits
                 </span>
+                <span className="text-[10px] font-normal text-orange-500 normal-case tracking-normal">
+                  — ressources / d&apos;où vient le financement
+                </span>
+                {allCreditsApplied && (
+                  <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
+                )}
               </div>
+
               {credits.map((e) => (
                 <EntryCard
                   key={e.id}
                   entry={e}
-                  onApply={() => {
-                    onApply(e.id);
-                    onApplyEntry?.(e.poste);
-                  }}
+                  isExpanded={activeEntryId === e.id}
+                  onToggle={() =>
+                    setActiveEntryId(activeEntryId === e.id ? null : e.id)
+                  }
+                  onApply={() => handleApply(e.id, e.poste)}
                 />
               ))}
             </div>
@@ -145,13 +189,11 @@ export function EntryPanel({
 
           {/* ── Règle de la partie double : Σ Débits = Σ Crédits ── */}
           {debits.length > 0 && credits.length > 0 && (
-            <div
-              className={`mt-2 rounded-xl px-3 py-2 border flex items-center justify-between text-xs font-bold ${
-                partieDoubleOk
-                  ? "bg-indigo-950/50 border-indigo-700 text-indigo-300"
-                  : "bg-amber-950/40 border-amber-600 text-amber-300"
-              }`}
-            >
+            <div className={`mt-2 rounded-xl px-3 py-2 border flex items-center justify-between text-xs font-bold ${
+              partieDoubleOk
+                ? "bg-indigo-950/50 border-indigo-700 text-indigo-300"
+                : "bg-amber-950/40 border-amber-600 text-amber-300"
+            }`}>
               <span>
                 <span className="text-blue-400">Σ Débits</span>{" "}
                 <span className="font-black tabular-nums">{sumDebits}</span>
@@ -164,7 +206,7 @@ export function EntryPanel({
                 <span className="font-black tabular-nums">{sumCredits}</span>
               </span>
               <span className="text-[10px] font-normal opacity-70 ml-1">
-                {partieDoubleOk ? "✓ partie double respectée" : "à vérifier"}
+                {partieDoubleOk ? "✓ partie double" : "à vérifier"}
               </span>
             </div>
           )}
