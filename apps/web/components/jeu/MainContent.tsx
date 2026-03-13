@@ -6,9 +6,10 @@ import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
+import { GlossairePanel } from "@/components/GlossairePanel";
 import CarteView from "@/components/CarteView";
 
-type TabType = "bilan" | "cr" | "indicateurs";
+type TabType = "bilan" | "cr" | "indicateurs" | "glossaire";
 
 interface MainContentProps {
   joueur: Joueur;
@@ -32,6 +33,7 @@ const TABS: Array<[TabType, string]> = [
   ["bilan", "📋 Bilan"],
   ["cr", "📈 Compte de résultat"],
   ["indicateurs", "📊 Indicateurs"],
+  ["glossaire", "📖 Glossaire"],
 ];
 
 /**
@@ -229,6 +231,9 @@ export function MainContent({
         )}
         {activeTab === "indicateurs" && (
           <IndicateursPanel joueur={displayJoueur} />
+        )}
+        {activeTab === "glossaire" && (
+          <GlossairePanel />
         )}
       </div>
 

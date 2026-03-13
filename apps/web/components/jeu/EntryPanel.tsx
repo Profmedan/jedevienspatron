@@ -242,27 +242,17 @@ export function EntryPanel({
         </div>
       </div>
 
-      {/* ── Principe comptable ── */}
-      <div className="bg-indigo-950/40 rounded-xl p-2.5 border border-indigo-800/50 shadow-sm">
-        <div className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">
-          📚 Principe comptable
-        </div>
-        <p className="text-xs text-indigo-200 leading-relaxed">{activeStep.principe}</p>
-      </div>
-
-      {/* ── Conseil ── */}
-      <div className="bg-amber-950/30 rounded-xl p-2.5 border border-amber-800/50 shadow-sm">
-        <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1">
-          💡 Conseil
-        </div>
-        <p className="text-xs text-amber-300 leading-relaxed">{activeStep.conseil}</p>
+      {/* ── Lien vers le Glossaire ── */}
+      <div className="bg-indigo-950/30 rounded-xl px-3 py-2 border border-indigo-800/40 text-[11px] text-indigo-400 flex items-center gap-2">
+        <span>📖</span>
+        <span>Principe comptable et définitions → onglet <strong className="text-indigo-300">Glossaire</strong> (panneau droit)</span>
       </div>
 
       {/* ── Boutons d'action ── */}
       <div className="flex gap-2 pt-1">
         <button
           onClick={onCancel}
-          className="flex-1 py-2 border border-gray-600 rounded-xl text-gray-400 text-xs hover:bg-gray-800 transition-colors font-medium"
+          className="py-2 px-4 border border-gray-600 rounded-xl text-gray-400 text-xs hover:bg-gray-800 transition-colors font-medium shrink-0"
           aria-label="Revenir à l'étape"
         >
           ← Revenir
@@ -270,7 +260,7 @@ export function EntryPanel({
         {canContinue && (
           <button
             onClick={onConfirm}
-            className="flex-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold py-2 px-5 rounded-xl text-xs transition-all shadow-sm active:scale-95"
+            className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-md shadow-emerald-900/40 active:scale-95"
             aria-label="Confirmer et continuer"
           >
             ✅ Continuer →

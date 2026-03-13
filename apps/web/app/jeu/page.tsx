@@ -106,7 +106,7 @@ export default function JeuPage() {
   const [etat, setEtat]                   = useState<EtatJeu | null>(null);
   const [activeStep, setActiveStep]       = useState<ActiveStep | null>(null);
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
-  const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs">("bilan");
+  const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs" | "glossaire">("bilan");
   const [highlightedPoste, setHighlightedPoste] = useState<string | null>(null);
   const [recentModifications, setRecentModifications] = useState<Array<{
     poste: string; ancienneValeur: number; nouvelleValeur: number;
