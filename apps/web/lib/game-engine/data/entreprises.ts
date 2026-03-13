@@ -2,7 +2,19 @@
 // KICLEPATRON — Données des 4 entreprises
 // Source : KICLEPATRON_v2.html — Pierre Médan
 //
-// Bilan initial équilibré : Actif = Passif = 20
+// ── Bilans initiaux équilibrés (Actif = Passif) ─────────────
+//   • Manufacture Belvaux : Actif = Passif = 28
+//       Immos (8+8) + Stocks 4 + Tréso 8 = 28
+//       Capitaux 20 + Emprunts 8 = 28
+//   • Véloce Transports   : Actif = Passif = 28
+//       Immos (10+6) + Stocks 4 + Tréso 8 = 28
+//       Capitaux 20 + Emprunts 8 = 28
+//   • Azura Commerce      : Actif = Passif = 28
+//       Immos (8+8) + Stocks 4 + Tréso 8 = 28
+//       Capitaux 20 + Emprunts 8 = 28
+//   • Synergia Lab        : Actif = Passif = 25
+//       Immos (8+5) + Stocks 4 + Tréso 8 = 25
+//       Capitaux 17 + Emprunts 8 = 25
 //
 // ── Logique d'amortissement (PCG) ──────────────────────────
 // Chaque bien immobilisé perd -1 par trimestre (durée de vie = valeur initiale).
@@ -20,9 +32,8 @@
 // achetés via les Cartes Décision et commence alors à s'amortir.
 //
 // ── Financement ─────────────────────────────────────────────
-// Emprunts = 8 (remboursement -1/tour pendant 8 tours = fin de jeu)
-// Capitaux propres = 12
-// Total passif = 20 = Total actif ✓
+// Emprunts = 8 pour toutes les entreprises (remboursement -1/tour × 8 tours)
+// Capitaux propres ajustés pour équilibrer chaque bilan (20 ou 17)
 // ============================================================
 
 import { EntrepriseTemplate } from "@/lib/game-engine/types";
@@ -48,8 +59,8 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Trésorerie", valeur: 8 },
     ],
     passifs: [
-      // CAPITAUX PROPRES
-      { nom: "Capitaux propres", valeur: 12 },
+      // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
+      { nom: "Capitaux propres", valeur: 20 },
       // EMPRUNTS — remboursement -1/trimestre pendant 8 trimestres
       { nom: "Emprunts", valeur: 8 },
       // DETTES FOURNISSEURS
@@ -77,7 +88,8 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Trésorerie", valeur: 8 },
     ],
     passifs: [
-      { nom: "Capitaux propres", valeur: 12 },
+      // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
+      { nom: "Capitaux propres", valeur: 20 },
       { nom: "Emprunts", valeur: 8 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
@@ -103,7 +115,8 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Trésorerie", valeur: 8 },
     ],
     passifs: [
-      { nom: "Capitaux propres", valeur: 12 },
+      // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
+      { nom: "Capitaux propres", valeur: 20 },
       { nom: "Emprunts", valeur: 8 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
@@ -129,7 +142,8 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Trésorerie", valeur: 8 },
     ],
     passifs: [
-      { nom: "Capitaux propres", valeur: 12 },
+      // CAPITAUX PROPRES — 17 pour équilibrer : Immos 13 + Stocks 4 + Tréso 8 = 25
+      { nom: "Capitaux propres", valeur: 17 },
       { nom: "Emprunts", valeur: 8 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
