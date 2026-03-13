@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>KICLEPATRON – Comparaison carte Commercial Junior</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center gap-10 p-10 font-sans">
+
+  <h1 class="text-2xl font-bold text-gray-700">Avant / Après – Carte Commercial Junior</h1>
+
+  <div class="flex flex-wrap gap-12 items-start justify-center">
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- AVANT (ancienne carte)                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-sm font-bold text-red-600 uppercase tracking-widest">❌ Avant (incompréhensible)</div>
+
+      <!-- Carte originale -->
+      <div class="border-2 border-green-300 rounded-xl px-3 py-2.5 flex flex-col gap-1 min-w-[110px] bg-green-50 text-green-800">
+        <div class="font-bold text-sm leading-tight">Commercial Junior</div>
+        <div class="flex items-center gap-1 mt-0.5">
+          <span class="text-lg">👤👤</span>
+          <div class="text-xs font-semibold leading-tight">
+            <span class="font-black">2×</span> Particulier<br />
+            <span class="opacity-70">+4 CA / trim</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Problèmes identifiés -->
+      <div class="bg-red-50 border border-red-200 rounded-xl p-3 max-w-[200px] text-xs text-red-700 space-y-1">
+        <div class="font-bold mb-1">Problèmes :</div>
+        <div>❌ Coût invisible (–1 charges, –1 tréso)</div>
+        <div>❌ "CA" = jargon non expliqué</div>
+        <div>❌ "trim" = trimestre ? trim ?</div>
+        <div>❌ "2× Particulier → +4 CA" = logique cachée</div>
+        <div>❌ Pas de séparation coût/bénéfice</div>
+      </div>
+    </div>
+
+    <!-- Flèche -->
+    <div class="self-center text-4xl text-gray-400 font-bold mt-[-40px]">→</div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- APRÈS (nouvelle carte)                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-sm font-bold text-green-600 uppercase tracking-widest">✅ Après (claire et lisible)</div>
+
+      <!-- Nouvelle carte : 1 Commercial Junior seul -->
+      <div class="border-2 border-green-300 rounded-xl overflow-hidden bg-white min-w-[160px] shadow-sm">
+        <!-- En-tête -->
+        <div class="bg-green-600 text-white px-3 py-2 flex items-center gap-1.5">
+          <span class="text-base">🧑‍💼</span>
+          <span class="font-bold text-sm leading-tight">Commercial Junior</span>
+        </div>
+        <!-- Coûts -->
+        <div class="px-3 py-2 border-b border-red-100 bg-red-50">
+          <div class="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">💸 Coût / trimestre</div>
+          <div class="space-y-0.5">
+            <div class="text-xs text-red-600 flex items-center gap-1">
+              <span class="font-bold">↑</span>
+              <span>+1 charges personnel</span>
+            </div>
+            <div class="text-xs text-red-600 flex items-center gap-1">
+              <span class="font-bold">↓</span>
+              <span>−1 trésorerie</span>
+            </div>
+          </div>
+        </div>
+        <!-- Bénéfices -->
+        <div class="px-3 py-2 bg-green-50">
+          <div class="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1">📈 Revenu / trimestre</div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-sm">👤</span>
+            <span class="text-xs text-green-700 font-semibold">+1 client particulier</span>
+          </div>
+          <div class="text-xs text-green-800 font-bold flex items-center gap-1">
+            <span class="text-green-500">→</span>
+            <span>+2 de chiffre d'affaires</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nouvelle carte : 2 Commerciaux Juniors (comme dans le screenshot) -->
+      <div class="border-2 border-green-300 rounded-xl overflow-hidden bg-white min-w-[160px] shadow-sm">
+        <div class="bg-green-600 text-white px-3 py-2 flex items-center gap-1.5">
+          <span class="text-base">🧑‍💼</span>
+          <span class="font-bold text-sm leading-tight">Commercial Junior</span>
+        </div>
+        <div class="px-3 py-2 border-b border-red-100 bg-red-50">
+          <div class="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">💸 Coût / trimestre</div>
+          <div class="space-y-0.5">
+            <div class="text-xs text-red-600 flex items-center gap-1">
+              <span class="font-bold">↑</span>
+              <span>+2 charges personnel</span>
+            </div>
+            <div class="text-xs text-red-600 flex items-center gap-1">
+              <span class="font-bold">↓</span>
+              <span>−2 trésorerie</span>
+            </div>
+          </div>
+        </div>
+        <div class="px-3 py-2 bg-green-50">
+          <div class="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1">📈 Revenu / trimestre</div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-sm">👤👤</span>
+            <span class="text-xs text-green-700 font-semibold">+2 clients particuliers</span>
+          </div>
+          <div class="text-xs text-green-800 font-bold flex items-center gap-1">
+            <span class="text-green-500">→</span>
+            <span>+4 de chiffre d'affaires</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Améliorations -->
+      <div class="bg-green-50 border border-green-200 rounded-xl p-3 max-w-[220px] text-xs text-green-800 space-y-1">
+        <div class="font-bold mb-1">Améliorations :</div>
+        <div>✅ Coût explicite en rouge</div>
+        <div>✅ "chiffre d'affaires" en clair</div>
+        <div>✅ "trimestre" abrégé disparu</div>
+        <div>✅ Logique visible : clients → CA</div>
+        <div>✅ Séparation visuelle coût/revenu</div>
+        <div>✅ Scalable avec n commerciaux</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Bonus : toutes les variantes                -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="mt-6">
+    <h2 class="text-lg font-bold text-gray-600 text-center mb-4">Toutes les variantes de commerciaux</h2>
+    <div class="flex flex-wrap gap-4 justify-center">
+
+      <!-- Senior -->
+      <div class="border-2 border-blue-300 rounded-xl overflow-hidden bg-white min-w-[160px] shadow-sm">
+        <div class="bg-blue-600 text-white px-3 py-2 flex items-center gap-1.5">
+          <span class="text-base">🧑‍💼</span>
+          <span class="font-bold text-sm leading-tight">Commercial Senior</span>
+        </div>
+        <div class="px-3 py-2 border-b border-red-100 bg-red-50">
+          <div class="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">💸 Coût / trimestre</div>
+          <div class="text-xs text-red-600 flex items-center gap-1"><span class="font-bold">↑</span><span>+2 charges personnel</span></div>
+          <div class="text-xs text-red-600 flex items-center gap-1"><span class="font-bold">↓</span><span>−2 trésorerie</span></div>
+        </div>
+        <div class="px-3 py-2 bg-green-50">
+          <div class="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1">📈 Revenu / trimestre</div>
+          <div class="flex items-center gap-1 mb-1"><span class="text-sm">🏠</span><span class="text-xs text-green-700 font-semibold">+1 client TPE</span></div>
+          <div class="text-xs text-green-800 font-bold flex items-center gap-1"><span class="text-green-500">→</span><span>+3 de chiffre d'affaires</span></div>
+        </div>
+      </div>
+
+      <!-- Directrice -->
+      <div class="border-2 border-purple-300 rounded-xl overflow-hidden bg-white min-w-[160px] shadow-sm">
+        <div class="bg-purple-600 text-white px-3 py-2 flex items-center gap-1.5">
+          <span class="text-base">🧑‍💼</span>
+          <span class="font-bold text-sm leading-tight">Directrice Commerciale</span>
+        </div>
+        <div class="px-3 py-2 border-b border-red-100 bg-red-50">
+          <div class="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">💸 Coût / trimestre</div>
+          <div class="text-xs text-red-600 flex items-center gap-1"><span class="font-bold">↑</span><span>+3 charges personnel</span></div>
+          <div class="text-xs text-red-600 flex items-center gap-1"><span class="font-bold">↓</span><span>−3 trésorerie</span></div>
+        </div>
+        <div class="px-3 py-2 bg-green-50">
+          <div class="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1">📈 Revenu / trimestre</div>
+          <div class="flex items-center gap-1 mb-1"><span class="text-sm">🏢</span><span class="text-xs text-green-700 font-semibold">+1 grand compte</span></div>
+          <div class="text-xs text-green-800 font-bold flex items-center gap-1"><span class="text-green-500">→</span><span>+4 de chiffre d'affaires</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="mt-4 text-xs text-gray-400 text-center">
+    KICLEPATRON · Redesign carte Commercial Junior · Agents : UX Researcher + UI Designer + Game Designer
+  </div>
+
+</body>
+</html>
