@@ -234,60 +234,6 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
       </div>
     </div>,
 
-    /* ── Étape 3 : Les amortissements ── */
-    <div key={3} className="space-y-4">
-      <h3 className="font-bold text-indigo-200 text-lg">
-        📉 Que sont les amortissements ?
-      </h3>
-      <p className="text-gray-300 text-sm leading-relaxed">
-        Chaque trimestre, tes immobilisations <strong>perdent de la valeur</strong> :
-        une usine s&apos;use, un brevet expire, un ordinateur vieillit. On enregistre
-        cette usure par une <strong>dotation aux amortissements</strong> (PCG, compte 681).
-      </p>
-
-      {/* Schéma visuel partie double */}
-      <div className="bg-gray-800 border border-gray-600 rounded-xl p-4">
-        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
-          ✍️ Écriture comptable chaque trimestre
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="bg-red-950/30 border border-red-800/50 rounded-lg p-3 text-center">
-            <div className="font-black text-red-300 text-base">DÉBIT</div>
-            <div className="text-xs text-red-400 mt-1 font-medium">681 — Dotation</div>
-            <div className="text-xs text-gray-500 mt-1">Charge au Compte de Résultat</div>
-            <div className="text-xl font-black text-red-300 mt-2">+{immos.length}</div>
-            <div className="text-xs text-gray-400">({immos.length} bien(s) × −1)</div>
-          </div>
-          <div className="bg-blue-950/30 border border-blue-800/50 rounded-lg p-3 text-center">
-            <div className="font-black text-blue-300 text-base">CRÉDIT</div>
-            <div className="text-xs text-blue-400 mt-1 font-medium">28x — Amort. immos</div>
-            <div className="text-xs text-gray-500 mt-1">Valeur nette du Bilan</div>
-            <div className="text-xl font-black text-blue-300 mt-2">−{immos.length}</div>
-            <div className="text-xs text-gray-400">(−1 par bien immobilisé)</div>
-          </div>
-        </div>
-        <div className="mt-3 text-xs text-center text-gray-500 font-medium">
-          ∑ Débits = ∑ Crédits → le bilan reste équilibré ✓
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-3 text-xs text-amber-300 leading-relaxed">
-          <span className="font-bold">💡 Clé PCG :</span> l&apos;amortissement est une
-          charge <em>calculée</em>, pas une sortie de trésorerie ! L&apos;argent
-          reste en banque mais le résultat net diminue.
-          <br />
-          <span className="font-semibold">CAF = Résultat net + Dotations</span> —
-          la Capacité d&apos;Autofinancement est donc supérieure au résultat.
-        </div>
-        <div className="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3 text-xs text-emerald-300 leading-relaxed">
-          <span className="font-bold">🎯 Dans le jeu :</span> chaque immobilisation
-          perd −1 par trimestre. Tes équipements durent de 2 à 6 trimestres selon leur
-          type. Investir dans de nouveaux équipements (via les Cartes Décision)
-          augmentera ta capacité de production !
-        </div>
-      </div>
-    </div>,
   ];
 
   return (
@@ -304,7 +250,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
         {/* Progression */}
         <div className="flex gap-2 justify-center p-3 border-b border-gray-700 bg-gray-800">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div
               key={i}
               className={`h-2 w-8 rounded-full transition-all ${
