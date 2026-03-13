@@ -31,6 +31,10 @@ interface MainContentProps {
   subEtape6?: "recrutement" | "investissement";
   /** Mode Rapide : étapes auto pré-cochées à partir du T3 */
   modeRapide?: boolean;
+  /** Passer l'étape 6 courante (6a → 6b, ou 6b → 7) */
+  onSkipDecision?: () => void;
+  /** Exécuter la carte Décision sélectionnée */
+  onLaunchDecision?: () => void;
 }
 
 const TABS: Array<[TabType, string]> = [
@@ -115,6 +119,8 @@ export function MainContent({
   recentModifications,
   subEtape6 = "recrutement",
   modeRapide = false,
+  onSkipDecision,
+  onLaunchDecision,
 }: MainContentProps) {
   // Les cartes de recrutement viennent de la prop dédiée (obtenirCarteRecrutement)
   // Si non fournie (rétrocompat), on filtre depuis cartesDisponibles
@@ -161,6 +167,168 @@ export function MainContent({
           )}
         </div>
       </div>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* 1b. ÉTAPE 6 — Zone d'action principale (EN HAUT)  */}
+      {/* Affichée AVANT les onglets pour que le joueur voit*/}
+      {/* immédiatement ce qu'il peut / doit faire.         */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {etapeTour === 6 && !activeStep && (
+        <div className="rounded-2xl border-2 border-indigo-700 bg-indigo-950/40 overflow-hidden">
+
+          {/* ── Header de l'étape 6 ── */}
+          <div className={`px-4 py-3 flex items-center gap-3 ${
+            subEtape6 === "recrutement"
+              ? "bg-indigo-900/60 border-b border-indigo-700"
+              : "bg-amber-900/60 border-b border-amber-700"
+          }`}>
+            <span className="text-2xl">{subEtape6 === "recrutement" ? "🧑‍💼" : "💡"}</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  subEtape6 === "recrutement"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-amber-600 text-white"
+                }`}>
+                  {subEtape6 === "recrutement" ? "ÉTAPE 6a" : "ÉTAPE 6b"}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                  subEtape6 === "recrutement"
+                    ? "border-indigo-500 text-indigo-300 bg-gray-800/50"
+                    : "border-amber-500 text-amber-300 bg-gray-800/50"
+                }`}>
+                  {subEtape6 === "recrutement" ? "6b Investissement →" : "← 6a Recrutement ✓"}
+                </span>
+              </div>
+              <div className={`font-bold text-base mt-0.5 ${
+                subEtape6 === "recrutement" ? "text-indigo-100" : "text-amber-100"
+              }`}>
+                {subEtape6 === "recrutement"
+                  ? "Recrute un Commercial (optionnel)"
+                  : "Investis dans ton Entreprise (optionnel)"}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Instruction claire ── */}
+          <div className={`px-4 py-2 text-sm leading-relaxed ${
+            subEtape6 === "recrutement"
+              ? "text-indigo-300 bg-indigo-950/30"
+              : "text-amber-300 bg-amber-950/30"
+          }`}>
+            {subEtape6 === "recrutement" ? (
+              <>
+                👇 <strong>Clique sur une carte</strong> pour recruter, puis tape sur{" "}
+                <strong className="text-white">Exécuter</strong> dans le panneau gauche.
+                Un commercial génère des clients <em>dès le tour suivant</em>.
+              </>
+            ) : (
+              <>
+                👇 <strong>Clique sur une carte</strong> pour investir, puis tape sur{" "}
+                <strong className="text-white">Exécuter</strong> dans le panneau gauche.
+                Chaque investissement génère des <em>clients récurrents</em> et des{" "}
+                <em>amortissements</em>.
+              </>
+            )}
+          </div>
+
+          {/* ── Cartes ── */}
+          <div className="px-4 py-3 space-y-3">
+
+            {/* Section Recrutement */}
+            {subEtape6 === "recrutement" && (
+              <>
+                {cartesRecrutement.length === 0 ? (
+                  <div className="text-center py-4 bg-green-950/30 border border-green-800/50 rounded-xl text-sm text-green-300 font-semibold">
+                    ✅ Tous les commerciaux sont déjà dans ton équipe !
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {cartesRecrutement.map((c) => (
+                      <CarteView
+                        key={c.id}
+                        carte={c}
+                        onClick={() =>
+                          setSelectedDecision(selectedDecision?.id === c.id ? null : c)
+                        }
+                        selected={selectedDecision?.id === c.id}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Section Investissement */}
+            {subEtape6 === "investissement" && (
+              <>
+                {cartesAutres.length === 0 ? (
+                  <div className="text-center py-4 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-gray-400">
+                    Aucune carte Décision disponible pour le moment.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {cartesAutres.map((c) => {
+                      const dejaActive = joueur.cartesActives.some((a) => a.id === c.id);
+                      return (
+                        <div key={c.id} className="relative">
+                          <div className={dejaActive ? "opacity-50 pointer-events-none" : ""}>
+                            <CarteView
+                              carte={c}
+                              onClick={() =>
+                                setSelectedDecision(selectedDecision?.id === c.id ? null : c)
+                              }
+                              selected={selectedDecision?.id === c.id}
+                            />
+                          </div>
+                          {dejaActive && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                                ✅ Déjà active
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+
+          {/* ── CTAs en bas du bloc ── */}
+          <div className="px-4 py-3 border-t border-gray-700/50 bg-gray-900/30 flex flex-col gap-2">
+            {selectedDecision && onLaunchDecision && (
+              <button
+                onClick={onLaunchDecision}
+                className={`w-full py-3 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 ${
+                  subEtape6 === "recrutement"
+                    ? "bg-indigo-600 hover:bg-indigo-500"
+                    : "bg-amber-600 hover:bg-amber-500"
+                }`}
+              >
+                <span>📝</span>
+                <span>Exécuter — {selectedDecision.titre}</span>
+              </button>
+            )}
+            {onSkipDecision && (
+              <button
+                onClick={onSkipDecision}
+                className="w-full py-2.5 rounded-xl font-semibold text-gray-300 text-sm border border-gray-600 bg-gray-800/50 hover:bg-gray-700/50 flex items-center justify-center gap-2 transition-colors"
+              >
+                {subEtape6 === "recrutement" ? (
+                  <><span>⏭️</span><span>Passer le recrutement → Investissement</span></>
+                ) : (
+                  <><span>⏭️</span><span>Passer — aucun investissement ce trimestre</span></>
+                )}
+              </button>
+            )}
+          </div>
+
+        </div>
+      )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* 2. Onglets Bilan / CR / Indicateurs               */}
@@ -457,109 +625,6 @@ export function MainContent({
         </div>
       )}
 
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 6. Sélecteur de cartes Décision (étape 6)          */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {etapeTour === 6 && showCartes && !activeStep && (
-        <div className="space-y-4">
-
-          {/* Badge de progression 6a/6b */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`px-3 py-1 rounded-full font-bold border ${
-              subEtape6 === "recrutement"
-                ? "bg-indigo-600 text-white border-indigo-500"
-                : "bg-gray-800 text-gray-500 border-gray-700"
-            }`}>
-              6a 🧑‍💼 Recrutement
-            </span>
-            <span className="text-gray-600">→</span>
-            <span className={`px-3 py-1 rounded-full font-bold border ${
-              subEtape6 === "investissement"
-                ? "bg-amber-600 text-white border-amber-500"
-                : "bg-gray-800 text-gray-500 border-gray-700"
-            }`}>
-              6b 💡 Investissement
-            </span>
-          </div>
-
-          {/* ── Section Recrutement — visible si subEtape6 === "recrutement" ─── */}
-          {subEtape6 === "recrutement" && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-px flex-1 bg-indigo-900/50" />
-              <div className="text-sm font-bold text-indigo-400 uppercase tracking-wider whitespace-nowrap">
-                🧑‍💼 Recrutement
-              </div>
-              <div className="h-px flex-1 bg-indigo-900/50" />
-            </div>
-            <div className="bg-indigo-950/30 border border-indigo-800/50 rounded-xl p-2 mb-3 text-xs text-indigo-300 leading-relaxed">
-              💡 <strong>Chaque trimestre, tu peux recruter un nouveau commercial.</strong>{" "}
-              La prise de poste est effective au trimestre suivant — pas d'écriture ce trimestre.
-            </div>
-
-            {cartesRecrutement.length === 0 ? (
-              <div className="text-center py-4 bg-green-950/30 border border-green-800/50 rounded-xl text-sm text-green-300 font-semibold">
-                ✅ Tous les commerciaux disponibles sont déjà dans votre équipe !
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {cartesRecrutement.map((c) => (
-                  <CarteView
-                    key={c.id}
-                    carte={c}
-                    onClick={() =>
-                      setSelectedDecision(selectedDecision?.id === c.id ? null : c)
-                    }
-                    selected={selectedDecision?.id === c.id}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* ── Section Investissements & Décisions — visible si subEtape6 === "investissement" ─────────────────── */}
-          {subEtape6 === "investissement" && cartesAutres.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-px flex-1 bg-gray-700" />
-                <div className="text-sm font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  💡 Investissements & Décisions
-                </div>
-                <div className="h-px flex-1 bg-gray-700" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {cartesAutres.map((c) => {
-                  const dejaActive = joueur.cartesActives.some((a) => a.id === c.id);
-                  return (
-                    <div key={c.id} className="relative">
-                      <div className={dejaActive ? "opacity-50 pointer-events-none" : ""}>
-                        <CarteView
-                          carte={c}
-                          onClick={() =>
-                            setSelectedDecision(
-                              selectedDecision?.id === c.id ? null : c
-                            )
-                          }
-                          selected={selectedDecision?.id === c.id}
-                        />
-                      </div>
-                      {dejaActive && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                            ✅ Déjà active
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-        </div>
-      )}
     </main>
   );
 }

@@ -75,13 +75,17 @@ export const ETAPE_INFO: Record<
   },
   6: {
     icone: "🎯",
-    titre: "6a Recrutement + 6b Investissement",
+    titre: "À toi de jouer !",
     description:
-      "Ce trimestre se divise en deux actions OPTIONNELLES et indépendantes. 6a : recruter un nouveau commercial (Junior, Senior ou Directrice). 6b : activer une carte Décision (investissement, financement, protection…). Tu peux faire les deux, l'un, ou passer les deux.",
+      "Deux actions OPTIONNELLES s'offrent à toi. 👇 Les cartes sont affichées directement — clique sur celle de ton choix, puis tape « Exécuter ».",
     principe:
-      "Recrutement (6a) : DÉBIT Charges de personnel / CRÉDIT Trésorerie (salaire de prise de poste). Investissement (6b) : DÉBIT Autres Immobilisations (actif ↑) / CRÉDIT Trésorerie. La chaîne de valeur : Investissement → clients générés → ventes → revenus → résultat amélioré. Attention : chaque immobilisation génère +1 dotation/trimestre, réduisant le résultat (charge calculée sans sortie tréso).",
+      "6a Recrutement → DÉBIT Charges personnel / CRÉDIT Trésorerie. " +
+      "6b Investissement → DÉBIT Immobilisations / CRÉDIT Trésorerie (ou Emprunts si financement). " +
+      "Chaque immobilisation génère ensuite +1 dotation/trim (charge sans sortie tréso).",
     conseil:
-      "🧑‍💼 Recruter tôt (dès T1/T2) maximise le nombre de trimestres de revenus. 💡 Investir tôt amortit sur plus de tours. Exemple optimal : Junior T1 + Senior T2 + Directrice T5. 🛡️ L'Assurance Prévoyance protège des événements négatifs. La R&D bénéficie du CIR (Crédit d'Impôt Recherche). Anticipe tes stocks : chaque client consomme 1 unité par vente !",
+      "🧑‍💼 Tu démarres déjà avec un Junior — recrute Senior dès T2 pour booster ton CA. " +
+      "💡 Investir tôt = amortir sur plus de tours. " +
+      "🛡️ L'Assurance Prévoyance blinde ton entreprise contre les événements négatifs.",
   },
   7: {
     icone: "🎲",

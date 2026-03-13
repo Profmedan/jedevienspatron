@@ -192,7 +192,10 @@ export function creerJoueur(
     },
     bilan,
     compteResultat: creerCompteResultatVierge(),
-    cartesActives: [], // Aucun commercial automatique — le joueur recrute librement dès T1
+    // 1 Commercial Junior pré-embauché dès le départ :
+    // → montre dès T1 que recruter génère des clients et des charges de personnel.
+    // → le joueur peut ensuite recruter Senior / Directrice via l'étape 6a.
+    cartesActives: [CARTES_DECISION.find((c) => c.id === "commercial-junior-dec")!],
     clientsATrait: [],
     elimine: false,
     publicitéCeTour: false,

@@ -176,6 +176,14 @@ export default function JeuPage() {
       .catch(err => console.error("❌ Erreur save résultats:", err));
   }, [phase, etat, roomCode, savedToDb]);
 
+  // Auto-ouvre les cartes dès que le joueur arrive à l'étape 6
+  // → plus besoin de cliquer "Voir les cartes" : les cartes s'affichent immédiatement
+  useEffect(() => {
+    if (etat?.etapeTour === 6 && !activeStep) {
+      setShowCartes(true);
+    }
+  }, [etat?.etapeTour, subEtape6, activeStep]);
+
   // ─ Joueur affiché (avec écritures partiellement appliquées si étape active) ─
   function getDisplayJoueur() {
     if (!etat) return null;
@@ -601,6 +609,8 @@ export default function JeuPage() {
           recentModifications={recentModifications}
           subEtape6={subEtape6}
           modeRapide={modeRapide}
+          onSkipDecision={skipDecision}
+          onLaunchDecision={launchDecision}
         />
       </div>
     </div>
