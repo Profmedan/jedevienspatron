@@ -107,6 +107,21 @@ function appliquerDeltaPoste(
   }
 
   // Bilan — actifs (chercher par catégorie)
+  // Cas spécial immobilisations : les investissements (delta > 0) → "Autres Immobilisations"
+  // pour ne pas altérer les biens existants (Usine, Camion, etc.)
+  if (poste === "immobilisations") {
+    let targetActif = delta > 0
+      ? bilanActifs.find((a) => a.nom === "Autres Immobilisations")
+      : undefined;
+    // Fallback : premier item immobilisations disponible
+    if (!targetActif) targetActif = bilanActifs.find((a) => a.categorie === "immobilisations");
+    if (targetActif) {
+      const old = targetActif.valeur;
+      targetActif.valeur = Math.max(0, old + delta);
+      return { ancienneValeur: old, nouvelleValeur: targetActif.valeur };
+    }
+  }
+
   const actif = bilanActifs.find((a) => a.categorie === poste);
   if (actif) {
     const old = actif.valeur;
@@ -287,11 +302,38 @@ export function appliquerEtape0(
     `Paiement charges fixes : -${CHARGES_FIXES_PAR_TOUR} Trésorerie`
   );
 
-  // 6. Amortissement outil productif (-1 Immo, +1 Dotations)
-  const immoTotale = getTotalImmobilisations(joueur);
-  if (immoTotale > 0) {
-    push("immobilisations", -1, "Amortissement des immobilisations : usure normale");
-    push("dotationsAmortissements", 1, "Dotation aux amortissements enregistrée");
+  // 6. Amortissement de chaque bien immobilisé (-1 par bien, Dotations = total)
+  // Règle PCG : DÉBIT Dotations aux amortissements / CRÉDIT Immobilisations nettes
+  // La dotation doit être ÉGALE à la somme des amortissements appliqués à chaque bien.
+  const immoAmortissables = joueur.bilan.actifs.filter(
+    (a) => a.categorie === "immobilisations" && a.valeur > 0
+  );
+  if (immoAmortissables.length > 0) {
+    const totalAvant = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
+
+    // Appliquer -1 directement à chaque bien (mutation directe pour éviter .find() répété)
+    immoAmortissables.forEach((item) => {
+      item.valeur = Math.max(0, item.valeur - 1);
+    });
+
+    const totalApres = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
+    const totalDotation = totalAvant - totalApres; // = nombre de biens amortis
+
+    // Enregistrer UNE modification agrégée pour les immobilisations (total avant/après)
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "immobilisations" as any,
+      ancienneValeur: totalAvant,
+      nouvelleValeur: totalApres,
+      explication: `Amortissement de ${immoAmortissables.length} bien(s) immobilisé(s) : -1 par bien, valeur nette ${totalAvant} → ${totalApres}`,
+    });
+
+    // Enregistrer la dotation = total des amortissements (règle de la partie double)
+    push(
+      "dotationsAmortissements",
+      totalDotation,
+      `Dotation aux amortissements : +${totalDotation} (1 par bien, ${immoAmortissables.length} bien(s) amortissable(s))`
+    );
   }
 
   // Vérifier si trésorerie négative → découvert automatique

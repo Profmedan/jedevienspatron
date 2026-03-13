@@ -130,7 +130,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "camionnette",
     titre: "Camionnette",
-    description: "Achetez une camionnette de livraison. Améliore votre logistique.",
+    description: "Achetez une camionnette de livraison — améliore votre logistique et attire 1 client Particulier/trimestre. Investissement immédiat : Immos +2, Tréso −2. Entretien : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 2 trimestres → Dotation aux amortissements +1 au CR.",
     categorie: "vehicule",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 2 },
@@ -146,7 +146,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "berline",
     titre: "Berline",
-    description: "Achetez une berline de représentation pour vos déplacements commerciaux.",
+    description: "Achetez une berline de représentation — facilite les démarches commerciales, +1 Carte Décision piochée par tour. Investissement : Immos +3, Tréso −3. Entretien : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation aux amortissements +1 au CR.",
     categorie: "vehicule",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 3 },
@@ -165,7 +165,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "site-internet",
     titre: "Site Internet",
-    description: "Créez votre site internet. Visibilité accrue, clients en ligne.",
+    description: "Créez votre vitrine en ligne — visibilité accrue, +1 client Particulier/trimestre. Investissement : Immos +3, Tréso −3. Maintenance : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 3 },  // DÉBIT Immobilisations
@@ -181,7 +181,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "rse",
     titre: "RSE",
-    description: "Investissez dans votre responsabilité sociale et environnementale.",
+    description: "Engagez-vous dans la responsabilité sociale — crédibilité renforcée, +1 client Particulier/trim. Financé par emprunt : Immos +1, Emprunts +1 (aucune sortie de tréso immédiate !). Charges RSE : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 1 trimestre → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 1 }, // DÉBIT Immobilisations
@@ -197,7 +197,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "recherche-developpement",
     titre: "Recherche & Développement",
-    description: "Investissez en R&D pour développer de nouveaux produits innovants. Votre innovation attire 1 client TPE supplémentaire par tour. Bénéficiez du Crédit d'Impôt Recherche (CIR) : l'État rembourse 30\u00a0% de vos dépenses de R&D sous forme de produit exceptionnel chaque trimestre.",
+    description: "Investissez en R&D — innovation brevetée, +1 client TPE/trimestre. Crédit d'Impôt Recherche (CIR) : l'État rembourse 30 % sous forme de produit exceptionnel +1/trim. Investissement : Immos +5, Tréso −5. Charges R&D : Services ext. +2/trim. 📉 Amortissement : −1/trim pendant 5 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 5 },  // DÉBIT Immobilisations incorporelles
@@ -215,7 +215,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "expansion",
     titre: "Expansion",
-    description: "Agrandissez vos locaux pour accueillir davantage de grands clients.",
+    description: "Agrandissez vos locaux — capacité d'accueil doublée, +1 Grand Compte/trimestre. Investissement : Immos +6, Tréso −6. Loyer et entretien : Services ext. +3/trim. 📉 Amortissement : −1/trim pendant 6 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 6 },  // DÉBIT Immobilisations (nouveaux locaux)
@@ -341,7 +341,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "certification-iso",
     titre: "Certification ISO 9001",
-    description: "Obtenez la certification qualité ISO 9001. Crédibilisez votre offre auprès des grandes entreprises et décrochez 1 grand compte supplémentaire par trimestre.",
+    description: "Obtenez la certification qualité — crédibilité auprès des grandes entreprises, +1 Grand Compte/trimestre. Investissement : Immos +4, Tréso −4. Maintien certification : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 4 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 4 },  // DÉBIT Immobilisations incorporelles
@@ -357,7 +357,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "application-mobile",
     titre: "Application Mobile",
-    description: "Développez une application mobile pour vendre en ligne. Touchez directement les particuliers et doublez votre acquisition client numérique : +2 clients particuliers par trimestre.",
+    description: "Lancez votre app de vente en ligne — canal direct vers les consommateurs, +2 clients Particuliers/trimestre. Développement : Immos +3, Tréso −3. Hébergement & maintenance : Services ext. +1/trim. 📉 Amortissement : −1/trim pendant 3 trimestres → Dotation +1 au CR.",
     categorie: "investissement",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 3 },  // DÉBIT Immobilisations incorporelles (développement)
@@ -377,7 +377,7 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "assurance-prevoyance",
     titre: "Assurance Prévoyance",
-    description: "Souscrivez une assurance. Annule les effets des événements négatifs.",
+    description: "Souscrivez une assurance — annule les événements négatifs (incendie, grève, litige, contrôle fiscal…). Dépôt de garantie : Immos +1, Tréso −1. Prime annuelle : Services ext. +1/trim, Tréso −1/trim. 📉 Amortissement : −1/trim (1 trimestre).",
     categorie: "protection",
     effetsImmédiats: [
       { poste: "immobilisations", delta: 1 },

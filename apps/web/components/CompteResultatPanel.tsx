@@ -175,14 +175,14 @@ export default function CompteResultatPanel({
               recentMod={findMod(recentModifications, "chargesExceptionnelles")}
             />
             <Row
-              label="Amortissements"
+              label="Dotation aux amortissements"
               value={charges.dotationsAmortissements}
               color="#ef4444"
               highlighted={highlightedPoste === "dotationsAmortissements"}
               recentMod={findMod(recentModifications, "dotationsAmortissements")}
             />
             {charges.dotationsAmortissements !== 0 && (
-              <NoteEcritureEquilibre texte="L'amortissement constate l'usure de vos équipements. Aucun argent ne sort : la trésorerie n'est pas touchée." />
+              <NoteEcritureEquilibre texte="Dotation = somme de l'usure de chaque bien (-1/trimestre). Charge calculée : aucune sortie de trésorerie → la CAF > Résultat net." />
             )}
 
             <div className="flex justify-between px-2.5 py-2 border-t-2 border-red-300 mt-2 font-bold bg-red-100 rounded-lg">

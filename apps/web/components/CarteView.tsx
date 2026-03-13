@@ -11,6 +11,31 @@ interface Props {
   compact?: boolean;
 }
 
+/** Labels lisibles pour les postes comptables (remplace les noms bruts) */
+const POSTE_LABELS: Record<string, string> = {
+  tresorerie: "Trésorerie",
+  stocks: "Stocks",
+  immobilisations: "Autres Immos",
+  creancesPlus1: "Créances C+1",
+  creancesPlus2: "Créances C+2",
+  capitaux: "Capitaux propres",
+  emprunts: "Emprunts",
+  dettes: "Dettes fourn.",
+  servicesExterieurs: "Services ext.",
+  chargesPersonnel: "Charges personnel",
+  chargesInteret: "Charges intérêt",
+  dotationsAmortissements: "Dotations amort.",
+  revenusExceptionnels: "Revenus except.",
+  ventes: "Ventes",
+};
+
+/** Labels lisibles pour les types de clients */
+const CLIENT_LABELS: Record<string, string> = {
+  particulier: "Particulier (tréso +2)",
+  tpe: "TPE (créance C+1 +3)",
+  grand_compte: "Grand Compte (créance C+2 +4)",
+};
+
 const CATEGORIE_COLORS: Record<string, string> = {
   commercial: "#a78bfa",
   vehicule: "#60a5fa",
@@ -111,22 +136,33 @@ export default function CarteView({ carte, onClick, selected, disabled, compact 
             <div className="space-y-1">
               {(carte as CarteDecision).effetsImmédiats.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-0.5">Effets immédiats :</div>
+                  <div className="text-xs font-semibold text-gray-500 mb-0.5">⚡ Effets immédiats :</div>
                   {(carte as CarteDecision).effetsImmédiats.map((e, i) => (
-                    <div key={i} className="text-xs font-mono text-gray-700">
-                      {e.poste} {formatDelta(e.delta)}
+                    <div key={i} className={`text-xs font-mono ${e.delta > 0 ? "text-emerald-700" : "text-red-700"}`}>
+                      {POSTE_LABELS[e.poste] ?? e.poste} {formatDelta(e.delta)}
                     </div>
                   ))}
                 </div>
               )}
               {(carte as CarteDecision).effetsRecurrents.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-0.5">Par tour :</div>
+                  <div className="text-xs font-semibold text-gray-500 mb-0.5">🔄 Par trimestre :</div>
                   {(carte as CarteDecision).effetsRecurrents.map((e, i) => (
-                    <div key={i} className="text-xs font-mono text-gray-700">
-                      {e.poste} {formatDelta(e.delta)}
+                    <div key={i} className={`text-xs font-mono ${e.delta > 0 ? "text-emerald-700" : "text-red-700"}`}>
+                      {POSTE_LABELS[e.poste] ?? e.poste} {formatDelta(e.delta)}
                     </div>
                   ))}
+                </div>
+              )}
+              {/* Clients générés par trimestre (chaîne investissement → ventes) */}
+              {(carte as CarteDecision).clientParTour && (
+                <div className="mt-1 pt-1 border-t border-gray-200">
+                  <div className="text-xs font-semibold text-indigo-600 mb-0.5">📈 Chaîne de valeur :</div>
+                  <div className="text-xs text-indigo-700 font-medium">
+                    🤝 +{(carte as CarteDecision).nbClientsParTour ?? 1} client(s){" "}
+                    <span className="capitalize">{CLIENT_LABELS[(carte as CarteDecision).clientParTour!] ?? (carte as CarteDecision).clientParTour}</span>
+                    /trimestre → ventes ↑ → stocks nécessaires ↑
+                  </div>
                 </div>
               )}
             </div>

@@ -247,18 +247,37 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
           </div>
 
           <SectionHeader label="Investissements durables" color={TOOLTIPS.immobilisations.couleur} />
-          {immobilisations.map((a) => (
-            <TooltipPoste
-              key={a.nom}
-              label={a.nom}
-              value={a.valeur}
-              color={TOOLTIPS.immobilisations.couleur}
-              categorie="immobilisations"
-              sub
-              highlighted={highlightedPoste === "immobilisations"}
-              recentMod={findMod(recentModifications, "immobilisations")}
-            />
-          ))}
+          {(() => {
+            // Calculer le badge par bien à partir de la modification totale des immo.
+            // Le moteur enregistre un seul mod agrégé (totalAvant → totalAprès).
+            // On divise par N pour obtenir le delta par bien (chaque bien perd -1).
+            const totalImmMod = findMod(recentModifications, "immobilisations");
+            const nItems = immobilisations.length;
+            return immobilisations.map((a) => {
+              let perItemMod: typeof totalImmMod;
+              if (totalImmMod && nItems > 0) {
+                const totalDelta = totalImmMod.nouvelleValeur - totalImmMod.ancienneValeur;
+                const perItemDelta = Math.round(totalDelta / nItems); // -1 par bien
+                perItemMod = {
+                  poste: "immobilisations",
+                  ancienneValeur: a.valeur - perItemDelta, // valeur avant = valeur actuelle - delta
+                  nouvelleValeur: a.valeur,
+                };
+              }
+              return (
+                <TooltipPoste
+                  key={a.nom}
+                  label={a.nom}
+                  value={a.valeur}
+                  color={TOOLTIPS.immobilisations.couleur}
+                  categorie="immobilisations"
+                  sub
+                  highlighted={highlightedPoste === "immobilisations"}
+                  recentMod={perItemMod}
+                />
+              );
+            });
+          })()}
 
           <SectionHeader label="Stocks" color={TOOLTIPS.stocks.couleur} />
           {stocks.map((a) => (

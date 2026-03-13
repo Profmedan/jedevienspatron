@@ -42,10 +42,10 @@ interface JournalEntry {
 
 const ETAPE_INFO: Record<number, { icone: string; titre: string; description: string; principe: string; conseil: string }> = {
   0: {
-    icone: "💼", titre: "Charges fixes & Amortissements",
-    description: "Chaque trimestre, ton entreprise doit payer ses charges fixes (loyer, électricité, assurances…) et enregistrer l'usure de ses immobilisations.",
-    principe: "DÉBIT Services extérieurs / CRÉDIT Trésorerie (charges fixes). DÉBIT Dotations amortissements / CRÉDIT Immobilisations (amortissements). Les charges augmentent → résultat diminue → capitaux propres diminuent à terme.",
-    conseil: "⚠️ Ces charges sont OBLIGATOIRES. Si ta trésorerie passe sous zéro, un découvert bancaire s'ouvre. Au-delà de 5 de découvert → faillite !",
+    icone: "💼", titre: "Charges fixes & Dotation aux amortissements",
+    description: "Chaque trimestre, ton entreprise paie ses charges fixes (loyer, énergie, assurances…) et constate l'usure de chaque bien immobilisé (-1 par bien). La dotation enregistrée = total des usures individuelles.",
+    principe: "Charges fixes → DÉBIT Services extérieurs / CRÉDIT Trésorerie. Amortissements → DÉBIT Dotation aux amortissements (+N) / CRÉDIT Immobilisations nettes (−N). Règle PCG : Σ dotation = Σ amortissements individuels.",
+    conseil: "⚠️ Ces charges sont OBLIGATOIRES. La dotation aux amortissements est une charge calculée : aucune sortie de trésorerie, mais elle réduit le résultat (et donc les capitaux propres à terme).",
   },
   1: {
     icone: "📦", titre: "Achats de marchandises",

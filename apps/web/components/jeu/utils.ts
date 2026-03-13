@@ -177,6 +177,30 @@ export function applyDeltaToJoueur(j: Joueur, poste: string, delta: number): voi
   if (poste === "creancesPlus2") { j.bilan.creancesPlus2 += delta; return; }
   if (poste === "dettes")        { j.bilan.dettes         += delta; return; }
   if (poste === "dettesFiscales"){ j.bilan.dettesFiscales += delta; return; }
+
+  // Immobilisations : distribuer le delta sur TOUS les biens pour respecter
+  // la règle de l'amortissement individuel (-1 par bien immobilisé).
+  if (poste === "immobilisations") {
+    const immoItems = j.bilan.actifs.filter((a) => (a.categorie as string) === "immobilisations");
+    if (immoItems.length > 0) {
+      if (delta < 0) {
+        // Distribuer la réduction proportionnellement : -1 par bien, dans l'ordre
+        let remaining = -delta; // positif
+        for (const item of immoItems) {
+          if (remaining <= 0) break;
+          const d = Math.min(remaining, item.valeur);
+          item.valeur -= d;
+          remaining -= d;
+        }
+      } else if (delta > 0) {
+        // Investissement → "Autres Immobilisations" (réservé aux achats via Cartes Décision)
+        const autres = immoItems.find((a) => a.nom === "Autres Immobilisations") ?? immoItems[0];
+        autres.valeur += delta;
+      }
+    }
+    return;
+  }
+
   const actif = j.bilan.actifs.find(a => (a.categorie as string) === poste);
   if (actif) { actif.valeur += delta; return; }
   const passif = j.bilan.passifs.find(p => (p.categorie as string) === poste);
