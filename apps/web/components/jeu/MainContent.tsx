@@ -45,6 +45,20 @@ const MONTANT_PAR_TYPE: Record<string, number> = {
   grand_compte: 4,
 };
 
+/** Délai d'encaissement par type de client (0 = immédiat, 1 = C+1, 2 = C+2) */
+const DELAI_PAR_TYPE: Record<string, number> = {
+  particulier: 0,
+  tpe: 1,
+  grand_compte: 2,
+};
+
+/** Labels court de risque BFR */
+const BFR_LABELS: Record<number, { label: string; color: string; icon: string }> = {
+  0: { label: "Aucun",    color: "text-emerald-400", icon: "✓" },
+  1: { label: "Élevé",    color: "text-orange-400",  icon: "⚠️" },
+  2: { label: "Critique", color: "text-red-400",     icon: "🚨" },
+};
+
 /** Labels lisibles pour les postes du moteur */
 const POSTE_LABELS: Record<string, string> = {
   tresorerie: "Trésorerie",
@@ -273,20 +287,15 @@ export function MainContent({
                       : "🏢";
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const nb = (c as any).nbClientsParTour ?? 1;
-                const typeLabel =
-                  c.clientParTour === "particulier"
-                    ? "client particulier"
-                    : c.clientParTour === "tpe"
-                      ? "client TPE"
-                      : "grand compte";
                 const typeLabelPluriel =
                   c.clientParTour === "particulier"
                     ? "clients particuliers"
                     : c.clientParTour === "tpe"
                       ? "clients TPE"
                       : "grands comptes";
-                const montant = MONTANT_PAR_TYPE[c.clientParTour ?? ""] ?? 1;
-                const caTotal = montant * nb;
+                const montant    = MONTANT_PAR_TYPE[c.clientParTour ?? ""] ?? 1;
+                const caTotal    = montant * nb;
+                const delai      = DELAI_PAR_TYPE[c.clientParTour ?? ""] ?? 0;
 
                 // Extraire les coûts récurrents depuis effetsRecurrents
                 const coutCharges = (c.effetsRecurrents ?? [])
@@ -296,24 +305,34 @@ export function MainContent({
                   .filter((e) => e.poste === "tresorerie")
                   .reduce((sum, e) => sum + e.delta, 0);
 
+                // Calcul du bilan net (logique des agents)
+                const cmvTotal    = nb * 1;                                    // 1 stock consommé par vente
+                const resultatNet = caTotal - cmvTotal - coutCharges;          // résultat net/trim
+                const tresoNette  = (delai === 0 ? caTotal : 0) + coutTreso;  // encaissé imméd. − salaire
+                const bfrInfo     = BFR_LABELS[delai] ?? BFR_LABELS[0];
+
                 // Couleur du header selon type de client
                 const headerBg =
                   c.clientParTour === "particulier"
-                    ? "bg-green-600"
+                    ? "bg-green-700"
                     : c.clientParTour === "tpe"
-                      ? "bg-blue-600"
-                      : "bg-purple-600";
+                      ? "bg-blue-700"
+                      : "bg-purple-700";
                 const borderCol =
                   c.clientParTour === "particulier"
-                    ? "border-green-300"
+                    ? "border-green-500/60"
                     : c.clientParTour === "tpe"
-                      ? "border-blue-300"
-                      : "border-purple-300";
+                      ? "border-blue-500/60"
+                      : "border-purple-500/60";
+
+                // Label délai
+                const delaiLabel =
+                  delai === 0 ? "comptant C+0" : `créance C+${delai}`;
 
                 return (
                   <div
                     key={c.id}
-                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-gray-800 min-w-[160px] shadow-sm`}
+                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-gray-900 min-w-[170px] shadow-md`}
                   >
                     {/* ── En-tête : titre du commercial ── */}
                     <div className={`${headerBg} text-white px-3 py-2 flex items-center gap-1.5`}>
@@ -321,8 +340,8 @@ export function MainContent({
                       <span className="font-bold text-sm leading-tight">{c.titre}</span>
                     </div>
 
-                    {/* ── Coûts par trimestre (rouge) ── */}
-                    <div className="px-3 py-2 border-b border-red-900/40 bg-red-950/30">
+                    {/* ── Coûts récurrents (rouge) ── */}
+                    <div className="px-3 py-2 border-b border-gray-700/60 bg-red-950/20">
                       <div className="text-[10px] font-bold text-red-400 uppercase tracking-wide mb-1">
                         💸 Coût / trimestre
                       </div>
@@ -342,21 +361,56 @@ export function MainContent({
                       </div>
                     </div>
 
-                    {/* ── Bénéfices par trimestre (vert) ── */}
-                    <div className="px-3 py-2 bg-green-950/30">
-                      <div className="text-[10px] font-bold text-green-400 uppercase tracking-wide mb-1">
+                    {/* ── Revenus générés (vert) ── */}
+                    <div className="px-3 py-2 border-b border-gray-700/60 bg-emerald-950/20">
+                      <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide mb-1">
                         📈 Revenu / trimestre
                       </div>
                       <div className="flex items-center gap-1 mb-1">
                         <span className="text-sm">{Array(nb).fill(icon).join("")}</span>
-                        <span className="text-xs text-green-300 font-semibold">
-                          +{nb} {nb > 1 ? typeLabelPluriel : typeLabel}
+                        <span className="text-xs text-emerald-300 font-semibold">
+                          +{nb} {typeLabelPluriel}
                         </span>
                       </div>
-                      <div className="text-xs text-green-200 font-bold flex items-center gap-1">
-                        <span className="text-green-400">→</span>
-                        <span>+{caTotal} de chiffre d&apos;affaires</span>
+                      <div className="text-xs text-emerald-200 font-bold flex items-center gap-1">
+                        <span className="text-emerald-400">→</span>
+                        <span>+{caTotal} CA ({delaiLabel})</span>
                       </div>
+                    </div>
+
+                    {/* ── Bilan net / agents (indigo) ── */}
+                    <div className="px-3 py-2 bg-indigo-950/30">
+                      <div className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide mb-1.5">
+                        📊 Impact net / trimestre
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 text-center">
+                        {/* Résultat net */}
+                        <div className="bg-gray-800 border border-gray-700 rounded p-1">
+                          <div className="text-[9px] text-gray-500 uppercase leading-tight">Résultat</div>
+                          <div className={`text-sm font-black leading-tight ${resultatNet >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {resultatNet >= 0 ? "+" : ""}{resultatNet}
+                          </div>
+                        </div>
+                        {/* Trésorerie nette */}
+                        <div className="bg-gray-800 border border-gray-700 rounded p-1">
+                          <div className="text-[9px] text-gray-500 uppercase leading-tight">Tréso</div>
+                          <div className={`text-sm font-black leading-tight ${tresoNette >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {tresoNette >= 0 ? "+" : ""}{tresoNette}
+                          </div>
+                        </div>
+                        {/* BFR */}
+                        <div className="bg-gray-800 border border-gray-700 rounded p-1">
+                          <div className="text-[9px] text-gray-500 uppercase leading-tight">BFR</div>
+                          <div className={`text-xs font-bold leading-tight ${bfrInfo.color}`}>
+                            {bfrInfo.icon} {bfrInfo.label}
+                          </div>
+                        </div>
+                      </div>
+                      {delai > 0 && (
+                        <div className="mt-1.5 text-[10px] text-gray-500 italic leading-tight">
+                          ⚠️ CA encaissé en C+{delai} → décalage tréso, gérez votre BFR !
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
