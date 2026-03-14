@@ -21,6 +21,9 @@ import {
   getSens, getPosteValue, applyDeltaToJoueur,
   ACTIF_KEYS, PASSIF_KEYS, CHARGES_KEYS, PRODUITS_KEYS,
 } from "@/components/jeu";
+import ModalEtape from "@/components/jeu/ModalEtape";
+import QCMEtape from "@/components/jeu/QCMEtape";
+import { QCM_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
 // ─── UTILITAIRE ───────────────────────────────────────────────────────────────
 
@@ -124,6 +127,13 @@ export default function JeuPage() {
   // Mode Rapide : les étapes automatiques (0,2,3,4,5) pré-cochent toutes leurs écritures
   const [modeRapide, setModeRapide] = useState(false);
 
+  // ─ Pédagogie : modal d'explication + QCM ──────────────────────────────────
+  // etapesPedagoVues : étapes déjà expliquées ce tour (évite de ré-afficher)
+  const [etapesPedagoVues, setEtapesPedagoVues] = useState<Set<number>>(new Set());
+  const [showModalEtape, setShowModalEtape] = useState(false);
+  const [showQCM, setShowQCM] = useState(false);
+  const [etapeQCMEnCours, setEtapeQCMEnCours] = useState<number | null>(null);
+
   // ─ Supabase / room code ───────────────────────────────────────────────────
   const [roomCode, setRoomCode]   = useState<string | null>(null);
   const [savedToDb, setSavedToDb] = useState(false);
@@ -177,12 +187,20 @@ export default function JeuPage() {
   }, [phase, etat, roomCode, savedToDb]);
 
   // Auto-ouvre les cartes dès que le joueur arrive à l'étape 6
-  // → plus besoin de cliquer "Voir les cartes" : les cartes s'affichent immédiatement
   useEffect(() => {
     if (etat?.etapeTour === 6 && !activeStep) {
       setShowCartes(true);
     }
   }, [etat?.etapeTour, subEtape6, activeStep]);
+
+  // Afficher la modal pédagogique à chaque nouvelle étape (1 seule fois par étape par tour)
+  useEffect(() => {
+    if (!etat || phase !== "playing") return;
+    const etape = etat.etapeTour;
+    if (etapesPedagoVues.has(etape)) return;
+    setShowModalEtape(true);
+    setEtapesPedagoVues(prev => new Set(prev).add(etape));
+  }, [etat?.etapeTour, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─ Joueur affiché (avec écritures partiellement appliquées si étape active) ─
   function getDisplayJoueur() {
@@ -288,6 +306,12 @@ export default function JeuPage() {
     setRecentModifications([]);
     // Réinitialiser la sous-étape après la validation de l'investissement (6b)
     if (etapeAvantAvancement === 6) setSubEtape6("recrutement");
+
+    // Déclencher le QCM si disponible pour cette étape
+    if (QCM_ETAPES[etapeAvantAvancement]) {
+      setEtapeQCMEnCours(etapeAvantAvancement);
+      setShowQCM(true);
+    }
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -531,6 +555,26 @@ export default function JeuPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
+
+      {/* ─── MODAL PÉDAGOGIQUE (avant saisie) ─── */}
+      {showModalEtape && etat && (
+        <ModalEtape
+          etape={etat.etapeTour}
+          onClose={() => setShowModalEtape(false)}
+        />
+      )}
+
+      {/* ─── QCM (après validation d'étape) ─── */}
+      {showQCM && etapeQCMEnCours !== null && (
+        <QCMEtape
+          etape={etapeQCMEnCours}
+          onTermine={(score) => {
+            setShowQCM(false);
+            setEtapeQCMEnCours(null);
+            console.log(`QCM étape ${etapeQCMEnCours} : ${score}/5`);
+          }}
+        />
+      )}
 
       {/* ─── OVERLAYS ─── */}
       {tourTransition && (

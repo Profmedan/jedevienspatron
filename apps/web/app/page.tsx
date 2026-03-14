@@ -183,10 +183,6 @@ export default function Home() {
         </div>
       </div>
 
-      <p className="text-xs text-indigo-400 text-center">
-        ACTIF + CHARGES = PASSIF + PRODUITS<br />
-        L&apos;équation fondamentale de la comptabilité générale française
-      </p>
     </main>
   );
 }
