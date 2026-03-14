@@ -1,7 +1,7 @@
 // ============================================================
-// KICLEPATRON — Moteur de jeu principal (GameEngine)
+// JEDEVIENSPATRON — Moteur de jeu principal (GameEngine)
 // Logique 100% pure TypeScript, sans DOM, sans React
-// Source : KICLEPATRON_v2.html — Pierre Médan
+// Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 
 import {
@@ -209,7 +209,7 @@ export function initialiserJeu(
     piocheEvenements: melangerTableau([...CARTES_EVENEMENTS]),
     historiqueEvenements: [],
     messages: [
-      "Bienvenue dans KICLEPATRON ! Tour 1 — Étape 1 : Remboursements et charges fixes.",
+      "Bienvenue dans JEDEVIENSPATRON ! Tour 1 — Étape 1 : Remboursements et charges fixes.",
     ],
   };
 }

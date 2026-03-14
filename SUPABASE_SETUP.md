@@ -1,9 +1,9 @@
-# Guide de setup Supabase — KICLEPATRON
+# Guide de setup Supabase — JEDEVIENSPATRON
 
 ## Étape 1 — Créer le projet Supabase
 
 1. Aller sur [supabase.com](https://supabase.com) → **New Project**
-2. Nom du projet : `kiclepatron`
+2. Nom du projet : `jedevienspatron`
 3. Choisir la région : **West EU (Paris)** — pour la RGPD
 4. Définir un mot de passe de base de données (le noter)
 5. Cliquer **Create new project** (attendre ~2 minutes)

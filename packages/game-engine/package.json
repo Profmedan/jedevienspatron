@@ -1,7 +1,7 @@
 {
-  "name": "@kiclepatron/game-engine",
+  "name": "@jedevienspatron/game-engine",
   "version": "0.1.0",
-  "description": "Moteur de jeu TypeScript — logique comptable de KICLEPATRON",
+  "description": "Moteur de jeu TypeScript — logique comptable de JEDEVIENSPATRON",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

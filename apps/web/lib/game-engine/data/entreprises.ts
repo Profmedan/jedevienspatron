@@ -1,6 +1,6 @@
 // ============================================================
-// KICLEPATRON — Données des 4 entreprises
-// Source : KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Données des 4 entreprises
+// Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 //
 // ── Bilans initiaux équilibrés (Actif = Passif) ─────────────
 //   • Manufacture Belvaux : Actif = Passif = 28

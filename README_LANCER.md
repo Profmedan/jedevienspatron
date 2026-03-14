@@ -1,4 +1,4 @@
-# 🎓 KICLEPATRON — Instructions de lancement
+# 🎓 JEDEVIENSPATRON — Instructions de lancement
 
 ## Prérequis
 - Node.js ≥ 18 ([https://nodejs.org](https://nodejs.org))
@@ -7,7 +7,7 @@
 
 ```bash
 # 1. Ouvrez un Terminal dans ce dossier
-cd kiclepatron-saas/apps/web
+cd jedevienspatron-saas/apps/web
 
 # 2. Installez les dépendances (une seule fois)
 npm install --legacy-peer-deps
@@ -22,7 +22,7 @@ npm run dev
 ## Structure du projet
 
 ```
-kiclepatron-saas/
+jedevienspatron-saas/
   apps/web/               ← Application Next.js (UI)
     app/
       page.tsx            ← Page d'accueil
@@ -67,4 +67,4 @@ kiclepatron-saas/
 > (equivalent à ACTIF = PASSIF + RÉSULTAT NET)
 
 ---
-*Pierre Médan — KICLEPATRON v3 SaaS*
+*Pierre Médan — JEDEVIENSPATRON v3 SaaS*

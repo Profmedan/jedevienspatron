@@ -1,5 +1,5 @@
 // ============================================================
-// KICLEPATRON — Tests unitaires du moteur de jeu
+// JEDEVIENSPATRON — Tests unitaires du moteur de jeu
 // ============================================================
 
 import {

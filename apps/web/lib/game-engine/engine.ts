@@ -1,7 +1,7 @@
 // ============================================================
-// KICLEPATRON — Moteur de jeu principal (GameEngine)
+// JEDEVIENSPATRON — Moteur de jeu principal (GameEngine)
 // Logique 100% pure TypeScript, sans DOM, sans React
-// Source : KICLEPATRON_v2.html — Pierre Médan
+// Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 
 import {
@@ -229,7 +229,7 @@ export function initialiserJeu(
     piocheEvenements: melangerTableau([...CARTES_EVENEMENTS]),
     historiqueEvenements: [],
     messages: [
-      `Bienvenue dans KICLEPATRON ! Trimestre 1/${nbToursMax} — 3 exercices comptables de ${Math.round(nbToursMax/3)} trimestres chacun. Étape 0 : Charges fixes et amortissements.`,
+      `Bienvenue dans JEDEVIENSPATRON ! Trimestre 1/${nbToursMax} — 3 exercices comptables de ${Math.round(nbToursMax/3)} trimestres chacun. Étape 0 : Charges fixes et amortissements.`,
     ],
   };
 }

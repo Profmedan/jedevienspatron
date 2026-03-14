@@ -1,5 +1,5 @@
 -- ============================================================
--- KICLEPATRON SaaS — Schéma initial Supabase
+-- JEDEVIENSPATRON SaaS — Schéma initial Supabase
 -- Migration 001 : Multi-tenant B2B avec RLS
 -- ============================================================
 

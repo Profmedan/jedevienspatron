@@ -1,5 +1,5 @@
 // ============================================================
-// KICLEPATRON — Point d'entrée du package game-engine
+// JEDEVIENSPATRON — Point d'entrée du package game-engine
 // ============================================================
 
 export * from "./types";

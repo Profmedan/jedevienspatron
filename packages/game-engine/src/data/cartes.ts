@@ -1,6 +1,6 @@
 // ============================================================
-// KICLEPATRON — Catalogue complet des cartes
-// Source : KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Catalogue complet des cartes
+// Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 
 import { CarteCommercial, CarteClient, CarteDecision, CarteEvenement } from "../types";

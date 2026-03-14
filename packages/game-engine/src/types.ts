@@ -1,6 +1,6 @@
 // ============================================================
-// KICLEPATRON — Types TypeScript du moteur de jeu
-// Extraits fidèlement de KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Types TypeScript du moteur de jeu
+// Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 
 // ─── BILAN ───────────────────────────────────────────────────

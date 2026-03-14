@@ -1,6 +1,6 @@
 // ============================================================
-// KICLEPATRON — Calculateurs financiers
-// Extraits de KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Calculateurs financiers
+// Extraits de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 
 import {
