@@ -3,6 +3,7 @@ import { Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif, getResultatNet } from "@/lib/game-engine/calculators";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import { useState } from "react";
+import { Scale, X } from "lucide-react";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };
 
@@ -183,6 +184,7 @@ function findMod(mods: RecentMod[] | undefined, poste: string): RecentMod | unde
 }
 
 export default function BilanPanel({ joueur, highlightedPoste, recentModifications }: Props) {
+  const [showRegleOr, setShowRegleOr] = useState(false);
   const totalActif = getTotalActif(joueur);
   const resultat = getResultatNet(joueur);
   const totalPassif = getTotalPassif(joueur);
@@ -203,41 +205,72 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         <span className="text-xs text-slate-300 italic">Passez la souris sur ⓘ pour les explications</span>
       </div>
 
-      {/* ── Équation du bilan ── */}
-      <div
-        className={`mx-4 mt-4 mb-3 rounded-2xl p-3 border-2 ${
+      {/* ── Popup Règle d'or ── */}
+      {showRegleOr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-gray-900 rounded-2xl border-2 border-indigo-500 shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-indigo-600 text-white"><Scale size={24} /></div>
+              <h2 className="text-lg font-black text-white">La règle d&apos;or de la comptabilité</h2>
+              <button onClick={() => setShowRegleOr(false)} className="ml-auto text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+            <div className="space-y-4 text-sm text-gray-300 leading-relaxed">
+              <div className="bg-indigo-900/50 rounded-xl p-4 border border-indigo-700 text-center">
+                <p className="text-2xl font-black text-white mb-1">ACTIF = PASSIF</p>
+                <p className="text-indigo-300 text-xs">Cette équation doit TOUJOURS être vraie</p>
+              </div>
+              <div className="bg-blue-900/30 rounded-xl p-4 border border-blue-800">
+                <p className="font-bold text-blue-300 mb-1">📦 L&apos;Actif — Ce que tu possèdes</p>
+                <p>Tout ce que l&apos;entreprise possède : ses machines, ses stocks de marchandises, l&apos;argent en banque et ce que ses clients lui doivent encore. C&apos;est l&apos;emploi des ressources.</p>
+              </div>
+              <div className="bg-amber-900/30 rounded-xl p-4 border border-amber-800">
+                <p className="font-bold text-amber-300 mb-1">💰 Le Passif — D&apos;où vient l&apos;argent</p>
+                <p>Tout ce que l&apos;entreprise doit à quelqu&apos;un : aux associés (capitaux propres), à la banque (emprunts), aux fournisseurs (dettes). C&apos;est l&apos;origine des ressources.</p>
+              </div>
+              <div className="bg-green-900/30 rounded-xl p-4 border border-green-800">
+                <p className="font-bold text-green-300 mb-1">💡 Pourquoi c&apos;est toujours égal ?</p>
+                <p>Parce que chaque fois qu&apos;on acquiert quelque chose (Actif ↑), on a forcément utilisé une ressource pour le financer (Passif ↑). C&apos;est le principe de la <strong className="text-white">partie double</strong>.</p>
+                <p className="mt-2 text-xs text-gray-400">Exemple : Tu achètes une camionnette à 6 000 € → Immobilisations +6 (Actif) et Emprunts +6 (Passif). Bilan toujours équilibré ✅</p>
+              </div>
+            </div>
+            <button onClick={() => setShowRegleOr(false)} className="mt-5 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black transition-colors">
+              J&apos;ai compris →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Équation du bilan (cliquable) ── */}
+      <button
+        onClick={() => setShowRegleOr(true)}
+        className={`mx-4 mt-4 mb-3 rounded-2xl p-3 border-2 w-[calc(100%-2rem)] text-left transition-all hover:scale-[1.01] cursor-pointer ${
           equilibre
-            ? "border-indigo-700 bg-gradient-to-r from-blue-950/60 via-gray-800 to-amber-950/40"
+            ? "border-indigo-700 bg-gradient-to-r from-blue-950/60 via-gray-800 to-amber-950/40 hover:border-indigo-500"
             : "border-red-700 bg-red-950/40"
         }`}
+        title="Cliquer pour comprendre la règle d'or ACTIF = PASSIF"
       >
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-blue-600 rounded-xl py-2.5 shadow-sm">
             <div className="font-black text-3xl text-white tabular-nums">{totalActif}</div>
-            <div className="text-xs text-blue-100 font-bold uppercase tracking-widest mt-0.5">
-              ACTIF
-            </div>
+            <div className="text-xs text-blue-100 font-bold uppercase tracking-widest mt-0.5">ACTIF</div>
           </div>
           <div className="flex items-center justify-center">
             <span className="font-black text-3xl text-indigo-400">=</span>
           </div>
           <div className="bg-amber-600 rounded-xl py-2.5 shadow-sm">
             <div className="font-black text-3xl text-white tabular-nums">{totalPassif}</div>
-            <div className="text-xs text-amber-100 font-bold uppercase tracking-widest mt-0.5">
-              PASSIF
-            </div>
+            <div className="text-xs text-amber-100 font-bold uppercase tracking-widest mt-0.5">PASSIF</div>
           </div>
         </div>
-        <div
-          className={`mt-2 text-center text-xs font-bold py-1 rounded-lg ${
-            equilibre ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"
-          }`}
-        >
+        <div className={`mt-2 text-center text-xs font-bold py-1 rounded-lg ${
+          equilibre ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"
+        }`}>
           {equilibre
-            ? "✅ Bilan équilibré — règle d'or de la comptabilité"
+            ? "✅ Bilan équilibré — clique pour comprendre la règle d'or"
             : `⚠️ Déséquilibre : écart ${(totalActif - totalPassif).toFixed(1)}`}
         </div>
-      </div>
+      </button>
 
       <div className="grid grid-cols-2 gap-0 px-4 pb-4">
         {/* ── ACTIF ── */}

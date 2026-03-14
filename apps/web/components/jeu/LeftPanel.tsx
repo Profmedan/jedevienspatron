@@ -7,6 +7,68 @@ import CarteView from "@/components/CarteView";
 import { EntryPanel, type ActiveStep } from "./EntryPanel";
 import { nomCompte, getDocument } from "./utils";
 
+// ─── Indicateurs de santé financière ─────────────────────────
+
+function SanteFinanciere({ joueur }: { joueur: Joueur }) {
+  const treso = (joueur.bilan.actifs.find(a => a.categorie === "tresorerie")?.valeur ?? 0) - joueur.bilan.decouvert;
+  const capitaux = joueur.bilan.passifs.find(p => p.categorie === "capitaux")?.valeur ?? 0;
+  const cr = joueur.compteResultat;
+  const totalProduits = cr.produits.ventes + cr.produits.productionStockee + cr.produits.produitsFinanciers + cr.produits.revenusExceptionnels;
+  const totalCharges = cr.charges.achats + cr.charges.servicesExterieurs + cr.charges.impotsTaxes + cr.charges.chargesInteret + cr.charges.chargesPersonnel + cr.charges.chargesExceptionnelles + cr.charges.dotationsAmortissements;
+  const resultat = totalProduits - totalCharges;
+
+  function niveauTreso(): "vert" | "orange" | "rouge" {
+    if (treso < 0) return "rouge";
+    if (treso < 3) return "orange";
+    return "vert";
+  }
+  function niveauResultat(): "vert" | "orange" | "rouge" {
+    if (resultat < -5) return "rouge";
+    if (resultat < 0) return "orange";
+    return "vert";
+  }
+  function niveauCapitaux(): "vert" | "orange" | "rouge" {
+    if (capitaux <= 0) return "rouge";
+    if (capitaux < 5) return "orange";
+    return "vert";
+  }
+
+  const COULEUR = {
+    vert:   { dot: "bg-emerald-400", text: "text-emerald-300", bg: "bg-emerald-900/20 border-emerald-700/40" },
+    orange: { dot: "bg-amber-400",   text: "text-amber-300",   bg: "bg-amber-900/20 border-amber-700/40"   },
+    rouge:  { dot: "bg-red-500",     text: "text-red-300",     bg: "bg-red-900/20 border-red-700/40"       },
+  };
+
+  const indicateurs = [
+    { label: "Trésorerie", valeur: treso, niveau: niveauTreso(), hint: treso < 0 ? "Découvert !" : treso < 3 ? "Faible" : "Saine" },
+    { label: "Résultat",   valeur: resultat, niveau: niveauResultat(), hint: resultat < 0 ? "Déficit" : resultat === 0 ? "À l'équilibre" : "Bénéfice" },
+    { label: "Capitaux",   valeur: capitaux, niveau: niveauCapitaux(), hint: capitaux <= 0 ? "⚠️ Faillite !" : capitaux < 5 ? "Fragilisés" : "Solides" },
+  ];
+
+  return (
+    <div className="bg-gray-800/60 rounded-xl border border-gray-700 p-3">
+      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Santé financière</p>
+      <div className="grid grid-cols-3 gap-1.5">
+        {indicateurs.map(({ label, valeur, niveau, hint }) => {
+          const c = COULEUR[niveau];
+          return (
+            <div key={label} className={`rounded-lg border p-2 text-center ${c.bg}`}>
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide truncate">{label}</span>
+              </div>
+              <div className={`text-base font-black leading-none ${c.text}`}>
+                {valeur > 0 ? `+${valeur}` : valeur}
+              </div>
+              <div className="text-[9px] text-gray-500 mt-0.5 truncate">{hint}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 interface JournalEntry {
   id: number;
   tour: number;
@@ -106,6 +168,7 @@ export function LeftPanel({
   if (activeStep) {
     return (
       <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
+        <SanteFinanciere joueur={joueur} />
         <EntryPanel
           activeStep={activeStep}
           displayJoueur={joueur}
@@ -122,6 +185,9 @@ export function LeftPanel({
     <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
       {/* Guide de l'étape */}
       <EtapeGuide etape={etapeTour} tourActuel={tourActuel} nbTours={nbToursMax} />
+
+      {/* Santé financière */}
+      <SanteFinanciere joueur={joueur} />
 
       {/* Panneau d'action selon l'étape */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-3 shadow-sm">
