@@ -9,14 +9,33 @@ export default function Home() {
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
 
-  function handleCode(e: React.FormEvent) {
+  async function handleCode(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = code.trim().toUpperCase();
-    if (!trimmed.match(/^KIC-[A-Z0-9]{4}$/)) {
-      setCodeError("Format invalide. Le code ressemble à : KIC-4A2B");
+
+    // Format session enseignant : KIC-XXXX
+    if (trimmed.match(/^KIC-[A-Z0-9]{4}$/)) {
+      router.push(`/jeu?code=${trimmed}`);
       return;
     }
-    router.push(`/jeu?code=${trimmed}`);
+
+    // Format bypass (8 caractères) : valider côté serveur
+    if (trimmed.match(/^[A-Z0-9]{8}$/)) {
+      const res = await fetch("/api/bypass", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: trimmed }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        router.push("/jeu?access=bypass");
+        return;
+      }
+      setCodeError("Code invalide ou expiré.");
+      return;
+    }
+
+    setCodeError("Format invalide. Exemple de code session : KIC-4A2B");
   }
 
   return (
@@ -48,7 +67,7 @@ export default function Home() {
               type="text"
               value={code}
               onChange={e => { setCode(e.target.value.toUpperCase()); setCodeError(null); }}
-              placeholder="KIC-4A2B"
+              placeholder="KIC-4A2B ou code accès"
               maxLength={8}
               className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:outline-none focus:border-indigo-500 text-center font-mono font-bold text-lg tracking-widest uppercase"
             />
