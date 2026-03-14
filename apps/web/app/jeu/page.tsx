@@ -21,7 +21,6 @@ import {
   getSens, getPosteValue, applyDeltaToJoueur,
   ACTIF_KEYS, PASSIF_KEYS, CHARGES_KEYS, PRODUITS_KEYS,
 } from "@/components/jeu";
-import ModalEtape from "@/components/jeu/ModalEtape";
 import QCMEtape from "@/components/jeu/QCMEtape";
 import { QCM_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
@@ -590,15 +589,6 @@ export default function JeuPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
 
-      {/* ─── MODAL PÉDAGOGIQUE (avant saisie) ─── */}
-      {/* Affiché dans le MÊME batch que le changement d'étape → jamais de flash des boutons */}
-      {modalEtapeEnAttente !== null && (
-        <ModalEtape
-          etape={modalEtapeEnAttente}
-          onClose={() => setModalEtapeEnAttente(null)}
-        />
-      )}
-
       {/* ─── QCM (après validation d'étape) ─── */}
       {showQCM && etapeQCMEnCours !== null && (
         <QCMEtape
@@ -671,6 +661,8 @@ export default function JeuPage() {
           subEtape6={subEtape6}
           modeRapide={modeRapide}
           setModeRapide={setModeRapide}
+          modalEtapeEnAttente={modalEtapeEnAttente}
+          onCloseModal={() => setModalEtapeEnAttente(null)}
         />
 
         <MainContent

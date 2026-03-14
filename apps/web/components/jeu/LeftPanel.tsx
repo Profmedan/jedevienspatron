@@ -6,6 +6,74 @@ import EtapeGuide from "@/components/EtapeGuide";
 import CarteView from "@/components/CarteView";
 import { EntryPanel, type ActiveStep } from "./EntryPanel";
 import { nomCompte, getDocument } from "./utils";
+import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
+
+// ─── Carte pédagogique inline (remplace l'overlay plein écran) ──────────────
+
+const ETAPE_EMOJI: Record<number, string> = {
+  0: "💼", 1: "📦", 2: "💰", 3: "🤝", 4: "🎯", 5: "🏛️", 6: "✉️", 7: "🎲", 8: "📊",
+};
+
+function ModalEtapeInline({ etape, onClose }: { etape: number; onClose: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const modal = MODALES_ETAPES[etape];
+  if (!modal) return null;
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-950 to-gray-900 rounded-2xl border-2 border-indigo-500/60 p-3 space-y-2.5 shadow-lg">
+      {/* En-tête */}
+      <div className="flex items-center gap-2">
+        <span className="text-xl shrink-0">{ETAPE_EMOJI[etape] ?? "📋"}</span>
+        <div className="flex-1 min-w-0">
+          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">
+            Étape {etape}
+          </span>
+          <h3 className="text-sm font-black text-white leading-tight">{modal.titre}</h3>
+        </div>
+      </div>
+
+      {/* Ce qui se passe — toujours visible */}
+      <div className="bg-black/30 rounded-xl p-2.5">
+        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Ce qui se passe</p>
+        <p className="text-xs text-gray-200 leading-relaxed">{modal.ceQuiSePasse}</p>
+      </div>
+
+      {/* Sections repliables */}
+      {expanded && (
+        <div className="space-y-2">
+          <div className="bg-black/30 rounded-xl p-2.5">
+            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Pourquoi c&apos;est important</p>
+            <p className="text-xs text-gray-200 leading-relaxed">{modal.pourquoi}</p>
+          </div>
+          <div className="bg-black/30 rounded-xl p-2.5">
+            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Impact sur les comptes</p>
+            <p className="text-xs text-gray-200 leading-relaxed">{modal.impactComptes}</p>
+          </div>
+          <div className="bg-black/30 rounded-xl p-2.5">
+            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1">💡 Conseil</p>
+            <p className="text-xs text-gray-200 leading-relaxed">{modal.conseil}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Contrôles */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 text-xs py-1.5 rounded-lg bg-indigo-900/50 text-indigo-300 hover:bg-indigo-800/60 font-medium transition-colors border border-indigo-700/50"
+        >
+          {expanded ? "▲ Réduire" : "▼ En savoir plus"}
+        </button>
+        <button
+          onClick={onClose}
+          className="flex-1 text-xs py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-colors shadow-sm"
+        >
+          ✓ J&apos;ai compris
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── Indicateurs de santé financière ─────────────────────────
 
@@ -126,6 +194,9 @@ interface LeftPanelProps {
   /** Mode Rapide : pré-coche toutes les écritures pour les étapes automatiques */
   modeRapide?: boolean;
   setModeRapide?: (val: boolean) => void;
+  /** Carte pédagogique inline : numéro d'étape à afficher (null = aucune) */
+  modalEtapeEnAttente?: number | null;
+  onCloseModal?: () => void;
 }
 
 /**
@@ -161,14 +232,20 @@ export function LeftPanel({
   subEtape6 = "recrutement",
   modeRapide = false,
   setModeRapide,
+  modalEtapeEnAttente = null,
+  onCloseModal,
 }: LeftPanelProps) {
   const [showJournal, setShowJournal] = useState(false);
 
-  // Si une étape est active, afficher EntryPanel
+  // Si une étape est active, afficher EntryPanel (avec carte pédagogique au-dessus si présente)
   if (activeStep) {
     return (
       <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
         <SanteFinanciere joueur={joueur} />
+        {/* ── Carte pédagogique inline (au-dessus de la saisie) ── */}
+        {modalEtapeEnAttente !== null && onCloseModal && (
+          <ModalEtapeInline etape={modalEtapeEnAttente} onClose={onCloseModal} />
+        )}
         <EntryPanel
           activeStep={activeStep}
           displayJoueur={joueur}
@@ -188,6 +265,11 @@ export function LeftPanel({
 
       {/* Santé financière */}
       <SanteFinanciere joueur={joueur} />
+
+      {/* ── Carte pédagogique inline (au-dessus des boutons d'action) ── */}
+      {modalEtapeEnAttente !== null && onCloseModal && (
+        <ModalEtapeInline etape={modalEtapeEnAttente} onClose={onCloseModal} />
+      )}
 
       {/* Panneau d'action selon l'étape */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-3 shadow-sm">
