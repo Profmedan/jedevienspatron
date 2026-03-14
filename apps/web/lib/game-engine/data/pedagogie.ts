@@ -22,84 +22,86 @@ export interface QCMEtape {
   questions: QuestionQCM[]; // pool d'au moins 6 questions — 2 séries de 3 par tour
 }
 
+// Clé = etat.etapeTour du moteur de jeu (0-8), correspondance exacte avec ETAPE_INFO
 export const MODALES_ETAPES: Record<number, ModalEtape> = {
+  // ── étape 0 : Charges fixes & Dotation aux amortissements ───────────────────
   0: {
     etape: 0,
     titre: `Les frais qui te coûtent toujours de l'argent`,
     ceQuiSePasse: `Chaque trimestre, tu dois payer des charges régulières (loyer, salaire du gérant, assurances, électricité…). En plus, tes équipements (camion, mobilier, informatique) s'usent — même sans débourser un centime ce mois-ci. Tu dois comptabiliser cette usure comme une charge.`,
     pourquoi: `Sans payer ces frais, ton entreprise s'arrête. Et même si tes équipements durent longtemps, ils perdent de la valeur — tu dois en tenir compte pour connaître le vrai coût de ton activité.`,
     impactComptes: `Les charges fixes et l'amortissement réduisent ton résultat (bénéfice ou perte), mais seules les charges fixes font sortir de l'argent de ton compte bancaire.`,
-    conseil: `Pense à ces frais comme des "obligations" — il faut les payer même si tu n'as pas vendu grand-chose ce mois-ci. Assure-toi d'avoir assez de trésorerie pour les couvrir.`,
+    conseil: `Pense à ces frais comme des "obligations" — il faut les payer même si tu n'as pas vendu grand-chose ce trimestre. Assure-toi d'avoir assez de trésorerie pour les couvrir.`,
   },
+  // ── étape 1 : Achats de marchandises ────────────────────────────────────────
   1: {
     etape: 1,
-    titre: `La banque réclame son dû (capital + intérêts)`,
-    ceQuiSePasse: `Tu dois rembourser une partie du prêt que tu as contracté (c'est le capital) ET payer les intérêts que la banque demande pour te l'avoir prêté. Chaque trimestre, un montant fixe sort de ton compte.`,
-    pourquoi: `C'est de l'argent qui part — tu dois l'avoir. Si tu oublies, tu te retrouves dans le rouge ou la banque te ferme le robinet. Bien gérer tes emprunts, c'est survivre.`,
-    impactComptes: `Les intérêts réduisent ton résultat (c'est une charge). Le remboursement du capital sort de ta banque mais ne réduit pas le résultat (c'est du remboursement de dette).`,
-    conseil: `Avant d'emprunter, calcule si tes futurs bénéfices peuvent couvrir le remboursement. Une dette trop lourde te paralyse.`,
-  },
-  2: {
-    etape: 2,
     titre: `Tu remplis tes rayons pour vendre`,
     ceQuiSePasse: `Tu achètes de la marchandise auprès de tes fournisseurs pour la revendre. Cet achat augmente ton stock. Tu le paies maintenant (ou plus tard si c'est à crédit fournisseur — tu paieras au prochain tour), mais tu ne le comptabilises en "charge" que quand tu le vends.`,
     pourquoi: `Plus tu as de stock, plus tu peux vendre — mais tu dois avoir de l'argent disponible (ou du crédit fournisseur) pour le financer. Un stock trop gros bloque ton argent inutilement, trop petit te fait rater des ventes.`,
     impactComptes: `L'achat augmente ton stock (ce que tu possèdes) et réduit ta banque (ou crée une dette envers ton fournisseur). Pas de charge immédiate — c'est seulement quand tu vends que ça devient un "coût des ventes".`,
     conseil: `Achète juste assez pour 2-3 mois de ventes estimées. Pas plus, sinon tu immobilises de l'argent qui ne rapporte rien.`,
   },
-  3: {
-    etape: 3,
+  // ── étape 2 : Avancement des créances clients ────────────────────────────────
+  2: {
+    etape: 2,
     titre: `Tes clients te paient enfin !`,
     ceQuiSePasse: `Les clients à qui tu as vendu à crédit te remboursent (partiellement ou totalement). De l'argent rentre dans ta banque. Tu diminues tes créances clients (les montants que tes clients te devaient) d'autant.`,
     pourquoi: `Vendre ne suffit pas — c'est encaisser qui compte vraiment. Tant que tes clients ne paient pas, tu as fait une vente sur le papier mais tu n'as pas d'argent disponible. Et sans argent, même une entreprise pleine de ventes peut faire faillite.`,
     impactComptes: `Les créances clients baissent (les montants que tes clients te devaient diminuent). Ta banque augmente (l'argent arrive). Zéro impact sur le résultat — la vente avait déjà été comptée au moment où tu l'as faite.`,
     conseil: `Surveille tes délais de paiement. Plus les clients paient vite, mieux ta trésorerie se porte. Laisser des clients payer très tard, c'est leur faire crédit sans le décider — et ça peut t'étouffer.`,
   },
-  4: {
-    etape: 4,
+  // ── étape 3 : Paiement des commerciaux ──────────────────────────────────────
+  3: {
+    etape: 3,
     titre: `Tu paies tes vendeurs pour leurs efforts`,
     ceQuiSePasse: `Tes commerciaux (vendeurs/représentants) te ramènent des ventes. Tu dois les payer — soit un salaire fixe, soit une commission (pourcentage des ventes), soit les deux. L'argent sort de ta banque.`,
     pourquoi: `Sans eux, tu ne vends rien. Mais tu dois pouvoir les payer. Un commercial qui gagne bien = motivation et plus de ventes. Un commercial mal payé = démotivation et départ.`,
-    impactComptes: `Le paiement réduit ta banque et augmente tes charges (frais commerciaux/salaires). C'est une dépense courante.`,
+    impactComptes: `Le paiement réduit ta banque et augmente tes charges (frais commerciaux/salaires). C'est une dépense courante qui réduit ton résultat.`,
     conseil: `Paie une commission qui te laisse une marge suffisante. Si tu paies 50 % de chaque vente en commission, il faut vraiment vendre beaucoup pour que ça reste rentable.`,
   },
-  5: {
-    etape: 5,
+  // ── étape 4 : Traitement des ventes (Cartes Client) ─────────────────────────
+  4: {
+    etape: 4,
     titre: `Tes commerciaux livrent, tu fais des ventes !`,
     ceQuiSePasse: `Grâce au travail de tes commerciaux, des clients reçoivent de la marchandise et tu enregistres une vente. Ton chiffre d'affaires (total des ventes) monte. Selon tes conditions, tu reçois l'argent tout de suite ou une promesse de paiement.`,
     pourquoi: `C'est LE moteur de ton entreprise. Plus tu vends, plus tu couvres tes frais fixes et plus tu fais de bénéfice. Sans clients, tu n'es rien.`,
     impactComptes: `Le chiffre d'affaires augmente (résultat en plus). Ton stock diminue (la marchandise part). Tes créances clients montent (si tu vends à crédit) ou ta banque augmente (si le client paie comptant).`,
-    conseil: `Plus tu vends, plus tes frais fixes se répartissent sur beaucoup de ventes — tes bénéfices montent beaucoup plus vite que tes ventes. C'est le principe du seuil de rentabilité : une fois tes frais couverts, chaque euro de vente supplémentaire est presque tout bénéfice.`,
+    conseil: `Plus tu vends, plus tes frais fixes se répartissent sur beaucoup de ventes — tes bénéfices montent beaucoup plus vite que tes ventes. Une fois tes frais fixes couverts, chaque euro de vente supplémentaire est presque tout bénéfice.`,
   },
+  // ── étape 5 : Effets récurrents des cartes Décision ──────────────────────────
+  5: {
+    etape: 5,
+    titre: `Tes cartes Décision réclament leur dû`,
+    ceQuiSePasse: `Certaines cartes Décision que tu as activées ont des effets qui se répètent chaque trimestre : remboursement d'emprunt (la part du capital + les intérêts dus à la banque), abonnement logiciel, coût de maintenance… Ces charges sortent automatiquement de ta trésorerie à chaque tour.`,
+    pourquoi: `C'est le coût de tes décisions passées. Chaque carte activée peut embarquer une charge invisible qui revient tous les trimestres. Plus tu accumules de cartes à effets récurrents, plus tes charges fixes augmentent — et plus tu dois vendre pour rester bénéficiaire.`,
+    impactComptes: `Ces charges récurrentes réduisent ta banque et augmentent tes charges (réduction du résultat). Les intérêts d'emprunt sont comptabilisés séparément des charges d'exploitation courantes.`,
+    conseil: `Avant d'activer une nouvelle carte, vérifie toujours son coût récurrent trimestriel. Deux ou trois cartes à effets récurrents peuvent rapidement peser très lourd sur ta trésorerie à chaque tour.`,
+  },
+  // ── étape 6 : Choix d'une carte Décision (6a recrutement + 6b investissement) ─
   6: {
     etape: 6,
-    titre: `Tu embauches un nouveau vendeur (ou pas)`,
-    ceQuiSePasse: `Tu as la possibilité d'embaucher un nouveau commercial. Il va développer tes ventes mais te coûtera en salaire fixe (+ commissions sur ses ventes). C'est une décision stratégique : risque vs. bénéfice potentiel.`,
-    pourquoi: `Recruter, c'est investir dans une personne. Ça coûte tout de suite (son salaire), mais ça rapporte progressivement (ses ventes). Tu dois avoir assez de trésorerie pour tenir pendant le temps qu'il lui faut pour être pleinement efficace.`,
-    impactComptes: `Ses salaires augmentent tes charges (réduction du résultat). Ses ventes augmentent ton chiffre d'affaires. Au final : rentable ou pas ? Ça dépend si les ventes qu'il génère rapportent plus que son salaire.`,
-    conseil: `Recrute un commercial si tu penses vraiment qu'il va générer en ventes au moins 2 à 3 fois son salaire annuel. Sinon, c'est une perte nette.`,
+    titre: `Tu choisis une carte Décision (optionnel)`,
+    ceQuiSePasse: `Tu as la possibilité de jouer une carte Décision ce trimestre : recruter un commercial ou investir dans un équipement, un logiciel, une protection… Ce choix est entièrement optionnel, mais c'est souvent ici que tu construis ton avantage sur la durée.`,
+    pourquoi: `Recruter ou investir coûte de l'argent tout de suite (salaire, prix d'achat), mais rapporte progressivement (plus de ventes, meilleure efficacité). Tu dois avoir assez de trésorerie pour tenir pendant que les bénéfices arrivent.`,
+    impactComptes: `Un recrutement augmente tes charges de personnel. Un investissement augmente un actif (ce que tu possèdes) et réduit ta banque. Dans les deux cas, la rentabilité réelle dépend de ce que ça te rapporte en ventes ou en économies par rapport à son coût.`,
+    conseil: `Recrute ou investis seulement si tu penses que ça va générer en bénéfices au moins 2 à 3 fois son coût annuel. Sinon, c'est une perte nette. Ne te laisse pas séduire par une belle carte sans en calculer la rentabilité.`,
   },
+  // ── étape 7 : Événement aléatoire ───────────────────────────────────────────
   7: {
     etape: 7,
-    titre: `Tu investis dans un nouvel équipement ou compétence`,
-    ceQuiSePasse: `Tu achètes ou investis dans quelque chose qui va augmenter ta productivité ou ta capacité : nouveau camion, logiciel, formation… L'argent sort de ta trésorerie immédiatement, mais la valeur créée dure longtemps.`,
-    pourquoi: `Les investissements coûtent cher maintenant mais rapportent plus tard. Un bon investissement peut doubler ta capacité. Un mauvais investissement te paralyse financièrement.`,
-    impactComptes: `L'investissement augmente un actif (camion, logiciel — quelque chose que tu possèdes) et réduit ta banque immédiatement. Ensuite, tu l'amortis sur plusieurs années (tu répartis la charge progressivement sur sa durée de vie).`,
-    conseil: `Avant d'investir, calcule le retour sur investissement. Il faut que ce que ça te rapporte (ventes ou économies) soit supérieur à ce que ça te coûte, sur une durée raisonnable.`,
-  },
-  8: {
-    etape: 8,
     titre: `Une surprise (bonne ou mauvaise) tombe du ciel`,
     ceQuiSePasse: `Chaque trimestre, un événement aléatoire arrive : un gros client se précipite sur toi (hausse des ventes), un concurrent baisse ses prix (tu perds des clients), une usine ferme (rupture de stock), un emprunt devient plus cher… Les entrepreneurs vivent dans l'incertitude.`,
     pourquoi: `C'est la réalité. Tu peux avoir le meilleur plan du monde, mais la vie te joue des tours. Comment tu réagis ? Tu paniques ? Tu t'adaptes ? La vraie compétence, c'est de rebondir.`,
     impactComptes: `Ça dépend de l'événement. Une grosse vente = chiffre d'affaires en hausse. Une rupture d'approvisionnement = stock qui baisse, ventes manquées. Un accident = dépense imprévue. Chaque événement modifie ton résultat du trimestre.`,
     conseil: `Garde toujours une réserve de trésorerie pour absorber les mauvaises surprises. Et regarde les bonnes surprises comme des occasions à saisir — ne les gaspille pas en dépenses impulsives.`,
   },
-  9: {
-    etape: 9,
+  // ── étape 8 : Bilan de fin de trimestre ─────────────────────────────────────
+  8: {
+    etape: 8,
     titre: `C'est fini ce trimestre, bilan et diagnostic`,
     ceQuiSePasse: `Le trimestre se termine. Tu dois regarder tes résultats : as-tu fait un bénéfice ou une perte ? Ta trésorerie tient-elle ? Tes dettes deviennent-elles trop lourdes par rapport à ce que tu possèdes ? C'est le moment de dire "j'ai bien géré" ou "je dois changer de stratégie".`,
-    pourquoi: `Sans ce bilan de fin de trimestre, tu ne sais pas où tu en es. Chaque trimestre clôturé, c'est une occasion de vérifier que tu vas dans la bonne direction.`,
+    pourquoi: `Sans ce bilan de fin de trimestre, tu ne sais pas où tu en es. Chaque trimestre clôturé, c'est une occasion de vérifier que tu vas dans la bonne direction avant d'entamer le suivant.`,
     impactComptes: `Tu calcules ton résultat net (bénéfice ou perte), tu mets à jour ton bilan, tu vérifies ta trésorerie. Si tu as une perte, elle ronge tes fonds propres (l'argent mis au départ + les bénéfices accumulés). Si tu as un bénéfice, tu le gardes en réserve ou tu le distribues.`,
     conseil: `À chaque clôture, pose-toi : "Où en suis-je réellement ?" Si tu as des doutes, c'est le moment d'ajuster : réduire tes charges, vendre davantage, recruter ou investir différemment.`,
   },

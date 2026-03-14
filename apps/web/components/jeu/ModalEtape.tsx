@@ -20,14 +20,23 @@ const ETAPE_CONFIG: Record<number, {
   badge: string;
   accent: string;
 }> = {
+  // 0 : Charges fixes & amortissements
   0: { Icon: Briefcase,   bg: "from-slate-50 to-slate-100",   border: "border-slate-300",  badge: "bg-slate-600",   accent: "text-slate-700"  },
-  1: { Icon: Landmark,    bg: "from-red-50 to-orange-50",     border: "border-orange-300", badge: "bg-red-600",     accent: "text-red-700"    },
-  2: { Icon: Package,     bg: "from-amber-50 to-yellow-50",   border: "border-amber-300",  badge: "bg-amber-600",   accent: "text-amber-700"  },
-  3: { Icon: Mail,        bg: "from-blue-50 to-indigo-50",    border: "border-blue-300",   badge: "bg-blue-600",    accent: "text-blue-700"   },
-  4: { Icon: Handshake,   bg: "from-purple-50 to-violet-50",  border: "border-purple-300", badge: "bg-purple-600",  accent: "text-purple-700" },
-  5: { Icon: DollarSign,  bg: "from-green-50 to-emerald-50",  border: "border-green-300",  badge: "bg-green-600",   accent: "text-green-700"  },
-  6: { Icon: Target,      bg: "from-indigo-50 to-blue-50",    border: "border-indigo-300", badge: "bg-indigo-600",  accent: "text-indigo-700" },
+  // 1 : Achats de marchandises (stock → rayons)
+  1: { Icon: Package,     bg: "from-amber-50 to-yellow-50",   border: "border-amber-300",  badge: "bg-amber-600",   accent: "text-amber-700"  },
+  // 2 : Avancement créances clients (argent qui rentre)
+  2: { Icon: DollarSign,  bg: "from-green-50 to-emerald-50",  border: "border-green-300",  badge: "bg-green-600",   accent: "text-green-700"  },
+  // 3 : Paiement des commerciaux (accord/salaires)
+  3: { Icon: Handshake,   bg: "from-blue-50 to-indigo-50",    border: "border-blue-300",   badge: "bg-blue-600",    accent: "text-blue-700"   },
+  // 4 : Ventes via cartes client (objectif commercial)
+  4: { Icon: Target,      bg: "from-purple-50 to-violet-50",  border: "border-purple-300", badge: "bg-purple-600",  accent: "text-purple-700" },
+  // 5 : Effets récurrents cartes Décision (remboursements banque)
+  5: { Icon: Landmark,    bg: "from-red-50 to-orange-50",     border: "border-orange-300", badge: "bg-red-600",     accent: "text-red-700"    },
+  // 6 : Choix d'une carte Décision (décision stratégique)
+  6: { Icon: Mail,        bg: "from-indigo-50 to-blue-50",    border: "border-indigo-300", badge: "bg-indigo-600",  accent: "text-indigo-700" },
+  // 7 : Événement aléatoire (surprise)
   7: { Icon: Dice6,       bg: "from-yellow-50 to-amber-50",   border: "border-yellow-300", badge: "bg-yellow-600",  accent: "text-yellow-700" },
+  // 8 : Bilan de fin de trimestre
   8: { Icon: BarChart3,   bg: "from-teal-50 to-cyan-50",      border: "border-teal-300",   badge: "bg-teal-600",    accent: "text-teal-700"   },
 };
 
