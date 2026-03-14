@@ -25,9 +25,9 @@ interface EtapeData {
 const ETAPES: EtapeData[] = [
   /* ── 0 ─ Charges fixes & Amortissements ── */
   {
-    titre: "Charges fixes & Amortissements",
+    titre: "Charges fixes & Amortissements (usure)",
     icon: "💼",
-    description: "Enregistre les charges obligatoires du trimestre : loyers, énergie, remboursement de l'emprunt, et usure des immobilisations.",
+    description: "Enregistre les charges obligatoires du trimestre : loyers, énergie, remboursement de l'emprunt, et amortissements (usure progressive des équipements).",
     ecritures: [
       { label: "Charges fixes",        debit: "Services ext. +2",      credit: "Trésorerie −2" },
       { label: "Remboursement emprunt",debit: "Emprunts −1",           credit: "Trésorerie −1" },

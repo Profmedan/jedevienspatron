@@ -186,54 +186,6 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
       </div>
     </div>,
 
-    /* ── Étape 2 : L'équilibre fondamental ── */
-    <div key={2} className="space-y-4">
-      <h3 className="font-bold text-indigo-200 text-lg">
-        ⚖️ L&apos;équilibre fondamental
-      </h3>
-      <p className="text-gray-300 text-sm leading-relaxed">
-        En comptabilité, le bilan est <strong>toujours équilibré</strong> : ACTIF =
-        PASSIF. C&apos;est une loi mathématique maintenue grâce à la{" "}
-        <strong>partie double</strong> — chaque opération affecte au moins deux postes.
-      </p>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-blue-950/30 border-2 border-blue-700 rounded-xl p-4 text-center">
-          <div className="text-3xl font-bold text-blue-400">{totalActif}</div>
-          <div className="text-sm font-bold text-blue-400 mt-1">TOTAL ACTIF</div>
-          <div className="text-xs text-gray-400">(Emplois)</div>
-        </div>
-        <div className="bg-orange-950/30 border-2 border-orange-700 rounded-xl p-4 text-center">
-          <div className="text-3xl font-bold text-orange-300">{totalPassif}</div>
-          <div className="text-sm font-bold text-orange-400 mt-1">TOTAL PASSIF</div>
-          <div className="text-xs text-gray-400">(Ressources)</div>
-        </div>
-      </div>
-      <div
-        className={`rounded-xl p-4 text-center font-bold text-lg transition-all ${
-          totalActif === totalPassif
-            ? "bg-gradient-to-r bg-emerald-950/40 text-emerald-300 border-2 border-emerald-700"
-            : "bg-red-950/40 text-red-300 border-2 border-red-700"
-        }`}
-      >
-        {totalActif === totalPassif
-          ? "✅ ACTIF = PASSIF — Le bilan est équilibré !"
-          : "⚠️ Déséquilibre !"}
-      </div>
-      <div className="bg-indigo-950/30 rounded-xl p-3 text-xs text-indigo-200 leading-relaxed border border-indigo-800/50 space-y-2">
-        <p>
-          <strong>🔄 Principe de la partie double :</strong> toute écriture comptable
-          touche au moins deux comptes en sens opposés (débit ↔ crédit).
-          Exemple : payer une charge en trésorerie → Charge augmente (Débit) et
-          Trésorerie diminue (Crédit).
-        </p>
-        <p>
-          <strong>📊 Résultat net :</strong> à la fin de chaque trimestre, le bénéfice
-          (ou la perte) du Compte de Résultat vient <em>s&apos;ajouter</em> aux
-          Capitaux propres au Passif — maintenant ainsi l&apos;équilibre ACTIF = PASSIF.
-        </p>
-      </div>
-    </div>,
-
   ];
 
   return (
@@ -250,7 +202,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
         {/* Progression */}
         <div className="flex gap-2 justify-center p-3 border-b border-gray-700 bg-gray-800">
-          {[0, 1, 2].map((i) => (
+          {[0, 1].map((i) => (
             <div
               key={i}
               className={`h-2 w-8 rounded-full transition-all ${

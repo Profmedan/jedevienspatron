@@ -254,3 +254,95 @@ export function analyserSituationFinanciere(joueur: Joueur): MessageAnalyse[] {
 
   return msgs;
 }
+
+// ─── PÉDAGOGIE DES ÉCRITURES ──────────────────────────────────────────────────
+
+/**
+ * Retourne une phrase courte et concrète expliquant CE QUI SE PASSE
+ * pour l'apprenant, selon le poste et le sens de l'écriture.
+ */
+export function getPedagogieContexte(poste: string, delta: number, isDebit: boolean): string {
+  // Cas particuliers par direction (débit vs crédit)
+  const MAP: Record<string, { debit: string; credit: string }> = {
+    tresorerie: {
+      debit:  "💰 De l'argent ENTRE dans ton compte bancaire.",
+      credit: "💸 De l'argent SORT de ton compte bancaire.",
+    },
+    stocks: {
+      debit:  "📦 Des marchandises ARRIVENT dans ton stock — elles attendent d'être vendues.",
+      credit: "📦 Des marchandises QUITTENT le stock — elles ont été vendues ou consommées.",
+    },
+    immobilisations: {
+      debit:  "🏭 Tu acquiers un équipement durable (machine, véhicule, local…) — il sera amorti progressivement.",
+      credit: "🏭 Un équipement PERD de la valeur : c'est l'usure (amortissement) ou une cession.",
+    },
+    creancesPlus1: {
+      debit:  "📬 Un client te doit de l'argent qu'il paiera dans 1 trimestre — c'est une créance C+1.",
+      credit: "📬 Une créance C+1 est ENCAISSÉE — l'argent entre enfin en trésorerie.",
+    },
+    creancesPlus2: {
+      debit:  "📬 Un grand client paie très lentement : son argent n'arrivera que dans 2 trimestres — créance C+2.",
+      credit: "📬 La créance C+2 AVANCE d'un cran — elle devient une créance C+1.",
+    },
+    capitaux: {
+      debit:  "📉 Les capitaux propres DIMINUENT — résultat d'une perte ou d'un retrait des associés.",
+      credit: "📈 Les capitaux propres AUGMENTENT — bénéfice intégré ou nouvel apport.",
+    },
+    emprunts: {
+      debit:  "🏦 Tu REMBOURSES une partie de l'emprunt bancaire — la dette diminue.",
+      credit: "🏦 Tu EMPRUNTES de l'argent à la banque — ressource immédiate, remboursement futur.",
+    },
+    dettes: {
+      debit:  "✅ Tu paies enfin le fournisseur — la dette disparaît.",
+      credit: "🔄 Achat À CRÉDIT : tu as les marchandises aujourd'hui, tu paieras le fournisseur plus tard.",
+    },
+    dettesFiscales: {
+      debit:  "✅ Tu règles ta dette fiscale (impôts, TVA…) — obligation soldée.",
+      credit: "🧾 L'État te réclame des impôts ou taxes — dette fiscale créée.",
+    },
+    decouvert: {
+      debit:  "🚨 Ton découvert AUGMENTE — tu es encore plus endetté envers la banque.",
+      credit: "🚨 Ton découvert DIMINUE légèrement — mais ta trésorerie reste négative.",
+    },
+    achats: {
+      debit:  "📉 COÛT de la marchandise vendue enregistré — ça RÉDUIT ton résultat net.",
+      credit: "Le coût de vente est annulé ou corrigé.",
+    },
+    servicesExterieurs: {
+      debit:  "📉 CHARGES FIXES du trimestre (loyer, énergie, assurances…) — elles réduisent ton bénéfice.",
+      credit: "Correction ou annulation d'une charge extérieure.",
+    },
+    chargesInteret: {
+      debit:  "📉 INTÉRÊTS d'emprunt payés à la banque — coût du financement, réduit le résultat.",
+      credit: "Correction d'intérêts.",
+    },
+    chargesPersonnel: {
+      debit:  "👔 SALAIRES versés à tes commerciaux — charges de personnel, réduisent le résultat.",
+      credit: "Correction ou remboursement de charges de personnel.",
+    },
+    chargesExceptionnelles: {
+      debit:  "⚡ CHARGE EXCEPTIONNELLE (événement rare ou imprévu) — impact négatif sur le résultat.",
+      credit: "Annulation d'une charge exceptionnelle.",
+    },
+    dotationsAmortissements: {
+      debit:  "⏳ USURE des équipements comptabilisée — charge calculée, AUCUNE sortie d'argent réelle.",
+      credit: "Correction d'amortissement.",
+    },
+    ventes: {
+      debit:  "Correction ou annulation d'une vente.",
+      credit: "📈 VENTE enregistrée — ton chiffre d'affaires AUGMENTE, le résultat s'améliore.",
+    },
+    revenusExceptionnels: {
+      debit:  "Annulation d'un produit exceptionnel.",
+      credit: "🎉 PRODUIT EXCEPTIONNEL — revenu inattendu (subvention, cession…), améliore le résultat.",
+    },
+    produitsFinanciers: {
+      debit:  "Correction d'un produit financier.",
+      credit: "💹 PRODUIT FINANCIER — intérêts ou dividendes reçus, améliorent le résultat.",
+    },
+  };
+
+  const mapping = MAP[poste];
+  if (!mapping) return "";
+  return isDebit ? mapping.debit : mapping.credit;
+}

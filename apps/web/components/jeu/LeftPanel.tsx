@@ -201,6 +201,19 @@ export function LeftPanel({
               <span>Achats de marchandises</span>
             </div>
 
+            {/* Bouton principal EN HAUT */}
+            <button
+              onClick={onLaunchAchat}
+              disabled={achatQte === 0}
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-40 text-white text-sm py-3 rounded-xl font-bold transition-all active:scale-95 shadow-sm"
+              aria-label="Exécuter et comprendre cet achat"
+            >
+              📝 Exécuter & Comprendre
+            </button>
+            {achatQte === 0 && (
+              <p className="text-[10px] text-gray-500 text-center -mt-1">Choisis une quantité pour activer</p>
+            )}
+
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-500 font-medium">Quantité :</label>
               <input
@@ -233,22 +246,12 @@ export function LeftPanel({
               ))}
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={onLaunchAchat}
-                disabled={achatQte === 0}
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-40 text-white text-sm py-2 rounded-xl font-bold transition-all active:scale-95"
-                aria-label="Exécuter et comprendre cet achat"
-              >
-                📝 Exécuter & Comprendre
-              </button>
-              <button
-                onClick={onSkipAchat}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 rounded-xl font-medium transition-colors"
-              >
-                Passer
-              </button>
-            </div>
+            <button
+              onClick={onSkipAchat}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-gray-400 text-sm py-2 rounded-xl font-medium transition-colors"
+            >
+              Passer cette étape
+            </button>
           </div>
         )}
 

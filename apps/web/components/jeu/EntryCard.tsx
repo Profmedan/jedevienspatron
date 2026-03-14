@@ -1,6 +1,6 @@
 "use client";
 
-import { nomCompte, getDocument, getEffetTexte, getSensExplication, type SensEcriture } from "./utils";
+import { nomCompte, getDocument, getEffetTexte, getSensExplication, getPedagogieContexte, type SensEcriture } from "./utils";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 
 export interface EntryLine {
@@ -186,6 +186,9 @@ export function EntryCard({ entry, onApply, isExpanded, onToggle }: EntryCardPro
   }
 
   // ── 3. État EXPANDED — fenêtre ouverte avec Saisir ──────────────────────
+  // Texte pédagogique contextuel selon le poste et le sens
+  const contexte = getPedagogieContexte(entry.poste, entry.delta, isDebit);
+
   return (
     <div
       className={`mb-1.5 rounded-xl border-2 shadow-md transition-all duration-200
@@ -215,61 +218,59 @@ export function EntryCard({ entry, onApply, isExpanded, onToggle }: EntryCardPro
         </div>
       </button>
 
+      {/* ── Contexte pédagogique — "Ce qui se passe concrètement" ── */}
+      {contexte && (
+        <div className="px-3 py-2 bg-indigo-950/40 border-b border-indigo-800/40 text-[11px] text-indigo-200 leading-snug">
+          {contexte}
+        </div>
+      )}
+
       {/* ── Corps de la carte ── */}
-      <div className="flex items-start p-2.5 gap-2">
-        <div className="flex-1 min-w-0">
+      <div className="p-2.5 space-y-2">
 
-          {/* Nom du compte */}
-          <div className="font-bold text-sm text-gray-100 mb-1.5 leading-tight">
-            {nomCompte(entry.poste)}
-          </div>
-
-          {/* Badges : document + impact résultat */}
-          <div className="flex flex-wrap gap-1 mb-2">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${doc.badge}`}>
-              {doc.label === "Bilan" ? "📋" : "📈"} {doc.label} · {doc.detail}
-            </span>
-            {(doc.detail === "Charge" || doc.detail === "Produit") && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                doc.detail === "Charge"
-                  ? "bg-red-900/50 text-red-300"
-                  : "bg-emerald-900/50 text-emerald-300"
-              }`}>
-                {doc.detail === "Charge" ? "↓ résultat net" : "↑ résultat net"}
+        {/* Nom du compte + montant */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-sm text-gray-100 leading-tight">
+              {nomCompte(entry.poste)}
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${doc.badge}`}>
+                {doc.label === "Bilan" ? "📋" : "📈"} {doc.label} · {doc.detail}
               </span>
-            )}
+              {(doc.detail === "Charge" || doc.detail === "Produit") && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  doc.detail === "Charge"
+                    ? "bg-red-900/50 text-red-300"
+                    : "bg-emerald-900/50 text-emerald-300"
+                }`}>
+                  {doc.detail === "Charge" ? "↓ résultat" : "↑ résultat"}
+                </span>
+              )}
+            </div>
           </div>
-
-          {/* Montant */}
-          <div className={`text-2xl font-black tabular-nums mb-1.5 ${bon ? "text-emerald-400" : "text-red-400"}`}>
+          <div className={`text-2xl font-black tabular-nums shrink-0 ${bon ? "text-emerald-400" : "text-red-400"}`}>
             {entry.delta > 0 ? "+" : ""}{entry.delta}
           </div>
+        </div>
 
-          {/* Effet mémoire */}
-          {effetTexte && (
-            <div className={`text-[11px] font-semibold mb-1.5 leading-tight rounded-lg px-2 py-1 ${
-              bon ? "bg-emerald-900/40 text-emerald-300" : "bg-red-950/30 text-red-400"
-            }`}>
-              {effetTexte}
-            </div>
-          )}
-
-          {/* Description technique */}
-          <div className="text-xs text-gray-500 leading-snug italic">
-            {entry.description}
+        {/* Effet mémoire */}
+        {effetTexte && (
+          <div className={`text-[11px] font-semibold leading-tight rounded-lg px-2 py-1.5 ${
+            bon ? "bg-emerald-900/40 text-emerald-300" : "bg-red-950/30 text-red-400"
+          }`}>
+            {effetTexte}
           </div>
-        </div>
+        )}
 
-        {/* Bouton Saisir */}
-        <div className="shrink-0 mt-1">
-          <button
-            onClick={onApply}
-            className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold px-3 py-2.5 rounded-lg whitespace-nowrap transition-all shadow-sm"
-            aria-label={`Saisir l'écriture : ${nomCompte(entry.poste)}`}
-          >
-            Saisir →
-          </button>
-        </div>
+        {/* Bouton Saisir — pleine largeur en bas */}
+        <button
+          onClick={onApply}
+          className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white text-xs font-black py-2.5 rounded-lg transition-all shadow-sm"
+          aria-label={`Saisir l'écriture : ${nomCompte(entry.poste)}`}
+        >
+          ✅ J&apos;ai compris — Saisir →
+        </button>
       </div>
     </div>
   );
