@@ -53,13 +53,13 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       {/* Retour */}
       <Link
         href="/"
-        className="text-indigo-400 text-sm mb-6 hover:underline transition-colors"
+        className="text-emerald-400 text-sm mb-6 hover:underline transition-colors"
       >
         ← Retour à l&apos;accueil
       </Link>
 
       {/* Titre */}
-      <h2 className="text-3xl font-bold text-indigo-200 mb-2">🎮 Configuration</h2>
+      <h2 className="text-3xl font-bold text-emerald-200 mb-2">🎮 Configuration</h2>
       <p className="text-gray-500 mb-8 text-sm">
         Choisis le nombre de joueurs et configure ton entreprise
       </p>
@@ -72,8 +72,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             onClick={() => setNbJoueurs(n)}
             className={`w-12 h-12 rounded-xl font-bold text-lg transition-all ${
               nbJoueurs === n
-                ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg scale-110"
-                : "bg-gray-800 text-indigo-300 border-2 border-gray-600 hover:border-indigo-500 hover:bg-gray-700"
+                ? "bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg scale-110"
+                : "bg-gray-800 text-emerald-300 border-2 border-gray-600 hover:border-emerald-500 hover:bg-gray-700"
             }`}
           >
             {n}
@@ -91,7 +91,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
           return (
             <div
               key={i}
-              className="bg-gray-900 rounded-2xl p-4 border border-gray-700 hover:border-indigo-700 transition-colors"
+              className="bg-gray-900 rounded-2xl p-4 border border-gray-700 hover:border-emerald-700 transition-colors"
             >
               {/* Pseudo input */}
               <div className="flex items-center gap-2 mb-3">
@@ -99,7 +99,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 <input
                   value={players[i].pseudo}
                   onChange={(e) => update(i, "pseudo", e.target.value)}
-                  className="flex-1 border-b-2 border-gray-600 focus:border-indigo-500 outline-none px-1 py-0.5 font-bold text-gray-100 placeholder-gray-600 bg-transparent transition-colors"
+                  className="flex-1 border-b-2 border-gray-600 focus:border-emerald-500 outline-none px-1 py-0.5 font-bold text-gray-100 placeholder-gray-600 bg-transparent transition-colors"
                   placeholder="Ton prénom ou pseudo"
                   maxLength={20}
                   aria-label={`Pseudo du joueur ${i + 1}`}
@@ -112,7 +112,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 onChange={(e) =>
                   update(i, "entreprise", e.target.value as NomEntreprise)
                 }
-                className="w-full border border-gray-600 bg-gray-800 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full border border-gray-600 bg-gray-800 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 aria-label={`Entreprise du joueur ${i + 1}`}
               >
                 {allEntreprises.map((nom) => (
@@ -152,8 +152,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             onClick={() => setNbTours(n)}
             className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
               nbTours === n
-                ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg scale-105"
-                : "bg-gray-800 text-indigo-300 border-2 border-gray-600 hover:border-indigo-500 hover:bg-gray-700"
+                ? "bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg scale-105"
+                : "bg-gray-800 text-emerald-300 border-2 border-gray-600 hover:border-emerald-500 hover:bg-gray-700"
             }`}
           >
             <div>{n} trimestres</div>
@@ -168,7 +168,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       <button
         onClick={() => onStart(players.slice(0, nbJoueurs), nbTours)}
         disabled={!canStart}
-        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40 text-white font-bold px-12 py-4 rounded-2xl text-lg shadow-lg transition-all active:scale-95"
+        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-40 text-white font-bold px-12 py-4 rounded-2xl text-lg shadow-lg transition-all active:scale-95"
         aria-label="Suivant: Comprendre le bilan de départ"
       >
         🚀 Suivant — Comprendre mon bilan de départ

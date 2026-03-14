@@ -46,7 +46,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const steps = [
     /* ── Étape 0 : D'où vient l'argent ── */
     <div key={0} className="space-y-4">
-      <h3 className="font-bold text-indigo-200 text-lg">📥 D&apos;où vient l&apos;argent de départ ?</h3>
+      <h3 className="font-bold text-orange-200 text-lg">📥 D&apos;où vient l&apos;argent de départ ?</h3>
       <p className="text-gray-300 text-sm leading-relaxed">
         Toute entreprise naît grâce à des <strong>RESSOURCES</strong> : l&apos;argent
         investi par les propriétaires (<em>capitaux propres</em>) et/ou des emprunts
@@ -98,7 +98,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
     /* ── Étape 1 : Comment cet argent est utilisé ── */
     <div key={1} className="space-y-4">
-      <h3 className="font-bold text-indigo-200 text-lg">
+      <h3 className="font-bold text-emerald-200 text-lg">
         📤 Comment cet argent a-t-il été utilisé ?
       </h3>
       <p className="text-gray-300 text-sm leading-relaxed">
@@ -106,8 +106,8 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
         biens durables (immobilisations), marchandises (stocks) et liquidités (trésorerie).
         C&apos;est la colonne <strong>ACTIF</strong> du bilan.
       </p>
-      <div className="bg-blue-950/20 border border-blue-800/50 rounded-xl p-4">
-        <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
+      <div className="bg-emerald-950/20 border border-emerald-800/50 rounded-xl p-4">
+        <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">
           📤 EMPLOIS (Actif) — À quoi sert l&apos;argent ?
         </div>
         <div className="space-y-2">
@@ -122,7 +122,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                 return (
                   <div
                     key={a.nom}
-                    className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40"
+                    className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-emerald-900/40"
                   >
                     <div>
                       <div className="font-medium text-sm text-gray-100">
@@ -137,7 +137,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                         )}
                       </div>
                     </div>
-                    <span className="font-bold text-blue-400">{a.valeur}</span>
+                    <span className="font-bold text-emerald-400">{a.valeur}</span>
                   </div>
                 );
               })}
@@ -152,13 +152,13 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               {stocks.map((a) => (
                 <div
                   key={a.nom}
-                  className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40"
+                  className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-emerald-900/40"
                 >
                   <div>
                     <div className="font-medium text-sm text-gray-100">📦 {a.nom}</div>
                     <div className="text-xs text-gray-400">Marchandises prêtes à être vendues ou transformées</div>
                   </div>
-                  <span className="font-bold text-blue-400">{a.valeur}</span>
+                  <span className="font-bold text-emerald-400">{a.valeur}</span>
                 </div>
               ))}
             </>
@@ -169,16 +169,16 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2 mb-1">
                 💰 Trésorerie
               </div>
-              <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-blue-900/40">
+              <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-emerald-900/40">
                 <div>
                   <div className="font-medium text-sm text-gray-100">💰 {tresorerie.nom}</div>
                   <div className="text-xs text-gray-400">Liquidités disponibles pour payer les charges</div>
                 </div>
-                <span className="font-bold text-blue-400">{tresorerie.valeur}</span>
+                <span className="font-bold text-emerald-400">{tresorerie.valeur}</span>
               </div>
             </>
           )}
-          <div className="flex justify-between items-center bg-blue-900/40 rounded-lg p-2 font-bold text-blue-200 mt-2">
+          <div className="flex justify-between items-center bg-emerald-900/40 rounded-lg p-2 font-bold text-emerald-200 mt-2">
             <span>TOTAL EMPLOIS (Actif)</span>
             <span className="text-lg">{totalActif}</span>
           </div>
@@ -192,11 +192,11 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6">
       <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-700">
         {/* En-tête */}
-        <div className="bg-gradient-to-r from-indigo-700 to-purple-700 text-white p-4 flex items-center gap-3">
+        <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-4 flex items-center gap-3">
           <span className="text-3xl">{j.entreprise.icon}</span>
           <div>
             <div className="font-bold">{j.pseudo} — {j.entreprise.nom}</div>
-            <div className="text-sm text-indigo-200">{j.entreprise.specialite}</div>
+            <div className="text-sm text-emerald-100">{j.entreprise.specialite}</div>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
             <div
               key={i}
               className={`h-2 w-8 rounded-full transition-all ${
-                i <= step ? "bg-indigo-500" : "bg-gray-600"
+                i <= step ? "bg-emerald-500" : "bg-gray-600"
               }`}
             />
           ))}
@@ -228,7 +228,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {step < steps.length - 1 ? (
             <button
               onClick={() => setStep((s) => s + 1)}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+              className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
             >
               Suivant →
             </button>
