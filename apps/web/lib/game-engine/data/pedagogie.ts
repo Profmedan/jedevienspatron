@@ -11,15 +11,15 @@ export interface ModalEtape {
 
 export interface QuestionQCM {
   question: string;
-  choix: [string, string, string, string]; // A, B, C, D
-  bonneReponse: 0 | 1 | 2 | 3; // index 0=A, 1=B, 2=C, 3=D
+  choix: [string, string, string]; // A, B, C
+  bonneReponse: 0 | 1 | 2; // index 0=A, 1=B, 2=C
   explicationBonne: string;
-  explicationFausses: [string, string, string]; // explications des 3 mauvaises réponses
+  explicationFausses: [string, string]; // explications des 2 mauvaises réponses
 }
 
 export interface QCMEtape {
   etape: number;
-  questions: [QuestionQCM, QuestionQCM, QuestionQCM, QuestionQCM, QuestionQCM]; // exactement 5
+  questions: QuestionQCM[]; // pool d'au moins 6 questions — 2 séries de 3 par tour
 }
 
 export const MODALES_ETAPES: Record<number, ModalEtape> = {
@@ -115,14 +115,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `50 000 € (l'amortissement ne coûte rien)`,
           `38 000 € (50 000 - 12 000 - 3 000)`,
           `35 000 € (50 000 - 15 000 de sortie réelle)`,
-          `47 000 € (seul l'amortissement compte)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Les charges fixes (12 000 €) te sortent vraiment de l'argent. L'amortissement (3 000 €) ne te coûte rien en trésorerie ce mois-ci — c'est juste une comptabilisation de l'usure. Donc tu perds 12 000 € secs, pas 15 000 €. Ta trésorerie passe de 50 000 à 38 000 €.`,
         explicationFausses: [
           `Oublie les 12 000 € qui sortent réellement.`,
           `Confond trésorerie et résultat (mixing les deux).`,
-          `Ignore complètement les charges fixes — ton loyer ne disparaît pas magiquement !`,
         ],
       },
       {
@@ -131,14 +129,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `8 000 € (c'est le résultat)`,
           `-4 000 € (8 000 - 10 000 - 2 000)`,
           `-2 000 € (8 000 - 10 000 en réalité)`,
-          `6 000 € (8 000 - 2 000 seulement)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Les 8 000 € de résultat incluent déjà les 10 000 € de charges et les 2 000 € d'amortissement dans le calcul. Donc ton vrai bénéfice est -2 000 € (une petite perte). En trésorerie, tu as perdu 10 000 € (charges), pas 12 000 (les 2 000 € d'amortissement ne sortent pas de la caisse).`,
         explicationFausses: [
           `Confond résultat comptable et réalité économique.`,
           `Additionne mal — tu déjà compté les charges dans les 8 000 €.`,
-          `Ignore les charges fixes — elles te mettent dans le rouge.`,
         ],
       },
       {
@@ -147,14 +143,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Pour payer moins d'impôts`,
           `Parce que le camion te sert pendant 5 ans, pas juste cette année`,
           `Parce que c'est obligatoire par la loi`,
-          `Pour faire croire que tu fais plus de bénéfices`,
         ],
         bonneReponse: 1,
         explicationBonne: `Si tu achètes un camion 50 000 € et tu l'utilises 5 ans, ce serait bête de dire qu'il t'a coûté 50 000 € cette année. En amortissant (disons 10 000 € par an), tu répartis le coût sur sa durée de vie réelle — c'est plus juste pour voir quel bénéfice tu fais vraiment chaque année.`,
         explicationFausses: [
           `C'est un effet, pas la raison principale.`,
           `C'est pas juste obligatoire, c'est surtout logique économiquement.`,
-          `Au contraire, l'amortissement réduit tes bénéfices affichés.`,
         ],
       },
       {
@@ -163,14 +157,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `17 000 €`,
           `14 500 €`,
           `12 000 €`,
-          `16 000 €`,
         ],
         bonneReponse: 1,
         explicationBonne: `Loyer + salaire + assurances = 5 000 + 8 000 + 1 500 = 14 500 € qui sortent réellement de ta banque. L'amortissement (2 500 €) ne coûte rien en argent frais — c'est juste de la comptabilité pour l'usure.`,
         explicationFausses: [
           `Additionne les amortissements aussi (erreur classique).`,
           `Oublie les assurances.`,
-          `Compte un montant aléatoire.`,
         ],
       },
       {
@@ -179,14 +171,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `20 000 € (tout en une fois)`,
           `5 000 € (annuel, donc 20 000 / 4)`,
           `1 250 € (par trimestre : 20 000 / 4 ans / 4 trimestres)`,
-          `2 500 € (par trimestre)`,
         ],
         bonneReponse: 2,
         explicationBonne: `4 ans = 16 trimestres. L'amortissement annuel est 20 000 € / 4 = 5 000 €. Par trimestre : 5 000 € / 4 = 1 250 €. C'est logique : tu répartis le coût uniformément sur chaque période.`,
         explicationFausses: [
           `Tu prendrais une énorme perte le premier trimestre — pas réaliste.`,
           `C'est l'amortissement annuel, pas trimestriel.`,
-          `C'est le double du bon calcul.`,
+        ],
+      },
+      {
+        question: `Ton entreprise a une charge fixe de 6 000 € par trimestre et un amortissement de 2 000 €. Si ta trésorerie de départ est 10 000 €, quelle sera-t-elle à la fin du trimestre (aucune vente) ?`,
+        choix: [
+          `4 000 € (10 000 - 6 000 de charges réelles)`,
+          `2 000 € (10 000 - 6 000 - 2 000)`,
+          `10 000 € (l'amortissement ne change rien à la trésorerie)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Seules les charges fixes (6 000 €) sortent réellement de ta banque. L'amortissement (2 000 €) est une charge comptable — aucun centime ne quitte ton compte. Trésorerie finale : 10 000 - 6 000 = 4 000 €.`,
+        explicationFausses: [
+          `Tu déduis aussi l'amortissement de la trésorerie — erreur ! L'amortissement n'est pas un décaissement.`,
+          `L'amortissement touche bien le résultat, mais pas la trésorerie.`,
         ],
       },
     ],
@@ -200,14 +204,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Ton résultat baisse de 3 500 € et ta banque de 3 500 €`,
           `Ton résultat baisse de 3 000 € et ta banque de 3 500 €`,
           `Ton résultat baisse de 500 € et ta banque de 3 500 €`,
-          `Ton résultat baisse de 3 500 € et ta banque de 500 €`,
         ],
         bonneReponse: 2,
         explicationBonne: `Seuls les intérêts (500 €) sont une charge pour le résultat — tu dois les comptabiliser. Le remboursement du capital (3 000 €) est juste de la trésorerie (tu rembourses une dette). Mais en banque, tu sors 3 500 € au total.`,
         explicationFausses: [
           `Confond le capital (qui n'impacte pas le résultat) avec les intérêts.`,
           `Mélange mal — le capital ne touche pas le résultat.`,
-          `Inverse complètement — le capital ne sort pas du résultat, mais il sort de la banque.`,
         ],
       },
       {
@@ -216,14 +218,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `80 € (4 % de 2 000)`,
           `On ne peut pas le savoir sans connaître le capital restant au début du trimestre`,
           `200 € (1 % par trimestre de 20 000)`,
-          `40 € (4 % annuel / 4 trimestres = 1 %)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Les intérêts se calculent sur le capital restant dû, pas sur le capital remboursé. Si tu dois 50 000 €, les intérêts trimestriels sont 50 000 × 4 % / 4 = 500 €. Pas assez d'infos dans la question.`,
         explicationFausses: [
           `Applique le taux au remboursement du jour (faux).`,
           `Invente un capital qui n'existe pas.`,
-          `Bien que ça semble logique, ça ignore la vraie base de calcul.`,
         ],
       },
       {
@@ -232,14 +232,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Augmenter (tu as remboursé du capital)`,
           `Diminuer (il reste moins de capital à intéresser)`,
           `Rester identiques (le taux est fixe)`,
-          `Doubler (tu paies les intérêts deux fois)`,
         ],
         bonneReponse: 1,
         explicationBonne: `À chaque remboursement, le capital diminue. Puisque les intérêts se calculent sur ce qui reste, ils baissent naturellement. C'est logique : plus tu dois peu, moins tu paies de frais.`,
         explicationFausses: [
           `Inverse la logique — c'est l'opposé qui se passe.`,
           `Le montant total des intérêts est constant si tu paies la même somme, mais la part intérêts vs capital change.`,
-          `Tu ne paies jamais les intérêts deux fois sur la même base.`,
         ],
       },
       {
@@ -248,14 +246,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `750 € (3 % de 100 000 / 4)`,
           `450 € (3 % de 60 000 / 4)`,
           `300 € (3 % de 40 000 / 4)`,
-          `900 € (3 % de 120 000 / 4)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Capital restant = 100 000 - 40 000 = 60 000 €. Intérêts annuels = 60 000 × 3 % = 1 800 €. Par trimestre = 1 800 / 4 = 450 €. Simple et mécanique.`,
         explicationFausses: [
           `Calcule sur le capital initial (ne tient pas compte des remboursements).`,
           `Calcule sur le capital remboursé (illogique).`,
-          `Invente un capital qui n'existe pas.`,
         ],
       },
       {
@@ -264,14 +260,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `5 000 €`,
           `4 200 € (5 000 - 800)`,
           `4 200 €`,
-          `5 800 € (5 000 + 800)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Le paiement de 5 000 € se décompose en 800 € d'intérêts (charge) et 4 200 € de remboursement du capital (réduction de dette). C'est crucial pour ton bilan.`,
         explicationFausses: [
           `Confond le paiement total avec le remboursement de capital.`,
           `(identique à la bonne réponse)`,
-          `Additionne au lieu de soustraire — faux total.`,
+        ],
+      },
+      {
+        question: `Chaque trimestre tu rembourses 1 000 € de capital + 200 € d'intérêts. Quel est l'impact sur ton RÉSULTAT (pas sur ta banque) ?`,
+        choix: [
+          `Le résultat baisse de 200 € seulement (les intérêts)`,
+          `Le résultat baisse de 1 200 € (capital + intérêts)`,
+          `Le résultat ne change pas (c'est juste un remboursement)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Seuls les INTÉRÊTS (200 €) sont une charge qui réduit le résultat. Le remboursement du capital (1 000 €) sort de ta banque et réduit ta dette, mais n'impacte PAS le résultat.`,
+        explicationFausses: [
+          `Tu mélanges impact banque et impact résultat : 1 200 € sortent de la banque, mais seuls 200 € réduisent le résultat.`,
+          `Les intérêts sont bien une charge qui réduit le résultat.`,
         ],
       },
     ],
@@ -285,14 +293,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Rester inchangées (tu n'as pas vendu, donc pas de charge)`,
           `Augmenter de 10 000 €`,
           `Diminuer de 10 000 €`,
-          `Augmenter de 5 000 €`,
         ],
         bonneReponse: 0,
         explicationBonne: `Acheter n'est pas une charge — c'est juste une transformation : tu échanges du cash contre du stock. La charge (coût des ventes) ne vient que quand un client achète la marchandise. Avant, c'est juste de l'argent immobilisé.`,
         explicationFausses: [
           `Confond achat et coût des ventes (erreur majeure).`,
           `L'achat ne diminue pas les charges.`,
-          `Pourquoi seulement la moitié ? Pas de logique.`,
         ],
       },
       {
@@ -301,14 +307,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `3 000 € (15 000 + 8 000 - 20 000)`,
           `23 000 € (15 000 + 8 000)`,
           `20 000 €`,
-          `15 000 €`,
         ],
         bonneReponse: 0,
         explicationBonne: `Stock initial (15 000) + Achats (8 000) - Marchandises vendues (20 000) = 3 000 €. C'est la logique des entrepôts : tu remplis, tu vides. Pas compliqué.`,
         explicationFausses: [
           `Oublie de soustraire les ventes — tu compterais le stock deux fois.`,
           `Ignore le stock initial et les achats.`,
-          `Prétend qu'il n'y a eu aucun mouvement.`,
         ],
       },
       {
@@ -317,14 +321,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Ta banque baisse de 10 000 €`,
           `Ton stock augmente et ta banque diminue`,
           `Ton stock augmente, ta banque ne bouge pas (tu dois de l'argent au fournisseur)`,
-          `Tes charges augmentent immédiatement`,
         ],
         bonneReponse: 2,
         explicationBonne: `L'achat à crédit augmente ton stock mais crée une "dette fournisseur" au lieu de faire sortir du cash immédiatement. C'est pratique pour ta trésorerie à court terme, mais tu dois payer plus tard.`,
         explicationFausses: [
           `C'est vrai si tu paies cash, pas à crédit.`,
           `Mélange achat cash et achat crédit.`,
-          `Les charges ne montent que si tu vends.`,
         ],
       },
       {
@@ -333,14 +335,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Augmenter ta banque immédiatement`,
           `Réduire ton stock directement`,
           `Suivre combien de clients te doivent de l'argent (tracabilité)`,
-          `Payer tes fournisseurs plus vite`,
         ],
         bonneReponse: 2,
         explicationBonne: `Les créances clients c'est un actif : ça montre combien les clients te doivent. C'est un pense-bête pour savoir "attends, j'ai vendu 100 000 € à crédit à des gens mais je n'ai reçu que 60 000 €".`,
         explicationFausses: [
           `Les créances ne sont pas encore du cash.`,
           `Les créances n'impactent pas le stock.`,
-          `Au contraire, il faut que tu sois payé pour payer tes fournisseurs.`,
         ],
       },
       {
@@ -349,14 +349,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Ta banque (tu reçois plus vite)`,
           `Tes frais financiers (tu empruntes moins)`,
           `Ton attractivité client (plus facile de vendre, clients heureux)`,
-          `Ton cash-flow à court terme (tu as plus d'argent)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Oui, les longs délais attirent les clients (c'est un avantage commercial). Mais c'est mauvais pour ta trésorerie (tu attends 3 mois pour être payé) et bon pour les clients (ils ont 3 mois pour payer).`,
         explicationFausses: [
           `Au contraire, tu reçois plus lentement.`,
           `Au contraire, tu dois peut-être emprunter pour combler le trou.`,
-          `Au contraire, tu as moins d'argent en banque (tu attends).`,
+        ],
+      },
+      {
+        question: `Tu achètes 50 unités à 20 €, tu en vends 30 à 35 €. Quelle est ta marge brute ce trimestre ?`,
+        choix: [
+          `450 € (30 × 15 € de marge unitaire)`,
+          `1 050 € (30 × 35 €, le CA total)`,
+          `-1 000 € (tu as dépensé 1 000 € pour le stock)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Marge = CA - Coût des marchandises vendues. CA : 30 × 35 = 1 050 €. CMMV : 30 × 20 = 600 €. Marge = 450 €. Les 20 unités non vendues restent en stock et ne sont pas encore une charge.`,
+        explicationFausses: [
+          `C'est le CA total, pas la marge. La marge soustrait le coût des marchandises vendues.`,
+          `Tu charges les 50 unités achetées alors qu'on ne charge que les 30 vendues.`,
         ],
       },
     ],
@@ -370,14 +382,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `30 000 € (tu n'as pas vendu plus)`,
           `42 000 € (30 000 + 12 000)`,
           `18 000 € (30 000 - 12 000)`,
-          `12 000 € (tu as seulement reçu ce montant)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Quand un client paie une partie, sa dette diminue. Tu as toujours des créances, mais moins qu'avant : 30 000 - 12 000 = 18 000 €. Simple logique.`,
         explicationFausses: [
           `Prétend qu'aucun paiement n'a eu lieu.`,
           `Additionne au lieu de soustraire — tu ne crées pas de dettes en recevant de l'argent.`,
-          `Confond le paiement avec les créances restantes.`,
         ],
       },
       {
@@ -386,14 +396,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `12 500 € (25 % une seule fois)`,
           `25 000 € (50 %)`,
           `37 500 € (25 % × 3 mois de 50 000)`,
-          `50 000 € (tout d'un coup)`,
         ],
         bonneReponse: 2,
         explicationBonne: `25 % par mois pendant 3 mois = 75 % de 50 000 = 37 500 €. À la fin du trimestre, tu en auras reçu 75 %, il te restera 12 500 € en créances.`,
         explicationFausses: [
           `Une seule fois, pas 3 mois.`,
           `C'est seulement 50 % (2 mois de paiement).`,
-          `C'est impossible en 3 mois si tu reçois 25 % par mois.`,
         ],
       },
       {
@@ -402,14 +410,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `40 000 € (tout)`,
           `20 000 € (50 % seulement)`,
           `32 000 € (20k + 12k)`,
-          `70 000 € (50 % + 30 % + 20 % = 100 %, donc 40 000 × 1,75)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Mois 1 (vente) : 0 € reçu. Mois 2 : 40 000 × 50 % = 20 000 €. Mois 3 : 40 000 × 30 % = 12 000 €. À la fin du mois 3, tu en as reçu 32 000 €, il te reste 8 000 € à recevoir en mois 4.`,
         explicationFausses: [
           `Impossible si les clients paient progressivement.`,
           `C'est seulement le 2e mois.`,
-          `Tu mélanges tout — 50 + 30 + 20 = 100 %, pas 175 %.`,
         ],
       },
       {
@@ -418,14 +424,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Aucun (tu as déjà compté la vente quand tu l'as faite)`,
           `Ça augmente ton résultat (c'est du revenu)`,
           `Ça diminue ton résultat (c'est une dépense)`,
-          `Ça crée une petite charge de gestion`,
         ],
         bonneReponse: 0,
         explicationBonne: `Le résultat, c'est Revenus - Charges. Tu as déjà compté le revenu quand tu as vendu (même à crédit). Quand le client paie, tu récupères juste l'argent promis — aucun changement au résultat, juste à la banque.`,
         explicationFausses: [
           `Tu compterais la vente deux fois.`,
           `Recevoir de l'argent n'est pas une charge.`,
-          `Il n'y a aucune charge supplémentaire.`,
         ],
       },
       {
@@ -434,14 +438,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Tes résultats (tu vends plus)`,
           `Ta trésorerie court terme (tu reçois plus vite)`,
           `Ton attractivité auprès des clients, mais mauvais pour ta trésorerie`,
-          `Tes intérêts d'emprunt (tu dois moins emprunter)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Les délais longs attirent les clients (ils aiment avoir le temps de payer), mais toi, tu attends 4 mois avant d'avoir l'argent. Pendant ce temps, tu dois payer tes fournisseurs, tes salaires… avec quoi ? Donc tu dois emprunter ou avoir beaucoup de réserve. C'est un piège.`,
         explicationFausses: [
           `Les résultats ne changent pas, le délai oui.`,
           `C'est l'inverse — tu reçois plus lentement.`,
-          `Au contraire, tu dois emprunter plus pour combler le trou.`,
+        ],
+      },
+      {
+        question: `Un client te doit 800 € depuis le trimestre dernier (créance C+1). Il paie aujourd'hui. Quel est l'impact sur ton RÉSULTAT ce trimestre ?`,
+        choix: [
+          `Aucun impact sur le résultat — le CA était déjà comptabilisé`,
+          `+800 € sur le résultat (rentrée d'argent)`,
+          `+800 € en trésorerie ET +800 € en résultat`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `La vente a été comptabilisée lors de la livraison. Maintenant tu encaisses : trésorerie +800 € et créance -800 €. C'est un transfert bilan — zéro impact résultat.`,
+        explicationFausses: [
+          `La trésorerie monte, mais le résultat ne bouge pas — tu as déjà compté cette vente.`,
+          `Ce serait compter la vente deux fois !`,
         ],
       },
     ],
@@ -455,14 +471,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `9 000 € (1 500 × 3 mois)`,
           `13 000 € (9 000 + 4 000 commission)`,
           `4 000 € (5 % de 80 000)`,
-          `20 000 €`,
         ],
         bonneReponse: 1,
         explicationBonne: `Fixe : 1 500 × 3 mois × 2 commerçants = 9 000 €. Commission : 5 % × 80 000 € = 4 000 € total. Total : 13 000 €.`,
         explicationFausses: [
           `Oublie la commission — ça réduit ton bénéfice.`,
           `C'est seulement la commission, pas le fixe.`,
-          `Calcul brouillon.`,
         ],
       },
       {
@@ -471,14 +485,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Tes charges baissent (bon pour toi)`,
           `Tu perds le chiffre d'affaires qu'il générait (souvent plus grave)`,
           `Tes clients seront plus heureux (un seul contact)`,
-          `Tu fais plus de bénéfices`,
         ],
         bonneReponse: 1,
         explicationBonne: `Oui, tu paies moins en salaire si tu le vires. Mais ce gars ramène peut-être 50 000 € de chiffre par trimestre. Tu économises 4 500 € en salaire mais tu perds 50 000 € en ventes — mauvais calcul.`,
         explicationFausses: [
           `C'est vrai que tes charges baissent, mais ce n'est pas l'enjeu majeur.`,
           `Au contraire, moins de vendeurs = moins d'attention client.`,
-          `Perdre du chiffre = moins de bénéfices, même si tu paies moins.`,
         ],
       },
       {
@@ -487,14 +499,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `2 000 €`,
           `5 000 € (30 000 / 6)`,
           `5 000 € (2 000 + 3 000)`,
-          `3 000 € (10 % × 30 000)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Fixe : 2 000 €. Commission : 10 % × 30 000 € = 3 000 €. Total : 5 000 €.`,
         explicationFausses: [
           `Ignores la commission.`,
           `Fait un calcul aléatoire.`,
-          `C'est le montant juste mais par calcul partiel (commission seulement).`,
         ],
       },
       {
@@ -503,14 +513,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Les nouvelles commissions n'excèdent pas 3 900 € supplémentaires`,
           `Les bénéfices supplémentaires (30 000 € × ta marge) > les nouvelles commissions`,
           `Ton résultat baisse mais ta réputation monte`,
-          `Tu vends plus, point`,
         ],
         bonneReponse: 1,
         explicationBonne: `Nouvelle commission = 8 % × 130 000 = 10 400 €. Ancienne = 5 % × 100 000 = 5 000 €. Différence : +5 400 € de commissions. Les 30 000 € de ventes supplémentaires te rapportent disons 40 % de marge = 12 000 €. Donc oui, tu gagnes 12 000 - 5 400 = 6 600 € de plus.`,
         explicationFausses: [
           `Le montant de 3 900 € n'a aucun sens.`,
           `Tu ne fais pas des affaires pour la réputation.`,
-          `Oui tu vends plus, mais faut que ça coûte moins que tu ne gagnes.`,
         ],
       },
       {
@@ -519,14 +527,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `10 000 €`,
           `20 000 € (10 % × 200 000)`,
           `20 000 €`,
-          `100 000 € (50 % de 200 000)`,
         ],
         bonneReponse: 1,
         explicationBonne: `10 % × 200 000 € = 20 000 €. C'est le ratio que tu te fixes.`,
         explicationFausses: [
           `Dix fois trop peu.`,
           `(identique à la bonne réponse)`,
-          `Beaucoup trop haut (c'est 50 % là).`,
+        ],
+      },
+      {
+        question: `2 commerciaux : un fixe à 3 000 €/trimestre, l'autre à 10 % sur ses ventes (il a vendu 25 000 €). Quel est le coût total en charges de personnel ?`,
+        choix: [
+          `5 500 € (3 000 fixe + 2 500 commission)`,
+          `28 000 € (3 000 + 25 000 de CA)`,
+          `3 000 € (seul le fixe est une charge)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Commercial 1 : 3 000 € fixe. Commercial 2 : 10 % × 25 000 = 2 500 € de commission. Total : 5 500 €. Les commissions sont des charges de personnel comme les salaires fixes.`,
+        explicationFausses: [
+          `Tu additionnes le CA du commercial 2 — le CA est une ressource, pas une charge !`,
+          `Les commissions sont aussi des charges salariales.`,
         ],
       },
     ],
@@ -540,14 +560,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `CA 50 000, marge 30 000`,
           `CA 50 000, marge 20 000 (50 000 - 30 000)`,
           `CA 80 000, marge 30 000`,
-          `CA 50 000, marge 50 000`,
         ],
         bonneReponse: 1,
         explicationBonne: `Le CA, c'est ce que tu vends (50 000 €). La marge = CA - Coûts directs = 50 000 - 30 000 = 20 000 €. Avec ces 20 000 €, tu dois couvrir tes frais fixes et faire un bénéfice.`,
         explicationFausses: [
           `Confond marge et coût.`,
           `Additionne le CA et le coût (pas de sens).`,
-          `Prétend que tu gardes tout en marge (impossible).`,
         ],
       },
       {
@@ -556,14 +574,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `+60 000 € (tu reçois tout immédiatement)`,
           `+40 000 € (il faut enlever les coûts)`,
           `+60 000 € (le CA montant, pas le bénéfice)`,
-          `+30 000 € (la marge nette)`,
         ],
         bonneReponse: 0,
         explicationBonne: `Quand tu vends cash, tu reçois le prix de vente (60 000 €), pas le bénéfice. C'est un montant brut qui entre. Après, tu vas soustraire les coûts et frais pour voir ton bénéfice.`,
         explicationFausses: [
           `Mélange CA et résultat net.`,
           `(identique à la bonne réponse en essence)`,
-          `C'est peut-être ton bénéfice, mais pas ce que tu reçois en trésorerie.`,
         ],
       },
       {
@@ -572,14 +588,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `60 000 € (ce que tu as reçu)`,
           `100 000 € (ce que tu as vendu, peu importe si tu l'as reçu ou pas)`,
           `40 000 € (ce qui reste à recevoir)`,
-          `160 000 € (100 000 + 60 000)`,
         ],
         bonneReponse: 1,
         explicationBonne: `En comptabilité, le CA = ce que tu vends, pas ce que tu reçois. Tu dis "ce trimestre, on a fait 100 000 € de chiffre". Le paiement de 60 000 € c'est du cash, mais le CA c'est 100 000.`,
         explicationFausses: [
           `Confond CA et trésorerie.`,
           `C'est juste ce qui reste à recevoir (créances).`,
-          `Mélange ventes et paiements.`,
         ],
       },
       {
@@ -588,14 +602,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `60 000 € (ce que tu as acheté)`,
           `65 000 € (25 000 + 60 000 - 20 000)`,
           `65 000 €`,
-          `45 000 € (25 000 + 20 000)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Coût des ventes = Stock initial + Achats - Stock final = 25 000 + 60 000 - 20 000 = 65 000 €. C'est classique.`,
         explicationFausses: [
           `C'est seulement les achats ce trimestre.`,
           `(identique à la bonne réponse)`,
-          `Fait une addition bizarre.`,
         ],
       },
       {
@@ -604,14 +616,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `40 000 € à 60 000 €`,
           `0 € à 20 000 € (résultat = CA - Coûts variables - Fixes)`,
           `60 000 € à 80 000 €`,
-          `100 000 € à 150 000 €`,
         ],
         bonneReponse: 1,
         explicationBonne: `Avant : 100 000 - 60 000 - 40 000 = 0 € (break-even). Après : 150 000 - 90 000 - 40 000 = 20 000 €. C'est magique : +50 % de CA et tu passes de zéro à +20 000 € de profit. C'est l'effet de levier !`,
         explicationFausses: [
           `Oublie les coûts variables.`,
           `Inventé.`,
-          `Mélange CA et bénéfice.`,
+        ],
+      },
+      {
+        question: `Tu vends 20 articles à 50 €, dont 12 cash et 8 à crédit (paiement dans 1 trimestre). Quel est l'impact IMMÉDIAT sur ta trésorerie ?`,
+        choix: [
+          `+600 € (12 × 50 €)`,
+          `+1 000 € (20 × 50 €)`,
+          `+400 € (8 × 50 €)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Seuls les 12 clients cash paient maintenant : 12 × 50 = 600 € en trésorerie. Les 8 clients à crédit créent une créance (actif), mais l'argent n'est pas encore là. Pourtant, le CA total (1 000 €) est bien enregistré en résultat dès maintenant.`,
+        explicationFausses: [
+          `Les ventes à crédit entrent dans le CA mais pas encore dans la trésorerie.`,
+          `Ce sont les seules ventes à crédit — tu ne les encaisses qu'au trimestre suivant.`,
         ],
       },
     ],
@@ -625,14 +649,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Non, ça te coûte trop cher`,
           `Oui : (50 000 × 40 %) - (6 000 fixe) - (1 500 commission) = 12 500 € net`,
           `Non, les commissions sont trop hautes`,
-          `Impossible à calculer sans plus d'infos`,
         ],
         bonneReponse: 1,
         explicationBonne: `Marge brute : 50 000 × 40 % = 20 000 €. Coûts directs : 6 000 € (3 × 2 000) fixe + 1 500 € (3 % × 50 000) commission = 7 500 €. Contribution : 20 000 - 7 500 = 12 500 €. Rentable !`,
         explicationFausses: [
           `Sans calcul, c'est trop vite dit.`,
           `3 %, c'est normal pour une commission.`,
-          `On peut calculer avec les infos.`,
         ],
       },
       {
@@ -641,14 +663,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Non, tu augmentes tes charges`,
           `Oui si la marge sur les +40 000 € couvre les +4 500 € de charges et encore plus`,
           `Impossible à dire sans la marge`,
-          `Oui, tu fais +40 000 € de CA`,
         ],
         bonneReponse: 1,
         explicationBonne: `Les 40 000 € de CA doivent te rapporter en marge brute > 4 500 €. Si ta marge brute est 35 % sur ces 40 000 €, tu fais 14 000 € de marge. Donc oui, c'est rentable (14 000 - 4 500 = 9 500 € gagnés).`,
         explicationFausses: [
           `Plus de charges ne veut pas dire perte.`,
           `"+CA" ne suffît pas, faut regarder la marge et les coûts.`,
-          `(identique à la bonne réponse en essence)`,
         ],
       },
       {
@@ -657,14 +677,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `6 000 € (son salaire pur)`,
           `Ça dépend de sa commission et de ta marge — mais au moins 6 000 € + frais`,
           `2 000 € (juste ce qu'il coûte)`,
-          `0 € (tu l'embauches pas si c'est mauvais)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Minimum, tu perds son salaire (6 000 € pour 3 mois). En plus, il faut lui payer une commission sur les 5 000 € vendus. C'est normal en ramp-up.`,
         explicationFausses: [
           `Il y a aussi la commission.`,
           `6 000 € minimum, plus la commission.`,
-          `On accepte les pertes de ramp-up en espérant qu'il monte en puissance.`,
         ],
       },
       {
@@ -673,14 +691,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Tu as 24 000 € de trésorerie libre pour supporter son paiement`,
           `Tu as 24 000 € et que ça génère au moins 24 000 € de CA additionnel en marge brute`,
           `Tu es prêt à perdre un peu les premiers mois (risque accepté)`,
-          `Tu as une trésorerie de plus de 100 000 €`,
         ],
         bonneReponse: 1,
         explicationBonne: `Les 40 000 € de CA doivent générer au minimum 24 000 € de marge brute pour couvrir son salaire (24 000 €/an). Si ta marge est 50 %+ tu gagnes. Mais il faut cette trésorerie cushion.`,
         explicationFausses: [
           `24 000 € c'est nécessaire mais pas suffisant.`,
           `Oui il faut un risque, mais il faut du calcul derrière.`,
-          `100 000 € c'est excessif.`,
         ],
       },
       {
@@ -689,14 +705,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Le commercial (plus de CA)`,
           `Le logiciel (moins de risque)`,
           `Ça dépend de ta marge et de ta trésorerie — les deux peuvent être rentables`,
-          `Aucun, garde la trésorerie`,
         ],
         bonneReponse: 2,
         explicationBonne: `Commercial : 100k CA × 50% marge = 50k contribution - 24k salaire = 26k gain. Logiciel : 50k CA × 50% marge = 25k gain (si on suppose une durée). C'est comparable. Le choix dépend du risque et de ton appétit.`,
         explicationFausses: [
           `Le commercial génère plus de CA mais coûte plus.`,
           `Le logiciel est moins de risque, mais pas rentable.`,
-          `Les deux peuvent être rentables, pas "aucun".`,
+        ],
+      },
+      {
+        question: `Tu envisages de recruter un commercial à 4 000 €/trimestre. Il devrait générer 15 000 € de CA avec 40 % de marge. Est-ce rentable ?`,
+        choix: [
+          `Oui : marge générée (6 000 €) > coût (4 000 €) — bénéfice net +2 000 €`,
+          `Non : son salaire dépasse le CA qu'il génère`,
+          `C'est neutre : le CA divisé par son salaire ne montre pas de profit clair`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Marge générée : 40 % × 15 000 = 6 000 €. Coût : 4 000 €. Gain net = +2 000 €. La règle : comparer la MARGE générée (pas le CA) avec le coût du commercial.`,
+        explicationFausses: [
+          `Tu compares son salaire au CA brut — il faut comparer au profit généré (marge nette).`,
+          `Ce n'est pas le CA divisé par le salaire qui compte, c'est la marge nette après son coût.`,
         ],
       },
     ],
@@ -710,14 +738,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `20 000 € (tout le CA est du bénéfice)`,
           `15 000 € (20 000 CA × 75 % marge brute)`,
           `0 € (c'est du hasard, ça compense ailleurs)`,
-          `10 000 € (la moitié du CA)`,
         ],
         bonneReponse: 1,
         explicationBonne: `CA additionnel 20 000 €. Tu dois enlever le coût (disons 5 000 € si tu coûtes 25 %). Donc 20 000 - 5 000 = 15 000 € de contribution. C'est du pur bénéfice puisque tes charges fixes ne montent pas.`,
         explicationFausses: [
           `Ignores le coût des ventes.`,
           `Au contraire, c'est du bonus pur.`,
-          `Arbitraire.`,
         ],
       },
       {
@@ -726,14 +752,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `12 000 €`,
           `Plus que 12 000 € si tu ne peux pas augmenter tes prix client`,
           `Moins de 12 000 € (tu as des réserves)`,
-          `0 € (c'est un cas rare)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Oui le coût monte de 12 000 €. Mais si tu ne peux pas répercuter sur tes prix, ta marge brute s'érode. L'impact réel > 12 000 €.`,
         explicationFausses: [
           `Vrai en première approximation, mais incomplet.`,
           `Les réserves aident à la trésorerie, pas au résultat.`,
-          `Faux, c'est un risque classique.`,
         ],
       },
       {
@@ -742,14 +766,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `0 € (tu perds tout)`,
           `-5 000 € (70 000 - 30 000 coûts ventes - 40 000 fixes)`,
           `Ça dépend du coût unitaire, mais tu perds beaucoup`,
-          `+5 000 € (tu en gardes la moitié)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Nouveau CA 70 000 €. Coût des ventes = 70 000 × (30 000/100 000) = 21 000 €. Résultat = 70 000 - 21 000 - 40 000 = 9 000 €. (C'est positif, mais tu as perdu 21 000 € de résultat.)`,
         explicationFausses: [
           `Trop pessimiste.`,
           `(identique à la bonne réponse)`,
-          `Trop optimiste.`,
         ],
       },
       {
@@ -758,14 +780,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Augmenter de 5 000 € (c'est du revenu pur)`,
           `Augmenter de 3 500 € (après impôts)`,
           `Augmenter de 5 000 € net (les subventions ne sont pas imposées généralement)`,
-          `Ne pas changer (c'est du provisoire)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Une subvention est du revenu exceptionnel qui augmente ton résultat (généralement non imposée ou partiellement imposée). +5 000 € net.`,
         explicationFausses: [
           `Grosso modo vrai mais formulation simpliste.`,
           `On va pas appliquer d'impôts immédiatement.`,
-          `Non c'est immédiat.`,
         ],
       },
       {
@@ -773,15 +793,27 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
         choix: [
           `+9 000 € (10 - 3 + 2)`,
           `+9 000 € en CA, mais moins en résultat`,
-          `+15 000 € (tout ce qui arrive additionne)`,
           `Environ +5 000 € (6k bénéfice + 3k perte + 2k sub)`,
         ],
-        bonneReponse: 3,
+        bonneReponse: 2,
         explicationBonne: `+10 000 € CA × 60 % marge = +6 000 € de bénéfice. -3 000 € coût supplémentaire = -3 000 €. +2 000 € subvention = +2 000 €. Net : +6 000 - 3 000 + 2 000 = +5 000 €.`,
         explicationFausses: [
           `9 000 € suppose qu'on additionne sans considérer les coûts.`,
           `Partiellement juste.`,
-          `Tu ne sommes pas les CA et les subventions.`,
+        ],
+      },
+      {
+        question: `Tu achètes une machine à 12 000 € amortissable sur 3 ans (12 trimestres). Juste après l'achat, qu'observe-t-on au bilan ?`,
+        choix: [
+          `Immobilisations +12 000 € et Trésorerie -12 000 €`,
+          `Résultat -12 000 € et Trésorerie -12 000 €`,
+          `Immobilisations +12 000 € seulement (pas de sortie d'argent immédiate)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `À l'achat : immobilisation (actif) +12 000 € et trésorerie -12 000 €. Le total actif reste inchangé (un actif devient un autre). La charge de 1 000 €/trimestre (amortissement) n'apparaîtra que progressivement dans le résultat.`,
+        explicationFausses: [
+          `La machine est une immobilisation amortie progressivement — pas une charge immédiate en résultat.`,
+          `La trésorerie diminue bien — tu as payé cash !`,
         ],
       },
     ],
@@ -795,14 +827,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `40 000 €`,
           `40 000 € (120 000 - 80 000)`,
           `50 000 € (on enlève pas l'amortissement)`,
-          `70 000 € (120 000 - 50 000 de charges réelles)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Résultat = CA - Toutes les charges (y compris amortissement). 120 000 - 80 000 = 40 000 €. L'amortissement compte, même s'il ne sort pas de trésorerie.`,
         explicationFausses: [
           `(identique à la bonne réponse)`,
           `Tu dois enlever l'amortissement.`,
-          `Tu mélanges les concepts.`,
         ],
       },
       {
@@ -811,14 +841,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `200 000 € (inchangé)`,
           `215 000 € (200 000 + 15 000 de bénéfice)`,
           `300 000 € (tu augmentes tes réserves)`,
-          `185 000 € (tu dois payer des impôts)`,
         ],
         bonneReponse: 1,
         explicationBonne: `Chaque trimestre de bénéfice augmente tes capitaux propres (réserves). 200 000 + 15 000 = 215 000 €. C'est un investissement dans ta propre boîte.`,
         explicationFausses: [
           `Non, le bénéfice gonfle les capitaux propres.`,
           `On ne crée pas un deuxième palier.`,
-          `On va payer les impôts plus tard.`,
         ],
       },
       {
@@ -827,14 +855,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `50 % de l'actif (dette = 50 % de ce que tu possèdes)`,
           `70 % de l'actif (tu peux être plus endetté quand tu croîs)`,
           `Ça dépend du secteur et de la stabilité du cash-flow`,
-          `100 % (pas de limite)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Un ratio d'endettement "sain" dépend : secteur stable = 60-70 %, secteur volatile = 40-50 %. Plus ton cash-flow est stable, plus tu peux te permettre de dettes. Pour une startup, 50-60 % c'est standard.`,
         explicationFausses: [
           `Peut être trop conservateur.`,
           `70 % c'est OK mais dépend.`,
-          `Sans limite = tu crèves rapidement.`,
         ],
       },
       {
@@ -843,14 +869,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Le résultat ne compte pas, seul le cash compte`,
           `Tu as probablement remboursé de la dette ou investi plus que ton bénéfice`,
           `Il y a une erreur comptable`,
-          `C'est normal, la trésorerie baisse toujours`,
         ],
         bonneReponse: 1,
         explicationBonne: `Résultat != Trésorerie. Tu peux faire +10 000 € de résultat mais avoir investi 35 000 € ou remboursé 25 000 € de dettes. C'est très normal et fréquent.`,
         explicationFausses: [
           `Faux, le résultat compte (c'est ta rentabilité long terme).`,
           `Non c'est une vraie situation.`,
-          `Non, elle peut monter ou baisser.`,
         ],
       },
       {
@@ -859,14 +883,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Oui, tu dois arrêter tout`,
           `Non, ça arrive à tout le monde`,
           `Ça dépend si tu as une réserve et si c'est une tendance ou une anomalie`,
-          `Non, tu as encore du temps`,
         ],
         bonneReponse: 2,
         explicationBonne: `Une perte trimestrielle ce n'est pas dramatique si : 1) tu as une réserve (tu ne crèves pas), 2) c'est une anomalie, pas une tendance. Mais si ça continue 3 trimestres d'affilée sans réserve, tu dois t'inquiéter.`,
         explicationFausses: [
           `Alarmiste.`,
           `Trop léger.`,
-          `Tu as du temps, mais faut réagir vite.`,
+        ],
+      },
+      {
+        question: `Un événement exceptionnel te rapporte une subvention de 5 000 €. Comment cela apparaît-il dans tes comptes ?`,
+        choix: [
+          `Trésorerie +5 000 € et Résultat +5 000 € (produit exceptionnel)`,
+          `Trésorerie +5 000 € seulement — aucun impact sur le résultat`,
+          `Capitaux propres +5 000 € directement`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Une subvention est un produit exceptionnel : trésorerie +5 000 € ET résultat net +5 000 €. Les capitaux propres s'améliorent indirectement via le bénéfice en fin de période.`,
+        explicationFausses: [
+          `Tout encaissement qui n'est pas un remboursement de dette impacte le résultat.`,
+          `Les capitaux propres se mettent à jour en fin de période via le résultat, pas directement.`,
         ],
       },
     ],
@@ -880,14 +916,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Non, tu investis 50 000 € et tu ne récupères que 100 000 € au total`,
           `Oui, c'est 100 000 € de revenus pour 50 000 € investi`,
           `Ça dépend : ton ROI est 100 % sur 10 ans (10 % par an), faut que ce soit > ton coût d'emprunt`,
-          `Impossible à dire, c'est du long terme`,
         ],
         bonneReponse: 2,
         explicationBonne: `ROI = (Revenus - Investissement) / Investissement = (100 000 - 50 000) / 50 000 = 100 % sur 10 ans = 10 % par an. Si tu empruntes à 4 %, c'est bon. Si tu empruntes à 12 %, c'est mauvais.`,
         explicationFausses: [
           `C'est vrai brut, mais il faut regarder le ROI et le coût du capital.`,
           `C'est positif mais pas rentable si c'est long terme.`,
-          `On peut calculer avec les infos.`,
         ],
       },
       {
@@ -896,14 +930,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `A, ça rapporte moins cher à mettre en place`,
           `B, ça rapporte plus en absolu`,
           `Regarde le ROI : A = 30 %, B = 33 %, B est un peu mieux mais dépend de ta trésorerie`,
-          `Aucun, c'est trop risqué`,
         ],
         bonneReponse: 2,
         explicationBonne: `A : ROI = 30 000 / 100 000 = 30 % annuel. B : ROI = 50 000 / 150 000 = 33 % annuel. B est légèrement meilleur, mais si tu n'as que 100 000 €, tu dois choisir A.`,
         explicationFausses: [
           `Juste le coût ne suffit pas.`,
           `Juste le montant absolu ne suffit pas.`,
-          `Les deux peuvent être bons avec le bon ROI.`,
         ],
       },
       {
@@ -912,14 +944,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `A, c'est plus sûr`,
           `B, ça rapporte plus`,
           `B, car 15 % > 6 % (coût d'emprunt), donc c'est positif net`,
-          `Aucun, garde la trésorerie`,
         ],
         bonneReponse: 2,
         explicationBonne: `B rapporte 15 % alors que tu dois rembourser 6 %. Le gain net est 15 - 6 = 9 %. C'est du "arbitrage positif".`,
         explicationFausses: [
           `A est plus sûr mais moins rentable.`,
           `B rapporte plus mais faut vérifier vs le coût d'emprunt.`,
-          `Si le ROI > coût d'emprunt, c'est bon d'investir.`,
         ],
       },
       {
@@ -928,14 +958,12 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `0 % (au minimum tu récupères ton argent)`,
           `5 % (tu gagnes un peu)`,
           `Supérieur à ton coût d'emprunt (ex: si tu empruntes à 4 %, faut ROI > 4 %)`,
-          `20 % minimum (sinon ce n'est pas intéressant)`,
         ],
         bonneReponse: 2,
         explicationBonne: `Si tu empruntes à 4 % pour un investissement qui te rapporte 3 %, tu perds de l'argent. Donc ROI > coût d'emprunt, minimum.`,
         explicationFausses: [
           `0 % c'est break-even, pas rentable.`,
           `5 % c'est peut-être juste assez.`,
-          `20 % c'est optimal mais pas toujours atteignable.`,
         ],
       },
       {
@@ -944,14 +972,26 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
           `Oui, maximum de cash pour l'investissement`,
           `Peut-être pas — 20 000 € c'est peut-être pas assez de réserve d'urgence`,
           `Oui si l'investissement est solide, non si le business reste fragile`,
-          `Non, tu dois garder au minimum 50 % en réserve`,
         ],
         bonneReponse: 2,
         explicationBonne: `Ça dépend. Si tu as des charges fixes stables, 20 000 € peut suffire (ça couvre 1-2 mois). Si tu es fragile, c'est trop peu. Tu dois avoir une réserve = 2-3 mois de charges fixes minimum.`,
         explicationFausses: [
           `Pas assez de réserve.`,
           `Partiel — dépend du contexte.`,
-          `50 % c'est peut-être excessif.`,
+        ],
+      },
+      {
+        question: `À la clôture : CA 20 000 €, charges totales 16 000 € dont 3 000 € d'amortissements. Quelle est ta variation réelle de trésorerie ce trimestre ?`,
+        choix: [
+          `+7 000 € (20 000 - 13 000 de charges décaissées)`,
+          `+4 000 € (résultat net = variation trésorerie)`,
+          `-16 000 € (toutes les charges sortent en trésorerie)`,
+        ],
+        bonneReponse: 0,
+        explicationBonne: `Charges décaissées = 16 000 - 3 000 amortissements = 13 000 €. Variation trésorerie : +20 000 - 13 000 = +7 000 €. Le résultat comptable (+4 000 €) diffère car les amortissements réduisent le résultat mais ne sortent PAS de la banque.`,
+        explicationFausses: [
+          `Le résultat comptable ≠ variation trésorerie, justement à cause des amortissements non décaissés.`,
+          `L'amortissement ne sort pas de la banque — c'est une charge calculée.`,
         ],
       },
     ],

@@ -568,10 +568,11 @@ export default function JeuPage() {
       {showQCM && etapeQCMEnCours !== null && (
         <QCMEtape
           etape={etapeQCMEnCours}
+          tourActuel={etat.tourActuel}
           onTermine={(score) => {
             setShowQCM(false);
             setEtapeQCMEnCours(null);
-            console.log(`QCM étape ${etapeQCMEnCours} : ${score}/5`);
+            console.log(`QCM étape ${etapeQCMEnCours} : ${score}/3`);
           }}
         />
       )}

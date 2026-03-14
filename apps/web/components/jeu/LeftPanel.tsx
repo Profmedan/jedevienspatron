@@ -167,7 +167,7 @@ export function LeftPanel({
   // Si une étape est active, afficher EntryPanel
   if (activeStep) {
     return (
-      <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
+      <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
         <SanteFinanciere joueur={joueur} />
         <EntryPanel
           activeStep={activeStep}
@@ -182,7 +182,7 @@ export function LeftPanel({
   }
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
+    <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
       {/* Guide de l'étape */}
       <EtapeGuide etape={etapeTour} tourActuel={tourActuel} nbTours={nbToursMax} />
 
