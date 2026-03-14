@@ -130,7 +130,9 @@ export default function JeuPage() {
   // ─ Pédagogie : modal d'explication + QCM ──────────────────────────────────
   // etapesPedagoVues : étapes déjà expliquées ce tour (évite de ré-afficher)
   const [etapesPedagoVues, setEtapesPedagoVues] = useState<Set<number>>(new Set());
-  const [showModalEtape, setShowModalEtape] = useState(false);
+  // modalEtapeEnAttente : numéro d'étape dont la modal doit s'afficher (null = aucune)
+  // Valeur définie DANS le même batch que setEtat → la modal s'affiche dès le 1er rendu
+  const [modalEtapeEnAttente, setModalEtapeEnAttente] = useState<number | null>(null);
   const [showQCM, setShowQCM] = useState(false);
   const [etapeQCMEnCours, setEtapeQCMEnCours] = useState<number | null>(null);
 
@@ -192,15 +194,6 @@ export default function JeuPage() {
       setShowCartes(true);
     }
   }, [etat?.etapeTour, subEtape6, activeStep]);
-
-  // Afficher la modal pédagogique à chaque nouvelle étape (1 seule fois par étape par tour)
-  useEffect(() => {
-    if (!etat || phase !== "playing") return;
-    const etape = etat.etapeTour;
-    if (etapesPedagoVues.has(etape)) return;
-    setShowModalEtape(true);
-    setEtapesPedagoVues(prev => new Set(prev).add(etape));
-  }, [etat?.etapeTour, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─ Joueur affiché (avec écritures partiellement appliquées si étape active) ─
   function getDisplayJoueur() {
@@ -301,6 +294,14 @@ export default function JeuPage() {
     }
 
     avancerEtape(next);
+    // Montrer la modal de la PROCHAINE étape dans le MÊME batch que setEtat+setActiveStep(null)
+    // → la modal s'affiche dès le 1er rendu de la nouvelle étape (avant que l'utilisateur
+    //   puisse cliquer sur quoi que ce soit dans le LeftPanel)
+    const prochEtape = next.etapeTour;
+    if (!etapesPedagoVues.has(prochEtape)) {
+      setModalEtapeEnAttente(prochEtape);
+      setEtapesPedagoVues(prev => new Set(prev).add(prochEtape));
+    }
     setEtat({ ...next });
     setActiveStep(null);
     setRecentModifications([]);
@@ -399,12 +400,22 @@ export default function JeuPage() {
       next.tourActuel = oldTour + 1;
       next.etapeTour = 0;
       next.joueurActif = 0;
+      // Montrer la modal d'étape 0 au début de chaque nouveau tour (si pas encore vue)
+      if (!etapesPedagoVues.has(0)) {
+        setModalEtapeEnAttente(0);
+        setEtapesPedagoVues(prev => new Set(prev).add(0));
+      }
       setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
       setTourTransition({ from: oldTour, to: next.tourActuel });
     } else {
       avancerEtape(next);
       next.joueurActif = nextJoueurIdx;
       next.etapeTour = 0;
+      // Montrer la modal d'étape 0 pour le prochain joueur (si pas encore vue)
+      if (!etapesPedagoVues.has(0)) {
+        setModalEtapeEnAttente(0);
+        setEtapesPedagoVues(prev => new Set(prev).add(0));
+      }
       setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
     }
   }
@@ -422,6 +433,11 @@ export default function JeuPage() {
     if (!etat) return;
     const next = cloneEtat(etat);
     avancerEtape(next);
+    const prochEtape = next.etapeTour;
+    if (!etapesPedagoVues.has(prochEtape)) {
+      setModalEtapeEnAttente(prochEtape);
+      setEtapesPedagoVues(prev => new Set(prev).add(prochEtape));
+    }
     setEtat(next);
   }
 
@@ -470,6 +486,11 @@ export default function JeuPage() {
     // Sous-étape 6b : passer l'investissement → avancer à l'étape 7
     const next = cloneEtat(etat);
     avancerEtape(next);
+    const prochEtape = next.etapeTour;
+    if (!etapesPedagoVues.has(prochEtape)) {
+      setModalEtapeEnAttente(prochEtape);
+      setEtapesPedagoVues(prev => new Set(prev).add(prochEtape));
+    }
     setEtat(next);
     setShowCartes(false);
     setSelectedDecision(null);
@@ -480,7 +501,20 @@ export default function JeuPage() {
   // ─── RENDU ────────────────────────────────────────────────────────────────
 
   if (phase === "setup") return <SetupScreen onStart={handleStart} />;
-  if (phase === "intro" && etat) return <CompanyIntro joueurs={etat.joueurs} onStart={() => setPhase("playing")} />;
+  if (phase === "intro" && etat) return (
+    <CompanyIntro
+      joueurs={etat.joueurs}
+      onStart={() => {
+        // Montrer la modal de l'étape 0 dans le MÊME batch que le passage en "playing"
+        // → 1er rendu du jeu = modal déjà visible, jamais de flash des boutons d'action
+        if (!etapesPedagoVues.has(0)) {
+          setModalEtapeEnAttente(0);
+          setEtapesPedagoVues(prev => new Set(prev).add(0));
+        }
+        setPhase("playing");
+      }}
+    />
+  );
 
   if (phase === "gameover" && etat) {
     const classement = [...etat.joueurs]
@@ -557,10 +591,11 @@ export default function JeuPage() {
     <div className="min-h-screen bg-gray-950 flex flex-col">
 
       {/* ─── MODAL PÉDAGOGIQUE (avant saisie) ─── */}
-      {showModalEtape && etat && (
+      {/* Affiché dans le MÊME batch que le changement d'étape → jamais de flash des boutons */}
+      {modalEtapeEnAttente !== null && (
         <ModalEtape
-          etape={etat.etapeTour}
-          onClose={() => setShowModalEtape(false)}
+          etape={modalEtapeEnAttente}
+          onClose={() => setModalEtapeEnAttente(null)}
         />
       )}
 
