@@ -182,7 +182,7 @@ export default function CompteResultatPanel({
               recentMod={findMod(recentModifications, "dotationsAmortissements")}
             />
             {charges.dotationsAmortissements !== 0 && (
-              <NoteEcritureEquilibre texte="Dotation = somme de l'usure de chaque bien (-1/trimestre). Charge calculée : aucune sortie de trésorerie → la CAF > Résultat net." />
+              <NoteEcritureEquilibre texte="L'amortissement réduit ton bénéfice ici (compte de résultat), mais aucun euro ne quitte ta banque — c'est une charge comptable, pas un paiement. Ta trésorerie, elle, est enregistrée dans les comptes de bilan." />
             )}
 
             <div className="flex justify-between px-2.5 py-2 border-t-2 border-red-800 mt-2 font-bold bg-red-900/40 rounded-lg">
