@@ -15,6 +15,8 @@ export interface EntryLine {
 interface EntryCardProps {
   entry: EntryLine;
   onApply: () => void;
+  /** Titre de l'opération courante (ex : "Charges fixes & Amortissements") */
+  operationTitre?: string;
   /** Accordion : fenêtre actuellement ouverte */
   isExpanded: boolean;
   /** Callback pour ouvrir/fermer manuellement */
@@ -29,12 +31,13 @@ interface EntryCardProps {
  * 3. EXPANDED  : carte complète avec bouton Saisir
  *
  * Design pédagogique :
+ *  - Description engine affichée en 1er (le "pourquoi" concret)
+ *  - Contexte comptable (ce que ça signifie pour le bilan/CR)
  *  - Header coloré (bleu=débit / orange=crédit)
  *  - Montant coloré selon l'impact financier réel
- *  - Badge "document" + badge impact résultat
  *  - Effet mémoire : ce que ça fait concrètement
  */
-export function EntryCard({ entry, onApply, isExpanded, onToggle }: EntryCardProps) {
+export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle }: EntryCardProps) {
   const isDebit = entry.sens === "debit";
   const bon     = isBonPourEntreprise(entry.poste, entry.delta);
   const doc     = getDocument(entry.poste);
@@ -186,7 +189,7 @@ export function EntryCard({ entry, onApply, isExpanded, onToggle }: EntryCardPro
   }
 
   // ── 3. État EXPANDED — fenêtre ouverte avec Saisir ──────────────────────
-  // Texte pédagogique contextuel selon le poste et le sens
+  // Contexte pédagogique générique (poste + sens)
   const contexte = getPedagogieContexte(entry.poste, entry.delta, isDebit);
 
   return (
@@ -210,33 +213,49 @@ export function EntryCard({ entry, onApply, isExpanded, onToggle }: EntryCardPro
         <span className={`text-xs font-black uppercase tracking-wide ${isDebit ? "text-blue-200" : "text-orange-200"}`}>
           {isDebit ? "📤 DÉBIT — Emploi" : "📥 CRÉDIT — Ressource"}
         </span>
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-normal opacity-75 hidden sm:block ${isDebit ? "text-blue-300" : "text-orange-300"}`}>
-            {sensExplication}
-          </span>
-          <span className={`text-xs rotate-180 inline-block ${isDebit ? "text-blue-400" : "text-orange-400"}`}>▼</span>
-        </div>
+        <span className={`text-xs rotate-180 inline-block ${isDebit ? "text-blue-400" : "text-orange-400"}`}>▼</span>
       </button>
 
-      {/* ── Contexte pédagogique — "Ce qui se passe concrètement" ── */}
+      {/* ── BLOC 1 : Pourquoi cette écriture ? (raison concrète de l'engine) ── */}
+      <div className="px-3 pt-2.5 pb-0">
+        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+          Pourquoi ?
+        </div>
+        <div className={`text-[13px] font-bold leading-snug ${isDebit ? "text-blue-100" : "text-orange-100"}`}>
+          {entry.description}
+        </div>
+        {operationTitre && (
+          <div className="text-[10px] text-gray-500 mt-0.5">
+            Opération : {operationTitre}
+          </div>
+        )}
+      </div>
+
+      {/* ── BLOC 2 : Ce que ça signifie concrètement ── */}
       {contexte && (
-        <div className="px-3 py-2 bg-indigo-950/40 border-b border-indigo-800/40 text-[11px] text-indigo-200 leading-snug">
-          {contexte}
+        <div className="px-3 pt-2 pb-0">
+          <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+            Ce que ça fait
+          </div>
+          <div className="text-[11px] text-gray-300 leading-snug">
+            {contexte}
+          </div>
         </div>
       )}
 
-      {/* ── Corps de la carte ── */}
-      <div className="p-2.5 space-y-2">
-
-        {/* Nom du compte + montant */}
+      {/* ── BLOC 3 : Écriture comptable ── */}
+      <div className="px-3 pt-2.5 pb-0">
+        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+          Écriture dans le {doc.label === "Bilan" ? "Bilan" : "Compte de résultat"}
+        </div>
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-sm text-gray-100 leading-tight">
+            <div className={`font-bold text-sm leading-tight ${isDebit ? "text-blue-200" : "text-orange-200"}`}>
               {nomCompte(entry.poste)}
             </div>
             <div className="flex flex-wrap gap-1 mt-1">
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${doc.badge}`}>
-                {doc.label === "Bilan" ? "📋" : "📈"} {doc.label} · {doc.detail}
+                {doc.label} · {doc.detail}
               </span>
               {(doc.detail === "Charge" || doc.detail === "Produit") && (
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
@@ -253,17 +272,21 @@ export function EntryCard({ entry, onApply, isExpanded, onToggle }: EntryCardPro
             {entry.delta > 0 ? "+" : ""}{entry.delta}
           </div>
         </div>
+      </div>
 
-        {/* Effet mémoire */}
-        {effetTexte && (
+      {/* ── BLOC 4 : Impact mémoire ── */}
+      {effetTexte && (
+        <div className="px-3 pt-2 pb-0">
           <div className={`text-[11px] font-semibold leading-tight rounded-lg px-2 py-1.5 ${
             bon ? "bg-emerald-900/40 text-emerald-300" : "bg-red-950/30 text-red-400"
           }`}>
             {effetTexte}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Bouton Saisir — pleine largeur en bas */}
+      {/* ── Bouton Saisir — pleine largeur ── */}
+      <div className="p-2.5">
         <button
           onClick={onApply}
           className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white text-xs font-black py-2.5 rounded-lg transition-all shadow-sm"

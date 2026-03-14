@@ -106,11 +106,39 @@ export function EntryPanel({
       {/* ── Bloc écritures ── */}
       {activeStep.entries.length > 0 ? (
         <div>
+
+          {/* ── Vue d'ensemble : ce qui va changer ── */}
+          {!allApplied && (
+            <div className="mb-3 bg-gray-800/60 rounded-xl border border-gray-700 overflow-hidden">
+              <div className="px-3 py-1.5 bg-gray-700/50 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ce qui va changer</span>
+                <span className="text-[10px] text-gray-500">{totalCount} écriture{totalCount > 1 ? "s" : ""}</span>
+              </div>
+              <div className="divide-y divide-gray-700/50">
+                {activeStep.entries.map((e) => {
+                  const isD = e.sens === "debit";
+                  return (
+                    <div key={e.id} className={`flex items-center gap-2 px-3 py-1.5 ${e.applied ? "opacity-40" : ""}`}>
+                      <span className={`text-[10px] font-black w-14 shrink-0 ${isD ? "text-blue-400" : "text-orange-400"}`}>
+                        {isD ? "📤 DÉBIT" : "📥 CRÉDIT"}
+                      </span>
+                      <span className="flex-1 text-[11px] text-gray-300 truncate">{e.description}</span>
+                      <span className={`text-[11px] font-black tabular-nums shrink-0 ${e.delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {e.delta > 0 ? "+" : ""}{e.delta}
+                      </span>
+                      {e.applied && <span className="text-[10px] text-emerald-500">✅</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Barre de progression */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                ✏️ Écritures à saisir
+                ✏️ Saisie des écritures
               </span>
               <span className={`text-xs font-black tabular-nums ${allApplied ? "text-emerald-400" : "text-indigo-400"}`}>
                 {appliedCount}/{totalCount}
@@ -147,6 +175,7 @@ export function EntryPanel({
                 <EntryCard
                   key={e.id}
                   entry={e}
+                  operationTitre={activeStep.titre}
                   isExpanded={activeEntryId === e.id}
                   onToggle={() =>
                     setActiveEntryId(activeEntryId === e.id ? null : e.id)
@@ -177,6 +206,7 @@ export function EntryPanel({
                 <EntryCard
                   key={e.id}
                   entry={e}
+                  operationTitre={activeStep.titre}
                   isExpanded={activeEntryId === e.id}
                   onToggle={() =>
                     setActiveEntryId(activeEntryId === e.id ? null : e.id)
