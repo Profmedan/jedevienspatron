@@ -549,14 +549,11 @@ export function appliquerEffetsRecurrents(
 /**
  * Retourne les cartes commerciales que le joueur peut encore recruter.
  * Aucun commercial n'est distribué automatiquement — le joueur choisit librement.
- * Disponible dès le Tour 1 pour tous les commerciaux (Junior, Senior, Directrice).
- * Anti-doublon : impossible d'avoir 2 fois le même commercial.
+ * Disponible tout au long du jeu : les 3 types (Junior, Senior, Directrice) restent
+ * recrutables à chaque tour, y compris en doublon (plusieurs juniors possibles, etc.).
  */
-export function obtenirCarteRecrutement(etat: EtatJeu, joueurIdx: number): CarteDecision[] {
-  const joueur = etat.joueurs[joueurIdx];
-  return CARTES_DECISION.filter(
-    (c) => c.categorie === "commercial" && !joueur.cartesActives.some((a) => a.id === c.id)
-  );
+export function obtenirCarteRecrutement(_etat: EtatJeu, _joueurIdx: number): CarteDecision[] {
+  return CARTES_DECISION.filter((c) => c.categorie === "commercial");
 }
 
 // ─── ÉTAPE 6 : Pioche Décision (hors commerciaux) ───────────
@@ -588,13 +585,19 @@ export function acheterCarteDecision(
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
 
-  // Garde anti-doublon : impossible d'activer deux fois la même carte
-  if (joueur.cartesActives.some((a) => a.id === carte.id)) {
+  // Garde anti-doublon uniquement pour les cartes non-commerciales
+  // Les commerciaux peuvent être recrutés plusieurs fois (plusieurs juniors, etc.)
+  if (carte.categorie !== "commercial" && joueur.cartesActives.some((a) => a.id === carte.id)) {
     return {
       succes: false,
       messageErreur: `Vous avez déjà la carte "${carte.titre}" active.`,
       modifications: [],
     };
+  }
+
+  // Pour les commerciaux, cloner la carte avec un ID unique afin de tracer chaque recrue
+  if (carte.categorie === "commercial") {
+    carte = { ...carte, id: `${carte.id}-${Date.now()}` };
   }
 
   // Appliquer les effets immédiats
