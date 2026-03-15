@@ -107,12 +107,82 @@ function Gauge({ value, config }: { value: number; config: GaugeConfig }) {
   );
 }
 
+// ─── FONCTION HELPER : Analyse personnalisée par indicateur ──────────────────
+
+function getAnalysePersonnalisee(label: string, value: number): string {
+  switch (label) {
+    case "Taux de marge nette":
+      if (value < -10) return "Ta marge nette est très dégradée. Tes charges fixes (loyer, salaires, amortissements) sont trop lourdes par rapport à ton CA. Priorise l'augmentation du CA via recrutement plutôt que de nouveaux investissements coûteux.";
+      if (value < 0) return "Tu es en légère perte. Un ou deux clients supplémentaires suffiraient à passer en positif. Recrute un commercial Junior ce trimestre.";
+      if (value < 10) return "Marge légèrement positive. Bien — mais surveille tes amortissements qui grignotent le résultat. N'augmente pas tes charges fixes avant que ta marge soit > 15%.";
+      return "Excellente marge. Tu peux te permettre d'investir dans un actif ou de recruter un profil plus senior.";
+
+    case "Taux de marge EBE":
+      if (value < 0) return "Ton exploitation ne génère pas assez pour couvrir ses charges de fonctionnement. Réduis les services extérieurs si possible.";
+      if (value < 15) return "EBE faible. Attention : si tu ajoutes des amortissements, ton résultat d'exploitation sera négatif.";
+      return "Bon EBE. Ton activité génère suffisamment pour financer ses amortissements et ses charges financières.";
+
+    case "Rentabilité économique":
+      if (value < 0) return "Tes actifs (machines, stocks, créances) ne génèrent pas de valeur. Vends les actifs non productifs ou augmente tes ventes.";
+      if (value < 5) return "Rentabilité faible. Tes actifs travaillent peu. Cherche à optimiser ton stock : n'achète que ce que tu peux vendre dans le trimestre.";
+      return "Bonne rentabilité économique. Continue sur cette lancée et envisage d'investir dans des actifs supplémentaires.";
+
+    case "Ratio de solvabilité":
+      if (value < 20) return "Situation risquée : ton endettement est trop élevé. Évite tout nouvel emprunt et cherche à générer des bénéfices pour reconstruire tes capitaux propres.";
+      if (value < 33) return "Solvabilité acceptable mais fragile. Un mauvais trimestre peut dégrader ce ratio. Ne prends pas de nouveaux emprunts.";
+      return "Solide. Tu peux potentiellement accéder à un emprunt avantageux pour financer une croissance.";
+
+    case "Fonds de Roulement (FR)":
+      if (value < 0) return "Danger : tes ressources à long terme ne couvrent pas tes actifs durables. Ta structure financière est déséquilibrée — rembourse tes dettes ou augmente tes capitaux.";
+      if (value < 3) return "FR positif mais faible. Un achat d'immobilisation pourrait le faire passer en négatif. Prudence.";
+      return "FR confortable. Tu as une marge de manœuvre pour financer ton cycle d'exploitation.";
+
+    case "Besoin en Fonds de Roulement (BFR)":
+      // Note: Pour BFR, on compare avec FR. On retourne ici le contexte général.
+      if (value < 0) return "BFR négatif = ressources d'exploitation disponibles. Excellente maîtrise de ton cycle.";
+      if (value <= 3) return "BFR couvert correctement. Situation normale, continue à surveiller ton cycle d'exploitation.";
+      return "Ton BFR est élevé. Cherche à le réduire : accélère le recouvrement clients, négocie des délais fournisseurs plus longs, optimise les stocks.";
+
+    case "Trésorerie Nette":
+      if (value < 0) return "ALERTE : découvert bancaire. Risque de faillite si < -5. Stoppe tous les achats non-essentiels immédiatement.";
+      if (value < 3) return "Réserve minimale. Un imprévu (événement aléatoire négatif) peut te mettre en découvert. Reconstituez un matelas.";
+      return "Trésorerie saine. Tu peux absorber les imprévus et envisager des investissements.";
+
+    case "ROE — Rentabilité financière":
+      if (value < 0) return "ROE négatif : tes actionnaires perdent de l'argent. Améliore d'urgence le résultat net.";
+      if (value < 10) return "ROE faible. Les capitaux investis ne génèrent pas assez de rendement. Accélère la croissance ou réduis les capitaux inactifs.";
+      return "Bon ROE. Tes actionnaires sont satisfaits du rendement. Peux envisager une nouvelle levée de fonds si besoin.";
+
+    case "Capacité d'autofinancement (CAF)":
+      if (value < 0) return "CAF négative : tu ne dégages pas de trésorerie. Impossible de rembourser des dettes ou investir sans aide. Priorité absolue : redevenir positif.";
+      if (value < 3) return "CAF très faible. À peine suffisant pour l'exploitation. Évite les investissements lourds ce trimestre.";
+      return "CAF solide. Tu peux t'autofinancer et rembourser progressivement tes dettes.";
+
+    case "Ratio de liquidité":
+      if (value < 0.5) return "Situation CRITIQUE : tu ne peux pas payer tes dettes court terme. Action immédiate : augmente l'actif circulant ou réduis les dettes court terme.";
+      if (value < 1) return "Liquidité insuffisante. Risque de ne pas pouvoir payer tes fournisseurs. Accélère les encaissements et repousse les paiements si possible.";
+      if (value < 1.5) return "Liquidité correcte. À maintenir. Un imprévu pourrait créer des tensions — garde une réserve de trésorerie.";
+      return "Liquidité excellente. Tu as une belle marge de manœuvre court terme.";
+
+    case "Délai de paiement clients (jours)":
+      if (value > 60) return "Délai TRÈS long ! Tes clients te font crédit trop longuement. Impact grave sur la trésorerie. Réduis les délais : demande des acomptes, favorise les paiements comptant.";
+      if (value > 45) return "Délai élevé. À surveiller. Cherche à ramener les clients à C+1 ou comptant pour soulager la trésorerie.";
+      if (value > 30) return "Délai correct. Peut encore être optimisé — relance les clients lents et négocie des conditions plus courtes.";
+      return "Excellent délai clients. Continue ainsi pour conserver ta trésorerie saine.";
+
+    default:
+      return "";
+  }
+}
+
 function Indicateur({ label, value, unit, positive, formule, definition, interpretation, objectif, gaugeConfig }: {
   label: string; value: number; unit?: string; positive?: boolean;
   formule?: string; definition?: string; interpretation?: string; objectif?: string;
   gaugeConfig?: GaugeConfig;
 }) {
   const [open, setOpen] = useState(false);
+  const analyseTexte = getAnalysePersonnalisee(label, value);
+
   return (
     <div className="relative">
       <div className={`bg-gray-50 rounded-xl p-3 border border-gray-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50 transition-all ${open ? "ring-2 ring-indigo-300" : ""}`}
@@ -146,6 +216,12 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
           )}
           {definition && <div><div className="font-semibold text-gray-600 mb-0.5">📖 Définition</div><p className="text-gray-600 leading-relaxed">{definition}</p></div>}
           {interpretation && <div><div className="font-semibold text-gray-600 mb-0.5">🔍 Interprétation</div><p className="text-gray-600 leading-relaxed">{interpretation}</p></div>}
+          {analyseTexte && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className="text-xs font-bold text-indigo-700 mb-1">🎯 Pour toi ce trimestre</p>
+              <p className="text-xs text-gray-600 leading-relaxed">{analyseTexte}</p>
+            </div>
+          )}
           {objectif && (
             <div className={`rounded-lg p-2 border ${positive === undefined ? "bg-gray-50 border-gray-200" : positive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
               <div className="font-semibold mb-0.5">🎯 Objectif</div>

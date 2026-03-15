@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { Joueur } from "@/lib/game-engine/types";
 import { getTotalCharges, getTotalProduits, getResultatNet } from "@/lib/game-engine/calculators";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
@@ -90,6 +91,61 @@ function NoteEcritureEquilibre({ texte }: { texte: string }) {
 
 function findMod(mods: RecentMod[] | undefined, poste: string): RecentMod | undefined {
   return mods?.find((m) => m.poste === poste);
+}
+
+function CRAnalyse({ joueur }: { joueur: Joueur }) {
+  const [open, setOpen] = useState(false);
+  const cr = joueur.compteResultat;
+  const ca = cr.produits?.ventes ?? 0;
+  const charges = (cr.charges?.achats ?? 0) + (cr.charges?.servicesExterieurs ?? 0) + (cr.charges?.chargesPersonnel ?? 0) + (cr.charges?.dotationsAmortissements ?? 0);
+  const resultat = getResultatNet(joueur);
+
+  const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
+
+  if (ca === 0) {
+    points.push({ niveau: "rouge", texte: "Aucune vente enregistrée ce trimestre. Recrutez un commercial dès l'étape 6 pour générer du chiffre d'affaires." });
+  } else {
+    const tauxMarge = Math.round((resultat / ca) * 100);
+    if (tauxMarge < -20) points.push({ niveau: "rouge", texte: `Taux de marge nette très négatif (${tauxMarge}%). Vos charges sont disproportionnées par rapport à votre CA (${ca}). Priorité : augmenter les ventes.` });
+    else if (tauxMarge < 0) points.push({ niveau: "jaune", texte: `Légère perte (marge ${tauxMarge}%). Quelques clients supplémentaires suffiraient à équilibrer. Recrutez un Junior.` });
+    else if (tauxMarge < 15) points.push({ niveau: "jaune", texte: `Marge positive mais faible (${tauxMarge}%). Consolidez avant d'investir davantage.` });
+    else points.push({ niveau: "vert", texte: `Bonne marge nette (${tauxMarge}%). Vous pouvez investir dans un actif ou recruter un profil plus senior.` });
+  }
+
+  if ((cr.charges?.dotationsAmortissements ?? 0) > ca * 0.3 && ca > 0) {
+    points.push({ niveau: "jaune", texte: `Amortissements élevés (${cr.charges?.dotationsAmortissements}) — ils pèsent plus de 30% de votre CA. Ils diminuent le bénéfice mais pas la trésorerie.` });
+  }
+
+  if ((cr.charges?.chargesPersonnel ?? 0) > ca * 0.5 && ca > 0) {
+    points.push({ niveau: "rouge", texte: `Masse salariale (${cr.charges?.chargesPersonnel}) > 50% du CA. Vos commerciaux coûtent plus qu'ils ne rapportent ce trimestre. Attendez la montée en puissance.` });
+  }
+
+  const colors = {
+    rouge: "text-red-600 bg-red-50 border-red-200",
+    jaune: "text-amber-700 bg-amber-50 border-amber-200",
+    vert: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  };
+
+  return (
+    <div className="mt-4 border-t border-gray-200 pt-3 mx-4 pb-4">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between text-xs font-bold text-indigo-700 uppercase tracking-wider py-1 hover:text-indigo-900 transition-colors"
+      >
+        <span>🔍 Analyse & Conseils</span>
+        <span className="text-gray-400 font-normal normal-case">{open ? "▲ Masquer" : "▼ Afficher"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {points.map((p, i) => (
+            <div key={i} className={`border rounded-lg px-2.5 py-1.5 text-xs leading-snug ${colors[p.niveau]}`}>
+              {p.texte}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function CompteResultatPanel({
@@ -291,6 +347,8 @@ export default function CompteResultatPanel({
             </div>
           </div>
         )}
+
+        <CRAnalyse joueur={joueur} />
       </div>
     </div>
   );

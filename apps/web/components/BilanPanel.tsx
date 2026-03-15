@@ -238,6 +238,57 @@ function findMod(mods: RecentMod[] | undefined, poste: string): RecentMod | unde
   return mods?.find((m) => m.poste === poste);
 }
 
+function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; totalActif: number; totalPassif: number }) {
+  const [open, setOpen] = useState(false);
+
+  // Calculer quelques indicateurs simples
+  const tresorerie = joueur.bilan.actifs.find(a => a.categorie === "tresorerie")?.valeur ?? 0;
+  const decouvert = joueur.bilan.decouvert ?? 0;
+  const tresoNette = tresorerie - decouvert;
+  const capitaux = joueur.bilan.passifs.filter(p => p.categorie === "capitaux").reduce((s, p) => s + p.valeur, 0);
+  const emprunts = joueur.bilan.passifs.filter(p => p.categorie === "emprunts").reduce((s, p) => s + p.valeur, 0);
+  const stocks = joueur.bilan.actifs.filter(a => a.categorie === "stocks").reduce((s, a) => s + a.valeur, 0);
+
+  // Construire l'analyse
+  const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
+
+  if (tresoNette < 0) points.push({ niveau: "rouge", texte: `Trésorerie nette négative (${tresoNette}) — risque de faillite si découvert > 5.` });
+  else if (tresoNette < 3) points.push({ niveau: "jaune", texte: `Trésorerie faible (${tresoNette}) — préservez vos liquidités ce trimestre.` });
+  else points.push({ niveau: "vert", texte: `Trésorerie saine (${tresoNette}) — vous pouvez envisager un investissement.` });
+
+  if (emprunts > capitaux) points.push({ niveau: "rouge", texte: `Vos emprunts (${emprunts}) dépassent vos capitaux propres (${capitaux}) — endettement excessif.` });
+  else if (emprunts > 0) points.push({ niveau: "jaune", texte: `Emprunts en cours (${emprunts}) — chaque trimestre −1 de remboursement automatique.` });
+
+  if (stocks > 5) points.push({ niveau: "jaune", texte: `Stocks élevés (${stocks}) — immobilisation de trésorerie. Vendez avant d'acheter davantage.` });
+
+  const colors = {
+    rouge: "text-red-600 bg-red-50 border-red-200",
+    jaune: "text-amber-700 bg-amber-50 border-amber-200",
+    vert: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  };
+
+  return (
+    <div className="mt-4 border-t border-gray-200 pt-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between text-xs font-bold text-indigo-700 uppercase tracking-wider py-1 hover:text-indigo-900 transition-colors"
+      >
+        <span>🔍 Analyse & Conseils</span>
+        <span className="text-gray-400 font-normal normal-case">{open ? "▲ Masquer" : "▼ Afficher"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {points.map((p, i) => (
+            <div key={i} className={`border rounded-lg px-2.5 py-1.5 text-xs leading-snug ${colors[p.niveau]}`}>
+              {p.texte}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BilanPanel({ joueur, highlightedPoste, recentModifications }: Props) {
   const totalActif  = getTotalActif(joueur);
   const resultat    = getResultatNet(joueur);
@@ -482,6 +533,8 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
           </div>
         </div>
       </div>
+
+      <BilanAnalyse joueur={joueur} totalActif={totalActif} totalPassif={totalPassif} />
     </div>
   );
 }

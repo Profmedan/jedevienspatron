@@ -12,31 +12,44 @@ interface TransitionInfo {
   to: number;
 }
 
+interface AnalysisMessage {
+  niveau: "rouge" | "jaune" | "vert";
+  message: string;
+  consequence: string;
+  conseil: string;
+}
+
 interface OverlayTransitionProps {
   transitionInfo: TransitionInfo;
   joueurs: Joueur[];
   onContinue: () => void;
 }
 
-function analyserSituationFinanciere(joueur: Joueur) {
+function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
   const ind = calculerIndicateurs(joueur);
-  const msgs: Array<{ niveau: "rouge" | "jaune" | "vert"; message: string }> = [];
+  const msgs: AnalysisMessage[] = [];
 
   // Trésorerie nette
   if (ind.tresorerieNette < 0) {
     msgs.push({
       niveau: "rouge",
       message: `⚠️ Votre trésorerie nette est négative (${ind.tresorerieNette}). Risque de rupture.`,
+      consequence: "Vous risquez de ne plus pouvoir payer vos fournisseurs, vos salaires ou vos dettes. Au-delà d'un découvert de 5, c'est la faillite automatique.",
+      conseil: "Évitez tout achat à crédit ce trimestre. Privilégiez les clients comptants (Particuliers). Si possible, ne recrutez pas.",
     });
   } else if (ind.tresorerieNette < 5) {
     msgs.push({
       niveau: "jaune",
       message: `🔶 Votre trésorerie nette est faible (${ind.tresorerieNette}).`,
+      consequence: "Une charge imprévue (événement aléatoire, remboursement de dette) peut vous mettre en découvert.",
+      conseil: "Constituez une réserve : limitez les achats de stocks, favorisez les clients à paiement immédiat.",
     });
   } else {
     msgs.push({
       niveau: "vert",
       message: `✅ Votre trésorerie nette est positive (${ind.tresorerieNette}).`,
+      consequence: "Situation saine. Votre trésorerie absorbe les imprévus.",
+      conseil: "Vous pouvez envisager un investissement ou recruter un commercial ce trimestre.",
     });
   }
 
@@ -45,11 +58,15 @@ function analyserSituationFinanciere(joueur: Joueur) {
     msgs.push({
       niveau: "rouge",
       message: `⚠️ Votre fonds de roulement est négatif (${ind.fondsDeRoulement}).`,
+      consequence: "Vos dettes à court terme dépassent vos actifs circulants. La banque peut refuser de nouvelles lignes de crédit.",
+      conseil: "Remboursez vos dettes fournisseurs en priorité. Évitez les achats à crédit.",
     });
   } else if (ind.besoinFondsRoulement > ind.fondsDeRoulement) {
     msgs.push({
       niveau: "jaune",
       message: `🔶 Votre BFR (${ind.besoinFondsRoulement}) dépasse votre FR.`,
+      consequence: "Votre cycle d'exploitation consomme plus de liquidités que vous n'en avez. Risque de tension sur la trésorerie.",
+      conseil: "Réduisez le délai d'encaissement (moins de clients Grand Compte à C+2) ou augmentez votre fonds de roulement (capitaux, emprunt).",
     });
   }
 
@@ -58,16 +75,22 @@ function analyserSituationFinanciere(joueur: Joueur) {
     msgs.push({
       niveau: "rouge",
       message: `📉 Votre résultat est déficitaire (${ind.resultatNet}).`,
+      consequence: "Vos charges dépassent vos produits. Si cette tendance se prolonge, vos Capitaux propres vont s'éroder jusqu'à devenir négatifs — insolvabilité.",
+      conseil: "Analysez vos charges : amortissements élevés ? Salaires trop lourds ? Augmentez vos ventes ou réduisez vos coûts fixes.",
     });
   } else if (ind.resultatNet === 0) {
     msgs.push({
       niveau: "jaune",
       message: `⚖️ Votre résultat net est nul.`,
+      consequence: "Vous couvrez vos charges mais ne créez pas de valeur. Un imprévu peut faire basculer en perte.",
+      conseil: "Cherchez à augmenter votre chiffre d'affaires : recrutez un commercial ou investissez dans la publicité.",
     });
   } else {
     msgs.push({
       niveau: "vert",
       message: `📈 Votre résultat net est bénéficiaire (${ind.resultatNet}).`,
+      consequence: "Situation positive. Vos revenus couvrent vos charges et dégagent un bénéfice.",
+      conseil: "Renforcez votre avantage : investissez les bénéfices dans un nouvel actif ou une levée de fonds.",
     });
   }
 
@@ -76,16 +99,22 @@ function analyserSituationFinanciere(joueur: Joueur) {
     msgs.push({
       niveau: "rouge",
       message: `⚠️ Votre solvabilité est très faible (${ind.ratioSolvabilite.toFixed(0)}%).`,
+      consequence: "Votre entreprise est très endettée par rapport à ses actifs. Les créanciers peuvent perdre confiance.",
+      conseil: "Évitez tout nouvel emprunt. Cherchez à augmenter vos Capitaux propres (bénéfices, levée de fonds).",
     });
   } else if (ind.ratioSolvabilite < 33) {
     msgs.push({
       niveau: "jaune",
       message: `🔶 Votre solvabilité est acceptable (${ind.ratioSolvabilite.toFixed(0)}%).`,
+      consequence: "Solvabilité acceptable mais fragile. Un mauvais trimestre peut dégrader ce ratio.",
+      conseil: "Maintenez le cap : ne prenez pas de nouveaux emprunts sans augmenter en parallèle votre résultat.",
     });
   } else {
     msgs.push({
       niveau: "vert",
       message: `✅ Votre solvabilité est solide (${ind.ratioSolvabilite.toFixed(0)}%).`,
+      consequence: "Votre structure financière est solide. Les créanciers et partenaires font confiance à votre entreprise.",
+      conseil: "Vous pouvez envisager un emprunt pour financer une croissance ou un investissement rentable.",
     });
   }
 
@@ -104,6 +133,7 @@ export function OverlayTransition({
   const [activeTab, setActiveTab] = useState<
     "analyse" | "indicateurs" | "bilan" | "cr"
   >("analyse");
+  const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
   const estClotureFiscale = transitionInfo.from % 4 === 0;
   const joueur = joueurs[0]; // Pour affichage bilan/CR
 
@@ -169,8 +199,7 @@ export function OverlayTransition({
                 </div>
               ) : (
                 <div className="bg-indigo-950/30 border border-indigo-700/50 rounded-xl p-3 text-sm text-indigo-200 leading-relaxed">
-                  <strong>📅 Fin du Trimestre {transitionInfo.from} :</strong> Le Compte
-                  de résultat continue à s&apos;accumuler.
+                  <strong>📅 Fin du Trimestre {transitionInfo.from} :</strong> Les charges et produits de ce trimestre s&apos;ajoutent à ceux des trimestres précédents. À la clôture annuelle (fin du trimestre 4, 8, 12…), le résultat net sera intégré aux Capitaux propres et le Compte de résultat remis à zéro.
                 </div>
               )}
 
@@ -214,14 +243,36 @@ export function OverlayTransition({
                             Cette entreprise est éliminée.
                           </p>
                         ) : (
-                          analyse.map((m, i) => (
-                            <div
-                              key={i}
-                              className={`border rounded-lg px-2.5 py-1.5 text-xs leading-snug ${colors[m.niveau]}`}
-                            >
-                              {m.message}
-                            </div>
-                          ))
+                          analyse.map((m, i) => {
+                            const msgKey = `${j.id}-${i}`;
+                            const isExpanded = expandedMsg === msgKey;
+                            return (
+                              <div
+                                key={msgKey}
+                                className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${colors[m.niveau]}`}
+                                onClick={() => setExpandedMsg(isExpanded ? null : msgKey)}
+                              >
+                                <div className="px-2.5 py-1.5 text-xs leading-snug flex items-center justify-between gap-2">
+                                  <span>{m.message}</span>
+                                  <span className="text-[10px] shrink-0 opacity-60">
+                                    {isExpanded ? "▲" : "▼ Détails"}
+                                  </span>
+                                </div>
+                                {isExpanded && (
+                                  <div className="px-3 pb-2.5 pt-1 border-t border-current/20 space-y-1.5">
+                                    <p className="text-xs leading-relaxed opacity-90">
+                                      <span className="font-bold">⚠️ Risque : </span>
+                                      {m.consequence}
+                                    </p>
+                                    <p className="text-xs leading-relaxed opacity-90">
+                                      <span className="font-bold">💡 Conseil : </span>
+                                      {m.conseil}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
                         )}
                       </div>
                     </div>
