@@ -185,14 +185,51 @@ function SectionHeader({ label, color }: { label: string; color?: string }) {
   );
 }
 
+const TOTAL_REGLE_OR: Record<"actif" | "passif", { message: string; detail: string }> = {
+  actif: {
+    message: "Le Total Actif = tout ce que l'entreprise possède ou détient.",
+    detail: "Il est toujours égal au Total Passif : chaque euro de l'entreprise a une origine (Passif) et un emploi (Actif). Si les deux divergent, une écriture est manquante.",
+  },
+  passif: {
+    message: "Le Total Passif = tout ce que l'entreprise doit (à ses actionnaires ou à ses créanciers).",
+    detail: "Il est toujours égal au Total Actif : les ressources (Passif) financent exactement les emplois (Actif). Capitaux propres + Dettes = ce que vous possédez.",
+  },
+};
+
 function ColumnTotal({ label, value, variant }: { label: string; value: number; variant: "actif" | "passif" }) {
+  const [open, setOpen] = useState(false);
   const isActif = variant === "actif";
+  const info = TOTAL_REGLE_OR[variant];
+  const accentColor = isActif ? "#3b82f6" : "#f59e0b";
+
   return (
-    <div className={`flex justify-between items-center px-3 py-2.5 rounded-xl mt-3 border-2 ${
-      isActif ? "bg-blue-600 border-blue-600 text-white" : "bg-amber-600 border-amber-600 text-white"
-    }`}>
-      <span className="text-xs font-bold uppercase tracking-wide opacity-90">{label}</span>
-      <span className="text-2xl font-black tabular-nums">{value}</span>
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen((s) => !s)}
+        className={`w-full flex justify-between items-center px-3 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+          isActif ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500" : "bg-amber-600 border-amber-600 text-white hover:bg-amber-500"
+        }`}
+      >
+        <span className="text-xs font-bold uppercase tracking-wide opacity-90 flex items-center gap-1.5">
+          {label}
+          <span className={`text-[11px] font-normal ${open ? "opacity-100" : "opacity-60"}`}>
+            {open ? "▲" : "ⓘ"}
+          </span>
+        </span>
+        <span className="text-2xl font-black tabular-nums">{value}</span>
+      </button>
+      {open && (
+        <div
+          className="mt-1 rounded-xl border p-3 text-xs space-y-1.5"
+          style={{ borderColor: `${accentColor}60`, backgroundColor: `${accentColor}15` }}
+        >
+          <p className="text-white font-semibold leading-relaxed">{info.message}</p>
+          <p className="text-gray-300 leading-relaxed border-t border-white/10 pt-1.5">{info.detail}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest pt-0.5" style={{ color: accentColor }}>
+            ⚖️ Règle d&apos;or — {isActif ? "ACTIF" : "PASSIF"} = {isActif ? "PASSIF" : "ACTIF"}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -230,9 +267,9 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-0 px-4 pb-4">
+      <div className="grid grid-cols-2 gap-0 px-4 pb-4 items-end">
         {/* ── ACTIF ── */}
-        <div className="pr-3 border-r border-gray-700">
+        <div className="pr-3 border-r border-gray-700 flex flex-col">
           <div className="text-center text-[11px] font-black text-blue-300 mb-2 uppercase tracking-widest bg-blue-900/40 rounded-lg py-1">
             ACTIF · Ce que vous possédez
           </div>
@@ -322,11 +359,13 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
             />
           )}
 
-          <ColumnTotal label="Total Actif" value={totalActif} variant="actif" />
+          <div className="mt-auto">
+            <ColumnTotal label="Total Actif" value={totalActif} variant="actif" />
+          </div>
         </div>
 
         {/* ── PASSIF ── */}
-        <div className="pl-3">
+        <div className="pl-3 flex flex-col">
           <div className="text-center text-[11px] font-black text-amber-300 mb-2 uppercase tracking-widest bg-amber-900/40 rounded-lg py-1">
             PASSIF · D&apos;où vient le financement
           </div>
@@ -438,7 +477,9 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
             </>
           )}
 
-          <ColumnTotal label="Total Passif" value={totalPassif} variant="passif" />
+          <div className="mt-auto">
+            <ColumnTotal label="Total Passif" value={totalPassif} variant="passif" />
+          </div>
         </div>
       </div>
     </div>
