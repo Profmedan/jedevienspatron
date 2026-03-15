@@ -20,13 +20,13 @@ function ModalEtapeInline({ etape, onClose }: { etape: number; onClose: () => vo
   if (!modal) return null;
 
   return (
-    <div className="bg-gradient-to-br from-indigo-950 to-gray-900 rounded-2xl border-2 border-indigo-500/60 p-3 space-y-2.5 shadow-lg">
+    <div className="bg-gradient-to-br from-indigo-950 to-gray-900 rounded-2xl border-2 border-indigo-400/70 p-3 space-y-2.5 shadow-xl ring-2 ring-indigo-500/20">
       {/* En-tête */}
       <div className="flex items-center gap-2">
-        <span className="text-xl shrink-0">{ETAPE_EMOJI[etape] ?? "📋"}</span>
+        <span className="text-2xl shrink-0">{ETAPE_EMOJI[etape] ?? "📋"}</span>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">
-            Étape {etape}
+            Étape {etape} — À lire avant d&apos;agir
           </span>
           <h3 className="text-sm font-black text-white leading-tight">{modal.titre}</h3>
         </div>
@@ -57,18 +57,18 @@ function ModalEtapeInline({ etape, onClose }: { etape: number; onClose: () => vo
       )}
 
       {/* Contrôles */}
-      <div className="flex gap-2">
+      <div className="space-y-2 pt-1 border-t border-indigo-700/40">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex-1 text-xs py-1.5 rounded-lg bg-indigo-900/50 text-indigo-300 hover:bg-indigo-800/60 font-medium transition-colors border border-indigo-700/50"
+          className="w-full text-xs py-2 rounded-lg bg-indigo-900/50 text-indigo-300 hover:bg-indigo-800/60 font-medium transition-colors border border-indigo-700/50"
         >
-          {expanded ? "▲ Réduire" : "▼ En savoir plus"}
+          {expanded ? "▲ Réduire" : "▼ En savoir plus (pourquoi · impact · conseil)"}
         </button>
         <button
           onClick={onClose}
-          className="flex-1 text-xs py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-colors shadow-sm"
+          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-black text-sm transition-all active:scale-95 shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2"
         >
-          ✓ J&apos;ai compris
+          ✅ J&apos;ai compris — je peux agir →
         </button>
       </div>
     </div>
@@ -239,39 +239,77 @@ export function LeftPanel({
 
   // Si une étape est active, afficher EntryPanel (avec carte pédagogique au-dessus si présente)
   if (activeStep) {
+    const modalActive = modalEtapeEnAttente !== null;
     return (
       <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
-        <SanteFinanciere joueur={joueur} />
-        {/* ── Carte pédagogique inline (au-dessus de la saisie) ── */}
-        {modalEtapeEnAttente !== null && onCloseModal && (
+        {/* Santé financière : masquée quand la carte pédagogique est prioritaire */}
+        {!modalActive && <SanteFinanciere joueur={joueur} />}
+
+        {/* ── Carte pédagogique inline (priorité 1) ── */}
+        {modalActive && onCloseModal && (
           <ModalEtapeInline etape={modalEtapeEnAttente} onClose={onCloseModal} />
         )}
-        <EntryPanel
-          activeStep={activeStep}
-          displayJoueur={joueur}
-          onApply={onApplyEntry}
-          onApplyEntry={onApplyEntryEffect}
-          onConfirm={onConfirmStep}
-          onCancel={onCancelStep}
-        />
+
+        {/* ── Formulaire de saisie : bloqué tant que la carte n'est pas lue ── */}
+        <div className={`relative transition-opacity duration-200 ${modalActive ? "opacity-40 pointer-events-none select-none" : ""}`}>
+          {modalActive && (
+            <div className="absolute inset-0 z-10 rounded-xl flex items-center justify-center pointer-events-none">
+              <div className="text-center bg-gray-950/80 rounded-xl px-3 py-2 border border-amber-700/40">
+                <p className="text-xs font-bold text-amber-300">🔒 Lis d&apos;abord la carte ci-dessus</p>
+              </div>
+            </div>
+          )}
+          <EntryPanel
+            activeStep={activeStep}
+            displayJoueur={joueur}
+            onApply={onApplyEntry}
+            onApplyEntry={onApplyEntryEffect}
+            onConfirm={onConfirmStep}
+            onCancel={onCancelStep}
+          />
+        </div>
       </aside>
     );
   }
 
+  const modalActive = modalEtapeEnAttente !== null;
+
   return (
     <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
-      {/* Guide de l'étape */}
-      <EtapeGuide etape={etapeTour} tourActuel={tourActuel} nbTours={nbToursMax} />
 
-      {/* Santé financière */}
-      <SanteFinanciere joueur={joueur} />
-
-      {/* ── Carte pédagogique inline (au-dessus des boutons d'action) ── */}
-      {modalEtapeEnAttente !== null && onCloseModal && (
-        <ModalEtapeInline etape={modalEtapeEnAttente} onClose={onCloseModal} />
+      {/* ── État A : carte pédagogique active → focus sur la lecture ── */}
+      {modalActive && (
+        <>
+          {/* Santé financière compacte reste visible pour le contexte */}
+          <SanteFinanciere joueur={joueur} />
+          {/* Carte pédagogique en premier plan */}
+          {onCloseModal && (
+            <ModalEtapeInline etape={modalEtapeEnAttente} onClose={onCloseModal} />
+          )}
+        </>
       )}
 
-      {/* Panneau d'action selon l'étape */}
+      {/* ── État B : pas de carte → affichage normal ── */}
+      {!modalActive && (
+        <>
+          {/* Guide de l'étape */}
+          <EtapeGuide etape={etapeTour} tourActuel={tourActuel} nbTours={nbToursMax} />
+          {/* Santé financière */}
+          <SanteFinanciere joueur={joueur} />
+        </>
+      )}
+
+      {/* Panneau d'action : bloqué tant que la carte n'est pas lue */}
+      <div className={`relative transition-opacity duration-200 ${modalActive ? "opacity-40 pointer-events-none select-none" : ""}`}>
+        {/* Overlay de verrouillage */}
+        {modalActive && (
+          <div className="absolute inset-0 z-10 rounded-2xl flex items-center justify-center pointer-events-none">
+            <div className="text-center bg-gray-950/80 rounded-xl px-3 py-2 border border-amber-700/40">
+              <p className="text-xs font-bold text-amber-300">🔒 Lis d&apos;abord la carte ci-dessus</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">puis clique sur ✅ J&apos;ai compris</p>
+            </div>
+          </div>
+        )}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-3 shadow-sm">
         {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {/* ÉTAPE 1 : Achats de marchandises */}
@@ -447,6 +485,7 @@ export function LeftPanel({
           </div>
         )}
       </div>
+      </div> {/* ── fin du wrapper de blocage ── */}
 
       {/* Toggle Mode Rapide (disponible à partir du T3) */}
       {tourActuel >= 3 && setModeRapide && (
