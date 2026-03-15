@@ -434,23 +434,16 @@ export function MainContent({
         </div>
 
         {/* ── Sous-section Commerciaux ─────────────────────────── */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-px flex-1 bg-indigo-900/50" />
-            <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider whitespace-nowrap">
-              🧑‍💼 Commerciaux
+        {cartesCommerciales.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-px flex-1 bg-indigo-900/50" />
+              <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider whitespace-nowrap">
+                🧑‍💼 Commerciaux
+              </div>
+              <div className="h-px flex-1 bg-indigo-900/50" />
             </div>
-            <div className="h-px flex-1 bg-indigo-900/50" />
-          </div>
 
-          {cartesCommerciales.length === 0 ? (
-            <div className="rounded-xl bg-amber-950/30 border border-amber-700 p-3 text-xs text-amber-300 leading-relaxed">
-              <strong>Aucun commercial actif.</strong> Recrutez via une{" "}
-              <span className="text-indigo-600 font-bold">Carte Décision</span> à
-              l&apos;étape 6 🎯 : Junior (2 particuliers/trim),
-              Senior (2 TPE/trim), Directrice (2 grands comptes/trim).
-            </div>
-          ) : (
             <div className="flex flex-wrap gap-3">
               {cartesCommerciales.map((c) => {
                 const icon =
@@ -506,16 +499,16 @@ export function MainContent({
                 return (
                   <div
                     key={c.id}
-                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-gray-900 min-w-[170px] shadow-md`}
+                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-gray-900 min-w-[180px] shadow-md`}
                   >
                     {/* ── En-tête : titre du commercial ── */}
-                    <div className={`${headerBg} text-white px-3 py-2 flex items-center gap-1.5`}>
+                    <div className={`${headerBg} text-white px-3 py-2.5 flex items-center gap-1.5`}>
                       <span className="text-base">🧑‍💼</span>
                       <span className="font-bold text-sm leading-tight">{c.titre}</span>
                     </div>
 
                     {/* ── Coûts récurrents (rouge) ── */}
-                    <div className="px-3 py-2 border-b border-gray-700/60 bg-red-950/20">
+                    <div className="px-3 py-2.5 border-b border-gray-700/60 bg-red-950/20">
                       <div className="text-[10px] font-bold text-red-400 uppercase tracking-wide mb-1">
                         💸 Coût / trimestre
                       </div>
@@ -536,7 +529,7 @@ export function MainContent({
                     </div>
 
                     {/* ── Revenus générés (vert) ── */}
-                    <div className="px-3 py-2 border-b border-gray-700/60 bg-emerald-950/20">
+                    <div className="px-3 py-2.5 border-b border-gray-700/60 bg-emerald-950/20">
                       <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide mb-1">
                         📈 Revenu / trimestre
                       </div>
@@ -553,11 +546,11 @@ export function MainContent({
                     </div>
 
                     {/* ── Bilan net / agents (indigo) ── */}
-                    <div className="px-3 py-2 bg-indigo-950/30">
+                    <div className="px-3 py-2.5 bg-indigo-950/30">
                       <div className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide mb-1.5">
                         📊 Impact net / trimestre
                       </div>
-                      <div className="grid grid-cols-3 gap-1 text-center">
+                      <div className="grid grid-cols-3 gap-2 text-center">
                         {/* Résultat net */}
                         <div className="bg-gray-800 border border-gray-700 rounded p-1">
                           <div className="text-[9px] text-gray-500 uppercase leading-tight">Résultat</div>
@@ -590,8 +583,8 @@ export function MainContent({
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ── Sous-section Investissements & Décisions ─────────── */}
         {cartesAutresActives.length > 0 && (

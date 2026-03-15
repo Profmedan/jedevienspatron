@@ -90,7 +90,7 @@ function BeforeAfterBadge({ mod }: { mod: RecentMod }) {
       <span className={`font-black text-sm tabular-nums ${bon ? "text-emerald-400" : "text-red-400"}`}>
         {mod.nouvelleValeur}
       </span>
-      <span className={`text-[10px] font-bold px-1 rounded-full ${bon ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"}`}>
+      <span className={`text-xs font-bold px-1 rounded-full ${bon ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"}`}>
         {delta > 0 ? "+" : ""}{delta}
       </span>
     </span>
@@ -112,7 +112,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
   return (
     <div className="relative">
       <div
-        className={`flex justify-between items-center px-2.5 py-1.5 rounded-lg mb-1 transition-all duration-300 ${
+        className={`flex justify-between items-center px-2.5 py-2 rounded-lg mb-1 transition-all duration-300 ${
           info ? "cursor-pointer" : "cursor-default"
         } ${
           sub ? "text-sm" : "font-semibold"
@@ -132,7 +132,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
         <span className="text-gray-200 flex items-center gap-1 text-sm">
           {label}
           {info && (
-            <span className={`text-[10px] leading-none transition-colors ${show ? "text-white" : "text-gray-500"}`}>
+            <span className={`text-xs leading-none transition-colors ${show ? "text-white" : "text-gray-500"}`}>
               {show ? "▲" : "ⓘ"}
             </span>
           )}
@@ -160,7 +160,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
 
           {/* Règle d'or */}
           <div className="border-t border-white/10 pt-2">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-1.5"
+            <p className="text-xs font-black uppercase tracking-widest mb-1.5"
                style={{ color: info.cote === "actif" ? "#60a5fa" : "#fbbf24" }}>
               ⚖️ Règle d&apos;or — Comment ça équilibre
             </p>
@@ -175,7 +175,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
 function SectionHeader({ label, color }: { label: string; color?: string }) {
   return (
     <div
-      className="text-[10px] font-black uppercase tracking-widest mt-3 mb-1 px-1 flex items-center gap-1.5"
+      className="text-xs font-black uppercase tracking-widest mt-4 mb-1.5 px-1 flex items-center gap-1.5"
       style={{ color: color ?? "#9ca3af" }}
     >
       <span className="h-px flex-1 opacity-30" style={{ backgroundColor: color ?? "#9ca3af" }} />
@@ -212,7 +212,7 @@ function ColumnTotal({ label, value, variant }: { label: string; value: number; 
       >
         <span className="text-xs font-bold uppercase tracking-wide opacity-90 flex items-center gap-1.5">
           {label}
-          <span className={`text-[11px] font-normal ${open ? "opacity-100" : "opacity-60"}`}>
+          <span className={`text-xs font-normal ${open ? "opacity-100" : "opacity-60"}`}>
             {open ? "▲" : "ⓘ"}
           </span>
         </span>
@@ -225,7 +225,7 @@ function ColumnTotal({ label, value, variant }: { label: string; value: number; 
         >
           <p className="text-white font-semibold leading-relaxed">{info.message}</p>
           <p className="text-gray-300 leading-relaxed border-t border-white/10 pt-1.5">{info.detail}</p>
-          <p className="text-[10px] font-black uppercase tracking-widest pt-0.5" style={{ color: accentColor }}>
+          <p className="text-xs font-black uppercase tracking-widest pt-0.5" style={{ color: accentColor }}>
             ⚖️ Règle d&apos;or — {isActif ? "ACTIF" : "PASSIF"} = {isActif ? "PASSIF" : "ACTIF"}
           </p>
         </div>
@@ -257,7 +257,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
       {/* ── En-tête ── */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex items-center justify-between">
         <h3 className="font-black text-white text-base tracking-widest uppercase">📋 Bilan</h3>
-        <span className="text-xs text-slate-400 italic">Clique sur ⓘ pour la règle d&apos;or de chaque poste</span>
+        <span className="text-xs text-slate-300 italic">Clique sur ⓘ pour la règle d&apos;or de chaque poste</span>
       </div>
 
       {/* Alerte déséquilibre uniquement (l'équation est déjà visible dans les totaux des colonnes) */}
@@ -267,10 +267,10 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-0 px-4 pb-4 items-end">
+      <div className="grid grid-cols-2 gap-3 px-4 pb-4 items-end">
         {/* ── ACTIF ── */}
-        <div className="pr-3 border-r border-gray-700 flex flex-col">
-          <div className="text-center text-[11px] font-black text-blue-300 mb-2 uppercase tracking-widest bg-blue-900/40 rounded-lg py-1">
+        <div className="pr-4 border-r border-gray-700 flex flex-col">
+          <div className="text-center text-xs font-black text-blue-300 mb-2 uppercase tracking-widest bg-blue-900/40 rounded-lg py-1">
             ACTIF · Ce que vous possédez
           </div>
 
@@ -365,8 +365,8 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         </div>
 
         {/* ── PASSIF ── */}
-        <div className="pl-3 flex flex-col">
-          <div className="text-center text-[11px] font-black text-amber-300 mb-2 uppercase tracking-widest bg-amber-900/40 rounded-lg py-1">
+        <div className="pl-4 flex flex-col">
+          <div className="text-center text-xs font-black text-amber-300 mb-2 uppercase tracking-widest bg-amber-900/40 rounded-lg py-1">
             PASSIF · D&apos;où vient le financement
           </div>
 

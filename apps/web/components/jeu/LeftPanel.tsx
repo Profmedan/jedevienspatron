@@ -282,7 +282,7 @@ export function LeftPanel({
       <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} />
 
       {/* 2. Santé financière */}
-      <SanteFinanciere joueur={joueur} />
+      {!isLocked && <SanteFinanciere joueur={joueur} />}
 
       {/* 3. Carte pédagogique — toujours présente */}
       <PedagoCard
@@ -341,6 +341,12 @@ export function LeftPanel({
               <button onClick={onSkipAchat} className="w-full bg-gray-700 hover:bg-gray-600 text-gray-400 text-sm py-2 rounded-xl font-medium transition-colors">
                 Passer cette étape
               </button>
+              {achatMode === "dettes" && achatQte > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-950/40 border border-amber-700 rounded-xl text-xs text-amber-300">
+                  <span>💳</span>
+                  <span>Dette fournisseur de <strong className="text-white">{achatQte}</strong> à rembourser au trimestre prochain</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -351,11 +357,6 @@ export function LeftPanel({
                 <span>{subEtape6 === "recrutement" ? "🧑‍💼" : "💡"}</span>
                 <span>{subEtape6 === "recrutement" ? "6a — Recrutement (optionnel)" : "6b — Investissement (optionnel)"}</span>
               </div>
-              <button onClick={() => setShowCartes(!showCartes)}
-                className="w-full bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-300 text-sm py-2 rounded-xl font-medium transition-colors border border-indigo-700"
-              >
-                {showCartes ? "▲ Masquer" : "▼ Voir les cartes"}
-              </button>
               {decisionError && (
                 <div className="bg-red-950/40 border border-red-700 text-red-300 rounded-xl px-3 py-2 text-xs font-semibold">❌ {decisionError}</div>
               )}
