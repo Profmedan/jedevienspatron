@@ -351,6 +351,7 @@ export function LeftPanel({
           )}
 
           {/* ── ÉTAPE 6 : Cartes Décision ── */}
+          {/* Le bouton "Exécuter" est dans le panneau central (MainContent) au plus proche des cartes */}
           {etapeTour === 6 && (
             <div className="space-y-2">
               <div className="text-sm font-bold text-gray-200 flex items-center gap-2">
@@ -361,11 +362,10 @@ export function LeftPanel({
                 <div className="bg-red-950/40 border border-red-700 text-red-300 rounded-xl px-3 py-2 text-xs font-semibold">❌ {decisionError}</div>
               )}
               {selectedDecision && (
-                <button onClick={onLaunchDecision}
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-sm py-2 rounded-xl font-bold transition-all active:scale-95 shadow-sm"
-                >
-                  📝 Exécuter & Comprendre : {selectedDecision.titre}
-                </button>
+                <div className="px-3 py-2 bg-indigo-950/40 border border-indigo-700/50 rounded-xl text-xs text-indigo-300 flex items-center gap-2">
+                  <span>✅</span>
+                  <span>Sélectionné : <strong className="text-white">{selectedDecision.titre}</strong> — clique sur <strong>Exécuter</strong> ci-contre</span>
+                </div>
               )}
               <button onClick={onSkipDecision} className="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 rounded-xl font-medium transition-colors">
                 {subEtape6 === "recrutement" ? "⏭️ Passer le recrutement → Investissement" : "⏭️ Passer (aucun investissement)"}

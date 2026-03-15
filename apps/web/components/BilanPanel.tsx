@@ -300,7 +300,8 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
   const tresorerie      = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie");
   const capitaux        = joueur.bilan.passifs.filter((p) => p.categorie === "capitaux");
   const emprunts        = joueur.bilan.passifs.filter((p) => p.categorie === "emprunts");
-  const dettes          = joueur.bilan.passifs.filter((p) => p.categorie === "dettes");
+  // Note: bilan.passifs[] entries for "dettes" sont stales (moteur met à jour bilan.dettes direct)
+  // → on n'utilise plus ce tableau pour l'affichage (suppression du doublon PCG)
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 overflow-hidden">
@@ -457,21 +458,10 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
             />
           ))}
 
-          {(dettes.length > 0 || joueur.bilan.dettes > 0 || joueur.bilan.dettesFiscales > 0) && (
+          {(joueur.bilan.dettes > 0 || joueur.bilan.dettesFiscales > 0) && (
             <>
               <SectionHeader label="Dettes (court terme)" color={TOOLTIPS.dettes.couleur} />
-              {dettes.map((p) => (
-                <TooltipPoste
-                  key={p.nom}
-                  label={p.nom}
-                  value={p.valeur}
-                  color={TOOLTIPS.dettes.couleur}
-                  categorie="dettes"
-                  sub
-                  highlighted={highlightedPoste === "dettes"}
-                  recentMod={findMod(recentModifications, "dettes")}
-                />
-              ))}
+              {/* Compte unique 401 — source de vérité : bilan.dettes (champ direct mis à jour par le moteur) */}
               {joueur.bilan.dettes > 0 && (
                 <TooltipPoste
                   label="Dettes fournisseurs"

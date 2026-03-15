@@ -262,37 +262,30 @@ export function MainContent({
             {/* Section Investissement */}
             {subEtape6 === "investissement" && (
               <>
-                {cartesAutres.length === 0 ? (
-                  <div className="text-center py-4 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-gray-400">
-                    Aucune carte Décision disponible pour le moment.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {cartesAutres.map((c) => {
-                      const dejaActive = joueur.cartesActives.some((a) => a.id === c.id);
-                      return (
-                        <div key={c.id} className="relative">
-                          <div className={dejaActive ? "opacity-50 pointer-events-none" : ""}>
-                            <CarteView
-                              carte={c}
-                              onClick={() =>
-                                setSelectedDecision(selectedDecision?.id === c.id ? null : c)
-                              }
-                              selected={selectedDecision?.id === c.id}
-                            />
-                          </div>
-                          {dejaActive && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                                ✅ Déjà active
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                {/* Filtrer les cartes déjà actives : PCG — un compte ne se duplique pas */}
+                {(() => {
+                  const cartesDispos = cartesAutres.filter(
+                    (c) => !joueur.cartesActives.some((a) => a.id === c.id)
+                  );
+                  return cartesDispos.length === 0 ? (
+                    <div className="text-center py-4 bg-green-950/30 border border-green-800/50 rounded-xl text-sm text-green-300 font-semibold">
+                      ✅ Tous les investissements disponibles sont déjà actifs !
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {cartesDispos.map((c) => (
+                        <CarteView
+                          key={c.id}
+                          carte={c}
+                          onClick={() =>
+                            setSelectedDecision(selectedDecision?.id === c.id ? null : c)
+                          }
+                          selected={selectedDecision?.id === c.id}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </>
             )}
 
