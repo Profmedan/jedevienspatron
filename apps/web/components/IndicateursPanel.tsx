@@ -168,10 +168,10 @@ export default function IndicateursPanel({ joueur }: Props) {
   const sig = calculerSIG(joueur);
 
   const tabs: Array<[Tab, string]> = [
-    ["sig",         "📊 Formation du résultat"],
+    ["sig",         "📊 Résultat"],
     ["rentabilite", "💹 Rentabilité"],
-    ["structure",   "🏗️ Structure financière"],
-    ["ratios",      "⏱️ Ratios de gestion"],
+    ["structure",   "🏗️ Structure"],
+    ["ratios",      "⏱️ Ratios"],
   ];
 
   return (
@@ -180,10 +180,10 @@ export default function IndicateursPanel({ joueur }: Props) {
         <h3 className="font-bold text-center text-gray-800 mb-1 tracking-wide">📊 INDICATEURS FINANCIERS</h3>
         <p className="text-center text-xs text-gray-400 mb-3">Clique sur un indicateur pour son explication détaillée ⓘ</p>
         {/* Onglets */}
-        <div className="flex gap-1 overflow-x-auto border-b border-gray-200 pb-0">
+        <div className="grid grid-cols-4 gap-1 border-b border-gray-200 pb-0">
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`text-xs font-bold px-3 py-2 rounded-t-lg whitespace-nowrap transition-all border-b-2 ${
+              className={`text-xs font-bold px-2 py-2 rounded-t-lg text-center transition-all border-b-2 truncate ${
                 tab === t
                   ? "bg-indigo-50 text-indigo-700 border-indigo-600 shadow-sm"
                   : "text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-700"
