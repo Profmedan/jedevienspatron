@@ -3,7 +3,6 @@ import { Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif, getResultatNet } from "@/lib/game-engine/calculators";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import { useState } from "react";
-import { Scale, X } from "lucide-react";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };
 
@@ -13,53 +12,74 @@ interface Props {
   recentModifications?: RecentMod[];
 }
 
-const TOOLTIPS: Record<string, { definition: string; exemple: string; couleur: string }> = {
+// ─── Données pédagogiques enrichies par poste ─────────────────────────────────
+// regleOr : explication contextuelle du lien avec ACTIF = PASSIF
+const TOOLTIPS: Record<string, {
+  definition: string;
+  exemple: string;
+  couleur: string;
+  cote: "actif" | "passif";
+  regleOr: string;
+}> = {
   immobilisations: {
     definition: "Biens durables achetés par l'entreprise (machines, véhicules, brevets…). Ils se déprécient chaque trimestre = amortissements.",
     exemple: "Ex : Une usine à 3, une camionnette à 1 = 4 d'immobilisations.",
     couleur: "#d97706",
+    cote: "actif",
+    regleOr: "Quand tu achètes un bien, l'Actif ↑ (nouvelle immo) et le Passif ↑ (emprunt ou trésorerie ↓ côté actif). Quand il s'amortit chaque trimestre, l'Actif ↓ et le Résultat ↓ — les deux côtés bougent ensemble.",
   },
   stocks: {
     definition: "Marchandises achetées mais pas encore vendues. Augmentent à l'achat, diminuent à la vente (le coût des marchandises vendues est comptabilisé en charge).",
     exemple: "Ex : Tu achètes 4 unités → Stocks = 4. Tu en vends 2 → Stocks = 2, coût des ventes = 2.",
     couleur: "#db2777",
+    cote: "actif",
+    regleOr: "Achat comptant → Stocks ↑ (Actif) et Trésorerie ↓ (Actif). Bilan équilibré car un actif remplace un autre. Achat à crédit → Stocks ↑ (Actif) et Dettes fournisseurs ↑ (Passif). Vente → Stocks ↓ (Actif) et Coût des ventes ↑ (Charge = Résultat ↓ = Passif ↓).",
   },
   tresorerie: {
     definition: "Argent disponible immédiatement (compte bancaire). Augmente aux encaissements, diminue aux décaissements. Ne peut pas être négatif (→ découvert).",
     exemple: "Ex : Trésorerie 8. Tu paies 2 de charges → Trésorerie 6.",
     couleur: "#059669",
+    cote: "actif",
+    regleOr: "La trésorerie est le miroir de tous tes flux : chaque rentrée ou sortie d'argent modifie la trésorerie (Actif) et son pendant côté Passif (créance encaissée, dette payée, charge comptabilisée…). Si elle tombe à 0, le découvert prend le relais côté Passif.",
   },
   creances: {
     definition: "Argent que vos clients vous doivent mais n'ont pas encore payé. 'Dans 1 trimestre' sera encaissé au tour suivant, 'dans 2 trimestres' dans deux tours.",
     exemple: "Ex : Vente Grand Compte = +3 Ventes +3 Créances (encaissé dans 2 trimestres).",
     couleur: "#2563eb",
+    cote: "actif",
+    regleOr: "Une vente à crédit crée deux mouvements simultanés : Créances ↑ (Actif, promesse de paiement) et Ventes ↑ (Produit = Résultat ↑ = Passif ↑). Quand le client paie enfin : Trésorerie ↑ (Actif) et Créances ↓ (Actif). Le passif ne bouge pas — ce n'était que l'encaissement.",
   },
   capitaux: {
     definition: "Capitaux propres : argent investi par les propriétaires + résultats accumulés. Augmentent avec les bénéfices, diminuent avec les pertes.",
     exemple: "Ex : Capital 12. Bénéfice de 2 → Capitaux 14 à la clôture.",
     couleur: "#7c3aed",
+    cote: "passif",
+    regleOr: "Les capitaux propres sont ce que l'entreprise 'doit' à ses propriétaires. Ils ↑ avec les bénéfices (Résultat positif migre dans les capitaux en fin de période) et ↓ avec les pertes. Si les capitaux propres passent en négatif → l'entreprise doit plus qu'elle ne possède → faillite.",
   },
   emprunts: {
     definition: "Dettes à long terme envers la banque. Remboursées progressivement (-1 par tour). Génèrent des charges d'intérêt.",
     exemple: "Ex : Emprunt 4, remboursement 1/tour → Tour 1: 3, Tour 2: 2…",
     couleur: "#ea580c",
+    cote: "passif",
+    regleOr: "Quand tu empruntes, l'argent arrive en trésorerie (Actif ↑) et la dette s'inscrit au passif (Passif ↑) → bilan équilibré. Chaque remboursement : Trésorerie ↓ (Actif) et Emprunt ↓ (Passif). Les intérêts payés réduisent aussi la trésorerie et augmentent les charges (Résultat ↓).",
   },
   dettes: {
     definition: "Dettes à court terme : fournisseurs (achats à crédit, payables au tour suivant) ou fiscales (impôts à payer).",
     exemple: "Ex : Achat à crédit de 3 → Dettes fournisseurs +3 (payé au tour suivant).",
     couleur: "#e11d48",
+    cote: "passif",
+    regleOr: "Acheter à crédit crée simultanément un Actif (Stock ↑) et un Passif (Dette fournisseur ↑) — bilan équilibré. Quand tu règles la facture : Trésorerie ↓ (Actif) et Dette ↓ (Passif) — le bilan reste équilibré.",
   },
   decouvert: {
     definition: "⚠️ Découvert bancaire : trésorerie négative. Si le découvert dépasse 5, des pénalités s'appliquent. Au-delà, c'est la faillite.",
     exemple: "Ex : Tréso = 0, tu paies 3 → Tréso = 0, Découvert = 3 (dangereux !).",
     couleur: "#dc2626",
+    cote: "passif",
+    regleOr: "Le découvert est la trésorerie négative déplacée au passif. L'Actif Trésorerie reste à 0 ; c'est le Passif Découvert qui absorbe la différence — l'équation ACTIF = PASSIF reste vraie, mais c'est un signal d'alarme : la banque finance tes opérations à ta place.",
   },
 };
 
-/** Badge avant → après affiché à la place de la valeur courante.
- *  Couleur basée sur l'impact financier réel (PCG français) :
- *  vert = bon pour l'entreprise, rouge = appauvrissement.
- */
+/** Badge avant → après affiché à la place de la valeur courante. */
 function BeforeAfterBadge({ mod }: { mod: RecentMod }) {
   const delta = mod.nouvelleValeur - mod.ancienneValeur;
   const bon = isBonPourEntreprise(mod.poste, delta);
@@ -92,49 +112,60 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
   return (
     <div className="relative">
       <div
-        className={`flex justify-between items-center px-2.5 py-1.5 rounded-lg mb-1 cursor-help transition-all duration-300 ${
+        className={`flex justify-between items-center px-2.5 py-1.5 rounded-lg mb-1 transition-all duration-300 ${
+          info ? "cursor-pointer" : "cursor-default"
+        } ${
           sub ? "text-sm" : "font-semibold"
         } ${
           highlighted
             ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-lg shadow-amber-400/20 scale-[1.03] -mx-0.5"
             : ""
+        } ${
+          show && info ? "ring-1 ring-white/20 bg-white/5" : ""
         }`}
         style={{
-          backgroundColor: highlighted ? undefined : (color ? `${color}28` : undefined),
+          backgroundColor: (highlighted || (show && info)) ? undefined : (color ? `${color}28` : undefined),
           borderLeft: color ? `3px solid ${color}` : undefined,
         }}
-        onMouseEnter={() => info && setShow(true)}
-        onMouseLeave={() => setShow(false)}
         onClick={() => info && setShow((s) => !s)}
       >
         <span className="text-gray-200 flex items-center gap-1 text-sm">
           {label}
           {info && (
-            <span className="text-[10px] text-gray-500 hover:text-gray-300 leading-none">ⓘ</span>
+            <span className={`text-[10px] leading-none transition-colors ${show ? "text-white" : "text-gray-500"}`}>
+              {show ? "▲" : "ⓘ"}
+            </span>
           )}
         </span>
         <div className="flex items-center">
           {recentMod ? (
             <BeforeAfterBadge mod={recentMod} />
           ) : (
-            <span
-              className={`font-bold tabular-nums text-sm ${
-                value < 0 ? "text-red-400" : "text-gray-100"
-              }`}
-            >
+            <span className={`font-bold tabular-nums text-sm ${value < 0 ? "text-red-400" : "text-gray-100"}`}>
               {value >= 0 ? value : `(${Math.abs(value)})`}
             </span>
           )}
         </div>
       </div>
 
+      {/* ── Panneau règle d'or contextuel ── */}
       {show && info && (
-        <div className="absolute z-50 left-0 top-full mt-1 w-64 bg-gray-800 border border-gray-600 rounded-xl shadow-xl p-3 text-xs">
-          <div className="font-bold mb-1" style={{ color: info.couleur }}>
-            {label}
+        <div
+          className="mb-2 rounded-xl border p-3 text-xs space-y-2 shadow-lg"
+          style={{ borderColor: `${info.couleur}60`, backgroundColor: `${info.couleur}10` }}
+        >
+          {/* Définition */}
+          <p className="text-gray-200 leading-relaxed">{info.definition}</p>
+          <p className="text-gray-500 italic border-t border-white/10 pt-2">{info.exemple}</p>
+
+          {/* Règle d'or */}
+          <div className="border-t border-white/10 pt-2">
+            <p className="text-[10px] font-black uppercase tracking-widest mb-1.5"
+               style={{ color: info.cote === "actif" ? "#60a5fa" : "#fbbf24" }}>
+              ⚖️ Règle d&apos;or — Comment ça équilibre
+            </p>
+            <p className="text-gray-300 leading-relaxed">{info.regleOr}</p>
           </div>
-          <p className="text-gray-300 mb-2 leading-relaxed">{info.definition}</p>
-          <p className="text-gray-500 italic border-t border-gray-700 pt-1">{info.exemple}</p>
         </div>
       )}
     </div>
@@ -154,123 +185,69 @@ function SectionHeader({ label, color }: { label: string; color?: string }) {
   );
 }
 
-function ColumnTotal({
-  label,
-  value,
-  variant,
-}: {
-  label: string;
-  value: number;
-  variant: "actif" | "passif";
-}) {
+function ColumnTotal({ label, value, variant }: { label: string; value: number; variant: "actif" | "passif" }) {
   const isActif = variant === "actif";
   return (
-    <div
-      className={`flex justify-between items-center px-3 py-2.5 rounded-xl mt-3 border-2 ${
-        isActif
-          ? "bg-blue-600 border-blue-600 text-white"
-          : "bg-amber-600 border-amber-600 text-white"
-      }`}
-    >
+    <div className={`flex justify-between items-center px-3 py-2.5 rounded-xl mt-3 border-2 ${
+      isActif ? "bg-blue-600 border-blue-600 text-white" : "bg-amber-600 border-amber-600 text-white"
+    }`}>
       <span className="text-xs font-bold uppercase tracking-wide opacity-90">{label}</span>
       <span className="text-2xl font-black tabular-nums">{value}</span>
     </div>
   );
 }
 
-/** Résout la modification récente pour un poste donné */
 function findMod(mods: RecentMod[] | undefined, poste: string): RecentMod | undefined {
   return mods?.find((m) => m.poste === poste);
 }
 
 export default function BilanPanel({ joueur, highlightedPoste, recentModifications }: Props) {
-  const [showRegleOr, setShowRegleOr] = useState(false);
-  const totalActif = getTotalActif(joueur);
-  const resultat = getResultatNet(joueur);
+  const totalActif  = getTotalActif(joueur);
+  const resultat    = getResultatNet(joueur);
   const totalPassif = getTotalPassif(joueur);
-  const equilibre = Math.abs(totalActif - totalPassif) < 0.01;
+  const equilibre   = Math.abs(totalActif - totalPassif) < 0.01;
 
   const immobilisations = joueur.bilan.actifs.filter((a) => a.categorie === "immobilisations");
-  const stocks = joueur.bilan.actifs.filter((a) => a.categorie === "stocks");
-  const tresorerie = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie");
-  const capitaux = joueur.bilan.passifs.filter((p) => p.categorie === "capitaux");
-  const emprunts = joueur.bilan.passifs.filter((p) => p.categorie === "emprunts");
-  const dettes = joueur.bilan.passifs.filter((p) => p.categorie === "dettes");
+  const stocks          = joueur.bilan.actifs.filter((a) => a.categorie === "stocks");
+  const tresorerie      = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie");
+  const capitaux        = joueur.bilan.passifs.filter((p) => p.categorie === "capitaux");
+  const emprunts        = joueur.bilan.passifs.filter((p) => p.categorie === "emprunts");
+  const dettes          = joueur.bilan.passifs.filter((p) => p.categorie === "dettes");
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 overflow-hidden">
+
       {/* ── En-tête ── */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex items-center justify-between">
         <h3 className="font-black text-white text-base tracking-widest uppercase">📋 Bilan</h3>
-        <span className="text-xs text-slate-300 italic">Passez la souris sur ⓘ pour les explications</span>
+        <span className="text-xs text-slate-400 italic">Clique sur ⓘ pour la règle d&apos;or de chaque poste</span>
       </div>
 
-      {/* ── Popup Règle d'or ── */}
-      {showRegleOr && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-gray-900 rounded-2xl border-2 border-indigo-500 shadow-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-xl bg-indigo-600 text-white"><Scale size={24} /></div>
-              <h2 className="text-lg font-black text-white">La règle d&apos;or de la comptabilité</h2>
-              <button onClick={() => setShowRegleOr(false)} className="ml-auto text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            <div className="space-y-4 text-sm text-gray-300 leading-relaxed">
-              <div className="bg-indigo-900/50 rounded-xl p-4 border border-indigo-700 text-center">
-                <p className="text-2xl font-black text-white mb-1">ACTIF = PASSIF</p>
-                <p className="text-indigo-300 text-xs">Cette équation doit TOUJOURS être vraie</p>
-              </div>
-              <div className="bg-blue-900/30 rounded-xl p-4 border border-blue-800">
-                <p className="font-bold text-blue-300 mb-1">📦 L&apos;Actif — Ce que tu possèdes</p>
-                <p>Tout ce que l&apos;entreprise possède : ses machines, ses stocks de marchandises, l&apos;argent en banque et ce que ses clients lui doivent encore. C&apos;est l&apos;emploi des ressources.</p>
-              </div>
-              <div className="bg-amber-900/30 rounded-xl p-4 border border-amber-800">
-                <p className="font-bold text-amber-300 mb-1">💰 Le Passif — D&apos;où vient l&apos;argent</p>
-                <p>Tout ce que l&apos;entreprise doit à quelqu&apos;un : aux associés (capitaux propres), à la banque (emprunts), aux fournisseurs (dettes). C&apos;est l&apos;origine des ressources.</p>
-              </div>
-              <div className="bg-green-900/30 rounded-xl p-4 border border-green-800">
-                <p className="font-bold text-green-300 mb-1">💡 Pourquoi c&apos;est toujours égal ?</p>
-                <p>Parce que chaque fois qu&apos;on acquiert quelque chose (Actif ↑), on a forcément utilisé une ressource pour le financer (Passif ↑). C&apos;est le principe de la <strong className="text-white">partie double</strong>.</p>
-                <p className="mt-2 text-xs text-gray-400">Exemple : Tu achètes une camionnette à 6 000 € → Immobilisations +6 (Actif) et Emprunts +6 (Passif). Bilan toujours équilibré ✅</p>
-              </div>
-            </div>
-            <button onClick={() => setShowRegleOr(false)} className="mt-5 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black transition-colors">
-              J&apos;ai compris →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Équation du bilan (cliquable) ── */}
-      <button
-        onClick={() => setShowRegleOr(true)}
-        className={`mx-4 mt-4 mb-3 rounded-2xl p-3 border-2 w-[calc(100%-2rem)] text-left transition-all hover:scale-[1.01] cursor-pointer ${
-          equilibre
-            ? "border-indigo-700 bg-gradient-to-r from-blue-950/60 via-gray-800 to-amber-950/40 hover:border-indigo-500"
-            : "border-red-700 bg-red-950/40"
-        }`}
-        title="Cliquer pour comprendre la règle d'or ACTIF = PASSIF"
-      >
+      {/* ── Équation ACTIF = PASSIF (informatif, non cliquable) ── */}
+      <div className={`mx-4 mt-4 mb-3 rounded-2xl p-3 border-2 ${
+        equilibre ? "border-indigo-700/60 bg-gradient-to-r from-blue-950/60 via-gray-800 to-amber-950/40" : "border-red-700 bg-red-950/40"
+      }`}>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-blue-600 rounded-xl py-2.5 shadow-sm">
             <div className="font-black text-3xl text-white tabular-nums">{totalActif}</div>
             <div className="text-xs text-blue-100 font-bold uppercase tracking-widest mt-0.5">ACTIF</div>
           </div>
           <div className="flex items-center justify-center">
-            <span className="font-black text-3xl text-indigo-400">=</span>
+            <span className={`font-black text-3xl ${equilibre ? "text-indigo-400" : "text-red-400"}`}>
+              {equilibre ? "=" : "≠"}
+            </span>
           </div>
           <div className="bg-amber-600 rounded-xl py-2.5 shadow-sm">
             <div className="font-black text-3xl text-white tabular-nums">{totalPassif}</div>
             <div className="text-xs text-amber-100 font-bold uppercase tracking-widest mt-0.5">PASSIF</div>
           </div>
         </div>
-        <div className={`mt-2 text-center text-xs font-bold py-1 rounded-lg ${
-          equilibre ? "bg-emerald-900/50 text-emerald-300" : "bg-red-900/50 text-red-300"
-        }`}>
-          {equilibre
-            ? "✅ Bilan équilibré — clique pour comprendre la règle d'or"
-            : `⚠️ Déséquilibre : écart ${(totalActif - totalPassif).toFixed(1)}`}
-        </div>
-      </button>
+        {!equilibre && (
+          <div className="mt-2 text-center text-xs font-bold py-1 rounded-lg bg-red-900/50 text-red-300">
+            ⚠️ Déséquilibre : écart {(totalActif - totalPassif).toFixed(1)}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-0 px-4 pb-4">
         {/* ── ACTIF ── */}
@@ -281,19 +258,16 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
 
           <SectionHeader label="Investissements durables" color={TOOLTIPS.immobilisations.couleur} />
           {(() => {
-            // Calculer le badge par bien à partir de la modification totale des immo.
-            // Le moteur enregistre un seul mod agrégé (totalAvant → totalAprès).
-            // On divise par N pour obtenir le delta par bien (chaque bien perd -1).
             const totalImmMod = findMod(recentModifications, "immobilisations");
             const nItems = immobilisations.length;
             return immobilisations.map((a) => {
               let perItemMod: typeof totalImmMod;
               if (totalImmMod && nItems > 0) {
                 const totalDelta = totalImmMod.nouvelleValeur - totalImmMod.ancienneValeur;
-                const perItemDelta = Math.round(totalDelta / nItems); // -1 par bien
+                const perItemDelta = Math.round(totalDelta / nItems);
                 perItemMod = {
                   poste: "immobilisations",
-                  ancienneValeur: a.valeur - perItemDelta, // valeur avant = valeur actuelle - delta
+                  ancienneValeur: a.valeur - perItemDelta,
                   nouvelleValeur: a.valeur,
                 };
               }
@@ -458,13 +432,11 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
                 label={joueur.bilan.decouvert > 5 ? "🔴 DÉCOUVERT — FAILLITE !" : "⚠️ Découvert"}
                 color="#dc2626"
               />
-              <div
-                className={`px-3 py-2 rounded-xl border-2 mb-1 ${
-                  joueur.bilan.decouvert > 5
-                    ? "bg-red-950/70 border-red-600 animate-pulse"
-                    : "bg-orange-950/40 border-orange-500"
-                }`}
-              >
+              <div className={`px-3 py-2 rounded-xl border-2 mb-1 ${
+                joueur.bilan.decouvert > 5
+                  ? "bg-red-950/70 border-red-600 animate-pulse"
+                  : "bg-orange-950/40 border-orange-500"
+              }`}>
                 <TooltipPoste
                   label="Découvert bancaire"
                   value={joueur.bilan.decouvert}
@@ -474,11 +446,9 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
                   highlighted={highlightedPoste === "decouvert"}
                   recentMod={findMod(recentModifications, "decouvert")}
                 />
-                <div
-                  className={`text-xs mt-1 font-semibold ${
-                    joueur.bilan.decouvert > 5 ? "text-red-300" : "text-orange-300"
-                  }`}
-                >
+                <div className={`text-xs mt-1 font-semibold ${
+                  joueur.bilan.decouvert > 5 ? "text-red-300" : "text-orange-300"
+                }`}>
                   {joueur.bilan.decouvert > 5
                     ? "🚨 Découvert > 5 : faillite si non régularisé !"
                     : "Remboursez ce découvert au tour suivant."}
