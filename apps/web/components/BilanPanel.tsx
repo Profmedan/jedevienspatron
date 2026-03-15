@@ -223,31 +223,12 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         <span className="text-xs text-slate-400 italic">Clique sur ⓘ pour la règle d&apos;or de chaque poste</span>
       </div>
 
-      {/* ── Équation ACTIF = PASSIF (informatif, non cliquable) ── */}
-      <div className={`mx-4 mt-4 mb-3 rounded-2xl p-3 border-2 ${
-        equilibre ? "border-indigo-700/60 bg-gradient-to-r from-blue-950/60 via-gray-800 to-amber-950/40" : "border-red-700 bg-red-950/40"
-      }`}>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-blue-600 rounded-xl py-2.5 shadow-sm">
-            <div className="font-black text-3xl text-white tabular-nums">{totalActif}</div>
-            <div className="text-xs text-blue-100 font-bold uppercase tracking-widest mt-0.5">ACTIF</div>
-          </div>
-          <div className="flex items-center justify-center">
-            <span className={`font-black text-3xl ${equilibre ? "text-indigo-400" : "text-red-400"}`}>
-              {equilibre ? "=" : "≠"}
-            </span>
-          </div>
-          <div className="bg-amber-600 rounded-xl py-2.5 shadow-sm">
-            <div className="font-black text-3xl text-white tabular-nums">{totalPassif}</div>
-            <div className="text-xs text-amber-100 font-bold uppercase tracking-widest mt-0.5">PASSIF</div>
-          </div>
+      {/* Alerte déséquilibre uniquement (l'équation est déjà visible dans les totaux des colonnes) */}
+      {!equilibre && (
+        <div className="mx-4 mt-3 mb-1 text-center text-xs font-bold py-1.5 rounded-lg bg-red-900/50 text-red-300 border border-red-700">
+          ⚠️ Déséquilibre : écart {(totalActif - totalPassif).toFixed(1)}
         </div>
-        {!equilibre && (
-          <div className="mt-2 text-center text-xs font-bold py-1 rounded-lg bg-red-900/50 text-red-300">
-            ⚠️ Déséquilibre : écart {(totalActif - totalPassif).toFixed(1)}
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="grid grid-cols-2 gap-0 px-4 pb-4">
         {/* ── ACTIF ── */}
