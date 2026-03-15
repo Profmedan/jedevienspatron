@@ -636,7 +636,7 @@ export default function JeuPage() {
           etapeTour={etat.etapeTour}
           tourActuel={etat.tourActuel}
           nbToursMax={etat.nbToursMax}
-          joueur={joueur}
+          joueur={displayJoueur}
           activeStep={activeStep}
           onApplyEntry={applyEntry}
           onConfirmStep={confirmActiveStep}

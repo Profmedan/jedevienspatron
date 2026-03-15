@@ -11,7 +11,6 @@ export const ACTIF_KEYS = [
   "immobilisations",
   "creancesPlus1",
   "creancesPlus2",
-  "decouvert",
 ];
 
 export const PASSIF_KEYS = [
@@ -19,6 +18,9 @@ export const PASSIF_KEYS = [
   "emprunts",
   "dettes",
   "dettesFiscales",
+  // Le découvert bancaire est une dette envers la banque → PASSIF
+  // (getTotalPassif l'inclut déjà côté passif dans calculators.ts)
+  "decouvert",
 ];
 
 export const CHARGES_KEYS = [
