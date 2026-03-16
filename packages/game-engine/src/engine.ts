@@ -564,15 +564,22 @@ export function acheterCarteDecision(
   if (carte.id === "remboursement-anticipe") {
     const emprunts = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
     if (emprunts && emprunts.valeur > 0) {
-      const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(
+      const { ancienneValeur: tresoAncienne, nouvelleValeur: tresoNouvelle } = appliquerDeltaPoste(
         joueur, "tresorerie", -emprunts.valeur
       );
       modifications.push({
         joueurId: joueur.id, poste: "tresorerie",
-        ancienneValeur, nouvelleValeur,
-        explication: "Remboursement anticipé intégral de l'emprunt",
+        ancienneValeur: tresoAncienne, nouvelleValeur: tresoNouvelle,
+        explication: `Remboursement anticipé : trésorerie −${emprunts.valeur} (capital restant dû)`,
       });
-      appliquerDeltaPoste(joueur, "emprunts", -emprunts.valeur);
+      const { ancienneValeur: empruntAncien, nouvelleValeur: empruntNouveau } = appliquerDeltaPoste(
+        joueur, "emprunts", -emprunts.valeur
+      );
+      modifications.push({
+        joueurId: joueur.id, poste: "emprunts",
+        ancienneValeur: empruntAncien, nouvelleValeur: empruntNouveau,
+        explication: `Remboursement anticipé : dette financière soldée −${emprunts.valeur}`,
+      });
     }
     // Retirer la carte (usage unique)
     joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== "remboursement-anticipe");

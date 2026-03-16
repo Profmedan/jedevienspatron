@@ -91,7 +91,7 @@ function PedagoCard({ etape, isLocked, onUnlock }: {
         <span className="text-2xl shrink-0">{ETAPE_EMOJI[etape] ?? "📋"}</span>
         <div className="flex-1 min-w-0">
           <span className={`text-[10px] font-bold uppercase tracking-widest block ${isLocked ? "text-indigo-400" : "text-gray-500"}`}>
-            {isLocked ? "Étape " + etape + " — À lire avant d'agir" : "Rappel — étape " + etape}
+            {isLocked ? "Étape " + (etape + 1) + " — À lire avant d'agir" : "Rappel — étape " + (etape + 1)}
           </span>
           <h3 className="text-sm font-black text-white leading-tight">{modal.titre}</h3>
         </div>
@@ -341,8 +341,8 @@ export function LeftPanel({
                   </button>
                 ))}
               </div>
-              <button onClick={onSkipAchat} className="w-full bg-gray-700 hover:bg-gray-600 text-gray-400 text-sm py-2 rounded-xl font-medium transition-colors">
-                Passer cette étape
+              <button onClick={onSkipAchat} className="w-full border border-gray-500 hover:border-gray-400 bg-transparent hover:bg-gray-700/30 text-gray-300 hover:text-gray-100 text-sm py-2 rounded-xl font-medium transition-colors">
+                ⏭️ Passer cette étape
               </button>
               {achatMode === "dettes" && achatQte > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-amber-950/40 border border-amber-700 rounded-xl text-xs text-amber-300">
@@ -424,20 +424,20 @@ export function LeftPanel({
 
       {/* 4b. Emprunt bancaire (toujours disponible) */}
       {onDemanderEmprunt && (
-        <div className="bg-blue-950/30 rounded-xl border border-blue-800/50 p-3">
+        <div className="bg-amber-950/30 rounded-xl border border-amber-800/50 p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-base">🏦</span>
-              <span className="text-xs font-bold text-blue-300">Financement bancaire</span>
+              <span className="text-xs font-bold text-amber-300">Financement bancaire</span>
             </div>
             <button
               onClick={onDemanderEmprunt}
-              className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors"
+              className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors"
             >
               Demander un prêt
             </button>
           </div>
-          <p className="text-[10px] text-blue-500/80 leading-tight mt-1">
+          <p className="text-[10px] text-amber-500/80 leading-tight mt-1">
             Le banquier évalue votre solvabilité, résultat, trésorerie et endettement.
           </p>
         </div>

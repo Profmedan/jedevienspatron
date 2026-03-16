@@ -63,15 +63,15 @@ const ETAPE_INFO: Record<number, { icone: string; titre: string; description: st
   },
   3: {
     icone: "👔", titre: "Paiement des commerciaux",
-    description: "Tes commerciaux ont travaillé ce trimestre. Tu les rémunères : charges de personnel ↑, trésorerie ↓. En contrepartie, ils t'ont apporté des clients ce trimestre.",
+    description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici (charges personnel ↑, trésorerie ↓) et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1 avant tout recrutement.",
     principe: "DÉBIT Charges de personnel / CRÉDIT Trésorerie. Les salaires sont une charge d'exploitation qui réduit le résultat.",
-    conseil: "🤝 Junior → 1 Particulier/trim, Senior → 1 TPE/trim, Directrice → 1 Grand Compte/trim. Recruter via Carte Décision étape 6.",
+    conseil: "🤝 Junior → 1 Particulier/trim, Senior → 1 TPE/trim, Directrice → 1 Grand Compte/trim. Recruter via Carte Décision étape 6a.",
   },
   4: {
     icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
-    description: "Chaque vente génère 4 écritures : une vente (produit), un stock consommé (charge), un coût des marchandises vendues, et une entrée de trésorerie ou créance.",
+    description: "Chaque vente génère 4 écritures : vente (produit ↑), stock consommé (charge ↑), et encaissement comptant ou créance selon le délai. Au T1, 2 clients initiaux (portefeuille de démarrage) sont traités ici — sans commercial, c'est normal.",
     principe: "① Ventes + (Produit) ② Stocks − (marchandises livrées) ③ Achats/CMV + (Coût de revient) ④ Tréso + ou Créance + (selon délai).",
-    conseil: "🔑 C'est LE cœur de la partie double : une seule vente génère 4 écritures qui s'équilibrent.",
+    conseil: "🔑 C'est LE cœur de la partie double : une seule vente génère 4 écritures qui s'équilibrent. Recrute des commerciaux (étape 6a) pour en avoir plus !",
   },
   5: {
     icone: "🔄", titre: "Effets récurrents des cartes Décision",
@@ -352,8 +352,22 @@ export default function JeuPage() {
       case 8: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
       default: break;
     }
-    // Stocker les modifications pour affichage avant/après dans les panneaux
+    // Auto-skip étapes vides : créances (2) sans créances, commerciaux (3) sans commercial
+    const etapeActuelle = next.etapeTour;
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
+    if ((etapeActuelle === 2 || etapeActuelle === 3) && modsFiltrees.length === 0) {
+      avancerEtape(next);
+      const prochEtapeAuto = next.etapeTour;
+      if (!etapesPedagoVues.has(prochEtapeAuto)) {
+        setModalEtapeEnAttente(prochEtapeAuto);
+        setEtapesPedagoVues(prev => new Set(prev).add(prochEtapeAuto));
+      }
+      setEtat({ ...next });
+      setActiveStep(null);
+      return;
+    }
+
+    // Stocker les modifications pour affichage avant/après dans les panneaux
     setRecentModifications(modsFiltrees.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
@@ -655,7 +669,7 @@ export default function JeuPage() {
       {/* ─── MODAL EMPRUNT BANCAIRE ─── */}
       {showDemandeEmprunt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-md w-full border border-indigo-700 p-6">
+          <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-md w-full border border-amber-600 p-6">
             <div className="text-center mb-5">
               <div className="text-4xl mb-2">🏦</div>
               <h2 className="text-xl font-black text-white">Demande de prêt bancaire</h2>
@@ -675,8 +689,8 @@ export default function JeuPage() {
                         onClick={() => setMontantEmpruntChoisi(m)}
                         className={`px-4 py-2 rounded-xl font-bold text-sm border-2 transition-all ${
                           montantEmpruntChoisi === m
-                            ? "bg-indigo-600 border-indigo-400 text-white"
-                            : "bg-gray-800 border-gray-600 text-gray-300 hover:border-indigo-500"
+                            ? "bg-amber-600 border-amber-400 text-white"
+                            : "bg-gray-800 border-gray-600 text-gray-300 hover:border-amber-500"
                         }`}
                       >
                         {m}
@@ -684,7 +698,7 @@ export default function JeuPage() {
                     ))}
                   </div>
                 </div>
-                <div className="bg-indigo-950/40 border border-indigo-800 rounded-xl p-3 mb-4 text-xs text-indigo-300">
+                <div className="bg-amber-950/40 border border-amber-800 rounded-xl p-3 mb-4 text-xs text-amber-300">
                   <p>📊 Le banquier analyse : solvabilité, résultat, trésorerie, taux d&apos;endettement, montant demandé.</p>
                   <p className="mt-1">✅ Score ≥ 65 → taux standard (5%/an) · Score 50-64 → taux majoré (8%/an) · Score &lt; 50 → refus</p>
                 </div>
@@ -697,7 +711,7 @@ export default function JeuPage() {
                   </button>
                   <button
                     onClick={handleDemanderEmprunt}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                   >
                     🏦 Soumettre la demande
                   </button>
@@ -729,7 +743,7 @@ export default function JeuPage() {
                 </div>
                 <button
                   onClick={() => { setShowDemandeEmprunt(false); setReponseEmprunt(null); }}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition-all"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl text-sm transition-all"
                 >
                   Fermer
                 </button>

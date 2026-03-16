@@ -250,12 +250,12 @@ export const CARTES_DECISION: CarteDecision[] = [
     type: "decision",
     id: "remboursement-anticipe",
     titre: "Remboursement Anticipé",
-    description: "Remboursez intégralement votre emprunt. Économisez sur les intérêts futurs.",
+    description: "Soldez intégralement votre emprunt. Coût : frais de dossier (Services ext. +1, Tréso −1) PLUS le capital restant dû (Tréso − emprunts, Emprunts → 0). Économisez les intérêts futurs.",
     categorie: "financement",
     effetsImmédiats: [
       { poste: "servicesExterieurs", delta: 1 },
       { poste: "tresorerie", delta: -1 },
-      // Les emprunts restants sont remboursés → voir logique dans engine.ts
+      // Le capital restant dû est également débité de la trésorerie et soldé en emprunts → voir logique dans engine.ts
     ],
     effetsRecurrents: [],
   },
