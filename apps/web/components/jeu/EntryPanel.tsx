@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
 import { EntryCard, type EntryLine } from "./EntryCard";
+import { getPosteValue, nomCompte } from "./utils";
 
 export interface ActiveStep {
   titre: string;
@@ -19,6 +20,7 @@ export interface ActiveStep {
 interface EntryPanelProps {
   activeStep: ActiveStep;
   displayJoueur: Joueur;
+  baseJoueur?: Joueur;
   onApply: (id: string) => void;
   onApplyEntry?: (poste: string) => void;
   onConfirm: () => void;
@@ -38,6 +40,7 @@ interface EntryPanelProps {
 export function EntryPanel({
   activeStep,
   displayJoueur,
+  baseJoueur,
   onApply,
   onApplyEntry,
   onConfirm,
@@ -82,6 +85,27 @@ export function EntryPanel({
   const debits  = activeStep.entries.filter((e) => e.sens === "debit");
   const credits = activeStep.entries.filter((e) => e.sens === "credit");
 
+  // ── Impact par poste (dédoublonné) : avant → maintenant en temps réel ───
+  const impactRows = (() => {
+    const seen = new Set<string>();
+    const rows: Array<{
+      poste: string; label: string;
+      avant: number; actuel: number; delta: number;
+      pending: boolean;
+    }> = [];
+    for (const e of activeStep.entries) {
+      if (seen.has(e.poste)) continue;
+      seen.add(e.poste);
+      const avant  = baseJoueur ? getPosteValue(baseJoueur, e.poste) : 0;
+      const actuel = getPosteValue(displayJoueur, e.poste);
+      const allForPoste = activeStep.entries.filter((en) => en.poste === e.poste);
+      const pending = allForPoste.some((en) => !en.applied);
+      rows.push({ poste: e.poste, label: nomCompte(e.poste), avant, actuel, delta: actuel - avant, pending });
+    }
+    return rows;
+  })();
+  const impactApplied = impactRows.filter((r) => r.actuel !== r.avant).length;
+
   const sumDebits  = debits.reduce((s, e) => s + Math.abs(e.delta), 0);
   const sumCredits = credits.reduce((s, e) => s + Math.abs(e.delta), 0);
   const partieDoubleOk = Math.abs(sumDebits - sumCredits) < 0.01;
@@ -107,26 +131,51 @@ export function EntryPanel({
       {activeStep.entries.length > 0 ? (
         <div>
 
-          {/* ── Vue d'ensemble : ce qui va changer ── */}
-          {!allApplied && (
-            <div className="mb-3 bg-gray-800/60 rounded-xl border border-gray-700 overflow-hidden">
-              <div className="px-3 py-1.5 bg-gray-700/50 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ce qui va changer</span>
-                <span className="text-[10px] text-gray-500">{totalCount} écriture{totalCount > 1 ? "s" : ""}</span>
+          {/* ── Impact sur les comptes : avant → après en temps réel ── */}
+          {impactRows.length > 0 && (
+            <div className="mb-3 rounded-xl border border-gray-700 overflow-hidden bg-gray-900/70">
+              <div className="px-3 py-1.5 bg-gray-800/80 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">📊 Impact sur les comptes</span>
+                <span className={`text-[10px] font-bold tabular-nums transition-colors ${impactApplied === impactRows.length ? "text-emerald-400" : "text-indigo-400"}`}>
+                  {impactApplied}/{impactRows.length} saisis
+                </span>
               </div>
-              <div className="divide-y divide-gray-700/50">
-                {activeStep.entries.map((e) => {
-                  const isD = e.sens === "debit";
+              <div className="divide-y divide-gray-800/80">
+                {impactRows.map((row) => {
+                  const changed = row.actuel !== row.avant;
                   return (
-                    <div key={e.id} className={`flex items-center gap-2 px-3 py-1.5 ${e.applied ? "opacity-40" : ""}`}>
-                      <span className={`text-[10px] font-black w-14 shrink-0 ${isD ? "text-blue-400" : "text-orange-400"}`}>
-                        {isD ? "📤 DÉBIT" : "📥 CRÉDIT"}
+                    <div
+                      key={row.poste}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-all duration-300 ${
+                        changed ? "bg-gray-800/40" : "opacity-50"
+                      }`}
+                    >
+                      {/* Nom du compte */}
+                      <span className={`flex-1 text-[11px] truncate ${changed ? "text-gray-200 font-medium" : "text-gray-500"}`}>
+                        {row.label}
                       </span>
-                      <span className="flex-1 text-[11px] text-gray-300 truncate">{e.description}</span>
-                      <span className={`text-[11px] font-black tabular-nums shrink-0 ${e.delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                        {e.delta > 0 ? "+" : ""}{e.delta}
+                      {/* Avant */}
+                      <span className="text-[11px] tabular-nums text-gray-500 min-w-[20px] text-right">
+                        {row.avant}
                       </span>
-                      {e.applied && <span className="text-[10px] text-emerald-500">✅</span>}
+                      {/* Flèche */}
+                      <span className={`text-[10px] transition-colors ${changed ? "text-indigo-400" : "text-gray-700"}`}>→</span>
+                      {/* Maintenant */}
+                      <span className={`text-[11px] font-black tabular-nums min-w-[20px] text-right transition-all duration-300 ${
+                        row.delta > 0 ? "text-emerald-400" : row.delta < 0 ? "text-red-400" : "text-gray-500"
+                      }`}>
+                        {row.actuel}
+                      </span>
+                      {/* Delta */}
+                      <span className={`text-[10px] font-bold tabular-nums w-7 text-right ${
+                        row.delta > 0 ? "text-emerald-600" : row.delta < 0 ? "text-red-600" : "text-gray-700"
+                      }`}>
+                        {changed ? (row.delta > 0 ? `+${row.delta}` : `${row.delta}`) : "—"}
+                      </span>
+                      {/* Statut */}
+                      <span className="text-[10px] w-3 text-center">
+                        {changed ? "✓" : row.pending ? "⋯" : ""}
+                      </span>
                     </div>
                   );
                 })}

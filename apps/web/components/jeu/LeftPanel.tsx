@@ -267,6 +267,9 @@ export function LeftPanel({
           <EntryPanel
             activeStep={activeStep}
             displayJoueur={joueur}
+            baseJoueur={
+              activeStep.baseEtat?.joueurs?.[activeStep.baseEtat?.joueurActif] as import("@/lib/game-engine/types").Joueur | undefined
+            }
             onApply={onApplyEntry}
             onApplyEntry={onApplyEntryEffect}
             onConfirm={onConfirmStep}

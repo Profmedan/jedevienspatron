@@ -161,6 +161,7 @@ export function getPosteValue(j: Joueur, poste: string): number {
   if (poste === "creancesPlus1")  return j.bilan.creancesPlus1;
   if (poste === "creancesPlus2")  return j.bilan.creancesPlus2;
   if (poste === "dettes")         return j.bilan.dettes;
+  if (poste === "dettesD2")       return j.bilan.dettesD2 ?? 0;
   if (poste === "dettesFiscales") return j.bilan.dettesFiscales;
   const actif = j.bilan.actifs.find(a => (a.categorie as string) === poste);
   if (actif) return actif.valeur;
