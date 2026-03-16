@@ -8,6 +8,9 @@ import {
   IndicateursFinanciers,
   Charges,
   Produits,
+  ResultatDemandePret,
+  TAUX_INTERET_ANNUEL,
+  TAUX_INTERET_MAJORE,
 } from "@/lib/game-engine/types";
 
 // ─── TOTAUX BILAN ────────────────────────────────────────────
@@ -37,12 +40,9 @@ export function getTresorerie(joueur: Joueur): number {
 }
 
 export function getTotalPassif(joueur: Joueur): number {
-  const passifs = joueur.bilan.actifs
-    .filter((a) => a.categorie !== "tresorerie") // hors tréso
-    .reduce((s) => s, 0); // placeholder
   const passifsBruts = joueur.bilan.passifs.reduce((s, p) => s + p.valeur, 0);
   const decouvert = joueur.bilan.decouvert;
-  const dettes = joueur.bilan.dettes + joueur.bilan.dettesFiscales;
+  const dettes = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
   const resultat = getResultatNet(joueur);
   return passifsBruts + decouvert + dettes + resultat;
 }
@@ -91,7 +91,7 @@ export function verifierEquilibre(joueur: Joueur): {
 } {
   const totalActif = getTotalActif(joueur);
   const totalPassif = joueur.bilan.passifs.reduce((s, p) => s + p.valeur, 0) +
-    joueur.bilan.decouvert + joueur.bilan.dettes + joueur.bilan.dettesFiscales;
+    joueur.bilan.decouvert + joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
   const ecart = totalActif - totalPassif - getResultatNet(joueur);
   return {
     equilibre: Math.abs(ecart) < 0.001,
@@ -115,7 +115,7 @@ export function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers {
   const emprunts = joueur.bilan.passifs
     .filter((p) => p.categorie === "emprunts")
     .reduce((s, p) => s + p.valeur, 0);
-  const dettes = joueur.bilan.dettes + joueur.bilan.dettesFiscales;
+  const dettes = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
   const resultatNet = getResultatNet(joueur);
   const totalPassif =
     capitauxPropres + emprunts + dettes + joueur.bilan.decouvert + resultatNet;
@@ -159,6 +159,79 @@ export function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers {
     ratioSolvabilite,
     equilibre,
   };
+}
+
+// ─── INTÉRÊTS SUR EMPRUNT ─────────────────────────────────────
+export function calculerInterets(empruntsTotal: number, majore: boolean = false): number {
+  const taux = majore ? TAUX_INTERET_MAJORE : TAUX_INTERET_ANNUEL;
+  return Math.round(empruntsTotal * taux / 400);
+}
+
+// ─── SCORING BANCAIRE ─────────────────────────────────────────
+export function scorerDemandePret(
+  joueur: Joueur,
+  montantDemande: number
+): ResultatDemandePret {
+  const ind = calculerIndicateurs(joueur);
+  let score = 0;
+  const details: string[] = [];
+
+  const solv = ind.ratioSolvabilite;
+  if (solv >= 40) { score += 30; details.push("Solvabilité solide ✓"); }
+  else if (solv >= 30) { score += 20; details.push("Solvabilité acceptable"); }
+  else if (solv >= 20) { score += 10; details.push("Solvabilité fragile"); }
+  else { details.push("Solvabilité insuffisante ✗"); }
+
+  if (ind.resultatNet > 0) { score += 25; details.push("Résultat bénéficiaire ✓"); }
+  else if (ind.resultatNet === 0) { score += 10; details.push("Résultat nul (neutre)"); }
+  else { details.push("Résultat déficitaire ✗"); }
+
+  const treso = getTresorerie(joueur);
+  if (treso >= 5) { score += 20; details.push("Trésorerie confortable ✓"); }
+  else if (treso >= 2) { score += 10; details.push("Trésorerie limitée"); }
+  else if (treso >= 0) { score += 5; details.push("Trésorerie très faible"); }
+  else { details.push("Découvert bancaire ✗"); }
+
+  const emprunts = joueur.bilan.passifs
+    .filter((p) => p.categorie === "emprunts")
+    .reduce((s, p) => s + p.valeur, 0);
+  const tauxEndettement = ind.totalActif > 0 ? (emprunts / ind.totalActif) * 100 : 100;
+  if (tauxEndettement < 30) { score += 15; details.push("Endettement faible ✓"); }
+  else if (tauxEndettement < 50) { score += 10; details.push("Endettement modéré"); }
+  else if (tauxEndettement < 70) { score += 5; details.push("Endettement élevé"); }
+  else { details.push("Endettement excessif ✗"); }
+
+  const ratioPret = ind.totalActif > 0 ? (montantDemande / ind.totalActif) * 100 : 100;
+  if (ratioPret <= 10) { score += 10; details.push("Montant raisonnable ✓"); }
+  else if (ratioPret <= 20) { score += 5; details.push("Montant acceptable"); }
+  else { details.push("Montant trop élevé ✗"); }
+
+  const accepte = score >= 50;
+  const tauxMajore = accepte && score < 65;
+
+  let raison: string;
+  if (!accepte) {
+    raison = `Score ${score}/100 — insuffisant (min 50). ${details.filter(d => d.includes("✗")).join(", ")}.`;
+  } else if (tauxMajore) {
+    raison = `Score ${score}/100 — accordé avec taux majoré (8%/an). ${details.filter(d => !d.includes("✓")).join(", ")}.`;
+  } else {
+    raison = `Score ${score}/100 — accordé au taux standard (5%/an). ${details.filter(d => d.includes("✓")).join(", ")}.`;
+  }
+
+  return { accepte, montantAccorde: accepte ? montantDemande : 0, tauxMajore, score, raison };
+}
+
+// ─── VÉRIFICATION FAILLITE (PROGRESSIVE) ─────────────────────
+export function verifierFailliteProgressive(joueur: Joueur): { enFaillite: boolean; raison?: string } {
+  const capitauxPropres = joueur.bilan.passifs
+    .filter((p) => p.categorie === "capitaux")
+    .reduce((s, p) => s + p.valeur, 0);
+  const resultatNet = getResultatNet(joueur);
+  const capitauxTotaux = capitauxPropres + resultatNet;
+  if (capitauxTotaux < 0) {
+    return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };
+  }
+  return { enFaillite: false };
 }
 
 // ─── SOLDES INTERMÉDIAIRES DE GESTION (SIG) ──────────────────

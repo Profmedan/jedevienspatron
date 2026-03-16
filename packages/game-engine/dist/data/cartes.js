@@ -1,7 +1,7 @@
 "use strict";
 // ============================================================
-// KICLEPATRON — Catalogue complet des cartes
-// Source : KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Catalogue complet des cartes
+// Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CARTES_EVENEMENTS = exports.CARTES_DECISION = exports.CARTES_CLIENTS = exports.CARTES_COMMERCIAUX = void 0;

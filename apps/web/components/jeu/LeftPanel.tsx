@@ -219,6 +219,8 @@ interface LeftPanelProps {
   modeRapide?: boolean; setModeRapide?: (val: boolean) => void;
   modalEtapeEnAttente?: number | null;
   onCloseModal?: () => void;
+  /** Callback pour ouvrir le modal de demande d'emprunt bancaire */
+  onDemanderEmprunt?: () => void;
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
@@ -232,6 +234,7 @@ export function LeftPanel({
   onLaunchStep, journal,
   subEtape6 = "recrutement", modeRapide = false, setModeRapide,
   modalEtapeEnAttente = null, onCloseModal,
+  onDemanderEmprunt,
 }: LeftPanelProps) {
   const [showJournal, setShowJournal] = useState(false);
   const isLocked = modalEtapeEnAttente !== null;
@@ -418,6 +421,27 @@ export function LeftPanel({
           )}
         </div>
       </div>
+
+      {/* 4b. Emprunt bancaire (toujours disponible) */}
+      {onDemanderEmprunt && (
+        <div className="bg-blue-950/30 rounded-xl border border-blue-800/50 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🏦</span>
+              <span className="text-xs font-bold text-blue-300">Financement bancaire</span>
+            </div>
+            <button
+              onClick={onDemanderEmprunt}
+              className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors"
+            >
+              Demander un prêt
+            </button>
+          </div>
+          <p className="text-[10px] text-blue-500/80 leading-tight mt-1">
+            Le banquier évalue votre solvabilité, résultat, trésorerie et endettement.
+          </p>
+        </div>
+      )}
 
       {/* 5. Mode Rapide */}
       {tourActuel >= 3 && setModeRapide && (

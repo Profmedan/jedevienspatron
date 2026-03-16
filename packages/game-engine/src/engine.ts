@@ -14,10 +14,12 @@ import {
   CarteEvenement,
   NomEntreprise,
   ResultatAction,
+  ResultatDemandePret,
   EtapeTour,
   DECOUVERT_MAX,
   CHARGES_FIXES_PAR_TOUR,
   REMBOURSEMENT_EMPRUNT_PAR_TOUR,
+  MONTANTS_EMPRUNT,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
@@ -28,6 +30,8 @@ import {
   verifierEquilibre,
   verifierFaillite,
   calculerScore,
+  calculerInterets,
+  scorerDemandePret,
 } from "./calculators";
 
 // ─── HELPERS INTERNES ────────────────────────────────────────
@@ -49,6 +53,7 @@ function creerBilanVierge(): Bilan {
     creancesPlus1: 0,
     creancesPlus2: 0,
     dettes: 0,
+    dettesD2: 0,
     dettesFiscales: 0,
   };
 }
@@ -246,8 +251,15 @@ export function appliquerEtape0(
 
   // 2. Paiement dettes fournisseurs D+1
   if (joueur.bilan.dettes > 0) {
-    push("tresorerie", -joueur.bilan.dettes, "Paiement dettes fournisseurs");
-    push("dettes", -joueur.bilan.dettes, "Dettes fournisseurs soldées");
+    push("tresorerie", -joueur.bilan.dettes, "Paiement dettes fournisseurs D+1");
+    push("dettes", -joueur.bilan.dettes, "Dettes fournisseurs D+1 soldées");
+  }
+
+  // 2b. Avancement dettes D+2 → D+1 (les dettes créées il y a 2 trimestres deviennent exigibles)
+  if ((joueur.bilan.dettesD2 ?? 0) > 0) {
+    const montantD2 = joueur.bilan.dettesD2!;
+    push("dettes", montantD2, "Dettes fournisseurs D+2 → D+1 (deviennent exigibles)");
+    push("dettesD2", -montantD2, "Dettes D+2 avancées d'un trimestre");
   }
 
   // 3. Paiement dettes fiscales D+1
@@ -256,11 +268,22 @@ export function appliquerEtape0(
     push("dettesFiscales", -joueur.bilan.dettesFiscales, "Dettes fiscales soldées");
   }
 
-  // 4. Remboursement emprunt (-1 par tour si emprunts > 0)
-  const emprunts = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
-  if (emprunts && emprunts.valeur >= REMBOURSEMENT_EMPRUNT_PAR_TOUR) {
+  // 4. Remboursement emprunt (-1 par tour si emprunts > 0) + intérêts auto
+  const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
+  const empruntsTotal = empruntsPoste?.valeur ?? 0;
+  if (empruntsPoste && empruntsTotal >= REMBOURSEMENT_EMPRUNT_PAR_TOUR) {
     push("tresorerie", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Remboursement annuité emprunt");
     push("emprunts", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Emprunt réduit d'1 unité");
+    // Intérêts trimestriels : ROUND(emprunts × taux/400)
+    // Taux majoré (8%/an) si la situation est fragile (score bancaire < 65)
+    const { score: scoreBancaire } = scorerDemandePret(joueur, 0);
+    const tauxMajore = scoreBancaire < 65;
+    const interets = calculerInterets(empruntsTotal, tauxMajore);
+    if (interets > 0) {
+      const tauxLabel = tauxMajore ? "8%/an (situation fragile)" : "5%/an";
+      push("chargesInteret", interets, `Intérêts trimestriels sur emprunt (${tauxLabel}) : +${interets}`);
+      push("tresorerie", -interets, `Paiement intérêts : -${interets} trésorerie`);
+    }
   }
 
   // 5. Charges fixes obligatoires (+2 Services ext., -2 Trésorerie)
@@ -318,7 +341,13 @@ export function appliquerAchatMarchandises(
   if (modePaiement === "tresorerie") {
     push("tresorerie", -quantite, "Paiement immédiat des achats");
   } else {
-    push("dettes", quantite, "Achat à crédit : dette fournisseur D+1");
+    // D+1 (60%) ou D+2 (40%) aléatoire selon délai fournisseur
+    const estD2 = Math.random() < 0.40;
+    if (estD2) {
+      push("dettesD2", quantite, "Achat à crédit : dette fournisseur D+2 (délai 2 trimestres)");
+    } else {
+      push("dettes", quantite, "Achat à crédit : dette fournisseur D+1 (délai 1 trimestre)");
+    }
   }
 
   return { succes: true, modifications };
@@ -688,6 +717,42 @@ export function avancerEtape(etat: EtatJeu): void {
     }
     etat.etapeTour = 0;
   }
+}
+
+// ─── DEMANDE D'EMPRUNT BANCAIRE ──────────────────────────────
+/**
+ * Soumet une demande de prêt au banquier.
+ * Le banquier score la situation financière du joueur sur 100 points.
+ * - Score >= 65 : accepté, taux standard 5%/an
+ * - Score 50-64 : accepté avec taux majoré 8%/an
+ * - Score < 50  : refusé
+ *
+ * Si le prêt est accordé, les fonds sont versés immédiatement :
+ *   DÉBIT Trésorerie / CRÉDIT Emprunts
+ */
+export function demanderEmprunt(
+  etat: EtatJeu,
+  joueurIdx: number,
+  montant: number
+): { resultat: ResultatDemandePret; modifications: ResultatAction["modifications"] } {
+  const joueur = etat.joueurs[joueurIdx];
+  const resultat = scorerDemandePret(joueur, montant);
+  const modifications: ResultatAction["modifications"] = [];
+
+  if (!resultat.accepte) {
+    return { resultat, modifications };
+  }
+
+  const push = (poste: string, delta: number, explication: string) => {
+    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
+    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
+  };
+
+  const tauxLabel = resultat.tauxMajore ? "8%/an (taux majoré)" : "5%/an (taux standard)";
+  push("tresorerie", montant, `Versement emprunt bancaire : +${montant} trésorerie`);
+  push("emprunts", montant, `Nouvel emprunt bancaire de ${montant} — taux ${tauxLabel}`);
+
+  return { resultat, modifications };
 }
 
 // ─── PIOCHE CLIENTS (générée par les commerciaux) ───────────

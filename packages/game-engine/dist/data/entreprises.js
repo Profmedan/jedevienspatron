@@ -1,7 +1,7 @@
 "use strict";
 // ============================================================
-// KICLEPATRON — Données des 4 entreprises
-// Source : KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Données des 4 entreprises
+// Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // Bilan initial toujours équilibré : Actif = Passif = 16
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });

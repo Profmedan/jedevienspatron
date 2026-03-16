@@ -1,7 +1,7 @@
 "use strict";
 // ============================================================
-// KICLEPATRON — Types TypeScript du moteur de jeu
-// Extraits fidèlement de KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Types TypeScript du moteur de jeu
+// Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = void 0;

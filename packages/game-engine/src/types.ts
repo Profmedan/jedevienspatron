@@ -27,8 +27,10 @@ export interface Bilan {
   creancesPlus1: number;
   /** Créances clients à encaisser dans 2 tours */
   creancesPlus2: number;
-  /** Dettes fournisseurs D+1 */
+  /** Dettes fournisseurs D+1 (payables au prochain trimestre) */
   dettes: number;
+  /** Dettes fournisseurs D+2 (payables dans 2 trimestres, 40% des achats à crédit) */
+  dettesD2: number;
   /** Dettes fiscales D+1 */
   dettesFiscales: number;
 }
@@ -292,3 +294,19 @@ export const NB_TOURS_PAR_AN = 4;
 export const NB_TOURS_MAX = 4;
 export const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export const SCORE_MULTIPLICATEUR_IMMO = 2;
+
+/** Taux d'intérêt annuel sur les emprunts (5%) */
+export const TAUX_INTERET_ANNUEL = 5;
+/** Taux majoré appliqué si situation financière fragile (8%/an) */
+export const TAUX_INTERET_MAJORE = 8;
+/** Montants disponibles pour un emprunt bancaire */
+export const MONTANTS_EMPRUNT = [5, 8, 12, 16, 20] as const;
+
+/** Résultat d'une demande de prêt bancaire */
+export interface ResultatDemandePret {
+  accepte: boolean;
+  montantAccorde: number;
+  tauxMajore: boolean; // si fragile : taux 8%/an au lieu de 5%/an
+  score: number;       // score bancaire 0-100
+  raison: string;      // explication courte
+}

@@ -22,6 +22,12 @@ export interface QCMEtape {
   questions: QuestionQCM[]; // pool d'au moins 6 questions — 2 séries de 3 par tour
 }
 
+/** 4 questions tirées pour un trimestre donné */
+export interface QCMTrimestre {
+  tourActuel: number;
+  questions: QuestionQCM[];
+}
+
 // Clé = etat.etapeTour du moteur de jeu (0-8), correspondance exacte avec ETAPE_INFO
 export const MODALES_ETAPES: Record<number, ModalEtape> = {
   // ── étape 0 : Charges fixes & Dotation aux amortissements ───────────────────
@@ -999,3 +1005,27 @@ export const QCM_ETAPES: Record<number, QCMEtape> = {
     ],
   },
 };
+
+// ─── POOL GLOBAL QCM (toutes étapes confondues) ───────────────────────────────
+/**
+ * Agrège toutes les questions QCM de tous les étapes en un seul pool global.
+ * Utilisé pour les QCM de fin de trimestre (4 questions tirées au sort).
+ */
+export const QCM_POOL_GLOBAL: QuestionQCM[] = Object.values(QCM_ETAPES).flatMap(
+  (qcmEtape) => qcmEtape.questions
+);
+
+/**
+ * Tire 4 questions au hasard depuis le pool global.
+ * La sélection est effectuée de manière pseudo-aléatoire à chaque appel.
+ * Utiliser cette fonction dans le composant React pour obtenir les 4 questions du trimestre.
+ */
+export function tirerQuestionsTrimestriel(): QuestionQCM[] {
+  const pool = [...QCM_POOL_GLOBAL];
+  const selection: QuestionQCM[] = [];
+  while (selection.length < 4 && pool.length > 0) {
+    const idx = Math.floor(Math.random() * pool.length);
+    selection.push(pool.splice(idx, 1)[0]);
+  }
+  return selection;
+}

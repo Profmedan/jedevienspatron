@@ -1,7 +1,7 @@
 "use strict";
 // ============================================================
-// KICLEPATRON — Calculateurs financiers
-// Extraits de KICLEPATRON_v2.html — Pierre Médan
+// JEDEVIENSPATRON — Calculateurs financiers
+// Extraits de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTotalActif = getTotalActif;

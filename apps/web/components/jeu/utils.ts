@@ -17,6 +17,7 @@ export const PASSIF_KEYS = [
   "capitaux",
   "emprunts",
   "dettes",
+  "dettesD2",     // Dettes fournisseurs D+2 → PASSIF
   "dettesFiscales",
   // Le découvert bancaire est une dette envers la banque → PASSIF
   // (getTotalPassif l'inclut déjà côté passif dans calculators.ts)

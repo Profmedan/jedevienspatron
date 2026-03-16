@@ -18,6 +18,7 @@ import {
   DECOUVERT_MAX,
   CHARGES_FIXES_PAR_TOUR,
   REMBOURSEMENT_EMPRUNT_PAR_TOUR,
+  ResultatDemandePret,
 } from "@/lib/game-engine/types";
 import { ENTREPRISES } from "@/lib/game-engine/data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "@/lib/game-engine/data/cartes";
@@ -28,6 +29,7 @@ import {
   verifierEquilibre,
   verifierFaillite,
   calculerScore,
+  scorerDemandePret,
 } from "@/lib/game-engine/calculators";
 
 // ─── HELPERS INTERNES ────────────────────────────────────────
@@ -49,6 +51,7 @@ function creerBilanVierge(): Bilan {
     creancesPlus1: 0,
     creancesPlus2: 0,
     dettes: 0,
+    dettesD2: 0,
     dettesFiscales: 0,
   };
 }
@@ -787,6 +790,42 @@ export function avancerEtape(etat: EtatJeu): void {
     }
     etat.etapeTour = 0;
   }
+}
+
+// ─── DEMANDE D'EMPRUNT BANCAIRE ──────────────────────────────
+
+/**
+ * Le banquier score la situation financière du joueur sur 100 points.
+ * - Score >= 65 : accepté, taux standard 5%/an
+ * - Score 50-64 : accepté avec taux majoré 8%/an
+ * - Score < 50  : refusé
+ *
+ * Si le prêt est accordé, les fonds sont versés immédiatement :
+ *   DÉBIT Trésorerie / CRÉDIT Emprunts
+ */
+export function demanderEmprunt(
+  etat: EtatJeu,
+  joueurIdx: number,
+  montant: number
+): { resultat: ResultatDemandePret; modifications: ResultatAction["modifications"] } {
+  const joueur = etat.joueurs[joueurIdx];
+  const resultat = scorerDemandePret(joueur, montant);
+  const modifications: ResultatAction["modifications"] = [];
+
+  if (!resultat.accepte) {
+    return { resultat, modifications };
+  }
+
+  const push = (poste: string, delta: number, explication: string) => {
+    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
+    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
+  };
+
+  const tauxLabel = resultat.tauxMajore ? "8%/an (taux majoré)" : "5%/an (taux standard)";
+  push("tresorerie", montant, `Versement emprunt bancaire : +${montant} trésorerie`);
+  push("emprunts", montant, `Nouvel emprunt bancaire de ${montant} — taux ${tauxLabel}`);
+
+  return { resultat, modifications };
 }
 
 // ─── PIOCHE CLIENTS (générée par les commerciaux) ───────────

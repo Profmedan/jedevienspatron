@@ -1,6 +1,6 @@
 "use strict";
 // ============================================================
-// KICLEPATRON — Point d'entrée du package game-engine
+// JEDEVIENSPATRON — Point d'entrée du package game-engine
 // ============================================================
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;

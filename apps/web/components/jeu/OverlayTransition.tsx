@@ -6,6 +6,7 @@ import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
 import { calculerIndicateurs } from "@/lib/game-engine/calculators";
+import { QuestionQCM } from "@/lib/game-engine/data/pedagogie";
 
 interface TransitionInfo {
   from: number;
@@ -23,6 +24,12 @@ interface OverlayTransitionProps {
   transitionInfo: TransitionInfo;
   joueurs: Joueur[];
   onContinue: () => void;
+  /** 4 questions QCM à poser en fin de trimestre */
+  qcmQuestions?: QuestionQCM[];
+  /** Score QCM final (défini après que le joueur ait répondu à toutes les questions) */
+  qcmScore?: number;
+  /** Callback appelé quand le joueur termine le QCM */
+  onQCMTermine?: (score: number) => void;
 }
 
 function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
@@ -125,14 +132,167 @@ function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
  * Overlay affiché à la fin de chaque trimestre
  * Permet de visualiser le bilan, CR, indicateurs avant de commencer le nouveau trimestre
  */
+// ─── Composant QCM Inline ────────────────────────────────────────────────────
+const LETTRES_QCM = ["A", "B", "C"] as const;
+
+function QCMInline({
+  questions,
+  onTermine,
+}: {
+  questions: QuestionQCM[];
+  onTermine: (score: number) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const [reponse, setReponse] = useState<number | null>(null);
+  const [aRepondu, setARepondu] = useState(false);
+  const [score, setScore] = useState(0);
+  const [termine, setTermine] = useState(false);
+  const [scoreFinale, setScoreFinale] = useState(0);
+
+  if (termine) {
+    const bonus = scoreFinale === 4
+      ? "🎁 +1 Revenu exceptionnel (score parfait !)"
+      : scoreFinale === 3
+      ? "💰 +1 Trésorerie (3 bonnes réponses)"
+      : null;
+    return (
+      <div className="space-y-4">
+        <div className={`rounded-2xl p-5 text-center border-2 ${
+          scoreFinale >= 3 ? "bg-emerald-950/30 border-emerald-600" : "bg-gray-800 border-gray-600"
+        }`}>
+          <div className="text-4xl mb-2">{scoreFinale === 4 ? "🏆" : scoreFinale === 3 ? "🎉" : scoreFinale === 2 ? "😐" : "📚"}</div>
+          <div className="text-2xl font-black text-white mb-1">{scoreFinale} / 4</div>
+          <div className="text-sm text-gray-300">
+            {scoreFinale === 4 && "Score parfait — excellent !"}
+            {scoreFinale === 3 && "Très bien — presque parfait !"}
+            {scoreFinale === 2 && "Correct — continuez à apprendre !"}
+            {scoreFinale < 2 && "Entraînez-vous encore — vous pouvez y arriver !"}
+          </div>
+          {bonus && (
+            <div className="mt-3 bg-amber-950/40 border border-amber-500 rounded-xl px-3 py-2 text-amber-300 text-sm font-bold">
+              {bonus}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const q = questions[index];
+  const estBonne = reponse === q.bonneReponse;
+  const estDerniere = index + 1 >= questions.length;
+
+  function choisir(idx: number) {
+    if (aRepondu) return;
+    setReponse(idx);
+    setARepondu(true);
+  }
+
+  function suivante() {
+    const newScore = score + (estBonne ? 1 : 0);
+    if (estDerniere) {
+      setTermine(true);
+      setScoreFinale(newScore);
+      onTermine(newScore);
+      return;
+    }
+    setScore(newScore);
+    setIndex(i => i + 1);
+    setReponse(null);
+    setARepondu(false);
+  }
+
+  function couleur(idx: number) {
+    if (!aRepondu) {
+      return reponse === idx
+        ? "bg-indigo-900/60 border-indigo-400 text-indigo-200"
+        : "bg-gray-800 border-gray-600 text-gray-300 hover:border-indigo-500 hover:bg-indigo-950/30";
+    }
+    if (idx === q.bonneReponse) return "bg-emerald-900/60 border-emerald-500 text-emerald-200";
+    if (idx === reponse) return "bg-red-900/60 border-red-500 text-red-300";
+    return "bg-gray-800/50 border-gray-700 text-gray-500";
+  }
+
+  function explicationFausse(): string {
+    if (reponse === null || estBonne) return "";
+    const fausses = [0, 1, 2].filter(i => i !== q.bonneReponse);
+    const pos = fausses.indexOf(reponse);
+    return pos >= 0 ? q.explicationFausses[pos] ?? "" : "";
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Progression */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+          🧠 Quiz trimestriel
+        </span>
+        <div className="flex gap-1">
+          {questions.map((_, i) => (
+            <div key={i} className={`h-2 w-7 rounded-full transition-colors ${
+              i < index ? "bg-emerald-500" : i === index ? "bg-indigo-400" : "bg-gray-700"
+            }`} />
+          ))}
+        </div>
+        <span className="text-xs font-black text-indigo-300">{index + 1} / {questions.length}</span>
+      </div>
+
+      {/* Question */}
+      <p className="text-sm text-white leading-relaxed font-medium">{q.question}</p>
+
+      {/* Choix */}
+      <div className="space-y-2">
+        {q.choix.map((choix, idx) => (
+          <button
+            key={idx}
+            onClick={() => choisir(idx)}
+            disabled={aRepondu}
+            className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${couleur(idx)}`}
+          >
+            <span className="font-black mr-2 text-indigo-300">{LETTRES_QCM[idx]}.</span>
+            {choix}
+            {aRepondu && idx === q.bonneReponse && <span className="ml-2 text-emerald-400">✓</span>}
+            {aRepondu && idx === reponse && idx !== q.bonneReponse && <span className="ml-2 text-red-400">✗</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Explication */}
+      {aRepondu && (
+        <div className={`rounded-xl p-3 border text-xs ${estBonne ? "bg-emerald-950/40 border-emerald-700 text-emerald-200" : "bg-red-950/40 border-red-700 text-red-200"}`}>
+          <p className="font-bold mb-1">{estBonne ? "✅ Bonne réponse !" : "❌ Pas tout à fait…"}</p>
+          <p className="leading-relaxed text-gray-300">{q.explicationBonne}</p>
+          {!estBonne && explicationFausse() && (
+            <p className="mt-1 text-gray-500 italic">{explicationFausse()}</p>
+          )}
+        </div>
+      )}
+
+      {/* Bouton suivant */}
+      {aRepondu && (
+        <button
+          onClick={suivante}
+          className="w-full py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors text-sm"
+        >
+          {estDerniere ? "Voir mon score →" : "Question suivante →"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── OverlayTransition ───────────────────────────────────────────────────────
 export function OverlayTransition({
   transitionInfo,
   joueurs,
   onContinue,
+  qcmQuestions,
+  qcmScore,
+  onQCMTermine,
 }: OverlayTransitionProps) {
   const [activeTab, setActiveTab] = useState<
-    "analyse" | "indicateurs" | "bilan" | "cr"
-  >("analyse");
+    "analyse" | "indicateurs" | "bilan" | "cr" | "quiz"
+  >(qcmQuestions && qcmQuestions.length > 0 ? "quiz" : "analyse");
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
   const estClotureFiscale = transitionInfo.from % 4 === 0;
   const joueur = joueurs[0]; // Pour affichage bilan/CR
@@ -167,6 +327,9 @@ export function OverlayTransition({
         <div className="flex border-b border-gray-700 bg-gray-800 px-4 gap-0.5 overflow-x-auto shrink-0">
           {(
             [
+              ...(qcmQuestions && qcmQuestions.length > 0
+                ? [["quiz", qcmScore !== undefined ? `🧠 Quiz ${qcmScore}/4` : "🧠 Quiz"]] as const
+                : []),
               ["analyse", "📊 Analyse"],
               ["indicateurs", "📊 Indicateurs"],
               ["bilan", "📋 Bilan"],
@@ -175,7 +338,7 @@ export function OverlayTransition({
           ).map(([tab, label]) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActiveTab(tab as typeof activeTab)}
               className={`px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
                 activeTab === tab
                   ? "border-indigo-500 text-indigo-300 bg-gray-900"
@@ -282,6 +445,14 @@ export function OverlayTransition({
             </div>
           )}
 
+          {activeTab === "quiz" && qcmQuestions && qcmQuestions.length > 0 && (
+            <QCMInline
+              questions={qcmQuestions}
+              onTermine={(score) => {
+                onQCMTermine?.(score);
+              }}
+            />
+          )}
           {activeTab === "indicateurs" && <IndicateursPanel joueur={joueur} />}
           {activeTab === "bilan" && <BilanPanel joueur={joueur} highlightedPoste={null} />}
           {activeTab === "cr" && (

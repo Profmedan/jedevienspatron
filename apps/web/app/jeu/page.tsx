@@ -8,7 +8,7 @@ import {
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, tirerCartesDecision, acheterCarteDecision,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
-  obtenirCarteRecrutement, ResultatFinTour,
+  obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour,
 } from "@/lib/game-engine/engine";
 import {
   calculerScore, getTresorerie, calculerIndicateurs,
@@ -21,8 +21,8 @@ import {
   getSens, getPosteValue, applyDeltaToJoueur,
   ACTIF_KEYS, PASSIF_KEYS, CHARGES_KEYS, PRODUITS_KEYS,
 } from "@/components/jeu";
-import QCMEtape from "@/components/jeu/QCMEtape";
-import { QCM_ETAPES } from "@/lib/game-engine/data/pedagogie";
+import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
+import { ResultatDemandePret, MONTANTS_EMPRUNT } from "@/lib/game-engine/types";
 
 // ─── UTILITAIRE ───────────────────────────────────────────────────────────────
 
@@ -126,14 +126,17 @@ export default function JeuPage() {
   // Mode Rapide : les étapes automatiques (0,2,3,4,5) pré-cochent toutes leurs écritures
   const [modeRapide, setModeRapide] = useState(false);
 
-  // ─ Pédagogie : modal d'explication + QCM ──────────────────────────────────
-  // etapesPedagoVues : étapes déjà expliquées ce tour (évite de ré-afficher)
+  // ─ Pédagogie : modal d'explication + QCM fin de trimestre ──────────────────
   const [etapesPedagoVues, setEtapesPedagoVues] = useState<Set<number>>(new Set());
-  // modalEtapeEnAttente : numéro d'étape dont la modal doit s'afficher (null = aucune)
-  // Valeur définie DANS le même batch que setEtat → la modal s'affiche dès le 1er rendu
   const [modalEtapeEnAttente, setModalEtapeEnAttente] = useState<number | null>(null);
-  const [showQCM, setShowQCM] = useState(false);
-  const [etapeQCMEnCours, setEtapeQCMEnCours] = useState<number | null>(null);
+  // QCM trimestriel : 4 questions tirées à la fin de chaque trimestre
+  const [qcmTrimestreQuestions, setQcmTrimestreQuestions] = useState<QuestionQCM[] | undefined>(undefined);
+  const [qcmTrimestreScore, setQcmTrimestreScore] = useState<number | undefined>(undefined);
+
+  // ─ Emprunt bancaire ───────────────────────────────────────────────────────
+  const [showDemandeEmprunt, setShowDemandeEmprunt] = useState(false);
+  const [montantEmpruntChoisi, setMontantEmpruntChoisi] = useState<number>(MONTANTS_EMPRUNT[1]);
+  const [reponseEmprunt, setReponseEmprunt] = useState<ResultatDemandePret | null>(null);
 
   // ─ Supabase / room code ───────────────────────────────────────────────────
   const [roomCode, setRoomCode]   = useState<string | null>(null);
@@ -306,12 +309,6 @@ export default function JeuPage() {
     setRecentModifications([]);
     // Réinitialiser la sous-étape après la validation de l'investissement (6b)
     if (etapeAvantAvancement === 6) setSubEtape6("recrutement");
-
-    // Déclencher le QCM si disponible pour cette étape
-    if (QCM_ETAPES[etapeAvantAvancement]) {
-      setEtapeQCMEnCours(etapeAvantAvancement);
-      setShowQCM(true);
-    }
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -405,6 +402,10 @@ export default function JeuPage() {
         setEtapesPedagoVues(prev => new Set(prev).add(0));
       }
       setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
+      // Tirer 4 questions QCM pour ce trimestre et les passer à l'overlay
+      const questions = tirerQuestionsTrimestriel();
+      setQcmTrimestreQuestions(questions);
+      setQcmTrimestreScore(undefined);
       setTourTransition({ from: oldTour, to: next.tourActuel });
     } else {
       avancerEtape(next);
@@ -416,6 +417,52 @@ export default function JeuPage() {
         setEtapesPedagoVues(prev => new Set(prev).add(0));
       }
       setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
+    }
+  }
+
+  // ─ QCM trimestriel : bonus ────────────────────────────────────────────────
+  function handleQCMTermine(score: number) {
+    if (!etat) return;
+    setQcmTrimestreScore(score);
+    // Appliquer bonus selon le score
+    if (score >= 3) {
+      const next = cloneEtat(etat);
+      const idx = next.joueurActif;
+      const joueurBonus = next.joueurs[idx];
+      if (score === 4) {
+        // Score parfait : +1 Revenu exceptionnel
+        const { ancienneValeur, nouvelleValeur } = { ancienneValeur: joueurBonus.compteResultat.produits.revenusExceptionnels, nouvelleValeur: joueurBonus.compteResultat.produits.revenusExceptionnels + 1 };
+        joueurBonus.compteResultat.produits.revenusExceptionnels += 1;
+        console.log(`[QCM 4/4] Bonus +1 revenu exceptionnel (${ancienneValeur} → ${nouvelleValeur})`);
+      } else {
+        // 3/4 : +1 Trésorerie
+        const tresoActif = joueurBonus.bilan.actifs.find(a => a.categorie === "tresorerie");
+        if (tresoActif) {
+          tresoActif.valeur += 1;
+          console.log(`[QCM 3/4] Bonus +1 trésorerie`);
+        }
+      }
+      setEtat({ ...next });
+    }
+  }
+
+  // ─ Emprunt bancaire ───────────────────────────────────────────────────────
+  function handleDemanderEmprunt() {
+    if (!etat) return;
+    const next = cloneEtat(etat);
+    const { resultat, modifications } = demanderEmprunt(next, next.joueurActif, montantEmpruntChoisi);
+    setReponseEmprunt(resultat);
+    if (resultat.accepte) {
+      setEtat({ ...next });
+      // Ajouter au journal
+      addToJournal(next, modifications.map((m, i) => ({
+        id: `emprunt_${i}`,
+        poste: m.poste,
+        delta: m.nouvelleValeur - m.ancienneValeur,
+        description: m.explication,
+        applied: true,
+        sens: m.nouvelleValeur - m.ancienneValeur > 0 ? "credit" as const : "debit" as const,
+      })), 99);
     }
   }
 
@@ -589,26 +636,107 @@ export default function JeuPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
 
-      {/* ─── QCM (après validation d'étape) ─── */}
-      {showQCM && etapeQCMEnCours !== null && (
-        <QCMEtape
-          etape={etapeQCMEnCours}
-          tourActuel={etat.tourActuel}
-          onTermine={(score) => {
-            setShowQCM(false);
-            setEtapeQCMEnCours(null);
-            console.log(`QCM étape ${etapeQCMEnCours} : ${score}/3`);
-          }}
-        />
-      )}
-
-      {/* ─── OVERLAYS ─── */}
+      {/* ─── OVERLAY TRANSITION (fin de trimestre) ─── */}
       {tourTransition && (
         <OverlayTransition
           transitionInfo={tourTransition}
           joueurs={etat.joueurs}
-          onContinue={() => setTourTransition(null)}
+          qcmQuestions={qcmTrimestreQuestions}
+          qcmScore={qcmTrimestreScore}
+          onQCMTermine={handleQCMTermine}
+          onContinue={() => {
+            setTourTransition(null);
+            setQcmTrimestreQuestions(undefined);
+            setQcmTrimestreScore(undefined);
+          }}
         />
+      )}
+
+      {/* ─── MODAL EMPRUNT BANCAIRE ─── */}
+      {showDemandeEmprunt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 rounded-3xl shadow-2xl max-w-md w-full border border-indigo-700 p-6">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-2">🏦</div>
+              <h2 className="text-xl font-black text-white">Demande de prêt bancaire</h2>
+              <p className="text-sm text-gray-400 mt-1">Le banquier évalue votre situation financière</p>
+            </div>
+
+            {!reponseEmprunt ? (
+              <>
+                <div className="mb-4">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                    Montant souhaité
+                  </label>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {MONTANTS_EMPRUNT.map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setMontantEmpruntChoisi(m)}
+                        className={`px-4 py-2 rounded-xl font-bold text-sm border-2 transition-all ${
+                          montantEmpruntChoisi === m
+                            ? "bg-indigo-600 border-indigo-400 text-white"
+                            : "bg-gray-800 border-gray-600 text-gray-300 hover:border-indigo-500"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-indigo-950/40 border border-indigo-800 rounded-xl p-3 mb-4 text-xs text-indigo-300">
+                  <p>📊 Le banquier analyse : solvabilité, résultat, trésorerie, taux d&apos;endettement, montant demandé.</p>
+                  <p className="mt-1">✅ Score ≥ 65 → taux standard (5%/an) · Score 50-64 → taux majoré (8%/an) · Score &lt; 50 → refus</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowDemandeEmprunt(false); setReponseEmprunt(null); }}
+                    className="flex-1 py-2.5 border border-gray-600 rounded-xl text-gray-400 text-sm hover:bg-gray-800 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleDemanderEmprunt}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    🏦 Soumettre la demande
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className={`rounded-2xl p-4 text-center border-2 ${
+                  reponseEmprunt.accepte ? "bg-emerald-950/40 border-emerald-600" : "bg-red-950/40 border-red-600"
+                }`}>
+                  <div className="text-3xl mb-2">{reponseEmprunt.accepte ? "✅" : "❌"}</div>
+                  <div className="text-lg font-black text-white mb-1">
+                    {reponseEmprunt.accepte
+                      ? `Prêt accordé : +${reponseEmprunt.montantAccorde} trésorerie`
+                      : "Prêt refusé"}
+                  </div>
+                  <div className="text-xs text-gray-300">{reponseEmprunt.raison}</div>
+                  {reponseEmprunt.accepte && reponseEmprunt.tauxMajore && (
+                    <div className="mt-2 bg-amber-950/40 border border-amber-600 rounded-xl px-3 py-2 text-amber-300 text-xs">
+                      ⚠️ Taux majoré (8%/an) appliqué — situation financière fragile
+                    </div>
+                  )}
+                </div>
+                <div className="bg-gray-800/60 rounded-xl px-3 py-2 text-center">
+                  <span className="text-xs text-gray-400">Score bancaire : </span>
+                  <span className={`text-sm font-black ${reponseEmprunt.score >= 65 ? "text-emerald-400" : reponseEmprunt.score >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                    {reponseEmprunt.score} / 100
+                  </span>
+                </div>
+                <button
+                  onClick={() => { setShowDemandeEmprunt(false); setReponseEmprunt(null); }}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition-all"
+                >
+                  Fermer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
       {failliteInfo && (
         <OverlayFaillite
@@ -663,6 +791,7 @@ export default function JeuPage() {
           setModeRapide={setModeRapide}
           modalEtapeEnAttente={modalEtapeEnAttente}
           onCloseModal={() => setModalEtapeEnAttente(null)}
+          onDemanderEmprunt={() => { setReponseEmprunt(null); setShowDemandeEmprunt(true); }}
         />
 
         <MainContent

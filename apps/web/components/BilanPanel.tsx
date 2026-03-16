@@ -458,19 +458,30 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
             />
           ))}
 
-          {(joueur.bilan.dettes > 0 || joueur.bilan.dettesFiscales > 0) && (
+          {(joueur.bilan.dettes > 0 || (joueur.bilan.dettesD2 ?? 0) > 0 || joueur.bilan.dettesFiscales > 0) && (
             <>
               <SectionHeader label="Dettes (court terme)" color={TOOLTIPS.dettes.couleur} />
               {/* Compte unique 401 — source de vérité : bilan.dettes (champ direct mis à jour par le moteur) */}
               {joueur.bilan.dettes > 0 && (
                 <TooltipPoste
-                  label="Dettes fournisseurs"
+                  label="Dettes fournisseurs D+1"
                   value={joueur.bilan.dettes}
                   color={TOOLTIPS.dettes.couleur}
                   categorie="dettes"
                   sub
                   highlighted={highlightedPoste === "dettes"}
                   recentMod={findMod(recentModifications, "dettes")}
+                />
+              )}
+              {(joueur.bilan.dettesD2 ?? 0) > 0 && (
+                <TooltipPoste
+                  label="Dettes fournisseurs D+2"
+                  value={joueur.bilan.dettesD2!}
+                  color={TOOLTIPS.dettes.couleur}
+                  categorie="dettes"
+                  sub
+                  highlighted={highlightedPoste === "dettesD2"}
+                  recentMod={findMod(recentModifications, "dettesD2")}
                 />
               )}
               {joueur.bilan.dettesFiscales > 0 && (
