@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur, DECOUVERT_MAX } from "@/lib/game-engine/types";
 import { calculerIndicateurs, calculerSIG } from "@/lib/game-engine/calculators";
 
 interface Props { joueur: Joueur; }
@@ -184,7 +184,7 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
   const analyseTexte = getAnalysePersonnalisee(label, value);
 
   return (
-    <div className="relative">
+    <div className="relative z-0">
       <div className={`bg-gray-50 rounded-xl p-3 border border-gray-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50 transition-all ${open ? "ring-2 ring-indigo-300" : ""}`}
         onClick={() => setOpen(s => !s)}>
         <div className="flex items-start justify-between gap-1">
@@ -198,7 +198,7 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
         </div>
       </div>
       {open && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl p-4 text-xs space-y-2"
+        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-96 overflow-y-auto"
           style={{ minWidth: "280px" }}>
           <div className="flex items-start justify-between gap-2">
             <div className="font-bold text-indigo-700 text-sm">{label}</div>
@@ -214,18 +214,18 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
               <Gauge value={value} config={gaugeConfig} />
             </div>
           )}
-          {definition && <div><div className="font-semibold text-gray-600 mb-0.5">📖 Définition</div><p className="text-gray-600 leading-relaxed">{definition}</p></div>}
-          {interpretation && <div><div className="font-semibold text-gray-600 mb-0.5">🔍 Interprétation</div><p className="text-gray-600 leading-relaxed">{interpretation}</p></div>}
+          {definition && <div><div className="font-semibold text-gray-600 mb-0.5">📖 Définition</div><p className="text-gray-600 leading-relaxed break-words">{definition}</p></div>}
+          {interpretation && <div><div className="font-semibold text-gray-600 mb-0.5">🔍 Interprétation</div><p className="text-gray-600 leading-relaxed break-words">{interpretation}</p></div>}
           {analyseTexte && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <p className="text-xs font-bold text-indigo-700 mb-1">🎯 Pour toi ce trimestre</p>
-              <p className="text-xs text-gray-600 leading-relaxed">{analyseTexte}</p>
+              <p className="text-xs text-gray-600 leading-relaxed break-words">{analyseTexte}</p>
             </div>
           )}
           {objectif && (
             <div className={`rounded-lg p-2 border ${positive === undefined ? "bg-gray-50 border-gray-200" : positive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
               <div className="font-semibold mb-0.5">🎯 Objectif</div>
-              <p className="leading-relaxed">{objectif}</p>
+              <p className="leading-relaxed break-words">{objectif}</p>
             </div>
           )}
         </div>
@@ -251,8 +251,8 @@ export default function IndicateursPanel({ joueur }: Props) {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="px-4 pt-4 pb-2">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col max-h-full">
+      <div className="px-4 pt-4 pb-2 flex-shrink-0">
         <h3 className="font-bold text-center text-gray-800 mb-1 tracking-wide">📊 INDICATEURS FINANCIERS</h3>
         <p className="text-center text-xs text-gray-400 mb-3">Clique sur un indicateur pour son explication détaillée ⓘ</p>
         {/* Onglets */}
@@ -270,7 +270,7 @@ export default function IndicateursPanel({ joueur }: Props) {
         </div>
       </div>
 
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 flex-1 overflow-y-auto">
         {/* ── ONGLET SIG ─────────────────────────────────────────────── */}
         {tab === "sig" && (
           <div className="space-y-0.5">
@@ -352,7 +352,7 @@ export default function IndicateursPanel({ joueur }: Props) {
             <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">
               Indicateurs de rentabilité
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <Indicateur
                 label="Taux de marge nette"
                 value={parseFloat(sig.tauxMargeNette.toFixed(1))}
@@ -439,7 +439,7 @@ export default function IndicateursPanel({ joueur }: Props) {
             <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">
               Structure financière & Liquidité
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <Indicateur
                 label="Fonds de Roulement (FR)"
                 value={ind.fondsDeRoulement}
@@ -475,7 +475,7 @@ export default function IndicateursPanel({ joueur }: Props) {
                 formule="Fonds de Roulement − BFR  (ou Trésorerie − Découvert)"
                 definition="Conséquence de l'équilibre entre FR et BFR. Mesure les liquidités réellement disponibles après avoir financé l'exploitation."
                 interpretation="Positive → l'entreprise peut payer ses échéances. Négative → elle dépend du découvert bancaire."
-                objectif="Trésorerie nette ≥ 0. Découvert > 5 → faillite dans le jeu !"
+                objectif={`Trésorerie nette ≥ 0. Découvert > ${DECOUVERT_MAX} → faillite dans le jeu !`}
                 gaugeConfig={{ min: -8, max: 15, zones: [
                   { from: -8, to: -5, color: "#7f1d1d", label: "⚠️ Faillite" },
                   { from: -5, to: 0, color: "#ef4444", label: "Découvert" },
@@ -530,7 +530,7 @@ export default function IndicateursPanel({ joueur }: Props) {
             />
 
             {/* Totaux Actif/Passif + équilibre */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
                 <div className="text-xs text-blue-600 mb-1 font-semibold">Total Actif</div>
                 <div className="text-xl font-bold text-blue-800">{ind.totalActif}</div>

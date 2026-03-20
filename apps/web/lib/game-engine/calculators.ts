@@ -11,6 +11,7 @@ import {
   ResultatDemandePret,
   TAUX_INTERET_ANNUEL,
   TAUX_INTERET_MAJORE,
+  DECOUVERT_MAX,
 } from "@/lib/game-engine/types";
 
 // ─── TOTAUX BILAN ────────────────────────────────────────────
@@ -159,6 +160,29 @@ export function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers {
     ratioSolvabilite,
     equilibre,
   };
+}
+
+// ─── SIG SIMPLIFIÉ (5 indicateurs clés) ─────────────────────
+export interface SIGSimplifie {
+  ca: number;
+  marge: number;
+  ebe: number;
+  resultatNet: number;
+  tresorerie: number;
+}
+
+export function calculerSIGSimplifie(joueur: Joueur): SIGSimplifie {
+  const ca = joueur.compteResultat.produits.ventes;
+  const achats = joueur.compteResultat.charges.achats;
+  const marge = ca - achats;
+  const servExt = joueur.compteResultat.charges.servicesExterieurs;
+  const va = marge - servExt;  // Valeur Ajoutée simplifiée
+  const personnel = joueur.compteResultat.charges.chargesPersonnel;
+  const impots = joueur.compteResultat.charges.impotsTaxes;
+  const ebe = va - personnel - impots;
+  const resultatNet = getResultatNet(joueur);
+  const tresorerie = getTresorerie(joueur);
+  return { ca, marge, ebe, resultatNet, tresorerie };
 }
 
 // ─── INTÉRÊTS SUR EMPRUNT ─────────────────────────────────────
@@ -375,8 +399,8 @@ export function verifierFaillite(joueur: Joueur): ResultatVerifFaillite {
   const capitauxTotaux = capitauxPropres + resultatNet;
   const dettesTotales = joueur.bilan.dettes + joueur.bilan.dettesFiscales + emprunts;
 
-  if (decouvert > 5) {
-    return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > 5 maximum)` };
+  if (decouvert > DECOUVERT_MAX) {
+    return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > ${DECOUVERT_MAX} maximum)` };
   }
   if (capitauxTotaux < 0) {
     return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };

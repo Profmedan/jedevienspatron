@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
 import { EntryCard, type EntryLine } from "./EntryCard";
-import { getPosteValue, nomCompte } from "./utils";
+import { DoubleEntrySalesCard } from "./DoubleEntrySalesCard";
+import { getPosteValue, nomCompte, getDocumentType } from "./utils";
 
 export interface ActiveStep {
   titre: string;
@@ -25,6 +26,10 @@ interface EntryPanelProps {
   onApplyEntry?: (poste: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Tour actuel du jeu — for animations */
+  tourActuel?: number;
+  /** Étape actuelle du tour */
+  etapeTour?: number;
 }
 
 /**
@@ -45,6 +50,8 @@ export function EntryPanel({
   onApplyEntry,
   onConfirm,
   onCancel,
+  tourActuel = 0,
+  etapeTour = -1,
 }: EntryPanelProps) {
   // ── Accordion : id de la fenêtre actuellement ouverte ──────────────────
   const [activeEntryId, setActiveEntryId] = useState<string | null>(() => {
@@ -115,6 +122,35 @@ export function EntryPanel({
   const allDebitsApplied  = debits.every((e) => e.applied);
   const allCreditsApplied = credits.every((e) => e.applied);
 
+  // ── Détection des groupes de ventes (étape 4) pour affichage synthétique ──
+  // Les écritures de vente : ventes + stocks + achats + tréso/créances
+  // On en regroupe si la majorité des entrées correspondent à ce pattern
+  const isSalesStep = etapeTour === 4;
+  const salesGroups = (() => {
+    if (!isSalesStep) return [];
+
+    // Vérifier si on a au moins une instance de chaque type
+    const hasAnyVentes = activeStep.entries.some((e) => e.poste === "ventes");
+    const hasAnyStocks = activeStep.entries.some((e) => e.poste === "stocks");
+    const hasAnyAchats = activeStep.entries.some((e) => e.poste === "achats");
+    const hasAnyCashOrCreance = activeStep.entries.some(
+      (e) => e.poste === "tresorerie" || e.poste === "creancesPlus1" || e.poste === "creancesPlus2"
+    );
+
+    // Si le pattern global ne correspond pas, afficher en mode normal
+    if (!hasAnyVentes || !hasAnyStocks || !hasAnyAchats || !hasAnyCashOrCreance) {
+      return [];
+    }
+
+    // Créer un groupe avec toutes les entrées (c'est un pattern de ventes)
+    const description = activeStep.titre || "Vente client";
+    return [{ entries: activeStep.entries, description }];
+  })();
+
+  // Déterminer si on affiche en mode synthétique
+  const displayAsSalesGroup = salesGroups.length > 0;
+  const groupToDisplay = displayAsSalesGroup ? salesGroups[0] : null;
+
   return (
     <div className="space-y-3">
 
@@ -131,10 +167,10 @@ export function EntryPanel({
       {activeStep.entries.length > 0 ? (
         <div>
 
-          {/* ── Impact sur les comptes : avant → après en temps réel ── */}
+          {/* ── Impact sur les comptes : avant → après en temps réel (STICKY) ── */}
           {impactRows.length > 0 && (
-            <div className="mb-3 rounded-xl border border-gray-700 overflow-hidden bg-gray-900/70">
-              <div className="px-3 py-1.5 bg-gray-800/80 flex items-center justify-between">
+            <div className="sticky top-0 z-10 mb-3 rounded-xl border border-gray-700 overflow-hidden bg-gray-900 shadow-lg shadow-black/30">
+              <div className="px-3 py-1.5 bg-gray-800 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">📊 Impact sur les comptes</span>
                 <span className={`text-[10px] font-bold tabular-nums transition-colors ${impactApplied === impactRows.length ? "text-emerald-400" : "text-indigo-400"}`}>
                   {impactApplied}/{impactRows.length} saisis
@@ -150,6 +186,14 @@ export function EntryPanel({
                         changed ? "bg-gray-800/40" : "opacity-50"
                       }`}
                     >
+                      {/* Badge Bilan / CR */}
+                      <span className={`shrink-0 text-[8px] font-black uppercase tracking-wider px-1 py-0.5 rounded ${
+                        getDocumentType(row.poste) === "Bilan"
+                          ? "bg-blue-900/60 text-blue-300 border border-blue-700/40"
+                          : "bg-amber-900/60 text-amber-300 border border-amber-700/40"
+                      }`}>
+                        {getDocumentType(row.poste) === "Bilan" ? "Bilan" : "CR"}
+                      </span>
                       {/* Nom du compte */}
                       <span className={`flex-1 text-[11px] truncate ${changed ? "text-gray-200 font-medium" : "text-gray-500"}`}>
                         {row.label}
@@ -204,90 +248,120 @@ export function EntryPanel({
             </div>
           </div>
 
-          {/* ── Section DÉBITS ── */}
-          {debits.length > 0 && (
-            <div className="mb-3">
-              <div className={`flex items-center gap-2 mb-2 px-1 ${allDebitsApplied ? "opacity-60" : ""}`}>
-                <span className="inline-block w-3 h-0.5 bg-blue-400 rounded" />
-                <span className="text-xs font-black text-blue-400 uppercase tracking-wider">
-                  📤 Débits
-                </span>
-                <span className="text-[10px] font-normal text-blue-500 normal-case tracking-normal">
-                  — emplois / ce qui augmente
-                </span>
-                {allDebitsApplied && (
-                  <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
-                )}
-              </div>
-
-              {debits.map((e) => (
-                <EntryCard
-                  key={e.id}
-                  entry={e}
-                  operationTitre={activeStep.titre}
-                  isExpanded={activeEntryId === e.id}
-                  onToggle={() =>
-                    setActiveEntryId(activeEntryId === e.id ? null : e.id)
-                  }
-                  onApply={() => handleApply(e.id, e.poste)}
-                />
-              ))}
+          {/* ── Mode synthétique : Groupe de vente (étape 4) ── */}
+          {displayAsSalesGroup && groupToDisplay && (
+            <div>
+              <DoubleEntrySalesCard
+                entries={groupToDisplay.entries}
+                operationTitre={groupToDisplay.description}
+                onApplyAll={() => {
+                  // Appliquer toutes les 4 écritures d'un coup
+                  groupToDisplay.entries.forEach((entry) => {
+                    onApply(entry.id);
+                    onApplyEntry?.(entry.poste);
+                  });
+                  // Aucune autre entrée à traiter
+                  setActiveEntryId(null);
+                }}
+                index={0}
+                tourActuel={tourActuel}
+              />
             </div>
           )}
 
-          {/* ── Section CRÉDITS ── */}
-          {credits.length > 0 && (
-            <div className="mb-2">
-              <div className={`flex items-center gap-2 mb-2 px-1 ${allCreditsApplied ? "opacity-60" : ""}`}>
-                <span className="inline-block w-3 h-0.5 bg-orange-400 rounded" />
-                <span className="text-xs font-black text-orange-400 uppercase tracking-wider">
-                  📥 Crédits
-                </span>
-                <span className="text-[10px] font-normal text-orange-500 normal-case tracking-normal">
-                  — ressources / d&apos;où vient le financement
-                </span>
-                {allCreditsApplied && (
-                  <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
-                )}
-              </div>
+          {/* ── Mode normal : Débits et Crédits séparés ── */}
+          {!displayAsSalesGroup && (
+            <>
+              {/* ── Section DÉBITS ── */}
+              {debits.length > 0 && (
+                <div className="mb-3">
+                  <div className={`flex items-center gap-2 mb-2 px-1 ${allDebitsApplied ? "opacity-60" : ""}`}>
+                    <span className="inline-block w-3 h-0.5 bg-blue-400 rounded" />
+                    <span className="text-xs font-black text-blue-400 uppercase tracking-wider">
+                      📤 Débits
+                    </span>
+                    <span className="text-[10px] font-normal text-blue-500 normal-case tracking-normal">
+                      — emplois / ce qui augmente
+                    </span>
+                    {allDebitsApplied && (
+                      <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
+                    )}
+                  </div>
 
-              {credits.map((e) => (
-                <EntryCard
-                  key={e.id}
-                  entry={e}
-                  operationTitre={activeStep.titre}
-                  isExpanded={activeEntryId === e.id}
-                  onToggle={() =>
-                    setActiveEntryId(activeEntryId === e.id ? null : e.id)
-                  }
-                  onApply={() => handleApply(e.id, e.poste)}
-                />
-              ))}
-            </div>
-          )}
+                  {debits.map((e, idx) => (
+                    <EntryCard
+                      key={e.id}
+                      entry={e}
+                      operationTitre={activeStep.titre}
+                      isExpanded={activeEntryId === e.id}
+                      onToggle={() =>
+                        setActiveEntryId(activeEntryId === e.id ? null : e.id)
+                      }
+                      onApply={() => handleApply(e.id, e.poste)}
+                      index={idx}
+                      tourActuel={tourActuel}
+                    />
+                  ))}
+                </div>
+              )}
 
-          {/* ── Règle de la partie double : Σ Débits = Σ Crédits ── */}
-          {debits.length > 0 && credits.length > 0 && (
-            <div className={`mt-2 rounded-xl px-3 py-2 border flex items-center justify-between text-xs font-bold ${
-              partieDoubleOk
-                ? "bg-indigo-950/50 border-indigo-700 text-indigo-300"
-                : "bg-amber-950/40 border-amber-600 text-amber-300"
-            }`}>
-              <span>
-                <span className="text-blue-400">Σ Débits</span>{" "}
-                <span className="font-black tabular-nums">{sumDebits}</span>
-              </span>
-              <span className={`text-base ${partieDoubleOk ? "text-indigo-500" : "text-amber-500"}`}>
-                {partieDoubleOk ? "=" : "≠"}
-              </span>
-              <span>
-                <span className="text-orange-400">Σ Crédits</span>{" "}
-                <span className="font-black tabular-nums">{sumCredits}</span>
-              </span>
-              <span className="text-[10px] font-normal opacity-70 ml-1">
-                {partieDoubleOk ? "✓ partie double" : "à vérifier"}
-              </span>
-            </div>
+              {/* ── Section CRÉDITS ── */}
+              {credits.length > 0 && (
+                <div className="mb-2">
+                  <div className={`flex items-center gap-2 mb-2 px-1 ${allCreditsApplied ? "opacity-60" : ""}`}>
+                    <span className="inline-block w-3 h-0.5 bg-orange-400 rounded" />
+                    <span className="text-xs font-black text-orange-400 uppercase tracking-wider">
+                      📥 Crédits
+                    </span>
+                    <span className="text-[10px] font-normal text-orange-500 normal-case tracking-normal">
+                      — ressources / d&apos;où vient le financement
+                    </span>
+                    {allCreditsApplied && (
+                      <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
+                    )}
+                  </div>
+
+                  {credits.map((e, idx) => (
+                    <EntryCard
+                      key={e.id}
+                      entry={e}
+                      operationTitre={activeStep.titre}
+                      isExpanded={activeEntryId === e.id}
+                      onToggle={() =>
+                        setActiveEntryId(activeEntryId === e.id ? null : e.id)
+                      }
+                      onApply={() => handleApply(e.id, e.poste)}
+                      index={debits.length + idx}
+                      tourActuel={tourActuel}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* ── Règle de la partie double : Σ Débits = Σ Crédits ── */}
+              {debits.length > 0 && credits.length > 0 && (
+                <div className={`mt-2 rounded-xl px-3 py-2 border flex items-center justify-between text-xs font-bold ${
+                  partieDoubleOk
+                    ? "bg-indigo-950/50 border-indigo-700 text-indigo-300"
+                    : "bg-amber-950/40 border-amber-600 text-amber-300"
+                }`}>
+                  <span>
+                    <span className="text-blue-400">Σ Débits</span>{" "}
+                    <span className="font-black tabular-nums">{sumDebits}</span>
+                  </span>
+                  <span className={`text-base ${partieDoubleOk ? "text-indigo-500" : "text-amber-500"}`}>
+                    {partieDoubleOk ? "=" : "≠"}
+                  </span>
+                  <span>
+                    <span className="text-orange-400">Σ Crédits</span>{" "}
+                    <span className="font-black tabular-nums">{sumCredits}</span>
+                  </span>
+                  <span className="text-[10px] font-normal opacity-70 ml-1">
+                    {partieDoubleOk ? "✓ partie double" : "à vérifier"}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (

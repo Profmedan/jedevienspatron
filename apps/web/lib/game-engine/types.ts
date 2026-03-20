@@ -21,7 +21,7 @@ export interface PostePassif {
 export interface Bilan {
   actifs: PosteActif[];
   passifs: PostePassif[];
-  /** Découvert bancaire (max DECOUVERT_MAX = 5) */
+  /** Découvert bancaire (max DECOUVERT_MAX = 8) */
   decouvert: number;
   /** Créances clients à encaisser dans 1 tour */
   creancesPlus1: number;
@@ -215,6 +215,8 @@ export interface Joueur {
   elimine: boolean;
   /** Publicité activée ce tour ? */
   publicitéCeTour: boolean;
+  /** Nombre de clients perdus faute de capacité ce trimestre */
+  clientsPerdusCeTour: number;
 }
 
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
@@ -294,10 +296,62 @@ export interface IndicateursFinanciers {
 export const DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 → cessation de paiement
 export const CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
 export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
+/** Maximum de découvert remboursable par trimestre (progressif) */
+export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
+/** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
+export const INTERET_EMPRUNT_FREQUENCE = 4; // Q1 de chaque année
 export const NB_TOURS_PAR_AN = 4;
 export const NB_TOURS_MAX = 12; // Valeur par défaut — configurable à 6, 8 ou 12 à l'initialisation
 export const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export const SCORE_MULTIPLICATEUR_IMMO = 2;
+
+// ─── CAPACITÉ LOGISTIQUE ──────────────────────────────────────
+
+/** Capacité de base sans immobilisation (ventes/trimestre) */
+export const CAPACITE_BASE = 4;
+
+/** Bonus de capacité par type d'immobilisation active */
+export const CAPACITE_IMMOBILISATION: Record<string, number> = {
+  // Véhicules
+  "camionnette": 6,        // 8 unités immo → +6 ventes
+  "berline": 0,            // 8 unités immo → +0 ventes (commercial, non logistique)
+  "fourgon-refrigere": 5,  // 6 unités immo → +5 ventes
+  "velo-cargo": 3,         // 3 unités immo → +3 ventes
+
+  // Investissements logistiques
+  "expansion": 10,         // 8 unités immo → +10 ventes (augmentation capacité d'accueil)
+  "entrepot-automatise": 10, // 8 unités immo → +10 ventes (capacité de stockage doublée)
+
+  // Autres (non logistiques)
+  "site-internet": 0,
+  "rse": 0,
+  "recherche-developpement": 0,
+  "berline-repr": 0,
+  "certification-iso": 0,
+  "application-mobile": 0,
+  "assurance-prevoyance": 0,
+  "pret-bancaire": 0,
+  "levee-de-fonds": 0,
+  "publicite": 0,
+  "relance-clients": 0,
+  "formation": 0,
+  "affacturage": 0,
+  "remboursement-anticipe": 0,
+  "credit-bail": 6,        // 6 unités immo en crédit-bail → +6 ventes
+  "crowdfunding": 0,
+  "programme-fidelite": 0,
+  "export-international": 0,
+  "partenariat-commercial": 0,
+  "maintenance-preventive": 0,
+  "mutuelle-collective": 0,
+  "cybersecurite": 0,
+  "erp": 0,
+  "marketplace": 0,
+  "label-qualite": 0,
+  "commercial-junior-dec": 0,
+  "commercial-senior-dec": 0,
+  "directrice-commerciale-dec": 0,
+};
 
 /** Taux d'intérêt annuel sur les emprunts (5%) */
 export const TAUX_INTERET_ANNUEL = 5;

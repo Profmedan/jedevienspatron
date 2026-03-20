@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { EtatJeu, CarteDecision } from "@/lib/game-engine/types";
 import {
@@ -8,10 +9,11 @@ import {
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, tirerCartesDecision, acheterCarteDecision,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
-  obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour,
+  obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
 } from "@/lib/game-engine/engine";
 import {
-  calculerScore, getTresorerie, calculerIndicateurs,
+  calculerScore, getTresorerie, calculerIndicateurs, calculerSIGSimplifie,
+  getResultatNet, getTotalStocks,
 } from "@/lib/game-engine/calculators";
 import {
   HeaderJeu, LeftPanel, MainContent,
@@ -23,6 +25,19 @@ import {
 } from "@/components/jeu";
 import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
 import { ResultatDemandePret, MONTANTS_EMPRUNT } from "@/lib/game-engine/types";
+// [IMPACT-FLASH] import — retirer si on revient en arrière
+import { ImpactFlash } from "@/components/ImpactFlash";
+// ── Nouveaux composants v2 — chargement dynamique (évite panic Turbopack) ────
+const CenterPanel = dynamic(() => import("@/components/jeu/CenterPanel"), {
+  ssr: false,
+  loading: () => <div className="flex-1 flex items-center justify-center bg-gray-900 text-gray-600 text-sm">Chargement…</div>,
+});
+const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
+  ssr: false,
+  loading: () => <div className="bg-gray-900 rounded-lg" />,
+});
+import { generatePedagogicalMessage, generateTensionAlert, type PedagogicalContext } from "@/components/jeu/pedagogicalMessages";
+import AlerteDecouvert from "@/components/jeu/AlerteDecouvert";
 
 // ─── UTILITAIRE ───────────────────────────────────────────────────────────────
 
@@ -108,7 +123,8 @@ export default function JeuPage() {
   const [etat, setEtat]                   = useState<EtatJeu | null>(null);
   const [activeStep, setActiveStep]       = useState<ActiveStep | null>(null);
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
-  const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs" | "glossaire">("bilan");
+  // [IMPACT-FLASH] "impact" ajouté au type — retirer si on revient en arrière
+  const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs" | "glossaire" | "impact">("bilan");
   const [highlightedPoste, setHighlightedPoste] = useState<string | null>(null);
   const [recentModifications, setRecentModifications] = useState<Array<{
     poste: string; ancienneValeur: number; nouvelleValeur: number;
@@ -132,6 +148,13 @@ export default function JeuPage() {
   // QCM trimestriel : 4 questions tirées à la fin de chaque trimestre
   const [qcmTrimestreQuestions, setQcmTrimestreQuestions] = useState<QuestionQCM[] | undefined>(undefined);
   const [qcmTrimestreScore, setQcmTrimestreScore] = useState<number | undefined>(undefined);
+
+  // [IMPACT-FLASH] flashData state — retirer si on revient en arrière
+  const [flashData, setFlashData] = useState<{ poste: string; avant: number; apres: number } | null>(null);
+
+  // ── Nouveaux states v2 : panneau central + droit ─────────────────────────
+  const [rightTab, setRightTab] = useState<"resume" | "bilan" | "cr">("resume");
+  const [pedagogicalMsg, setPedagogicalMsg] = useState<string | null>(null);
 
   // ─ Emprunt bancaire ───────────────────────────────────────────────────────
   const [showDemandeEmprunt, setShowDemandeEmprunt] = useState(false);
@@ -225,10 +248,14 @@ export default function JeuPage() {
 
   // ─ Auto-switch onglet + surlignage au clic sur une écriture ──────────────
   function handleApplyEntry(poste: string) {
-    if (ACTIF_KEYS.includes(poste) || PASSIF_KEYS.includes(poste)) setActiveTab("bilan");
-    else if (CHARGES_KEYS.includes(poste) || PRODUITS_KEYS.includes(poste)) setActiveTab("cr");
+    // [IMPACT-FLASH] — retirer les 4 lignes suivantes si on revient en arrière
+    const mod = recentModifications.find((m) => m.poste === poste);
+    if (mod) {
+      setFlashData({ poste, avant: mod.ancienneValeur, apres: mod.nouvelleValeur });
+    }
+    // L'onglet "impact" est désormais géré par le useEffect dans MainContent.
+    // On garde setHighlightedPoste pour l'auto-scroll dans Bilan/CR quand le joueur change d'onglet.
     setHighlightedPoste(poste);
-    // Durée augmentée à 4s pour laisser l'étudiant bien voir la modification
     setTimeout(() => setHighlightedPoste(null), 4000);
   }
 
@@ -309,6 +336,28 @@ export default function JeuPage() {
     setRecentModifications([]);
     // Réinitialiser la sous-étape après la validation de l'investissement (6b)
     if (etapeAvantAvancement === 6) setSubEtape6("recrutement");
+
+    // ── Message pédagogique automatique après validation ──
+    const nextJoueur = next.joueurs[next.joueurActif];
+    const nextSig = calculerSIGSimplifie(nextJoueur);
+    const nextIndic = calculerIndicateurs(nextJoueur);
+    const ctx: PedagogicalContext = {
+      tour: next.tourActuel, etape: next.etapeTour,
+      resultatNet: nextSig.resultatNet, tresorerie: nextSig.tresorerie,
+      bfr: nextIndic.besoinFondsRoulement,
+      creancesPlus1: nextJoueur.bilan.creancesPlus1,
+      creancesPlus2: nextJoueur.bilan.creancesPlus2,
+      ca: nextSig.ca, stocks: getTotalStocks(nextJoueur),
+      nbCommerciaux: nextJoueur.cartesActives?.filter(
+        (c: { categorie?: string }) => c.categorie === "commercial"
+      ).length ?? 0,
+      decouvert: nextJoueur.bilan.decouvert,
+    };
+    const msg = generatePedagogicalMessage(ctx);
+    if (msg) {
+      setPedagogicalMsg(msg);
+      setTimeout(() => setPedagogicalMsg(null), 8000);
+    }
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -318,6 +367,11 @@ export default function JeuPage() {
     const idx = next.joueurActif;
     let mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string }> = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
+
+    // Réinitialiser clientsPerdusCeTour au début de chaque tour (étape 0)
+    if (next.etapeTour === 0) {
+      next.joueurs[idx].clientsPerdusCeTour = 0;
+    }
 
     switch (next.etapeTour) {
       case 0: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications; break; }
@@ -330,12 +384,41 @@ export default function JeuPage() {
         break;
       }
       case 4: {
-        const cs = next.joueurs[idx].clientsATrait;
-        for (const c of cs) {
+        const joueur = next.joueurs[idx];
+        const capacite = calculerCapaciteLogistique(joueur);
+        let clientsAtrait = joueur.clientsATrait;
+        let clientsPerdusPrise = 0;
+
+        // Trier par rentabilité : Grand Compte (delaiPaiement 2) > TPE (1) > Particulier (0)
+        clientsAtrait.sort((a, b) => {
+          const rentabilitéA = b.delaiPaiement - a.delaiPaiement; // Plus haut d'abord
+          if (rentabilitéA !== 0) return rentabilitéA;
+          return b.montantVentes - a.montantVentes; // Puis par montant
+        });
+
+        // Traiter les clients jusqu'à atteindre la capacité
+        const clientsTraites = clientsAtrait.slice(0, capacite);
+        const clientsPerdus = clientsAtrait.slice(capacite);
+
+        for (const c of clientsTraites) {
           const r = appliquerCarteClient(next, idx, c);
           if (r.succes) mods = [...mods, ...r.modifications];
         }
-        next.joueurs[idx].clientsATrait = [];
+
+        clientsPerdusPrise = clientsPerdus.length;
+        joueur.clientsPerdusCeTour = clientsPerdusPrise;
+        joueur.clientsATrait = [];
+
+        // Ajouter un message d'alerte si clients perdus
+        if (clientsPerdusPrise > 0) {
+          mods.push({
+            joueurId: joueur.id,
+            poste: "ventes",
+            ancienneValeur: 0,
+            nouvelleValeur: 0,
+            explication: `⚠️ Capacité logistique dépassée ! ${clientsPerdusPrise} client(s) perdu(s) faute de capacité (max ${capacite}, ${clientsAtrait.length} en attente).`,
+          });
+        }
         break;
       }
       case 5: { const r = appliquerEffetsRecurrents(next, idx); if (r.succes) mods = r.modifications; break; }
@@ -434,30 +517,38 @@ export default function JeuPage() {
     }
   }
 
-  // ─ QCM trimestriel : bonus ────────────────────────────────────────────────
+  // ─ QCM trimestriel : bonus / malus ───────────────────────────────────────
+  // PARTIE DOUBLE obligatoire : toute écriture sur le bilan (trésorerie) doit
+  // avoir une contrepartie au CR pour que Actif = Passif + Capitaux + RésultatNet.
+  //   Bonus → Débit Trésorerie (Actif ↑) / Crédit Revenus exceptionnels (CR Produits ↑)
+  //   Malus → Débit Charges exceptionnelles (CR Charges ↑) / Crédit Trésorerie (Actif ↓)
   function handleQCMTermine(score: number) {
     if (!etat) return;
     setQcmTrimestreScore(score);
-    // Appliquer bonus selon le score
-    if (score >= 3) {
-      const next = cloneEtat(etat);
-      const idx = next.joueurActif;
-      const joueurBonus = next.joueurs[idx];
-      if (score === 4) {
-        // Score parfait : +1 Revenu exceptionnel
-        const { ancienneValeur, nouvelleValeur } = { ancienneValeur: joueurBonus.compteResultat.produits.revenusExceptionnels, nouvelleValeur: joueurBonus.compteResultat.produits.revenusExceptionnels + 1 };
-        joueurBonus.compteResultat.produits.revenusExceptionnels += 1;
-        console.log(`[QCM 4/4] Bonus +1 revenu exceptionnel (${ancienneValeur} → ${nouvelleValeur})`);
-      } else {
-        // 3/4 : +1 Trésorerie
-        const tresoActif = joueurBonus.bilan.actifs.find(a => a.categorie === "tresorerie");
-        if (tresoActif) {
-          tresoActif.valeur += 1;
-          console.log(`[QCM 3/4] Bonus +1 trésorerie`);
-        }
-      }
-      setEtat({ ...next });
+
+    const next = cloneEtat(etat);
+    const joueurBonus = next.joueurs[next.joueurActif];
+    const tresoActif = joueurBonus.bilan.actifs.find(a => a.categorie === "tresorerie");
+
+    if (score === 4) {
+      // Score parfait : +1 Trésorerie / +1 Revenus exceptionnels
+      if (tresoActif) tresoActif.valeur += 1;
+      joueurBonus.compteResultat.produits.revenusExceptionnels += 1;
+      console.log("[QCM 4/4] Bonus +1 : Trésorerie +1 / Revenus exceptionnels +1 (partie double ✓)");
+    } else if (score === 3) {
+      // 3/4 : +1 Trésorerie / +1 Revenus exceptionnels
+      if (tresoActif) tresoActif.valeur += 1;
+      joueurBonus.compteResultat.produits.revenusExceptionnels += 1;
+      console.log("[QCM 3/4] Bonus +1 : Trésorerie +1 / Revenus exceptionnels +1 (partie double ✓)");
+    } else if (score < 2) {
+      // 0 ou 1/4 : −1 Trésorerie / +1 Charges exceptionnelles
+      if (tresoActif) tresoActif.valeur -= 1;
+      joueurBonus.compteResultat.charges.chargesExceptionnelles += 1;
+      console.log("[QCM <2] Malus −1 : Trésorerie −1 / Charges exceptionnelles +1 (partie double ✓)");
     }
+    // score === 2 : neutre, aucune écriture
+
+    setEtat({ ...next });
   }
 
   // ─ Emprunt bancaire ───────────────────────────────────────────────────────
@@ -647,6 +738,24 @@ export default function JeuPage() {
   const cartesRecrutement  = obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif);
   const etapeInfo     = ETAPE_INFO[etat.etapeTour];
 
+  // ── Métriques v2 ──────────────────────────────────────────────
+  const sig           = calculerSIGSimplifie(displayJoueur);
+  const indicateurs   = calculerIndicateurs(displayJoueur);
+  const nbCommerciaux = displayJoueur.cartesActives?.filter(
+    (c: { categorie?: string }) => c.categorie === "commercial"
+  ).length ?? 0;
+  const nbCartesActives = displayJoueur.cartesActives?.length ?? 0;
+  const pedaCtx: PedagogicalContext = {
+    tour: etat.tourActuel, etape: etat.etapeTour,
+    resultatNet: sig.resultatNet, tresorerie: sig.tresorerie,
+    bfr: indicateurs.besoinFondsRoulement,
+    creancesPlus1: displayJoueur.bilan.creancesPlus1,
+    creancesPlus2: displayJoueur.bilan.creancesPlus2,
+    ca: sig.ca, stocks: getTotalStocks(displayJoueur),
+    nbCommerciaux, decouvert: displayJoueur.bilan.decouvert,
+  };
+  const tensionAlert = generateTensionAlert(pedaCtx);
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
 
@@ -772,62 +881,116 @@ export default function JeuPage() {
         etapeTitle={etapeInfo?.titre ?? ""}
       />
 
-      {/* ─── CORPS ─── */}
-      <div className="flex flex-1 overflow-hidden">
-        <LeftPanel
-          etapeTour={etat.etapeTour}
-          tourActuel={etat.tourActuel}
-          nbToursMax={etat.nbToursMax}
-          joueur={displayJoueur}
-          activeStep={activeStep}
-          onApplyEntry={applyEntry}
-          onConfirmStep={confirmActiveStep}
-          onCancelStep={() => setActiveStep(null)}
-          onApplyEntryEffect={handleApplyEntry}
-          achatQte={achatQte}
-          setAchatQte={setAchatQte}
-          achatMode={achatMode}
-          setAchatMode={setAchatMode}
-          onLaunchAchat={launchAchat}
-          onSkipAchat={skipAchat}
-          showCartes={showCartes}
-          setShowCartes={setShowCartes}
-          selectedDecision={selectedDecision}
-          setSelectedDecision={setSelectedDecision}
-          cartesDisponibles={cartesDisponibles}
-          onLaunchDecision={launchDecision}
-          onSkipDecision={skipDecision}
-          decisionError={decisionError}
-          onLaunchStep={launchStep}
-          journal={journal}
-          subEtape6={subEtape6}
-          modeRapide={modeRapide}
-          setModeRapide={setModeRapide}
-          modalEtapeEnAttente={modalEtapeEnAttente}
-          onCloseModal={() => setModalEtapeEnAttente(null)}
-          onDemanderEmprunt={() => { setReponseEmprunt(null); setShowDemandeEmprunt(true); }}
-        />
-
-        <MainContent
-          joueur={joueur}
-          displayJoueur={displayJoueur}
-          activeStep={activeStep}
-          highlightedPoste={highlightedPoste}
-          etapeTour={etat.etapeTour}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          showCartes={showCartes}
-          selectedDecision={selectedDecision}
-          setSelectedDecision={setSelectedDecision}
-          cartesDisponibles={cartesDisponibles}
-          cartesRecrutement={cartesRecrutement}
-          recentModifications={recentModifications}
-          subEtape6={subEtape6}
-          modeRapide={modeRapide}
-          onSkipDecision={skipDecision}
-          onLaunchDecision={launchDecision}
-        />
+      {/* ─── ALERTE DÉCOUVERT BANCAIRE ─── */}
+      <div className="px-6 py-2">
+        <AlerteDecouvert decouvert={displayJoueur.bilan.decouvert} />
       </div>
+
+      {/* ─── CORPS 3 COLONNES : Décisions (30%) | Entreprise (45%) | Indicateurs (25%) ─── */}
+      <div className="grid grid-cols-[30%_45%_25%] flex-1 overflow-hidden">
+
+        {/* ── COLONNE GAUCHE : Décisions & Actions + CenterPanel ── */}
+        <div className="flex flex-col overflow-y-auto">
+          <LeftPanel
+            etapeTour={etat.etapeTour}
+            tourActuel={etat.tourActuel}
+            nbToursMax={etat.nbToursMax}
+            joueur={displayJoueur}
+            activeStep={activeStep}
+            onApplyEntry={applyEntry}
+            onConfirmStep={confirmActiveStep}
+            onCancelStep={() => setActiveStep(null)}
+            onApplyEntryEffect={handleApplyEntry}
+            achatQte={achatQte}
+            setAchatQte={setAchatQte}
+            achatMode={achatMode}
+            setAchatMode={setAchatMode}
+            onLaunchAchat={launchAchat}
+            onSkipAchat={skipAchat}
+            showCartes={showCartes}
+            setShowCartes={setShowCartes}
+            selectedDecision={selectedDecision}
+            setSelectedDecision={setSelectedDecision}
+            cartesDisponibles={cartesDisponibles}
+            onLaunchDecision={launchDecision}
+            onSkipDecision={skipDecision}
+            decisionError={decisionError}
+            onLaunchStep={launchStep}
+            journal={journal}
+            subEtape6={subEtape6}
+            modeRapide={modeRapide}
+            setModeRapide={setModeRapide}
+            modalEtapeEnAttente={modalEtapeEnAttente}
+            onCloseModal={() => setModalEtapeEnAttente(null)}
+            onDemanderEmprunt={() => { setReponseEmprunt(null); setShowDemandeEmprunt(true); }}
+          />
+        </div>
+
+        {/* ── COLONNE CENTRALE : Contenu Principal ── */}
+        <div className="flex flex-col overflow-y-auto">
+          {/* Contenu existant : sélection cartes, onglets, écritures */}
+          <MainContent
+            joueur={joueur}
+            displayJoueur={displayJoueur}
+            activeStep={activeStep}
+            highlightedPoste={highlightedPoste}
+            etapeTour={etat.etapeTour}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            showCartes={showCartes}
+            selectedDecision={selectedDecision}
+            setSelectedDecision={setSelectedDecision}
+            cartesDisponibles={cartesDisponibles}
+            cartesRecrutement={cartesRecrutement}
+            recentModifications={recentModifications}
+            subEtape6={subEtape6}
+            modeRapide={modeRapide}
+            onSkipDecision={skipDecision}
+            onLaunchDecision={launchDecision}
+          />
+        </div>
+
+        {/* ── COLONNE DROITE : Indicateurs & SIG + CenterPanel ── */}
+        <div className="flex flex-col overflow-y-auto">
+          <RightPanel
+            joueur={displayJoueur}
+            ca={sig.ca}
+            marge={sig.marge}
+            ebe={sig.ebe}
+            resultatNet={sig.resultatNet}
+            tresorerie={sig.tresorerie}
+            bfr={indicateurs.besoinFondsRoulement}
+            fondsRoulement={indicateurs.fondsDeRoulement}
+            solvabilite={indicateurs.ratioSolvabilite}
+            highlightedPoste={highlightedPoste}
+            activeTab={rightTab}
+            setActiveTab={setRightTab}
+          />
+
+          {/* Panneau narratif : évolution, BFR, flux, chaîne causale (shown only when tourActuel <= 3) */}
+          {etat.tourActuel <= 3 && (
+            <CenterPanel
+              tour={etat.tourActuel}
+              etape={etat.etapeTour}
+              joueur={displayJoueur}
+              nbCommerciaux={nbCommerciaux}
+              nbCartesActives={nbCartesActives}
+              tresorerie={sig.tresorerie}
+              resultatNet={sig.resultatNet}
+              ca={sig.ca}
+              creancesPlus1={displayJoueur.bilan.creancesPlus1}
+              creancesPlus2={displayJoueur.bilan.creancesPlus2}
+              pedagogicalMessage={pedagogicalMsg ?? tensionAlert ?? undefined}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* [IMPACT-FLASH] overlay centré — retirer si on revient en arrière */}
+      <ImpactFlash
+        data={flashData}
+        onDone={() => setFlashData(null)}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Joueur, CarteDecision } from "@/lib/game-engine/types";
+import { calculerCapaciteLogistique } from "@/lib/game-engine/engine";
 import CarteView from "@/components/CarteView";
 import { EntryPanel, type ActiveStep } from "./EntryPanel";
 import { nomCompte, getDocument } from "./utils";
@@ -244,7 +245,7 @@ export function LeftPanel({
   // ── Branch : formulaire de saisie actif ──────────────────────────────────
   if (activeStep) {
     return (
-      <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
+      <aside className="w-full flex flex-col gap-3 p-3 bg-gray-900 overflow-y-auto">
         <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} />
 
         {/* Carte pédagogique — toujours visible, verrouillée si nouvelle étape */}
@@ -274,15 +275,28 @@ export function LeftPanel({
             onApplyEntry={onApplyEntryEffect}
             onConfirm={onConfirmStep}
             onCancel={onCancelStep}
+            tourActuel={tourActuel}
+            etapeTour={etapeTour}
           />
         </div>
+
+        {/* Emprunt bancaire — toujours disponible à l'étape 6b même avec activeStep */}
+        {etapeTour === 6 && subEtape6 === "investissement" && onDemanderEmprunt && (
+          <button
+            onClick={onDemanderEmprunt}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-amber-700 bg-amber-900/20 hover:bg-amber-900/40 hover:border-amber-600 text-amber-400 hover:text-amber-300 transition-all text-xs font-medium"
+          >
+            <span className="text-sm">🏦</span>
+            <span>Demander un prêt bancaire</span>
+          </button>
+        )}
       </aside>
     );
   }
 
   // ── Branch : panneau d'action (pas de saisie en cours) ───────────────────
   return (
-    <aside className="w-80 shrink-0 flex flex-col gap-3 p-3 border-r border-gray-700 bg-gray-900 overflow-y-auto">
+    <aside className="w-full flex flex-col gap-3 p-3 bg-gray-900 overflow-y-auto">
 
       {/* 1. Progression */}
       <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} />
@@ -383,35 +397,67 @@ export function LeftPanel({
           {etapeTour !== 1 && etapeTour !== 6 && (
             <div className="space-y-2">
               {/* Clients étape 4 */}
-              {etapeTour === 4 && joueur.clientsATrait.length > 0 && (
+              {etapeTour === 4 && (
                 <div>
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤝 Clients à traiter ce tour</div>
-                  {joueur.clientsATrait.map((client, i) => {
-                    const colorCls = client.delaiPaiement === 0
-                      ? "border-green-700 bg-green-950/30 text-green-300"
-                      : client.delaiPaiement === 1
-                        ? "border-blue-700 bg-blue-950/30 text-blue-300"
-                        : "border-purple-700 bg-purple-950/30 text-purple-300";
+                  {/* Afficher la capacité logistique */}
+                  {(() => {
+                    const capacite = calculerCapaciteLogistique(joueur);
+                    const nbClients = joueur.clientsATrait.length;
+                    const clientsPerdus = joueur.clientsPerdusCeTour ?? 0;
+                    const capaciteUtilisee = Math.min(nbClients, capacite);
+                    const isExceeded = nbClients > capacite;
                     return (
-                      <div key={i} className={`rounded-xl border-2 overflow-hidden mb-1.5 ${colorCls}`}>
-                        <div className="px-2.5 pt-2 pb-1 flex items-center justify-between">
-                          <div className="font-bold text-sm">{client.titre}</div>
-                          <div className="text-right">
-                            <div className="font-bold text-lg">+{client.montantVentes}</div>
-                            <div className="text-[10px] opacity-60 font-medium -mt-0.5">chiffre d&apos;affaires</div>
-                          </div>
+                      <div className={`rounded-xl border-2 px-3 py-2.5 mb-2 flex items-center justify-between ${
+                        isExceeded
+                          ? "border-red-700 bg-red-950/30 text-red-300"
+                          : "border-amber-700 bg-amber-950/30 text-amber-300"
+                      }`}>
+                        <div className="space-y-1">
+                          <div className="text-sm font-bold">📦 Capacité logistique</div>
+                          <div className="text-xs font-semibold">{capaciteUtilisee} / {capacite} clients</div>
                         </div>
-                        <div className="px-2.5 pb-2 space-y-0.5">
-                          <div className="text-xs font-semibold">
-                            {client.delaiPaiement === 0 ? "💵 Encaissé immédiatement" : client.delaiPaiement === 1 ? "⏰ Encaissé dans 1 trimestre" : "⏰⏰ Encaissé dans 2 trimestres"}
-                          </div>
-                          <div className="text-[10px] opacity-50 mt-0.5 pt-0.5 border-t border-current border-opacity-20">
-                            Génère 4 écritures : Ventes ↑ · Stocks ↓ · Coût des ventes ↑ · Trésorerie ou Créance ↑
-                          </div>
+                        <div className="text-right">
+                          <div className="text-xl font-black">{capaciteUtilisee}</div>
+                          <div className="text-[10px] opacity-60 font-medium">à traiter</div>
                         </div>
                       </div>
                     );
-                  })}
+                  })()}
+
+                  {/* Affichage des clients */}
+                  {joueur.clientsATrait.length > 0 ? (
+                    <>
+                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤝 Clients à traiter ce tour</div>
+                      {joueur.clientsATrait.map((client, i) => {
+                        const colorCls = client.delaiPaiement === 0
+                          ? "border-green-700 bg-green-950/30 text-green-300"
+                          : client.delaiPaiement === 1
+                            ? "border-blue-700 bg-blue-950/30 text-blue-300"
+                            : "border-purple-700 bg-purple-950/30 text-purple-300";
+                        return (
+                          <div key={i} className={`rounded-xl border-2 overflow-hidden mb-1.5 ${colorCls}`}>
+                            <div className="px-2.5 pt-2 pb-1 flex items-center justify-between">
+                              <div className="font-bold text-sm">{client.titre}</div>
+                              <div className="text-right">
+                                <div className="font-bold text-lg">+{client.montantVentes}</div>
+                                <div className="text-[10px] opacity-60 font-medium -mt-0.5">chiffre d&apos;affaires</div>
+                              </div>
+                            </div>
+                            <div className="px-2.5 pb-2 space-y-0.5">
+                              <div className="text-xs font-semibold">
+                                {client.delaiPaiement === 0 ? "💵 Encaissé immédiatement" : client.delaiPaiement === 1 ? "⏰ Encaissé dans 1 trimestre" : "⏰⏰ Encaissé dans 2 trimestres"}
+                              </div>
+                              <div className="text-[10px] opacity-50 mt-0.5 pt-0.5 border-t border-current border-opacity-20">
+                                Génère 4 écritures : Ventes ↑ · Stocks ↓ · Coût des ventes ↑ · Trésorerie ou Créance ↑
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="text-xs text-gray-400 italic py-2">Aucun client à traiter ce trimestre</div>
+                  )}
                 </div>
               )}
               <button
@@ -425,26 +471,7 @@ export function LeftPanel({
         </div>
       </div>
 
-      {/* 4b. Emprunt bancaire (toujours disponible) */}
-      {onDemanderEmprunt && (
-        <div className="bg-amber-950/30 rounded-xl border border-amber-800/50 p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">🏦</span>
-              <span className="text-xs font-bold text-amber-300">Financement bancaire</span>
-            </div>
-            <button
-              onClick={onDemanderEmprunt}
-              className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors"
-            >
-              Demander un prêt
-            </button>
-          </div>
-          <p className="text-[10px] text-amber-500/80 leading-tight mt-1">
-            Le banquier évalue votre solvabilité, résultat, trésorerie et endettement.
-          </p>
-        </div>
-      )}
+      {/* 4b. Emprunt bancaire — discret, après les actions principales */}
 
       {/* 5. Mode Rapide */}
       {tourActuel >= 3 && setModeRapide && (
@@ -503,6 +530,17 @@ export function LeftPanel({
           </div>
         )}
       </div>
+
+      {/* 7. Emprunt bancaire — discret, en bas du panneau */}
+      {onDemanderEmprunt && (
+        <button
+          onClick={onDemanderEmprunt}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-gray-700 bg-gray-800/50 hover:bg-gray-800 hover:border-gray-600 text-gray-500 hover:text-gray-300 transition-all text-xs font-medium"
+        >
+          <span className="text-sm">🏦</span>
+          <span>Demander un prêt bancaire</span>
+        </button>
+      )}
     </aside>
   );
 }

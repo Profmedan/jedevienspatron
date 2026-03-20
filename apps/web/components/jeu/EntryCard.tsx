@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { nomCompte, getDocument, getEffetTexte, getSensExplication, getPedagogieContexte, type SensEcriture } from "./utils";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 
@@ -21,6 +22,10 @@ interface EntryCardProps {
   isExpanded: boolean;
   /** Callback pour ouvrir/fermer manuellement */
   onToggle: () => void;
+  /** Index dans la liste pour stagger animations */
+  index?: number;
+  /** Tour actuel du jeu — animations seulement si <= 3 */
+  tourActuel?: number;
 }
 
 /**
@@ -37,19 +42,28 @@ interface EntryCardProps {
  *  - Montant coloré selon l'impact financier réel
  *  - Effet mémoire : ce que ça fait concrètement
  */
-export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle }: EntryCardProps) {
+export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle, index = 0, tourActuel = 0 }: EntryCardProps) {
   const isDebit = entry.sens === "debit";
   const bon     = isBonPourEntreprise(entry.poste, entry.delta);
   const doc     = getDocument(entry.poste);
   const effetTexte      = getEffetTexte(entry.poste, entry.delta);
   const sensExplication = getSensExplication(entry.sens);
+  const shouldAnimate = tourActuel <= 3;
 
   // ── 1. État APPLIED ─────────────────────────────────────────────────────
   if (entry.applied) {
     // 1a. Déplié → mode lecture seule (revue pédagogique, sans bouton Saisir)
     if (isExpanded) {
+      const Wrapper = shouldAnimate ? motion.div : "div";
+      const wrapperProps = shouldAnimate ? {
+        initial: { opacity: 0, x: -20 },
+        animate: { opacity: 1, x: 0, scale: 1.02 },
+        transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
+      } : {};
+
       return (
-        <div
+        <Wrapper
+          {...wrapperProps}
           className="mb-1.5 rounded-xl border-2 border-emerald-700 bg-emerald-950/20 shadow-sm transition-all duration-200"
           role="region"
           aria-label={`Écriture déjà saisie (lecture) : ${nomCompte(entry.poste)}`}
@@ -119,13 +133,21 @@ export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle
               </span>
             </div>
           </div>
-        </div>
+        </Wrapper>
       );
     }
 
     // 1b. Replié → bandeau compact cliquable pour rouvrir
+    const CollapsedWrapper = shouldAnimate ? motion.button : "button";
+    const collapsedProps = shouldAnimate ? {
+      initial: { opacity: 0, x: -20 },
+      animate: { opacity: 1, x: 0, scale: entry.applied ? 1.02 : 1 },
+      transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
+    } : {};
+
     return (
-      <button
+      <CollapsedWrapper
+        {...collapsedProps}
         onClick={onToggle}
         className="w-full mb-1.5 rounded-xl border-2 border-emerald-700 bg-emerald-950/30 flex items-center gap-2.5 px-3 py-2 hover:bg-emerald-950/50 hover:border-emerald-500 transition-all duration-200 text-left"
         aria-label={`Revoir la saisie : ${nomCompte(entry.poste)}`}
@@ -145,14 +167,22 @@ export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle
           </span>
           <span className="text-[10px] text-emerald-600 opacity-70">▼</span>
         </div>
-      </button>
+      </CollapsedWrapper>
     );
   }
 
   // ── 2. État COLLAPSED — fenêtre fermée ──────────────────────────────────
   if (!isExpanded) {
+    const CollapsedNotAppliedWrapper = shouldAnimate ? motion.button : "button";
+    const collapsedNotAppliedProps = shouldAnimate ? {
+      initial: { opacity: 0, x: -20 },
+      animate: { opacity: 1, x: 0 },
+      transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
+    } : {};
+
     return (
-      <button
+      <CollapsedNotAppliedWrapper
+        {...collapsedNotAppliedProps}
         onClick={onToggle}
         className={`w-full mb-1.5 rounded-xl border-2 px-3 py-2.5 flex items-center justify-between gap-2
           transition-all duration-200 hover:shadow-md text-left
@@ -184,7 +214,7 @@ export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle
           </span>
           <span className={`text-xs ${isDebit ? "text-blue-500" : "text-orange-500"}`}>▼</span>
         </div>
-      </button>
+      </CollapsedNotAppliedWrapper>
     );
   }
 
@@ -192,8 +222,16 @@ export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle
   // Contexte pédagogique générique (poste + sens)
   const contexte = getPedagogieContexte(entry.poste, entry.delta, isDebit);
 
+  const ExpandedWrapper = shouldAnimate ? motion.div : "div";
+  const expandedProps = shouldAnimate ? {
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
+  } : {};
+
   return (
-    <div
+    <ExpandedWrapper
+      {...expandedProps}
       className={`mb-1.5 rounded-xl border-2 shadow-md transition-all duration-200
         ${isDebit
           ? "bg-blue-950/30 border-blue-600 shadow-blue-900/30"
@@ -295,6 +333,6 @@ export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle
           ✅ J&apos;ai compris — Saisir →
         </button>
       </div>
-    </div>
+    </ExpandedWrapper>
   );
 }

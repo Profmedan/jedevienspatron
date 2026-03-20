@@ -47,7 +47,7 @@ const TERMES: TermeGlossaire[] = [
         <p>L'<strong className="text-gray-100">amortissement</strong> traduit la perte de valeur progressive d'un bien immobilisé due à l'usage, au temps ou à l'obsolescence.</p>
         <div className="bg-gray-800 border border-gray-600 rounded-lg p-3">
           <div className="font-bold text-gray-200 mb-2 text-center">✍️ Écriture chaque trimestre</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 min-w-0">
             <div className="bg-red-950/30 border border-red-800/40 rounded p-2 text-center">
               <div className="font-black text-red-300">DÉBIT</div>
               <div className="text-red-400 text-[10px] mt-0.5">681 — Dotation aux amort.</div>
@@ -293,7 +293,7 @@ const TERMES: TermeGlossaire[] = [
         <p>Une <strong className="text-gray-100">écriture comptable</strong> est l'enregistrement d'une opération économique dans les comptes, en respectant le principe de la partie double.</p>
         <div className="bg-gray-800 border border-gray-600 rounded-lg p-2">
           <div className="text-gray-300 text-[11px] font-bold mb-1">Exemple : paiement loyer de 2</div>
-          <div className="grid grid-cols-2 gap-2 text-[10px]">
+          <div className="grid grid-cols-2 gap-2 text-[10px] min-w-0">
             <div className="bg-blue-950/30 rounded p-1.5 text-blue-200">📤 DÉBIT 6x Services ext. +2</div>
             <div className="bg-orange-950/30 rounded p-1.5 text-orange-200">📥 CRÉDIT 512 Trésorerie −2</div>
           </div>
@@ -1197,7 +1197,7 @@ export function GlossairePanel() {
   }, {});
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-y-auto max-h-full">
 
       {/* ── En-tête ── */}
       <div className="bg-gradient-to-br from-indigo-950/50 to-purple-950/30 rounded-xl p-3 border border-indigo-700/60">
@@ -1255,8 +1255,8 @@ export function GlossairePanel() {
                       aria-expanded={isOpen}
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-gray-100 leading-tight">{t.terme}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5 leading-snug">{t.court}</div>
+                        <div className="font-semibold text-sm text-gray-100 leading-tight break-words">{t.terme}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 leading-snug break-words">{t.court}</div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${catStyle.color}`}>
@@ -1268,8 +1268,8 @@ export function GlossairePanel() {
 
                     {/* Corps expandé */}
                     {isOpen && (
-                      <div className="px-3 pb-3 border-t border-gray-700/50">
-                        <div className="pt-2.5">
+                      <div className="px-3 pb-3 border-t border-gray-700/50 overflow-y-auto max-h-96">
+                        <div className="pt-2.5 break-words">
                           {t.contenu}
                         </div>
                         <button

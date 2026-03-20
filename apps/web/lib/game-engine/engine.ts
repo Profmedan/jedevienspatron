@@ -18,7 +18,12 @@ import {
   DECOUVERT_MAX,
   CHARGES_FIXES_PAR_TOUR,
   REMBOURSEMENT_EMPRUNT_PAR_TOUR,
+  REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR,
+  INTERET_EMPRUNT_FREQUENCE,
+  TAUX_INTERET_ANNUEL,
   ResultatDemandePret,
+  CAPACITE_BASE,
+  CAPACITE_IMMOBILISATION,
 } from "@/lib/game-engine/types";
 import { ENTREPRISES } from "@/lib/game-engine/data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "@/lib/game-engine/data/cartes";
@@ -195,9 +200,11 @@ export function creerJoueur(
     },
     bilan,
     compteResultat: creerCompteResultatVierge(),
-    // Aucun commercial pré-embauché : les 3 niveaux (Junior/Senior/Directrice)
-    // restent visibles et recrutables dès le T1 via l'étape 6a.
-    cartesActives: [],
+    // Commercial Junior par défaut : -1 chargesPersonnel, -1 tresorerie, +2 clients Particuliers/tour
+    cartesActives: (() => {
+      const comJunior = CARTES_DECISION.find((c) => c.id === "commercial-junior-dec");
+      return comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${Date.now()}` }] : [];
+    })(),
     // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
     // quelques clients avant le début du jeu — le joueur voit immédiatement
     // une vente et son écriture sans attendre d'avoir recruté un commercial.
@@ -207,6 +214,7 @@ export function creerJoueur(
     })(),
     elimine: false,
     publicitéCeTour: false,
+    clientsPerdusCeTour: 0,
   };
 }
 
@@ -266,15 +274,54 @@ export function appliquerEtape0(
     push(
       "chargesInteret",
       1,
-      `Agios bancaires : intérêts sur découvert de ${joueur.bilan.decouvert} → Charges d'intérêt +1`
+      `Agios bancaires : tu paies des intérêts (1) sur ton découvert de ${joueur.bilan.decouvert} — la banque te pénalise pour ta trésorerie négative`
     );
-    push("decouvert", 1, "Agios ajoutés au découvert bancaire (+1)");
+    push("decouvert", 1, "Agios ajoutés au découvert bancaire — tu dois rembourser davantage au prochain tour (+1)");
   }
 
-  // 1. Remboursement découvert (trésorerie absorbe d'abord le découvert, puis les dettes)
+  // 0b. Intérêts annuels sur emprunt (tous les 4 trimestres = 1 fois/an)
+  const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
+  if (empruntsPoste && empruntsPoste.valeur > 0 && etat.tourActuel % INTERET_EMPRUNT_FREQUENCE === 1) {
+    // Intérêt simplifié : 5% arrondi à l'unité supérieure (minimum 1)
+    const interetEmprunt = Math.max(1, Math.ceil(empruntsPoste.valeur * TAUX_INTERET_ANNUEL / 100));
+    push(
+      "chargesInteret",
+      interetEmprunt,
+      `Intérêts annuels sur emprunt de ${empruntsPoste.valeur} : ${TAUX_INTERET_ANNUEL}% = ${interetEmprunt} — la banque facture ses intérêts une fois par an`
+    );
+    push(
+      "tresorerie",
+      -interetEmprunt,
+      `Paiement des intérêts d'emprunt : -${interetEmprunt} Trésorerie`
+    );
+  }
+
+  // 1. Remboursement découvert PROGRESSIF (max REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR par trimestre)
   if (joueur.bilan.decouvert > 0) {
-    push("tresorerie", -joueur.bilan.decouvert, "Remboursement du découvert bancaire (priorité sur les dettes)");
-    push("decouvert", -joueur.bilan.decouvert, "Solde découvert remis à zéro");
+    const tresoDisponible = getTresorerie(joueur);
+    const remboursementSouhaite = Math.min(joueur.bilan.decouvert, REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR);
+    const remboursementEffectif = Math.min(remboursementSouhaite, Math.max(0, tresoDisponible));
+    if (remboursementEffectif > 0) {
+      push(
+        "tresorerie",
+        -remboursementEffectif,
+        `Remboursement progressif du découvert : -${remboursementEffectif} (max ${REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR}/trimestre, reste ${joueur.bilan.decouvert - remboursementEffectif} après remboursement)`
+      );
+      push(
+        "decouvert",
+        -remboursementEffectif,
+        `Découvert réduit de ${remboursementEffectif} — remboursement progressif pour ne pas asphyxier ta trésorerie`
+      );
+    } else {
+      // Pas assez de trésorerie pour rembourser → message pédagogique
+      modifications.push({
+        joueurId: joueur.id,
+        poste: "decouvert" as any,
+        ancienneValeur: joueur.bilan.decouvert,
+        nouvelleValeur: joueur.bilan.decouvert,
+        explication: `Découvert maintenu à ${joueur.bilan.decouvert} — trésorerie insuffisante pour rembourser ce trimestre. Attention aux agios !`,
+      });
+    }
   }
 
   // 2. Paiement dettes fournisseurs D+1
@@ -292,8 +339,8 @@ export function appliquerEtape0(
   // 4. Remboursement emprunt (-1 par tour si emprunts > 0)
   const emprunts = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
   if (emprunts && emprunts.valeur >= REMBOURSEMENT_EMPRUNT_PAR_TOUR) {
-    push("tresorerie", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Remboursement annuité emprunt");
-    push("emprunts", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Emprunt réduit d'1 unité");
+    push("tresorerie", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Remboursement annuité emprunt (1 par trimestre)");
+    push("emprunts", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Emprunt réduit d'1 unité — remboursement régulier");
   }
 
   // 5. Charges fixes obligatoires (+2 Services ext., -2 Trésorerie)
@@ -349,7 +396,11 @@ export function appliquerEtape0(
   if (treso < 0) {
     const montantDecouvert = Math.abs(treso);
     push("tresorerie", montantDecouvert, "Trésorerie ramenée à 0");
-    push("decouvert", montantDecouvert, `Découvert bancaire ouvert : ${montantDecouvert}`);
+    push(
+      "decouvert",
+      montantDecouvert,
+      `Découvert bancaire automatique — ta trésorerie était négative, la banque couvre le déficit mais tu paies des agios (+${montantDecouvert})`
+    );
   }
 
   return { succes: true, modifications };
@@ -422,6 +473,17 @@ export function appliquerAvancementCreances(
       push("creancesPlus1", joueur.bilan.creancesPlus2, "Avancement créances C+2 → C+1");
       push("creancesPlus2", -joueur.bilan.creancesPlus2, "Créances C+2 avancées d'un trimestre");
     }
+  }
+
+  // Si aucune créance en attente, ajouter un message pédagogique
+  if (joueur.bilan.creancesPlus1 === 0 && joueur.bilan.creancesPlus2 === 0) {
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "creancesPlus1" as any,
+      ancienneValeur: 0,
+      nouvelleValeur: 0,
+      explication: "Aucune créance en attente ce trimestre. Avec des clients TPE ou Grands Comptes, tu verras ici les encaissements différés.",
+    });
   }
 
   return { succes: true, modifications };
@@ -564,19 +626,23 @@ export function obtenirCarteRecrutement(_etat: EtatJeu, _joueurIdx: number): Car
 /**
  * Tire nb cartes de la pioche (les cartes commerciales sont exclues :
  * elles passent par obtenirCarteRecrutement ci-dessus).
+ * Le nombre minimum garanti est 4 cartes.
  */
-export function tirerCartesDecision(etat: EtatJeu, nb: number = 3): CarteDecision[] {
+export function tirerCartesDecision(etat: EtatJeu, nb: number = 4): CarteDecision[] {
   // Filtrer les commerciaux de la pioche — ils ont leur propre section
   etat.piocheDecision = etat.piocheDecision.filter((c) => c.categorie !== "commercial");
 
-  const tirees = etat.piocheDecision.splice(0, nb);
+  // Toujours tirer au minimum 4 cartes (valeur par défaut mise à jour)
+  const cartesDemandees = Math.max(4, nb);
 
-  if (etat.piocheDecision.length < nb) {
-    // Recharger la pioche si vide (sans les commerciaux)
+  // Recharger la pioche si nécessaire pour avoir assez de cartes
+  while (etat.piocheDecision.length < cartesDemandees) {
     etat.piocheDecision.push(
       ...melangerTableau(CARTES_DECISION.filter((c) => c.categorie !== "commercial"))
     );
   }
+
+  const tirees = etat.piocheDecision.splice(0, cartesDemandees);
   return tirees;
 }
 
@@ -772,8 +838,9 @@ export function cloturerAnnee(etat: EtatJeu): void {
       (c) => c.categorie !== "tactique" && c.categorie !== "financement"
     );
 
-    // Réinitialiser clients à traiter
+    // Réinitialiser clients à traiter et clients perdus ce tour
     joueur.clientsATrait = [];
+    joueur.clientsPerdusCeTour = 0;
   }
 
   etat.tourActuel = 1;
@@ -833,6 +900,27 @@ export function demanderEmprunt(
   push("emprunts", montant, `Nouvel emprunt bancaire de ${montant} — taux ${tauxLabel}`);
 
   return { resultat, modifications };
+}
+
+// ─── CAPACITÉ LOGISTIQUE ──────────────────────────────────────
+
+/**
+ * Calcule la capacité logistique maximale du joueur.
+ * Formule : CAPACITE_BASE + somme des bonus des immobilisations actives
+ *
+ * Les immobilisations restent fonctionnelles même quand VNC = 0 (amortie).
+ * On identifie les immobilisations via les cartes actives du joueur.
+ */
+export function calculerCapaciteLogistique(joueur: Joueur): number {
+  let capacite = CAPACITE_BASE;
+
+  // Parcourir les cartes actives pour identifier les immobilisations logistiques
+  for (const carte of joueur.cartesActives) {
+    const bonus = CAPACITE_IMMOBILISATION[carte.id] ?? 0;
+    capacite += bonus;
+  }
+
+  return capacite;
 }
 
 // ─── PIOCHE CLIENTS (générée par les commerciaux) ───────────

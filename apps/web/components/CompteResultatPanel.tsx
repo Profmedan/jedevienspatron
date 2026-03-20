@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Joueur } from "@/lib/game-engine/types";
 import { getTotalCharges, getTotalProduits, getResultatNet } from "@/lib/game-engine/calculators";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
@@ -57,9 +57,19 @@ function Row({
   highlighted?: boolean;
   recentMod?: RecentMod;
 }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll vers ce poste quand il est mis en surbrillance
+  useEffect(() => {
+    if (highlighted && rowRef.current) {
+      rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlighted]);
+
   if (value === 0 && !recentMod) return null;
   return (
     <div
+      ref={rowRef}
       className={`flex justify-between items-center px-2.5 py-1.5 text-sm rounded-lg mb-1 transition-all duration-300 ${
         highlighted ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-md shadow-amber-400/20 scale-[1.02] -mx-0.5" : ""
       }`}
@@ -82,7 +92,7 @@ function Row({
 
 function NoteEcritureEquilibre({ texte }: { texte: string }) {
   return (
-    <div className="ml-1 mb-2 px-2.5 py-1.5 bg-blue-950/40 border border-blue-900/50 rounded-lg text-xs text-blue-300 leading-snug">
+    <div className="ml-1 mb-2 px-2.5 py-1.5 bg-blue-950/40 border border-blue-900/50 rounded-lg text-xs text-blue-300 leading-snug break-words">
       <span className="font-semibold">📚 Note pédagogique : </span>
       {texte}
     </div>
@@ -168,72 +178,72 @@ export default function CompteResultatPanel({
     (etapeTour !== undefined && etapeTour >= 1 && etapeTour <= 7);
 
   return (
-    <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 overflow-hidden">
+    <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 flex flex-col max-h-full">
       {/* ── En-tête ── */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3">
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex-shrink-0">
         <h3 className="font-black text-white text-base tracking-widest uppercase text-center">
           📈 Compte de Résultat
         </h3>
       </div>
 
-      <div className="p-4">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="p-4 flex-1 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-3 min-w-0">
           {/* ── CHARGES ── */}
-          <div className="bg-red-950/20 rounded-xl p-3 border border-red-900/50">
-            <div className="text-center text-xs font-black text-white mb-2.5 uppercase tracking-widest bg-red-600 rounded-lg py-1.5">
+          <div className="bg-orange-950/20 rounded-xl p-3 border border-orange-900/50">
+            <div className="text-center text-xs font-black text-white mb-2.5 uppercase tracking-widest bg-orange-600 rounded-lg py-1.5">
               − Charges
             </div>
 
             <Row
               label="Coût des marchandises vendues"
               value={charges.achats}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "achats"}
               recentMod={findMod(recentModifications, "achats")}
             />
             {charges.achats !== 0 && (
-              <NoteEcritureEquilibre texte="Le CMV représente le coût réel des produits vendus ce trimestre. Il diminue les stocks et s'enregistre en charge." />
+              <NoteEcritureEquilibre texte="CMV = Coût des Marchandises Vendues. Dans notre modèle (inventaire permanent), l'achat de marchandises n'apparaît pas directement en charge : il augmente les Stocks (actif du bilan). C'est seulement lors de la vente que le coût des marchandises livrées est transféré des Stocks vers cette ligne du CR. Ainsi, le CMV reflète uniquement le coût des produits effectivement vendus ce trimestre — pas le coût total des achats." />
             )}
 
             <Row
               label="Services extérieurs"
               value={charges.servicesExterieurs}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "servicesExterieurs"}
               recentMod={findMod(recentModifications, "servicesExterieurs")}
             />
             <Row
               label="Impôts & taxes"
               value={charges.impotsTaxes}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "impotsTaxes"}
               recentMod={findMod(recentModifications, "impotsTaxes")}
             />
             <Row
               label="Charges d'intérêt"
               value={charges.chargesInteret}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "chargesInteret"}
               recentMod={findMod(recentModifications, "chargesInteret")}
             />
             <Row
               label="Charges de personnel"
               value={charges.chargesPersonnel}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "chargesPersonnel"}
               recentMod={findMod(recentModifications, "chargesPersonnel")}
             />
             <Row
               label="Charges exceptionnelles"
               value={charges.chargesExceptionnelles}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "chargesExceptionnelles"}
               recentMod={findMod(recentModifications, "chargesExceptionnelles")}
             />
             <Row
               label="Dotation aux amortissements"
               value={charges.dotationsAmortissements}
-              color="#ef4444"
+              color="#f97316"
               highlighted={highlightedPoste === "dotationsAmortissements"}
               recentMod={findMod(recentModifications, "dotationsAmortissements")}
             />
@@ -241,9 +251,9 @@ export default function CompteResultatPanel({
               <NoteEcritureEquilibre texte="L'amortissement réduit ton bénéfice ici (compte de résultat), mais aucun euro ne quitte ta banque — c'est une charge comptable, pas un paiement. Ta trésorerie, elle, est enregistrée dans les comptes de bilan." />
             )}
 
-            <div className="flex justify-between px-2.5 py-2 border-t-2 border-red-800 mt-2 font-bold bg-red-900/40 rounded-lg">
-              <span className="text-xs text-red-200 uppercase tracking-wide">Total charges</span>
-              <span className="text-xl font-black text-red-400 tabular-nums">{totalCharges}</span>
+            <div className="flex justify-between px-2.5 py-2 border-t-2 border-orange-800 mt-2 font-bold bg-orange-900/20 rounded-lg">
+              <span className="text-xs text-orange-200 uppercase tracking-wide">Total charges</span>
+              <span className="text-xl font-black text-orange-400 tabular-nums">{totalCharges}</span>
             </div>
           </div>
 
