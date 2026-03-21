@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 import path from "path";
-import { fileURLToPath } from "url";
+import { createRequire } from "module";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// require.resolve suit la résolution Node.js réelle (hissage npm workspaces inclus)
+const require = createRequire(import.meta.url);
+const reactDir = path.dirname(require.resolve("react/package.json"));
+const reactDomDir = path.dirname(require.resolve("react-dom/package.json"));
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -18,8 +21,8 @@ const nextConfig: NextConfig = {
     // Évite "ReactCurrentDispatcher undefined" et "useContext null" (styled-jsx dual instance)
     config.resolve.alias = {
       ...config.resolve.alias,
-      react: path.resolve(__dirname, "node_modules/react"),
-      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+      react: reactDir,
+      "react-dom": reactDomDir,
     };
     return config;
   },
