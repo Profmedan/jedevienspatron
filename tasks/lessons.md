@@ -40,3 +40,32 @@
 1. Lire le fichier `.md` de l'agent concerné
 2. Lancer un subagent avec ce contexte
 3. Valider avec `testing/testing-reality-checker.md` avant tout push
+
+---
+
+### L7 — 2026-03-21 : Agents experts uploadés = priorité absolue
+
+**Erreur** : sur la tâche "Improve unclear game map design", implémentation directe sans consulter les agents experts uploadés par Pierre (design-ux-architect, design-ui-designer, design-whimsy-injector, etc.).
+
+**Conséquence** : v1 du GameMap techniquement correcte mais pauvre — sans microcopy narratif, sans différenciation 6a/6b par couleur, sans "vibe" par étape.
+
+**Règle** :
+- Lire les agents uploadés EN DÉBUT de session, pas en cours de route
+- Pour toute tâche design/UX : lancer ≥ 3 agents en parallèle AVANT d'écrire du code
+- Les agents Design à utiliser en priorité : `design-ux-researcher`, `design-ux-architect`, `design-ui-designer`, `design-visual-storyteller`, `design-whimsy-injector`, `design-brand-guardian`
+
+**Pattern correct validé** :
+```
+① Lire CLAUDE.md + agents disponibles
+② Écrire tasks/todo.md (pas seulement widget TodoWrite)
+③ Lancer agents en parallèle (UX Research + Visual Story + Brand/UI)
+④ Consolider → specs concrètes
+⑤ Implémenter selon specs
+⑥ npx tsc --noEmit → 0 erreur
+⑦ Commit + update tasks/lessons.md
+```
+
+### L8 — 2026-03-21 : `npm run build` échoue dans le VM Linux (SWC)
+
+**Cause** : binaire SWC pour Linux/x64 absent dans le VM sandbox.
+**Solution** : utiliser `npx tsc --noEmit` pour la validation TypeScript. Le build réel se fait sur Vercel.

@@ -8,133 +8,195 @@ import { EntryPanel, type ActiveStep } from "./EntryPanel";
 import { nomCompte, getDocument } from "./utils";
 import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
-// ─── GameMap : carte visuelle complète de la progression ────────────────────
+// ─── GameMap v2 : carte narrative de progression ─────────────────────────────
+// Conçu par les agents : UX Researcher · UX Architect · Visual Storyteller
+//                        Whimsy Injector · Brand Guardian · UI Designer
 
 const ETAPES_MAP = [
-  { icone: "💼", label: "Charges fixes",     court: "Charges" },
-  { icone: "📦", label: "Achats stocks",     court: "Achats"  },
-  { icone: "⏩", label: "Créances clients",  court: "Créances"},
-  { icone: "👔", label: "Paiement commerciaux", court: "Commerciaux" },
-  { icone: "🤝", label: "Ventes & clients", court: "Ventes"  },
-  { icone: "🔄", label: "Effets récurrents", court: "Récurrents" },
-  { icone: "🎯", label: "Carte Décision",   court: "Décision"},
-  { icone: "🎲", label: "Événement aléatoire", court: "Événement" },
-  { icone: "📊", label: "Bilan trimestriel", court: "Bilan"   },
+  { icone: "💼", label: "Charges fixes",        court: "Charges",     vibe: "Coûts obligatoires à payer"    },
+  { icone: "📦", label: "Achats stocks",         court: "Achats",      vibe: "Comptant ou à crédit ?"        },
+  { icone: "⏩", label: "Créances clients",      court: "Créances",    vibe: "L'argent rentrant enfin"        },
+  { icone: "👔", label: "Paiement commerciaux",  court: "Commerciaux", vibe: "On paie ceux qui vendent"      },
+  { icone: "🤝", label: "Ventes & clients",      court: "Ventes",      vibe: "Le cœur du trimestre 🎉"       },
+  { icone: "🔄", label: "Effets récurrents",     court: "Récurrents",  vibe: "Tes décisions se répercutent"  },
+  { icone: "🎯", label: "Carte Décision",        court: "Décision",    vibe: "Ton choix stratégique"         },
+  { icone: "🎲", label: "Événement aléatoire",   court: "Événement",   vibe: "Une surprise t'attend…"        },
+  { icone: "📊", label: "Bilan trimestriel",     court: "Bilan",       vibe: "Le verdict du trimestre"       },
 ];
 
-function GameMap({ etapeTour, tourActuel, nbToursMax }: {
+// Microcopy contextuel par étape (Whimsy Injector + Visual Storyteller)
+const MICROCOPY: Record<number, string> = {
+  0: "Charges fixes et amortissements — obligatoires, gère-les.",
+  1: "Achète des stocks pour les revendre. Comptant ou à crédit ?",
+  2: "Tes créances avancent — l'argent rentre en banque.",
+  3: "Paie tes commerciaux. Ils t'ont ramené des clients.",
+  4: "Les ventes ! C'est le cœur de ton trimestre. 🎉",
+  5: "Les effets de tes cartes actives se répercutent.",
+  6: "Moment clé — investis, recrutes ou passes ton tour ?",
+  7: "Un événement arrive. Bonne ou mauvaise surprise ?",
+  8: "Trimestre terminé. Regarde ce que tu as construit.",
+};
+
+function GameMap({ etapeTour, tourActuel, nbToursMax, subEtape6 = "recrutement" }: {
   etapeTour: number; tourActuel: number; nbToursMax: number;
+  subEtape6?: "recrutement" | "investissement";
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
-  const currentEtape = ETAPES_MAP[etapeTour];
+  const currentEtape  = ETAPES_MAP[etapeTour];
   const pctTour  = Math.round(((tourActuel - 1) / nbToursMax) * 100);
   const pctEtape = Math.round((etapeTour / 9) * 100);
+
+  // Brand Guardian : étape 6a = indigo, 6b = amber
+  const isEtape6 = etapeTour === 6;
+  const is6b     = isEtape6 && subEtape6 === "investissement";
+  const accentBg  = is6b ? "bg-amber-600"        : "bg-indigo-600";
+  const accentRing = is6b ? "ring-amber-400/40"   : "ring-indigo-400/40";
+  const accentText = is6b ? "text-amber-400"      : "text-indigo-400";
+  const accentMini = is6b ? "text-amber-300/70"   : "text-indigo-300/70";
+  const accentBar  = is6b
+    ? "bg-gradient-to-r from-amber-600 to-amber-400"
+    : "bg-gradient-to-r from-indigo-600 to-indigo-400";
+  const accentZoneB = is6b
+    ? "bg-amber-950/30 border-amber-800/30"
+    : "bg-indigo-950/25 border-indigo-900/20";
+  const accentPing  = is6b ? "bg-amber-400" : "bg-indigo-400";
+  const accentDot   = is6b ? "bg-amber-300" : "bg-indigo-300";
+  const accentLabel = isEtape6
+    ? (is6b ? "6b — Investissement" : "6a — Recrutement")
+    : `Étape ${etapeTour + 1}/9`;
 
   return (
     <div className="bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden shadow-md">
 
-      {/* ── En-tête : Tour + progression globale ── */}
-      <div className="px-3 pt-2.5 pb-2 border-b border-gray-800 space-y-2">
+      {/* ━━━ ZONE A — Tour + double barre de progression ━━━ */}
+      <div className="px-3 pt-3 pb-2.5 border-b border-gray-800 space-y-2">
 
-        {/* Ligne tour */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Ligne tours : pastilles + % global */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">
               Tour {tourActuel}/{nbToursMax}
             </span>
-            <div className="flex gap-0.5">
+            <div className="flex gap-1">
               {Array.from({ length: nbToursMax }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-2 w-5 rounded-full transition-all ${
-                    i < tourActuel - 1
-                      ? "bg-indigo-600"
-                      : i === tourActuel - 1
-                        ? "bg-indigo-400 ring-1 ring-indigo-300/50"
-                        : "bg-gray-700"
-                  }`}
-                />
+                <div key={i} className={`h-2 w-6 rounded-full transition-all duration-300 ${
+                  i < tourActuel - 1
+                    ? "bg-indigo-600"
+                    : i === tourActuel - 1
+                      ? "bg-indigo-400 ring-1 ring-indigo-300/50"
+                      : "bg-gray-700"
+                }`} />
               ))}
             </div>
           </div>
-          <span className="text-[10px] text-gray-500 font-medium shrink-0">
+          <span className="text-[10px] text-gray-500 font-medium tabular-nums shrink-0">
             {pctTour}% complété
           </span>
         </div>
 
-        {/* Ligne étape du tour */}
+        {/* Ligne étapes du trimestre */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Étape du trimestre
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+              Étapes du trimestre
             </span>
-            <span className="text-[10px] text-indigo-300 font-bold">{etapeTour + 1}/9</span>
+            <span className={`text-[10px] font-black tabular-nums ${accentText}`}>
+              {etapeTour + 1}/9
+            </span>
           </div>
-          {/* Barre de progression étape */}
           <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-500"
+              className={`h-full rounded-full transition-all duration-500 ${accentBar}`}
               style={{ width: `${pctEtape}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* ── Étape courante — mise en avant ── */}
-      <div className="px-3 py-2.5 bg-indigo-950/30 border-b border-indigo-800/30 flex items-center gap-2.5">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl shadow-md shrink-0 ring-2 ring-indigo-400/40">
+      {/* ━━━ ZONE B — Étape courante (priorité max, Visual Storyteller) ━━━ */}
+      <div className={`px-3 py-3 border-b flex items-start gap-3 ${accentZoneB}`}>
+
+        {/* Icône principale — UI Designer : 44px, rounded-xl, ring */}
+        <div className={`w-11 h-11 rounded-xl ${accentBg} flex items-center justify-center text-2xl
+          shadow-md shrink-0 ring-2 ${accentRing}`}
+        >
           {currentEtape?.icone ?? "📋"}
         </div>
+
         <div className="flex-1 min-w-0">
-          <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">En cours</div>
-          <div className="text-xs font-bold text-white leading-snug truncate">
-            {etapeTour + 1}. {currentEtape?.label ?? ""}
+          {/* Badge étape + point pulsé */}
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={`text-[9px] font-black uppercase tracking-widest ${accentText}`}>
+              {accentLabel}
+            </span>
+            {/* Point "live" — Whimsy Injector */}
+            <span className="relative flex h-1.5 w-1.5 shrink-0">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${accentPing} opacity-75`} />
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${accentDot}`} />
+            </span>
+          </div>
+
+          {/* Titre de l'étape */}
+          <div className="text-sm font-bold text-white leading-tight">
+            {currentEtape?.label ?? ""}
+          </div>
+
+          {/* Microcopy narratif — Whimsy Injector + Visual Storyteller */}
+          <div className={`text-[10px] mt-1 leading-snug ${accentMini}`}>
+            {MICROCOPY[etapeTour]}
           </div>
         </div>
-        {/* Indicateur "suivante" */}
-        {etapeTour < 8 && (
-          <div className="text-right shrink-0">
-            <div className="text-[8px] text-gray-600 uppercase tracking-wider">Suivante</div>
-            <div className="text-[10px] text-gray-500 flex items-center gap-0.5">
-              <span>{ETAPES_MAP[etapeTour + 1]?.icone}</span>
-              <span>{ETAPES_MAP[etapeTour + 1]?.court}</span>
-            </div>
-          </div>
-        )}
+
+        {/* Étape suivante — UX Architect : anticiper, réduire l'incertitude */}
+        <div className="text-right shrink-0 min-w-[48px]">
+          {etapeTour < 8 ? (
+            <>
+              <div className="text-[8px] text-gray-600 uppercase tracking-wider mb-0.5">Suivante</div>
+              <div className="text-xl leading-none">{ETAPES_MAP[etapeTour + 1]?.icone}</div>
+              <div className="text-[9px] text-gray-600 mt-0.5">{ETAPES_MAP[etapeTour + 1]?.court}</div>
+            </>
+          ) : (
+            <>
+              <div className="text-[8px] text-gray-600 uppercase tracking-wider mb-0.5">Fin du</div>
+              <div className="text-[9px] text-gray-500">trimestre</div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* ── Timeline visuelle des 9 étapes ── */}
-      <div className="px-2 pt-2 pb-1">
-        <div className="flex items-start gap-1 overflow-x-auto pb-1 scrollbar-none">
+      {/* ━━━ ZONE C — Timeline 9 pastilles (UI Designer : 28px, flex-1) ━━━ */}
+      <div className="px-2.5 pt-2.5 pb-2">
+        <div className="flex items-center gap-0.5">
           {ETAPES_MAP.map((etape, i) => {
             const done    = i < etapeTour;
             const current = i === etapeTour;
-            const coming  = i > etapeTour;
+            // Brand Guardian : étape 6 couleur selon sous-étape
+            const step6b  = i === 6 && is6b;
             return (
-              <div key={i} className="flex flex-col items-center gap-0.5 min-w-[30px] flex-1">
-                {/* Icône / pastille */}
+              <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
                 <div className={`
                   relative w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
                   transition-all duration-300
-                  ${done    ? "bg-indigo-700 text-white"         : ""}
-                  ${current ? "bg-indigo-500 text-white ring-2 ring-indigo-300 scale-125 shadow-md shadow-indigo-900/60 z-10" : ""}
-                  ${coming  ? "bg-gray-800 text-gray-600 border border-gray-700" : ""}
+                  ${done    ? "bg-indigo-700 text-emerald-300" : ""}
+                  ${current && !step6b ? "bg-indigo-500 text-white ring-2 ring-indigo-300 scale-125 shadow-md shadow-indigo-900/60 z-10" : ""}
+                  ${current && step6b  ? "bg-amber-500 text-white ring-2 ring-amber-300 scale-125 shadow-md z-10" : ""}
+                  ${!done && !current  ? "bg-gray-800 text-gray-600 border border-gray-700" : ""}
                 `}>
-                  {done ? (
-                    <span className="text-[10px] font-black text-emerald-300">✓</span>
-                  ) : (
-                    <span className={current ? "text-base" : "text-xs"}>{etape.icone}</span>
-                  )}
+                  {done
+                    ? <span className="text-[10px] font-black">✓</span>
+                    : <span className={current ? "text-sm" : "text-xs"}>{etape.icone}</span>
+                  }
                   {current && (
                     <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-60" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-300" />
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${step6b ? "bg-amber-400" : "bg-indigo-400"}`} />
+                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${step6b ? "bg-amber-300" : "bg-indigo-300"}`} />
                     </span>
                   )}
                 </div>
-                {/* Numéro */}
                 <span className={`text-[8px] font-bold tabular-nums ${
-                  done ? "text-indigo-500" : current ? "text-indigo-300" : "text-gray-700"
+                  done ? "text-indigo-500"
+                    : current ? (step6b ? "text-amber-300" : "text-indigo-300")
+                    : "text-gray-700"
                 }`}>{i + 1}</span>
               </div>
             );
@@ -142,35 +204,52 @@ function GameMap({ etapeTour, tourActuel, nbToursMax }: {
         </div>
       </div>
 
-      {/* ── Détail dépliable : liste des 9 étapes ── */}
+      {/* ━━━ ZONE D/E — Parcours narratif dépliable ━━━ */}
       <button
         onClick={() => setDetailOpen(!detailOpen)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:text-gray-400 uppercase tracking-widest border-t border-gray-800 transition-colors"
+        aria-expanded={detailOpen}
+        className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold
+          text-gray-600 hover:text-gray-300 uppercase tracking-widest
+          border-t border-gray-800 transition-colors"
       >
-        <span>📋 Parcours complet du trimestre</span>
-        <span className="text-sm">{detailOpen ? "▲" : "▼"}</span>
+        <span>🗺️ Parcours du trimestre</span>
+        <span className={`text-sm transition-transform duration-200 ${detailOpen ? "rotate-180" : ""}`}>▼</span>
       </button>
+
       {detailOpen && (
-        <div className="px-2 pb-2 space-y-0.5 border-t border-gray-800 bg-gray-950/30">
+        <div className="border-t border-gray-800 bg-gray-950/40 px-2 pb-2 pt-1 space-y-0.5">
           {ETAPES_MAP.map((etape, i) => {
             const done    = i < etapeTour;
             const current = i === etapeTour;
+            const curIs6b = i === 6 && is6b;
             return (
               <div
                 key={i}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all ${
+                className={`flex items-start gap-2 px-2.5 py-2 rounded-lg text-xs transition-all ${
                   current
-                    ? "bg-indigo-900/40 border border-indigo-700/50 text-white"
+                    ? curIs6b
+                      ? "bg-amber-900/30 border border-amber-700/40 text-white"
+                      : "bg-indigo-900/30 border border-indigo-700/40 text-white"
                     : done
                       ? "text-gray-600"
                       : "text-gray-500"
                 }`}
               >
-                <span className="text-sm shrink-0">{done ? "✅" : current ? "▶️" : "○"}</span>
-                <span className="shrink-0 text-base">{etape.icone}</span>
-                <span className={`font-medium leading-tight ${current ? "font-bold" : ""}`}>
-                  {i + 1}. {etape.label}
+                <span className="shrink-0 mt-0.5">
+                  {done ? "✅" : current ? "▶️" : "○"}
                 </span>
+                <span className="shrink-0 text-sm">{etape.icone}</span>
+                <div className="flex-1 min-w-0">
+                  <div className={`leading-tight ${current ? "font-bold" : "font-medium"}`}>
+                    {i + 1}. {etape.label}
+                  </div>
+                  {/* Vibe narratif sur l'étape active — Visual Storyteller */}
+                  {current && (
+                    <div className={`text-[9px] mt-0.5 ${curIs6b ? "text-amber-400/80" : "text-indigo-400/80"}`}>
+                      {etape.vibe}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -180,7 +259,7 @@ function GameMap({ etapeTour, tourActuel, nbToursMax }: {
   );
 }
 
-// Alias pour compatibilité avec les usages existants dans le composant principal
+// Alias rétrocompatible — accepte subEtape6 en plus
 const ProgressStrip = GameMap;
 
 // ─── Carte pédagogique persistante ──────────────────────────────────────────
@@ -381,7 +460,7 @@ export function LeftPanel({
   if (activeStep) {
     return (
       <aside className="w-full flex flex-col gap-3 p-3 bg-gray-900 overflow-y-auto">
-        <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} />
+        <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} subEtape6={subEtape6} />
 
         {/* Carte pédagogique — toujours visible, verrouillée si nouvelle étape */}
         <PedagoCard
@@ -434,7 +513,7 @@ export function LeftPanel({
     <aside className="w-full flex flex-col gap-3 p-3 bg-gray-900 overflow-y-auto">
 
       {/* 1. Progression */}
-      <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} />
+      <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} subEtape6={subEtape6} />
 
       {/* 2. Santé financière */}
       {!isLocked && <SanteFinanciere joueur={joueur} />}
