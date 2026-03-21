@@ -69,3 +69,45 @@
 
 **Cause** : binaire SWC pour Linux/x64 absent dans le VM sandbox.
 **Solution** : utiliser `npx tsc --noEmit` pour la validation TypeScript. Le build réel se fait sur Vercel.
+
+## L9 — Monorepo npm workspaces : dual React instance
+**Contexte** : Next.js 15 dans un monorepo npm workspaces avec `apps/web`.
+**Symptômes** : `useContext null` (styled-jsx) ou `ReactCurrentDispatcher undefined` au build Vercel.
+**Cause** : npm hisse `styled-jsx` en root `node_modules` ; il importe `react` depuis root, mais `react-dom` de l'app importe son propre `react` → 2 instances distinctes.
+**Fix complet (2 couches)** :
+1. Root `package.json` → `"overrides": { "react": "^18.3.1", "react-dom": "^18.3.1" }` — déduplique à l'install
+2. `apps/web/next.config.ts` → webpack alias `react` et `react-dom` → `path.resolve(__dirname, "node_modules/react")` — déduplique au bundle
+**Important** : dans next.config.ts ESM, utiliser `fileURLToPath(import.meta.url)` pour obtenir `__dirname`.
+
+## L10 — ESLint flat config incompatible avec Next.js 15 build Vercel
+**Symptôme** : `Cannot find module 'eslint-config-next/core-web-vitals'` au build.
+**Fix** : ajouter `eslint: { ignoreDuringBuilds: true }` dans `next.config.ts`. Pattern identique à `typescript.ignoreBuildErrors`.
+
+## L11 — webpack alias React : utiliser require.resolve, pas __dirname
+**Erreur** : `path.resolve(__dirname, "node_modules/react")` pointe vers `apps/web/node_modules/react` qui n'existe pas si npm a hissé React à la racine du monorepo.
+**Symptôme Vercel** : `Module not found: Can't resolve 'react'` et `Can't resolve 'react/jsx-runtime'`.
+**Fix correct** :
+```ts
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const reactDir = path.dirname(require.resolve("react/package.json"));
+```
+`require.resolve` suit la résolution Node.js réelle (hissage npm workspaces inclus) → portable localement et sur Vercel.
+
+## L12 — npm overrides React dans un monorepo : contre-productif
+**Erreur commise** : ajouter `"overrides": { "react": "^18.3.1" }` dans le root `package.json` pour "dédupliquer" React.
+**Effet réel** : npm installe React AUSSI à la racine (`/node_modules/react`) EN PLUS de `apps/web/node_modules/react` → crée exactement le dual instance qu'on voulait éviter.
+**Diagnostic** : `git diff commit-ok HEAD -- package.json next.config.ts` → repérer immédiatement l'overrides comme coupable probable.
+**Règle** : dans un monorepo npm workspaces, ne PAS utiliser `overrides` pour React. Utiliser uniquement le webpack alias dans `next.config.ts`.
+
+## L13 — webpack alias React : NE PAS faire
+**Erreur** : aliaser `react` et `react-dom` dans `next.config.ts` webpack casse les exports conditionnels de React.
+**Symptôme** : `(0, r.cache) is not a function` — `react/cache`, `react/jsx-runtime`, etc. ne se résolvent plus correctement car l'alias bypasse le champ `exports` du `package.json` React.
+**Règle** : Ne jamais ajouter de webpack alias pour React dans Next.js. Next.js gère déjà la déduplication React en interne.
+
+## L14 — Cause racine : React 19 fantôme dans le monorepo
+**Diagnostic définitif** : `package-lock.json` contenait React 19.2.3 à `node_modules/react` (racine) et React 18.3.1 à `apps/web/node_modules/react`. Cause : `framer-motion`, `lucide-react`, `styled-jsx` sont hissés à la racine et acceptent React 18 OU 19. npm résolvait vers React 19 pour ces packages racine.
+**Symptôme** : `styled-jsx` (racine) → `useContext` via React 19, `react-dom` (apps/web) → React 18 → `null` retourné par useContext (deux dispatchers React distincts).
+**Fix correct** : ajouter `"react": "^18.3.1"` et `"react-dom": "^18.3.1"` au root `package.json` + régénérer `package-lock.json`. Résultat : une seule instance React 18 dans tout le monorepo.
+**Erreurs précédentes** : `overrides` et `webpack alias` étaient tous deux contre-productifs — le premier ajoutait React 19 en parallèle, le second cassait les exports conditionnels.
+**Commande de vérification** : `python3 -c "import json; [print(k,v['version']) for k,v in json.load(open('package-lock.json'))['packages'].items() if k.endswith('/react') and 'react-' not in k.split('/')[-1]]"`

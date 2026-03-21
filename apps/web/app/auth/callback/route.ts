@@ -7,35 +7,40 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const redirectTo = requestUrl.searchParams.get("redirectTo") ?? "/dashboard";
 
-  if (code) {
-    const cookieStore = await cookies();
+  if (!code) {
+    const error = requestUrl.searchParams.get("error");
+    if (error === "access_denied") {
+      return NextResponse.redirect(new URL("/auth/login?error=oauth_cancelled", requestUrl.origin));
+    }
+    return NextResponse.redirect(new URL("/auth/login?error=invalid_code", requestUrl.origin));
+  }
 
+  try {
+    const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
+          getAll() { return cookieStore.getAll(); },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+            } catch {}
           },
         },
       }
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (!error) {
-      return NextResponse.redirect(new URL(redirectTo, requestUrl.origin));
+    if (error) {
+      console.error("[Auth Callback]", error.message);
+      return NextResponse.redirect(new URL("/auth/login?error=code_expired", requestUrl.origin));
     }
-  }
 
-  // En cas d'erreur, redirige vers login
-  return NextResponse.redirect(
-    new URL("/auth/login?error=auth_callback_error", requestUrl.origin)
-  );
+    return NextResponse.redirect(new URL(redirectTo, requestUrl.origin));
+  } catch (err) {
+    console.error("[Auth Callback] Exception:", err);
+    return NextResponse.redirect(new URL("/auth/login?error=server_error", requestUrl.origin));
+  }
 }

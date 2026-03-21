@@ -51,7 +51,7 @@ function LoginForm() {
 
       {/* Message confirmation email */}
       {message === "check-email" && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-blue-800 text-sm">
+        <div className="bg-blue-950/30 border border-blue-800 rounded-xl p-4 text-blue-200 text-sm">
           📬 <strong>Vérifiez votre email !</strong> Un lien de confirmation vous a été envoyé. Cliquez dessus avant de vous connecter.
         </div>
       )}
@@ -60,7 +60,7 @@ function LoginForm() {
       <button
         onClick={handleGoogleLogin}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-50 font-medium text-gray-700 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-600 rounded-xl bg-gray-900 hover:bg-gray-800 font-medium text-gray-100 transition-colors disabled:opacity-50"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -72,39 +72,39 @@ function LoginForm() {
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-xs text-gray-400 font-medium">OU</span>
-        <div className="flex-1 h-px bg-gray-200" />
+        <div className="flex-1 h-px bg-gray-700" />
+        <span className="text-xs text-gray-500 font-medium">OU</span>
+        <div className="flex-1 h-px bg-gray-700" />
       </div>
 
       {/* Formulaire email/mot de passe */}
       <form onSubmit={handleEmailLogin} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-200 mb-1">Email</label>
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="votre@email.fr"
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+          <label className="block text-sm font-medium text-gray-200 mb-1">Mot de passe</label>
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="••••••••"
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
           />
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+          <div className="bg-red-950/30 border border-red-800 rounded-lg p-3 text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -112,7 +112,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
+          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
         >
           {loading ? "Connexion en cours…" : "Se connecter"}
         </button>
@@ -123,29 +123,29 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">🎯</div>
-          <h1 className="text-2xl font-black text-gray-900">JE DEVIENS PATRON</h1>
-          <p className="text-gray-500 text-sm mt-1">Le jeu sérieux de gestion d&apos;entreprise</p>
+          <h1 className="text-2xl font-black text-gray-100">JE DEVIENS PATRON</h1>
+          <p className="text-gray-400 text-sm mt-1">Le jeu sérieux de gestion d&apos;entreprise</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-1">Connexion</h2>
-          <p className="text-gray-500 text-sm mb-6">Accédez à votre tableau de bord</p>
+        <div className="bg-gray-900 rounded-2xl shadow-2xl shadow-black/20 p-8">
+          <h2 className="text-xl font-bold text-gray-100 mb-1">Connexion</h2>
+          <p className="text-gray-400 text-sm mb-6">Accédez à votre tableau de bord</p>
 
-          <Suspense fallback={<div className="animate-pulse h-64 bg-gray-100 rounded-xl" />}>
+          <Suspense fallback={<div className="animate-pulse h-64 bg-gray-800 rounded-xl" />}>
             <LoginForm />
           </Suspense>
         </div>
 
         {/* Lien inscription */}
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-400 mt-6">
           Pas encore de compte ?{" "}
-          <Link href="/auth/register" className="text-blue-600 font-semibold hover:underline">
+          <Link href="/auth/register" className="text-indigo-400 font-semibold hover:underline">
             Créer un compte
           </Link>
         </p>
