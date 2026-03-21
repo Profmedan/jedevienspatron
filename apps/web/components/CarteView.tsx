@@ -35,9 +35,9 @@ const POSTE_LABELS: Record<string, string> = {
 
 /** Labels lisibles pour les types de clients */
 const CLIENT_LABELS: Record<string, string> = {
-  particulier:  "Particulier (tréso +2 imméd.)",
-  tpe:          "TPE (créance C+1 +3)",
-  grand_compte: "Grand Compte (créance C+2 +4)",
+  particulier:  "client Particulier — paiement immédiat, Ventes +2",
+  tpe:          "client TPE — paiement en C+1, Ventes +3",
+  grand_compte: "client Grand Compte — paiement en C+2, Ventes +4",
 };
 
 /** Couleur de bordure par catégorie de carte Décision */
@@ -145,18 +145,23 @@ export default function CarteView({ carte, onClick, selected, disabled, compact 
           )}
 
           {/* ── Carte Commercial (type = "commercial", pas decision) ── */}
-          {isCommercial && (
-            <div className="space-y-0.5">
-              <div className="text-xs text-gray-300">
-                💼 Coût : <strong className="text-red-400">{(carte as CarteCommercial).coutChargesPersonnel}/tour</strong>
+          {isCommercial && (() => {
+            const com = carte as CarteCommercial;
+            const clientLabel = CLIENT_LABELS[com.typeClientRapporte] ?? com.typeClientRapporte;
+            return (
+              <div className="space-y-1">
+                <div className="text-xs text-gray-300">
+                  💼 Coût : <strong className="text-red-400">{com.coutChargesPersonnel}/trimestre</strong>
+                </div>
+                <div className="text-xs text-indigo-300 font-medium">
+                  🤝 +{com.nbClientsParTour} {clientLabel} / trimestre
+                </div>
+                <div className="text-[10px] text-gray-500 italic">
+                  Ce client génère une vente à chaque trimestre tant que la carte est active.
+                </div>
               </div>
-              <div className="text-xs text-gray-300">
-                🎯 Rapporte : <strong className="text-emerald-400">
-                  {(carte as CarteCommercial).nbClientsParTour} {(carte as CarteCommercial).typeClientRapporte}
-                </strong>/tour
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── Carte Décision : effets + résumé ── */}
           {isDecision && (() => {
@@ -209,8 +214,16 @@ export default function CarteView({ carte, onClick, selected, disabled, compact 
                   const bfrLabel      = delai === 0
                     ? "Paiement immédiat — BFR nul"
                     : `Créances C+${delai} × ${nbClients} (+${totalVentes}) — surveiller le BFR !`;
+                  const clientTypeLabel: Record<string, string> = {
+                    particulier:  "client Particulier — paiement immédiat, Ventes +2",
+                    tpe:          "client TPE — paiement en C+1, Ventes +3",
+                    grand_compte: "client Grand Compte — paiement en C+2, Ventes +4",
+                  };
                   return (
                     <div className="mt-1.5 pt-1.5 border-t border-gray-700">
+                      <div className="text-xs text-indigo-300 font-semibold mb-1.5">
+                        🤝 +{nbClients} {clientTypeLabel[clientType] ?? clientType} / trimestre
+                      </div>
                       <div className="text-[10px] font-semibold text-indigo-300 mb-1 uppercase tracking-wide">
                         📊 Impact net / trimestre :
                       </div>
@@ -245,7 +258,10 @@ export default function CarteView({ carte, onClick, selected, disabled, compact 
                     <div className="text-xs text-indigo-300 font-medium">
                       🤝 +{dec.nbClientsParTour ?? 1}{" "}
                       {CLIENT_LABELS[dec.clientParTour] ?? dec.clientParTour}
-                      /trim
+                      {" "}/ trimestre
+                    </div>
+                    <div className="text-[10px] text-gray-500 italic mt-0.5">
+                      Ce client supplémentaire génère une vente à chaque trimestre tant que la carte est active.
                     </div>
                   </div>
                 )}

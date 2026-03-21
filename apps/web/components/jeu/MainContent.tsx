@@ -1,5 +1,7 @@
 "use client";
 
+// [IMPACT-B] imports — retirer si on revient en arrière
+import { useEffect } from "react";
 import { Joueur, CarteDecision } from "@/lib/game-engine/types";
 import { getTresorerie } from "@/lib/game-engine/calculators";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
@@ -8,8 +10,10 @@ import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
 import { GlossairePanel } from "@/components/GlossairePanel";
 import CarteView from "@/components/CarteView";
+import { getPosteValue, getDocumentType, nomCompte } from "./utils";
 
-type TabType = "bilan" | "cr" | "indicateurs" | "glossaire";
+// [IMPACT-B] "impact" ajouté au type — retirer si on revient en arrière
+type TabType = "bilan" | "cr" | "indicateurs" | "glossaire" | "impact";
 
 interface MainContentProps {
   joueur: Joueur;
@@ -37,12 +41,14 @@ interface MainContentProps {
   onLaunchDecision?: () => void;
 }
 
-const TABS: Array<[TabType, string]> = [
+const TABS_BASE: Array<[TabType, string]> = [
   ["bilan", "📋 Bilan"],
-  ["cr", "📈 Compte de résultat"],
+  ["cr", "📈 CR"],
   ["indicateurs", "📊 Indicateurs"],
   ["glossaire", "📖 Glossaire"],
 ];
+// [IMPACT-B] onglet Impact — retirer si on revient en arrière
+const TAB_IMPACT: [TabType, string] = ["impact", "🔍 Impact"];
 
 /**
  * Montant CA par type de client (pour l'affichage dans le portefeuille)
@@ -135,6 +141,22 @@ export function MainContent({
   // Séparation des cartes ACTIVES (déjà achetées)
   const cartesCommerciales = joueur.cartesActives.filter((c) => c.clientParTour);
   const cartesAutresActives = joueur.cartesActives.filter((c) => !c.clientParTour);
+
+  // [IMPACT-B] Auto-switch vers "impact" quand une étape commence — retirer si on revient en arrière
+  useEffect(() => {
+    if (activeStep) {
+      setActiveTab("impact");
+    } else {
+      // Quand l'étape se termine, revenir au Bilan si on était sur l'onglet impact
+      if (activeTab === "impact") setActiveTab("bilan");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!activeStep]);
+
+  // [IMPACT-B] Onglets dynamiques : "impact" apparaît uniquement pendant une étape active
+  const TABS = activeStep
+    ? [TAB_IMPACT, ...TABS_BASE]
+    : TABS_BASE;
 
   return (
     <main className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -328,17 +350,23 @@ export function MainContent({
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div className="flex gap-2 flex-wrap">
         {TABS.map(([tab, label]) => {
-          const isLive = !!activeStep && tab !== "indicateurs";
+          const isImpact = tab === "impact";
+          const isLive   = !!activeStep && !isImpact && tab !== "indicateurs";
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                activeTab === tab
-                  ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm"
-                  : isLive
-                    ? "bg-gray-800 text-indigo-300 border-2 border-indigo-400 hover:border-indigo-500"
-                    : "bg-gray-800 text-gray-300 border border-gray-600 hover:border-indigo-400"
+                // [IMPACT-B] styles spéciaux pour l'onglet impact
+                isImpact && activeTab === "impact"
+                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-900/40 ring-2 ring-violet-400/30"
+                  : isImpact
+                    ? "bg-violet-900/40 text-violet-300 border-2 border-violet-500 hover:border-violet-400 animate-pulse"
+                    : activeTab === tab
+                      ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm"
+                      : isLive
+                        ? "bg-gray-800 text-indigo-300 border-2 border-indigo-400 hover:border-indigo-500"
+                        : "bg-gray-800 text-gray-300 border border-gray-600 hover:border-indigo-400"
               }`}
               aria-pressed={activeTab === tab}
             >
@@ -358,42 +386,164 @@ export function MainContent({
       {/* 3. Bandeau modifications + Contenu de l'onglet    */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
 
-      {/* ── Bandeau récapitulatif des modifications (persistant pendant la saisie) ── */}
-      {activeStep && recentModifications && recentModifications.length > 0 && (
-        <div className="rounded-xl border-2 border-amber-600 bg-amber-950/30 px-3 py-2.5">
-          <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1.5 flex items-center gap-1.5">
-            <span className="inline-block animate-pulse">🔄</span>
-            Modifications de cette étape
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {recentModifications.map((mod) => {
-              const delta = mod.nouvelleValeur - mod.ancienneValeur;
-              // Couleur basée sur l'impact financier réel (PCG) — pas uniquement le signe du delta
-              const bon = isBonPourEntreprise(mod.poste, delta);
-              return (
-                <span
-                  key={mod.poste}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                    bon
-                      ? "bg-emerald-900/40 text-emerald-300 border-emerald-700"
-                      : "bg-red-900/40 text-red-300 border-red-700"
-                  }`}
-                >
-                  <span>{POSTE_LABELS[mod.poste] ?? mod.poste}</span>
-                  <span className="opacity-60 line-through text-[10px] tabular-nums">{mod.ancienneValeur}</span>
-                  <span className="text-[10px]">→</span>
-                  <span className="font-black tabular-nums">{mod.nouvelleValeur}</span>
-                  <span className={`text-[10px] font-bold ml-0.5 ${bon ? "text-emerald-400" : "text-red-400"}`}>
-                    ({delta > 0 ? "+" : ""}{delta})
-                  </span>
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Bandeau modifications supprimé — remplacé par le panneau Impact sticky dans le panneau de gauche */}
 
       <div>
+        {/* [IMPACT-B] Onglet Impact — retirer ce bloc si on revient en arrière */}
+        {activeTab === "impact" && activeStep && (() => {
+          const baseJoueur = activeStep.baseEtat?.joueurs?.[activeStep.baseEtat?.joueurActif] as Joueur | undefined;
+          // Dédoublonnage par poste
+          const seen = new Set<string>();
+          const rows: Array<{
+            poste: string; label: string; docType: "Bilan" | "CR";
+            avant: number; actuel: number; delta: number;
+            applied: boolean;
+          }> = [];
+          for (const e of activeStep.entries) {
+            if (seen.has(e.poste)) continue;
+            seen.add(e.poste);
+            const avant  = baseJoueur ? getPosteValue(baseJoueur, e.poste) : 0;
+            const actuel = getPosteValue(displayJoueur, e.poste);
+            const allForPoste = activeStep.entries.filter((en: { poste: string; applied?: boolean }) => en.poste === e.poste);
+            const applied = allForPoste.every((en: { applied?: boolean }) => en.applied);
+            rows.push({
+              poste: e.poste,
+              label: nomCompte(e.poste),
+              docType: getDocumentType(e.poste),
+              avant, actuel,
+              delta: actuel - avant,
+              applied,
+            });
+          }
+          const bilanRows = rows.filter(r => r.docType === "Bilan");
+          const crRows    = rows.filter(r => r.docType === "CR");
+          const totalRows = rows.length;
+          const doneRows  = rows.filter(r => r.applied).length;
+
+          return (
+            <div className="rounded-2xl border border-violet-700/50 bg-gray-900 overflow-hidden shadow-lg">
+              {/* En-tête */}
+              <div className="bg-gradient-to-r from-violet-900 to-indigo-900 px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{activeStep.icone}</span>
+                  <div>
+                    <div className="text-xs font-black text-violet-300 uppercase tracking-widest">Impact de l&apos;étape</div>
+                    <div className="text-sm font-bold text-white leading-tight">{activeStep.titre}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-2xl font-black tabular-nums ${doneRows === totalRows ? "text-emerald-400" : "text-violet-300"}`}>
+                    {doneRows}/{totalRows}
+                  </div>
+                  <div className="text-[10px] text-violet-400">saisies</div>
+                </div>
+              </div>
+              {/* Barre progression */}
+              <div className="h-1.5 bg-gray-800">
+                <div
+                  className={`h-full transition-all duration-500 ${doneRows === totalRows ? "bg-emerald-500" : "bg-violet-500"}`}
+                  style={{ width: `${totalRows > 0 ? (doneRows / totalRows) * 100 : 0}%` }}
+                />
+              </div>
+              {/* Grille Bilan | CR */}
+              <div className="grid grid-cols-2 divide-x divide-gray-700/50">
+                {/* Colonne Bilan */}
+                <div className="p-3">
+                  <div className="text-center text-[10px] font-black text-blue-300 uppercase tracking-widest bg-blue-900/30 rounded-lg py-1 mb-3">
+                    📋 Bilan
+                  </div>
+                  {bilanRows.length === 0 ? (
+                    <p className="text-xs text-gray-600 italic text-center py-2">Aucun poste bilan</p>
+                  ) : bilanRows.map((row) => {
+                    const changed = row.actuel !== row.avant;
+                    const bon = row.delta > 0
+                      ? !["emprunts","dettes","decouvert","dettesFiscales","dettesD2"].includes(row.poste)
+                      : ["emprunts","dettes","decouvert","dettesFiscales","dettesD2"].includes(row.poste);
+                    return (
+                      <div key={row.poste} className={`mb-3 rounded-xl p-2.5 border transition-all duration-500 ${
+                        row.applied
+                          ? changed
+                            ? "bg-gray-800/60 border-gray-600"
+                            : "bg-gray-800/30 border-gray-700 opacity-50"
+                          : "bg-blue-950/20 border-blue-800/40"
+                      }`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-blue-300 truncate">{row.label}</span>
+                          {row.applied
+                            ? <span className="text-[10px] text-emerald-400 font-bold">✓</span>
+                            : <span className="text-[10px] text-blue-500 animate-pulse">⋯</span>
+                          }
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xl font-black tabular-nums text-gray-400">{row.avant}</span>
+                          <span className="text-gray-600 text-sm">→</span>
+                          <span className={`text-2xl font-black tabular-nums ${
+                            !changed ? "text-gray-500" : bon ? "text-emerald-400" : "text-red-400"
+                          }`}>{row.actuel}</span>
+                        </div>
+                        {changed && (
+                          <div className={`text-center text-xs font-black mt-1 tabular-nums ${bon ? "text-emerald-500" : "text-red-500"}`}>
+                            {row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Colonne CR */}
+                <div className="p-3">
+                  <div className="text-center text-[10px] font-black text-amber-300 uppercase tracking-widest bg-amber-900/30 rounded-lg py-1 mb-3">
+                    📈 Compte de Résultat
+                  </div>
+                  {crRows.length === 0 ? (
+                    <p className="text-xs text-gray-600 italic text-center py-2">Aucun poste CR</p>
+                  ) : crRows.map((row) => {
+                    const changed = row.actuel !== row.avant;
+                    const bon = ["ventes","productionStockee","produitsFinanciers","revenusExceptionnels"].includes(row.poste)
+                      ? row.delta > 0 : row.delta < 0;
+                    return (
+                      <div key={row.poste} className={`mb-3 rounded-xl p-2.5 border transition-all duration-500 ${
+                        row.applied
+                          ? changed
+                            ? "bg-gray-800/60 border-gray-600"
+                            : "bg-gray-800/30 border-gray-700 opacity-50"
+                          : "bg-amber-950/20 border-amber-800/40"
+                      }`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-amber-300 truncate">{row.label}</span>
+                          {row.applied
+                            ? <span className="text-[10px] text-emerald-400 font-bold">✓</span>
+                            : <span className="text-[10px] text-amber-500 animate-pulse">⋯</span>
+                          }
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xl font-black tabular-nums text-gray-400">{row.avant}</span>
+                          <span className="text-gray-600 text-sm">→</span>
+                          <span className={`text-2xl font-black tabular-nums ${
+                            !changed ? "text-gray-500" : bon ? "text-emerald-400" : "text-red-400"
+                          }`}>{row.actuel}</span>
+                        </div>
+                        {changed && (
+                          <div className={`text-center text-xs font-black mt-1 tabular-nums ${bon ? "text-emerald-500" : "text-red-500"}`}>
+                            {row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Message fin */}
+              {doneRows === totalRows && (
+                <div className="mx-3 mb-3 py-2 rounded-xl bg-emerald-900/30 border border-emerald-700/50 text-center text-xs font-bold text-emerald-300">
+                  ✅ Toutes les écritures saisies — bilan et CR mis à jour !
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        {/* Fin [IMPACT-B] */}
+
         {activeTab === "bilan" && (
           <BilanPanel
             joueur={displayJoueur}

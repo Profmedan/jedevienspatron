@@ -1,8 +1,8 @@
 "use client";
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur, DECOUVERT_MAX } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif, getResultatNet } from "@/lib/game-engine/calculators";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };
 
@@ -108,9 +108,17 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
 }) {
   const [show, setShow] = useState(false);
   const info = categorie ? TOOLTIPS[categorie] : null;
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll vers ce poste quand il est mis en surbrillance
+  useEffect(() => {
+    if (highlighted && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlighted]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <div
         className={`flex justify-between items-center px-2.5 py-2 rounded-lg mb-1 transition-all duration-300 ${
           info ? "cursor-pointer" : "cursor-default"
@@ -252,7 +260,7 @@ function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; tot
   // Construire l'analyse
   const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
 
-  if (tresoNette < 0) points.push({ niveau: "rouge", texte: `Trésorerie nette négative (${tresoNette}) — risque de faillite si découvert > 5.` });
+  if (tresoNette < 0) points.push({ niveau: "rouge", texte: `Trésorerie nette négative (${tresoNette}) — risque de faillite si découvert > ${DECOUVERT_MAX}.` });
   else if (tresoNette < 3) points.push({ niveau: "jaune", texte: `Trésorerie faible (${tresoNette}) — préservez vos liquidités ce trimestre.` });
   else points.push({ niveau: "vert", texte: `Trésorerie saine (${tresoNette}) — vous pouvez envisager un investissement.` });
 
@@ -501,11 +509,11 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
           {joueur.bilan.decouvert > 0 && (
             <>
               <SectionHeader
-                label={joueur.bilan.decouvert > 5 ? "🔴 DÉCOUVERT — FAILLITE !" : "⚠️ Découvert"}
+                label={joueur.bilan.decouvert > DECOUVERT_MAX ? "🔴 DÉCOUVERT — FAILLITE !" : "⚠️ Découvert"}
                 color="#dc2626"
               />
               <div className={`px-3 py-2 rounded-xl border-2 mb-1 ${
-                joueur.bilan.decouvert > 5
+                joueur.bilan.decouvert > DECOUVERT_MAX
                   ? "bg-red-950/70 border-red-600 animate-pulse"
                   : "bg-orange-950/40 border-orange-500"
               }`}>
@@ -519,10 +527,10 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
                   recentMod={findMod(recentModifications, "decouvert")}
                 />
                 <div className={`text-xs mt-1 font-semibold ${
-                  joueur.bilan.decouvert > 5 ? "text-red-300" : "text-orange-300"
+                  joueur.bilan.decouvert > DECOUVERT_MAX ? "text-red-300" : "text-orange-300"
                 }`}>
-                  {joueur.bilan.decouvert > 5
-                    ? "🚨 Découvert > 5 : faillite si non régularisé !"
+                  {joueur.bilan.decouvert > DECOUVERT_MAX
+                    ? `🚨 Découvert > ${DECOUVERT_MAX} : faillite si non régularisé !`
                     : "Remboursez ce découvert au tour suivant."}
                 </div>
               </div>
