@@ -58,3 +58,23 @@ Modifier `apps/web/components/jeu/LeftPanel.tsx` :
 - [ ] TypeScript OK
 - [ ] Visuellement validé sur Vercel
 - [ ] Agents consultés avant implémentation
+
+---
+
+## Tâche urgente : Corriger les 2 erreurs de build Vercel (2026-03-21)
+
+### Erreur 1 — ESLint : module `eslint-config-next/core-web-vitals` introuvable
+- **Cause** : Next.js 15 exige l'extension `.js` dans l'import ESM flat config
+- **Fix** : Désactiver ESLint au build dans `next.config.ts` (pattern identique à TS)
+
+### Erreur 2 — React dual instance : `ReactCurrentDispatcher` undefined
+- **Cause** : monorepo npm workspaces → `styled-jsx` et `react-dom` utilisent 2 instances React distinctes
+- **Fix A** (déjà committé) : `overrides` dans root `package.json` → force une seule version npm
+- **Fix B** (à faire) : webpack alias dans `next.config.ts` → force une seule instance au bundle time
+
+### Plan d'exécution
+- [x] Diagnostiquer les 2 erreurs
+- [ ] Ajouter `eslint.ignoreDuringBuilds: true` dans `next.config.ts`
+- [ ] Ajouter webpack alias React dans `next.config.ts`
+- [ ] Vérifier avec `npx tsc --noEmit`
+- [ ] Commit + instruire push
