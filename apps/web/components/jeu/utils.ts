@@ -43,6 +43,14 @@ export const PRODUITS_KEYS = [
 
 export type SensEcriture = "debit" | "credit";
 
+/** Retourne le document comptable auquel appartient un poste : "Bilan" ou "CR" */
+export function getDocumentType(poste: string): "Bilan" | "CR" {
+  const p = poste.toLowerCase();
+  if (ACTIF_KEYS.some((k) => p.includes(k))) return "Bilan";
+  if (PASSIF_KEYS.some((k) => p.includes(k))) return "Bilan";
+  return "CR";
+}
+
 export function getSens(poste: string, delta: number): SensEcriture {
   const p = poste.toLowerCase();
   const isActif = ACTIF_KEYS.some((k) => p.includes(k));
