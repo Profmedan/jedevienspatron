@@ -8,45 +8,180 @@ import { EntryPanel, type ActiveStep } from "./EntryPanel";
 import { nomCompte, getDocument } from "./utils";
 import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
-// ─── Strip de progression compact (remplace EtapeGuide) ─────────────────────
+// ─── GameMap : carte visuelle complète de la progression ────────────────────
 
-const ETAPE_EMOJI: Record<number, string> = {
-  0: "💼", 1: "📦", 2: "💰", 3: "🤝", 4: "🎯", 5: "🏛️", 6: "✉️", 7: "🎲", 8: "📊",
-};
+const ETAPES_MAP = [
+  { icone: "💼", label: "Charges fixes",     court: "Charges" },
+  { icone: "📦", label: "Achats stocks",     court: "Achats"  },
+  { icone: "⏩", label: "Créances clients",  court: "Créances"},
+  { icone: "👔", label: "Paiement commerciaux", court: "Commerciaux" },
+  { icone: "🤝", label: "Ventes & clients", court: "Ventes"  },
+  { icone: "🔄", label: "Effets récurrents", court: "Récurrents" },
+  { icone: "🎯", label: "Carte Décision",   court: "Décision"},
+  { icone: "🎲", label: "Événement aléatoire", court: "Événement" },
+  { icone: "📊", label: "Bilan trimestriel", court: "Bilan"   },
+];
 
-function ProgressStrip({ etapeTour, tourActuel, nbToursMax }: {
+function GameMap({ etapeTour, tourActuel, nbToursMax }: {
   etapeTour: number; tourActuel: number; nbToursMax: number;
 }) {
-  const modal = MODALES_ETAPES[etapeTour];
+  const [detailOpen, setDetailOpen] = useState(false);
+  const currentEtape = ETAPES_MAP[etapeTour];
+  const pctTour  = Math.round(((tourActuel - 1) / nbToursMax) * 100);
+  const pctEtape = Math.round((etapeTour / 9) * 100);
+
   return (
-    <div className="bg-gray-800/60 rounded-xl border border-gray-700 px-3 py-2 space-y-1.5">
-      {/* Barre tour */}
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">
-          Tour {tourActuel} / {nbToursMax}
-        </span>
-        <div className="flex gap-0.5">
-          {Array.from({ length: nbToursMax }).map((_, i) => (
-            <div key={i} className={`h-1.5 w-4 rounded-full transition-all ${i < tourActuel ? "bg-indigo-400" : "bg-gray-700"}`} />
-          ))}
+    <div className="bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden shadow-md">
+
+      {/* ── En-tête : Tour + progression globale ── */}
+      <div className="px-3 pt-2.5 pb-2 border-b border-gray-800 space-y-2">
+
+        {/* Ligne tour */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">
+              Tour {tourActuel}/{nbToursMax}
+            </span>
+            <div className="flex gap-0.5">
+              {Array.from({ length: nbToursMax }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-2 w-5 rounded-full transition-all ${
+                    i < tourActuel - 1
+                      ? "bg-indigo-600"
+                      : i === tourActuel - 1
+                        ? "bg-indigo-400 ring-1 ring-indigo-300/50"
+                        : "bg-gray-700"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          <span className="text-[10px] text-gray-500 font-medium shrink-0">
+            {pctTour}% complété
+          </span>
+        </div>
+
+        {/* Ligne étape du tour */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Étape du trimestre
+            </span>
+            <span className="text-[10px] text-indigo-300 font-bold">{etapeTour + 1}/9</span>
+          </div>
+          {/* Barre de progression étape */}
+          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-500"
+              style={{ width: `${pctEtape}%` }}
+            />
+          </div>
         </div>
       </div>
-      {/* Barre étape */}
-      <div className="flex gap-0.5">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < etapeTour ? "bg-indigo-500" : i === etapeTour ? "bg-indigo-400" : "bg-gray-700"}`} />
-        ))}
+
+      {/* ── Étape courante — mise en avant ── */}
+      <div className="px-3 py-2.5 bg-indigo-950/30 border-b border-indigo-800/30 flex items-center gap-2.5">
+        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl shadow-md shrink-0 ring-2 ring-indigo-400/40">
+          {currentEtape?.icone ?? "📋"}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">En cours</div>
+          <div className="text-xs font-bold text-white leading-snug truncate">
+            {etapeTour + 1}. {currentEtape?.label ?? ""}
+          </div>
+        </div>
+        {/* Indicateur "suivante" */}
+        {etapeTour < 8 && (
+          <div className="text-right shrink-0">
+            <div className="text-[8px] text-gray-600 uppercase tracking-wider">Suivante</div>
+            <div className="text-[10px] text-gray-500 flex items-center gap-0.5">
+              <span>{ETAPES_MAP[etapeTour + 1]?.icone}</span>
+              <span>{ETAPES_MAP[etapeTour + 1]?.court}</span>
+            </div>
+          </div>
+        )}
       </div>
-      {/* Titre étape */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-sm">{ETAPE_EMOJI[etapeTour] ?? "📋"}</span>
-        <span className="text-[10px] text-gray-400 font-medium leading-tight">
-          Étape {etapeTour + 1}/9 — {modal?.titre ?? ""}
-        </span>
+
+      {/* ── Timeline visuelle des 9 étapes ── */}
+      <div className="px-2 pt-2 pb-1">
+        <div className="flex items-start gap-1 overflow-x-auto pb-1 scrollbar-none">
+          {ETAPES_MAP.map((etape, i) => {
+            const done    = i < etapeTour;
+            const current = i === etapeTour;
+            const coming  = i > etapeTour;
+            return (
+              <div key={i} className="flex flex-col items-center gap-0.5 min-w-[30px] flex-1">
+                {/* Icône / pastille */}
+                <div className={`
+                  relative w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+                  transition-all duration-300
+                  ${done    ? "bg-indigo-700 text-white"         : ""}
+                  ${current ? "bg-indigo-500 text-white ring-2 ring-indigo-300 scale-125 shadow-md shadow-indigo-900/60 z-10" : ""}
+                  ${coming  ? "bg-gray-800 text-gray-600 border border-gray-700" : ""}
+                `}>
+                  {done ? (
+                    <span className="text-[10px] font-black text-emerald-300">✓</span>
+                  ) : (
+                    <span className={current ? "text-base" : "text-xs"}>{etape.icone}</span>
+                  )}
+                  {current && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-60" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-300" />
+                    </span>
+                  )}
+                </div>
+                {/* Numéro */}
+                <span className={`text-[8px] font-bold tabular-nums ${
+                  done ? "text-indigo-500" : current ? "text-indigo-300" : "text-gray-700"
+                }`}>{i + 1}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* ── Détail dépliable : liste des 9 étapes ── */}
+      <button
+        onClick={() => setDetailOpen(!detailOpen)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:text-gray-400 uppercase tracking-widest border-t border-gray-800 transition-colors"
+      >
+        <span>📋 Parcours complet du trimestre</span>
+        <span className="text-sm">{detailOpen ? "▲" : "▼"}</span>
+      </button>
+      {detailOpen && (
+        <div className="px-2 pb-2 space-y-0.5 border-t border-gray-800 bg-gray-950/30">
+          {ETAPES_MAP.map((etape, i) => {
+            const done    = i < etapeTour;
+            const current = i === etapeTour;
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all ${
+                  current
+                    ? "bg-indigo-900/40 border border-indigo-700/50 text-white"
+                    : done
+                      ? "text-gray-600"
+                      : "text-gray-500"
+                }`}
+              >
+                <span className="text-sm shrink-0">{done ? "✅" : current ? "▶️" : "○"}</span>
+                <span className="shrink-0 text-base">{etape.icone}</span>
+                <span className={`font-medium leading-tight ${current ? "font-bold" : ""}`}>
+                  {i + 1}. {etape.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
+
+// Alias pour compatibilité avec les usages existants dans le composant principal
+const ProgressStrip = GameMap;
 
 // ─── Carte pédagogique persistante ──────────────────────────────────────────
 // isLocked=true  → étape nouvelle : carte développée, boutons verrouillés
@@ -73,7 +208,7 @@ function PedagoCard({ etape, isLocked, onUnlock }: {
         onClick={() => setOpen(true)}
         className="w-full flex items-center gap-2 px-3 py-2 bg-gray-800/60 rounded-xl border border-gray-700 hover:border-indigo-600/60 hover:bg-gray-800 transition-all text-left"
       >
-        <span className="text-base shrink-0">{ETAPE_EMOJI[etape] ?? "📋"}</span>
+        <span className="text-base shrink-0">{ETAPES_MAP[etape]?.icone ?? "📋"}</span>
         <span className="flex-1 text-xs text-gray-400 font-medium leading-tight truncate">{modal.titre}</span>
         <span className="text-[10px] text-indigo-400 shrink-0">▼ Relire</span>
       </button>
@@ -89,7 +224,7 @@ function PedagoCard({ etape, isLocked, onUnlock }: {
     }`}>
       {/* En-tête */}
       <div className="flex items-start gap-2">
-        <span className="text-2xl shrink-0">{ETAPE_EMOJI[etape] ?? "📋"}</span>
+        <span className="text-2xl shrink-0">{ETAPES_MAP[etape]?.icone ?? "📋"}</span>
         <div className="flex-1 min-w-0">
           <span className={`text-[10px] font-bold uppercase tracking-widest block ${isLocked ? "text-indigo-400" : "text-gray-500"}`}>
             {isLocked ? "Étape " + (etape + 1) + " — À lire avant d'agir" : "Rappel — étape " + (etape + 1)}
