@@ -38,7 +38,7 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent("/dashboard")}`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?redirectTo=${encodeURIComponent("/dashboard")}`,
       },
     });
     if (error) setError("Inscription Google impossible. Réessayez.");
@@ -69,7 +69,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: { full_name: displayName, org_name: orgName, org_type: orgType },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
       },
     });
 

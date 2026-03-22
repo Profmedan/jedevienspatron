@@ -187,7 +187,15 @@ export default function NewSessionPage() {
 
             {error && (
               <div className="bg-red-950/30 border border-red-800 rounded-xl p-4 text-sm text-red-200">
-                ⚠️ {error}
+                <p>⚠️ {error}</p>
+                {error.toLowerCase().includes("crédit") && (
+                  <Link
+                    href="/dashboard/packs"
+                    className="inline-block mt-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
+                  >
+                    💳 Acheter des sessions →
+                  </Link>
+                )}
               </div>
             )}
 

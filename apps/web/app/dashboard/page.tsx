@@ -97,12 +97,20 @@ export default async function DashboardPage() {
             <h2 className="text-2xl font-bold text-gray-100">Bonjour, {displayName} 👋</h2>
             <p className="text-gray-400 mt-1">Tableau de bord JE DEVIENS PATRON</p>
           </div>
-          <Link
-            href="/dashboard/sessions/new"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2"
-          >
-            <span>▶</span> Nouvelle session
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/packs"
+              className="border border-indigo-600 text-indigo-400 hover:bg-indigo-950/30 font-semibold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2"
+            >
+              💳 Acheter des sessions
+            </Link>
+            <Link
+              href="/dashboard/sessions/new"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2"
+            >
+              <span>▶</span> Nouvelle session
+            </Link>
+          </div>
         </div>
 
         {/* Explication du fonctionnement */}

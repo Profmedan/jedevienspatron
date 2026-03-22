@@ -39,7 +39,7 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirectTo=${redirectTo}`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?redirectTo=${redirectTo}`,
       },
     });
     if (error) setError("Connexion Google impossible. Réessayez.");
