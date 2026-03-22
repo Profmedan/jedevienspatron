@@ -32,6 +32,7 @@ function PacksContent() {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Affiche les messages de succès/annulation depuis Stripe
   useEffect(() => {
@@ -39,16 +40,17 @@ function PacksContent() {
     const cancelled = searchParams.get("cancelled");
 
     if (success === "true") {
-      setError(null);
-      // Message de succès affiché quelques secondes
+      setSuccessMessage("✅ Paiement confirmé ! Vos sessions ont été créditées.");
       setTimeout(() => {
-        router.push("/dashboard/packs");
-      }, 2000);
+        setSuccessMessage(null);
+        router.replace("/dashboard/packs");
+      }, 4000);
     } else if (cancelled === "true") {
-      setError("Paiement annulé.");
+      setError("Paiement annulé. Vous pouvez réessayer quand vous voulez.");
       setTimeout(() => {
-        router.push("/dashboard/packs");
-      }, 3000);
+        setError(null);
+        router.replace("/dashboard/packs");
+      }, 4000);
     }
   }, [searchParams, router]);
 
@@ -145,7 +147,16 @@ function PacksContent() {
         </div>
       </div>
 
-      {/* Messages erreur/succès */}
+      {/* Message de succès */}
+      {successMessage && (
+        <div className="px-6 py-4 bg-green-900/40 border-b border-green-700 text-green-300">
+          <div className="max-w-7xl mx-auto font-semibold">
+            {successMessage}
+          </div>
+        </div>
+      )}
+
+      {/* Message d'erreur */}
       {error && (
         <div className="px-6 py-4 bg-red-900/30 border-b border-red-700 text-red-300">
           <div className="max-w-7xl mx-auto">
@@ -162,7 +173,7 @@ function PacksContent() {
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">Pour les professeurs</h2>
               <p className="text-gray-400">
-                Packs courte durée avec expiration (7, 30 ou 60 jours)
+                Packs avec expiration (30, 60 ou 90 jours)
               </p>
             </div>
 
