@@ -1,111 +1,61 @@
-# Tâches JE DEVIENS PATRON — 2026-03-21
+# Tâches JE DEVIENS PATRON — mis à jour 2026-03-22
 
-## Tâche 1 : GameMap v2 ✅ TERMINÉE
-Design narratif du panneau gauche avec agents experts. Déployé sur Vercel.
-
-## Tâche 2 : Build fixes ✅ TERMINÉE
-React 18 unique (plus de React 19 fantôme), ESLint ignored, Next.js 15.5.14 (CVE fix).
-
----
-
-## Tâche 3 : Refonte UI dark mode + Auth + Business model sessions
-**Statut** : En cours — Phase agents experts
-**3 volets en parallèle** (demande Pierre)
+## Tâches précédentes ✅ TERMINÉES
+- Tâche 1 : GameMap v2 — déployé
+- Tâche 2 : Build fixes (React 18, ESLint, CVE Next.js)
+- Tâche 3 : Dark mode + Auth + Business model Stripe (volets 1/2/3)
 
 ---
 
-### VOLET 1 — Dark mode cohérent sur toutes les pages
+## Tâche 4 : Stripe + Domaine + Corrections UX — 2026-03-22
 
-**Problème** : Auth (login, register) et dashboard sont en thème clair (bleu/blanc) alors que le jeu est en dark `bg-gray-950`. Texte illisible dans les formulaires.
+### 4.1 — Stripe ✅
+- [x] 7 produits Stripe créés (individuel-5/10/20, org-80/150/300/1000)
+- [x] Migration 005 : stripe_price_id pour les 7 packs en base Supabase
+- [x] Route /api/stripe/checkout (lazy Stripe client)
+- [x] Route /api/stripe/webhook (checkout.session.completed → crédits)
+- [x] Page /dashboard/packs avec boutons Acheter + messages succès/erreur
+- [x] STRIPE_WEBHOOK_SECRET configuré sur Vercel
+- [x] NEXT_PUBLIC_APP_URL = https://jedevienspatron.fr sur Vercel
 
-**Fichiers à modifier** :
-- `apps/web/app/auth/login/page.tsx` (155 lignes — bleu/blanc)
-- `apps/web/app/auth/register/page.tsx` (292 lignes — bleu/blanc)
-- `apps/web/app/dashboard/page.tsx` (239 lignes — blanc)
-- `apps/web/app/dashboard/sessions/new/page.tsx` (206 lignes — blanc/indigo)
-- `apps/web/app/dashboard/sessions/[id]/page.tsx` (300+ lignes — blanc)
-- `apps/web/app/historique/page.tsx`
+### 4.2 — Domaine jedevienspatron.fr ✅
+- [x] Domaine ajouté sur Vercel (projet jedevienspatron-web)
+- [x] DNS OVH configurés : A @ → 76.76.21.21, www CNAME → cname.vercel-dns.com.
+- [x] Supabase Site URL + Redirect URLs mis à jour
+- [ ] Vérifier propagation DNS (attendre ✅ verts sur Vercel)
 
-**Palette cible** (cohérente avec le jeu) :
-- Root : `bg-gray-950 text-gray-100`
-- Panneaux : `bg-gray-900` ou `bg-gray-800/60`
-- Inputs : `bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400`
-- Boutons primaires : `bg-indigo-600 hover:bg-indigo-500`
-- Liens : `text-indigo-400 hover:text-indigo-300`
+### 4.3 — Corrections bugs ✅
+- [x] Fix email redirect : window.location.origin → NEXT_PUBLIC_APP_URL
+- [x] Fix trimestres : 4/6/8 → 6/8/10/12 (+15 min par tranche de 2)
+- [x] Fix navigation : bouton "Acheter des sessions" dans dashboard
+- [x] Fix lien "Acheter des sessions" quand crédits insuffisants
 
-**Checklist** :
-- [ ] Consulter agents : UI Designer + Brand Guardian
-- [ ] Convertir login/page.tsx
-- [ ] Convertir register/page.tsx
-- [ ] Convertir dashboard/page.tsx
-- [ ] Convertir sessions/new/page.tsx
-- [ ] Convertir sessions/[id]/page.tsx
-- [ ] Convertir historique/page.tsx
-- [ ] Vérifier tsc
-
----
-
-### VOLET 2 — Auth & inscription
-
-**Problèmes** :
-1. Google OAuth : bouton existe mais l'inscription échoue
-2. Confirmation email → page erreur (callback redirige vers /auth/login?error=auth_callback_error)
-3. Individu peut jouer sans s'inscrire → il faut forcer l'inscription
-
-**Fichiers concernés** :
-- `apps/web/app/auth/callback/route.ts` (42 lignes)
-- `apps/web/app/auth/register/page.tsx`
-- `apps/web/app/auth/login/page.tsx`
-- `apps/web/app/jeu/page.tsx` (vérification auth avant jeu)
-- Middleware auth (à créer)
-
-**Checklist** :
-- [ ] Consulter agents : Backend Architect + Security Engineer
-- [ ] Diagnostiquer flow Google OAuth côté code
-- [ ] Corriger callback confirmation email
-- [ ] Ajouter middleware auth pour /jeu
-- [ ] Page d'erreur auth en dark mode
+### 4.4 — Bypass codes ✅
+- [x] Codes TEST0001–TEST0010 créés (1 utilisation chacun)
+- [x] Code AIRWEEK1 illimité (usage interne Pierre)
+- [x] Code CLASSE01 (5 utilisations) + DEMO2026 (1 utilisation)
 
 ---
 
-### VOLET 3 — Business model sessions (Stripe)
+## Tâche 5 : À faire — priorités restantes
 
-**Architecture cible** :
-- Individuel : pack 5/10/20 sessions → crédits → décompte par partie
-- Organisation : pack 80/150/300/1000 sessions → crédits partagés enseignants
-- Codes partagés : décomptés du pack de l'organisation
-- Stripe Checkout → webhook → créditer session_credits
+### 5.1 — Test Stripe end-to-end
+- [ ] Tester achat avec carte 4242 4242 4242 4242
+- [ ] Vérifier crédits incrémentés après paiement
+- [ ] Mettre à jour URL webhook Stripe → https://jedevienspatron.fr/api/stripe/webhook
 
-**Tables DB existantes** :
-- `packs` (7 packs seed : individuel-5/10/20, org-80/150/300/1000)
-- `session_credits` (tracking crédits par org)
-- `subscriptions` (sync Stripe)
-- `bypass_codes` (codes gratuits avec quota)
+### 5.2 — Dashboard formateur
+- [ ] Page suivi apprenants : player_name + room_code + score par session
 
-**Fichiers à créer/modifier** :
-- `apps/web/app/api/stripe/checkout/route.ts` (nouveau)
-- `apps/web/app/api/stripe/webhook/route.ts` (nouveau)
-- `apps/web/app/api/sessions/route.ts` (ajouter vérif crédits)
-- `apps/web/app/dashboard/packs/page.tsx` (nouveau — page achat)
-- `apps/web/lib/credits.ts` (nouveau — logique décompte)
-
-**Checklist** :
-- [ ] Consulter agents : Backend Architect + Finance Tracker + Growth Hacker
-- [ ] /api/stripe/checkout
-- [ ] /api/stripe/webhook
-- [ ] Vérif crédits dans /api/sessions
-- [ ] Page /dashboard/packs
-- [ ] Décompte automatique par session
-- [ ] Tests
+### 5.3 — Bloquer jeu individuel sans inscription
+- [ ] Middleware : si accès /jeu sans session ET sans bypass code → redirect login
+- [ ] Vérif crédits AVANT de lancer la partie
 
 ---
 
-### Review finale
-- [ ] Toutes les pages en dark mode
-- [ ] Auth Google fonctionnel (côté code)
-- [ ] Email confirmation OK
-- [ ] Jeu bloqué sans inscription
-- [ ] Crédits décomptés par session
-- [ ] Codes partagés vérifiés/décomptés
-- [ ] tsc --noEmit OK
-- [ ] Build Vercel OK
+## Review finale
+- [ ] Test complet flux achat Stripe (carte test)
+- [ ] Test flux formateur (créer session → distribuer code → apprenants jouent)
+- [ ] Test flux bypass code (TEST0001 → jouer → code épuisé)
+- [ ] DNS jedevienspatron.fr propagé et ✅ sur Vercel
+- [ ] Stripe webhook URL → jedevienspatron.fr

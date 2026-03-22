@@ -111,3 +111,25 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 **Fix correct** : ajouter `"react": "^18.3.1"` et `"react-dom": "^18.3.1"` au root `package.json` + régénérer `package-lock.json`. Résultat : une seule instance React 18 dans tout le monorepo.
 **Erreurs précédentes** : `overrides` et `webpack alias` étaient tous deux contre-productifs — le premier ajoutait React 19 en parallèle, le second cassait les exports conditionnels.
 **Commande de vérification** : `python3 -c "import json; [print(k,v['version']) for k,v in json.load(open('package-lock.json'))['packages'].items() if k.endswith('/react') and 'react-' not in k.split('/')[-1]]"`
+
+## L15 — 2026-03-22 : window.location.origin en production = localhost
+**Erreur** : `window.location.origin` utilisé dans les pages auth pour construire `redirectTo` et `emailRedirectTo`.
+**Effet** : en local → `http://localhost:3000` ; sur Vercel → `https://jedevienspatron-web.vercel.app`. Mais si l'utilisateur avait saisi son email depuis la prod, le lien de confirmation renvoyait vers localhost.
+**Fix** : `process.env.NEXT_PUBLIC_APP_URL || window.location.origin` — NEXT_PUBLIC_APP_URL est défini sur Vercel et prend la priorité.
+**Règle** : toujours utiliser NEXT_PUBLIC_APP_URL pour construire des URLs absolues dans le code client. Ne jamais dépendre de window.location.origin pour des redirections auth.
+
+## L16 — 2026-03-22 : Pages orphelines = fonctionnalités invisibles
+**Erreur** : /dashboard/packs entièrement fonctionnelle mais aucun lien n'y menait depuis le dashboard ou la page de création de session.
+**Conséquence** : l'utilisateur voyait "crédits insuffisants" sans savoir où acheter.
+**Règle** : toute nouvelle page doit avoir au moins un point d'entrée visible depuis les pages adjacentes. Checklist à la création d'une page :
+1. Y a-t-il un lien depuis le dashboard principal ?
+2. Y a-t-il un lien depuis les pages qui en ont besoin (ex: page erreur → page achat) ?
+3. La page est-elle dans la navigation globale si pertinent ?
+
+## L17 — 2026-03-22 : Supabase Redirect URLs à configurer dès le début
+**Erreur** : Supabase bloque les redirections vers des URLs non whitelistées. En développement, localhost est accepté par défaut. En production, l'URL de prod doit être ajoutée manuellement dans Authentication → URL Configuration.
+**Règle** : à chaque nouveau domaine de déploiement (Vercel, domaine custom), ajouter immédiatement l'URL dans Supabase Redirect URLs. Ne pas attendre le premier bug utilisateur.
+
+## L18 — 2026-03-22 : Options pédagogiques = décision métier, pas technique
+**Erreur** : les options 4/6/8 trimestres avaient été fixées sans validation pédagogique. Pierre a indiqué que 4 trimestres est insuffisant pour observer les effets économiques du jeu.
+**Règle** : les paramètres liés au contenu pédagogique (nombre de tours, durée, niveaux) doivent être validés par Pierre avant implémentation. Ne pas inventer de valeurs par défaut sur du contenu métier.
