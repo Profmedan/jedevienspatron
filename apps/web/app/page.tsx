@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { KeyRound, Gamepad2, GraduationCap, CheckCircle, Zap, Scale, RefreshCw, TrendingUp, Mail, Shield, FileText, Info, Target, BookOpen, Shuffle, Users, Clock, Building2 } from "lucide-react";
+import { KeyIndicatorsSection } from "@/components/KeyIndicatorsSection";
+import { GlossarySection } from "@/components/GlossarySection";
 
 export default function Home() {
   const router = useRouter();
@@ -352,6 +354,16 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* INDICATEURS CLÉS                                  */}
+      {/* ══════════════════════════════════════════════════ */}
+      <KeyIndicatorsSection />
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* GLOSSAIRE COMPTABLE                               */}
+      {/* ══════════════════════════════════════════════════ */}
+      <GlossarySection />
 
       {/* ══════════════════════════════════════════════════ */}
       {/* PIED DE PAGE                                      */}
