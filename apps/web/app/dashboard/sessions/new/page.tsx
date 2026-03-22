@@ -6,16 +6,17 @@ import Link from "next/link";
 
 export default function NewSessionPage() {
   const router = useRouter();
-  const [nbTours, setNbTours] = useState<4 | 6 | 8>(6);
+  const [nbTours, setNbTours] = useState<6 | 8 | 10 | 12>(6);
   const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ room_code: string; id: string } | null>(null);
 
   const durations: Record<number, string> = {
-    4: "~1h — session courte",
-    6: "~1h30 — session standard ✓",
-    8: "~2h — session longue",
+    6:  "~1h — session standard ✓",
+    8:  "~1h15 — session approfondie",
+    10: "~1h30 — session complète",
+    12: "~1h45 — session longue",
   };
 
   async function handleCreate(e: React.FormEvent) {
@@ -147,8 +148,8 @@ export default function NewSessionPage() {
               <label className="block text-sm font-semibold text-gray-200 mb-3">
                 Durée de la session
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                {([4, 6, 8] as const).map(n => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {([6, 8, 10, 12] as const).map(n => (
                   <button
                     key={n}
                     type="button"
