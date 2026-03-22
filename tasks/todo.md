@@ -47,9 +47,10 @@
 ### 5.2 — Dashboard formateur
 - [ ] Page suivi apprenants : player_name + room_code + score par session
 
-### 5.3 — Bloquer jeu individuel sans inscription
-- [ ] Middleware : si accès /jeu sans session ET sans bypass code → redirect login
-- [ ] Vérif crédits AVANT de lancer la partie
+### 5.3 — Bloquer jeu individuel sans inscription ✅
+- [x] Middleware : si accès /jeu sans session ET sans bypass code → redirect login
+- [x] Homepage "Je joue seul" → lien vers login + texte "Compte requis"
+- [x] Vérif crédits AVANT de lancer la partie (appel /api/sessions au démarrage solo)
 
 ---
 

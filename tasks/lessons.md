@@ -133,3 +133,11 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 ## L18 — 2026-03-22 : Options pédagogiques = décision métier, pas technique
 **Erreur** : les options 4/6/8 trimestres avaient été fixées sans validation pédagogique. Pierre a indiqué que 4 trimestres est insuffisant pour observer les effets économiques du jeu.
 **Règle** : les paramètres liés au contenu pédagogique (nombre de tours, durée, niveaux) doivent être validés par Pierre avant implémentation. Ne pas inventer de valeurs par défaut sur du contenu métier.
+
+## L19 — 2026-03-22 : Bloquer l'accès solo = middleware + page + API
+**Erreur initiale** : le bloc "Je joue seul" sur la homepage renvoyait directement à `/jeu` sans aucune vérification d'auth ni de crédit.
+**Fix en 3 couches complémentaires** :
+1. **Middleware** (`middleware.ts`) : `/jeu` sans `?code=` ni `?access=bypass` → redirige vers login si non authentifié
+2. **Homepage** (`app/page.tsx`) : lien "Je joue seul" → `/auth/login?redirectTo=/jeu` + texte "Compte requis — 1 crédit par partie"
+3. **Page jeu** (`app/jeu/page.tsx`) : si `isSolo`, appel `/api/sessions` avant de lancer → consomme 1 crédit, récupère `room_code` → résultats sauvegardés en Supabase
+**Règle** : pour tout accès protégé, vérifier les 3 niveaux. Le middleware seul ne suffit pas (pas de vérification de crédits). La page seule ne suffit pas (contournable). Les deux ensemble = défense en profondeur.

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { EtatJeu, CarteDecision } from "@/lib/game-engine/types";
 import {
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
@@ -164,11 +165,22 @@ export default function JeuPage() {
   // ─ Supabase / room code ───────────────────────────────────────────────────
   const [roomCode, setRoomCode]   = useState<string | null>(null);
   const [savedToDb, setSavedToDb] = useState(false);
+  const [isSolo, setIsSolo]       = useState(false);  // true = joueur solo (pas de ?code ni bypass)
+  const [soloLoading, setSoloLoading] = useState(false);  // chargement création session solo
+  const [soloError, setSoloError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-    if (code) setRoomCode(code);
+    const access = params.get("access");
+    if (code) {
+      setRoomCode(code);
+    } else if (!access) {
+      // Ni room_code ni bypass → mode solo (auth + crédit requis)
+      setIsSolo(true);
+    }
   }, []);
 
   // Sauvegarde historique solo dans localStorage
@@ -260,7 +272,42 @@ export default function JeuPage() {
   }
 
   // ─ Démarrer une partie ────────────────────────────────────────────────────
-  function handleStart(players: PlayerSetup[], nbTours: number = 6) {
+  async function handleStart(players: PlayerSetup[], nbTours: number = 6) {
+    // Mode solo : créer une session (consomme 1 crédit) avant de lancer le jeu
+    if (isSolo) {
+      setSoloLoading(true);
+      setSoloError(null);
+      try {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nb_tours: nbTours }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 402 || (data.message ?? data.error ?? "").toLowerCase().includes("crédit")) {
+            // Pas de crédits → rediriger vers les packs
+            router.push("/dashboard/packs?message=no-credits");
+            return;
+          }
+          if (res.status === 401) {
+            router.push("/auth/login?redirectTo=/jeu");
+            return;
+          }
+          setSoloError(data.message ?? data.error ?? "Erreur lors de la création de la session.");
+          setSoloLoading(false);
+          return;
+        }
+        // Session créée → utiliser le room_code pour sauvegarder en Supabase
+        setRoomCode(data.session.room_code);
+      } catch {
+        setSoloError("Erreur réseau, veuillez réessayer.");
+        setSoloLoading(false);
+        return;
+      }
+      setSoloLoading(false);
+    }
+
     const joueursDefs = players.map(p => ({ pseudo: p.pseudo, nomEntreprise: p.entreprise }));
     setEtat(initialiserJeu(joueursDefs, nbTours));
     setPhase("intro");
@@ -651,6 +698,27 @@ export default function JeuPage() {
 
   // ─── RENDU ────────────────────────────────────────────────────────────────
 
+  if (soloLoading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-6">
+      <div className="text-5xl animate-bounce">🎮</div>
+      <p className="text-gray-300 font-semibold text-lg">Création de votre session en cours…</p>
+      <p className="text-gray-500 text-sm">1 crédit sera consommé</p>
+    </div>
+  );
+
+  if (soloError) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-4 p-8">
+      <div className="text-5xl">⚠️</div>
+      <p className="text-red-400 font-semibold text-lg text-center">{soloError}</p>
+      <button
+        onClick={() => setSoloError(null)}
+        className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-xl transition-colors"
+      >
+        Réessayer
+      </button>
+    </div>
+  );
+
   if (phase === "setup") return <SetupScreen onStart={handleStart} />;
   if (phase === "intro" && etat) return (
     <CompanyIntro
@@ -699,7 +767,8 @@ export default function JeuPage() {
         </div>
         {savedToDb && roomCode && (
           <div className="mb-4 bg-green-50 border border-green-200 rounded-xl px-6 py-3 text-green-700 text-sm font-medium flex items-center gap-2">
-            <span>✅</span><span>Résultats sauvegardés dans le tableau de bord enseignant</span>
+            <span>✅</span>
+            <span>{isSolo ? "Résultats sauvegardés dans votre compte" : "Résultats sauvegardés dans le tableau de bord enseignant"}</span>
           </div>
         )}
         {!roomCode && (

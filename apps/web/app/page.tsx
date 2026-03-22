@@ -134,19 +134,16 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-lg font-black text-gray-100">Je joue seul</h3>
-                <p className="text-xs text-gray-400 mt-1">Découvrir le jeu sans inscription</p>
+                <p className="text-xs text-gray-400 mt-1">Compte requis — 1 crédit par partie</p>
               </div>
               <div className="flex-1 flex flex-col justify-between gap-3">
                 <ul className="text-xs text-gray-400 space-y-2">
                   <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Partie complète en autonomie</li>
+                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Résultats sauvegardés dans votre compte</li>
                   <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Bilan, compte de résultat, indicateurs</li>
-                  <li className="flex items-center gap-2"><span className="text-gray-600 font-bold">✗</span> <span className="text-gray-500">Résultats non sauvegardés</span></li>
                 </ul>
-                <Link href="/jeu" className="block w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-black py-3 rounded-xl text-center transition-all active:scale-95 shadow-lg shadow-teal-900/40">
+                <Link href="/auth/login?redirectTo=/jeu" className="block w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-black py-3 rounded-xl text-center transition-all active:scale-95 shadow-lg shadow-teal-900/40">
                   Jouer maintenant →
-                </Link>
-                <Link href="/historique" className="block w-full text-center text-xs text-teal-500 hover:text-teal-300 py-1 transition-colors">
-                  <BarChart3 size={13} className="inline mr-1" />Voir mon historique
                 </Link>
               </div>
             </div>
