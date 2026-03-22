@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { KeyRound, Gamepad2, GraduationCap, CheckCircle, Zap, BarChart3, Scale, RefreshCw, TrendingUp } from "lucide-react";
+import { KeyRound, Gamepad2, GraduationCap, CheckCircle, Zap, Scale, RefreshCw, TrendingUp, Mail, Shield, FileText, Info } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -218,6 +218,40 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* PIED DE PAGE                                      */}
+      {/* ══════════════════════════════════════════════════ */}
+      <footer className="bg-gray-950 border-t border-gray-800 py-10 px-6">
+        <div className="max-w-5xl mx-auto">
+
+          {/* Liens légaux */}
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-6 text-xs text-gray-400">
+            <Link href="/mentions-legales" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+              <Info size={13} />Mentions légales
+            </Link>
+            <Link href="/cgu" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+              <FileText size={13} />CGU
+            </Link>
+            <Link href="/confidentialite" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+              <Shield size={13} />Politique de confidentialité
+            </Link>
+            <Link href="/contact" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
+              <Mail size={13} />Contact
+            </Link>
+          </div>
+
+          {/* Séparateur */}
+          <div className="border-t border-gray-800 my-5" />
+
+          {/* Copyright + hébergeur */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-gray-600">
+            <p>© {new Date().getFullYear()} Pierre Médan — Tous droits réservés</p>
+            <p>Hébergé par <span className="text-gray-500">Vercel Inc.</span> · DNS <span className="text-gray-500">OVH</span></p>
+          </div>
+
+        </div>
+      </footer>
 
     </main>
   );

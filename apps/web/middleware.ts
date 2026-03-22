@@ -5,14 +5,22 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Routes publiques — pas de vérification auth
+  const code = request.nextUrl.searchParams.get("code");
+  const access = request.nextUrl.searchParams.get("access");
+  const isBypassOrRoomCode = (code !== null) || (access === "bypass");
+
   if (
     pathname === "/" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api") ||
-    pathname.startsWith("/jeu") ||
     pathname.startsWith("/_next") ||
     pathname.includes(".")
   ) {
+    return NextResponse.next();
+  }
+
+  // /jeu avec room_code ou bypass code → public (apprenants + testeurs)
+  if (pathname.startsWith("/jeu") && isBypassOrRoomCode) {
     return NextResponse.next();
   }
 
