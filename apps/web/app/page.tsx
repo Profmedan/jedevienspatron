@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { KeyRound, Gamepad2, GraduationCap, CheckCircle, Zap, Scale, RefreshCw, TrendingUp, Mail, Shield, FileText, Info } from "lucide-react";
+import { KeyRound, Gamepad2, GraduationCap, CheckCircle, Zap, Scale, RefreshCw, TrendingUp, Mail, Shield, FileText, Info, Target, BookOpen, Shuffle, Users, Clock, Building2 } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -87,6 +87,140 @@ export default function Home() {
               sizes="(max-width: 768px) 100vw, 50vw"
             />
           </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* QU'EST-CE QUE CE JEU ?                             */}
+      {/* ══════════════════════════════════════════════════ */}
+      <section className="relative w-full px-6 py-16 md:py-24 overflow-hidden">
+        {/* Fond subtil */}
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/10 via-transparent to-transparent pointer-events-none" />
+
+        <div className="relative max-w-6xl mx-auto">
+
+          {/* Intro */}
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 mb-5 bg-emerald-950/40 border border-emerald-700/50 px-4 py-2 rounded-full">
+              <Gamepad2 size={15} className="text-emerald-400" />
+              <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest">Ludopédagogie</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+              Apprendre la comptabilité{" "}
+              <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                en jouant
+              </span>
+            </h2>
+            <p className="text-base text-gray-400 max-w-2xl mx-auto leading-relaxed">
+              Un simulateur de gestion d&apos;entreprise où chaque décision a des conséquences comptables visibles.
+              Vos apprenants pilotent une PME, expérimentent, se trompent et comprennent les vrais mécanismes financiers.
+            </p>
+          </div>
+
+          {/* Bento Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            {/* CARTE PRINCIPALE — Le cœur du jeu (2×2) */}
+            <div className="md:col-span-2 md:row-span-2 group rounded-3xl border border-emerald-700/40 bg-gradient-to-br from-emerald-950/30 via-emerald-900/10 to-transparent p-8 md:p-10 backdrop-blur-sm hover:border-emerald-600/60 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-emerald-600/5 to-transparent transition-opacity duration-300 pointer-events-none" />
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="p-3 rounded-2xl bg-emerald-600/20 border border-emerald-600/40 group-hover:bg-emerald-600/30 transition-colors">
+                      <Building2 size={28} className="text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl md:text-2xl font-black text-white">Gérez votre entreprise</h3>
+                      <p className="text-sm text-emerald-300 font-medium">Trimestre après trimestre</p>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 leading-relaxed mb-6">
+                    Choisissez parmi 4 entreprises (manufacture, transport, commerce, labo) et pilotez-la sur 6 à 12 trimestres.
+                    À chaque tour : achats de stocks, paiement des charges, ventes clients, investissements stratégiques.
+                    Chaque action modifie votre bilan et votre compte de résultat — en temps réel.
+                  </p>
+                </div>
+                <div className="space-y-2.5 pt-4 border-t border-emerald-700/30">
+                  {["8 étapes de décision par trimestre", "Bilan et trésorerie visibles en permanence", "Score final basé sur votre performance financière"].map((item) => (
+                    <div key={item} className="flex items-start gap-3 text-sm text-gray-200">
+                      <CheckCircle size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Carte 2 — Comptabilité vivante */}
+            <div className="group rounded-2xl border-l-4 border-l-blue-500/70 border border-blue-700/30 bg-gradient-to-br from-blue-950/20 via-blue-900/5 to-transparent p-6 backdrop-blur-sm hover:border-blue-600/50 hover:border-l-blue-400 transition-all duration-300 hover:shadow-md hover:shadow-blue-500/10">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-blue-600/20 border border-blue-600/40 mb-4 group-hover:bg-blue-600/30 transition-colors">
+                <Scale size={22} className="text-blue-400" />
+              </div>
+              <h4 className="text-base font-bold text-white mb-2">Comptabilité vivante</h4>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                L&apos;équation ACTIF = PASSIF n&apos;est plus théorique. Vous la voyez à l&apos;écran après chaque action. La partie double devient tangible.
+              </p>
+            </div>
+
+            {/* Carte 3 — QCM pédagogique */}
+            <div className="group rounded-2xl border-l-4 border-l-amber-500/70 border border-amber-700/30 bg-gradient-to-br from-amber-950/20 via-amber-900/5 to-transparent p-6 backdrop-blur-sm hover:border-amber-600/50 hover:border-l-amber-400 transition-all duration-300 hover:shadow-md hover:shadow-amber-500/10">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-amber-600/20 border border-amber-600/40 mb-4 group-hover:bg-amber-600/30 transition-colors">
+                <BookOpen size={22} className="text-amber-400" />
+              </div>
+              <h4 className="text-base font-bold text-white mb-2">QCM après chaque étape</h4>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Pas juste jouer : comprendre. Un quiz valide votre raisonnement comptable à chaque décision. Zéro passivité.
+              </p>
+            </div>
+
+            {/* Carte 4 — Événements & stratégie */}
+            <div className="group rounded-2xl border-l-4 border-l-violet-500/70 border border-violet-700/30 bg-gradient-to-br from-violet-950/20 via-violet-900/5 to-transparent p-6 backdrop-blur-sm hover:border-violet-600/50 hover:border-l-violet-400 transition-all duration-300 hover:shadow-md hover:shadow-violet-500/10">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-violet-600/20 border border-violet-600/40 mb-4 group-hover:bg-violet-600/30 transition-colors">
+                <Shuffle size={22} className="text-violet-400" />
+              </div>
+              <h4 className="text-base font-bold text-white mb-2">Surprises et décisions</h4>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Cartes de décision (investir, recruter, emprunter) et événements aléatoires (crise, opportunité) forcent à s&apos;adapter.
+              </p>
+            </div>
+
+            {/* Carte 5 — Solo ou en classe */}
+            <div className="group rounded-2xl border-l-4 border-l-teal-500/70 border border-teal-700/30 bg-gradient-to-br from-teal-950/20 via-teal-900/5 to-transparent p-6 backdrop-blur-sm hover:border-teal-600/50 hover:border-l-teal-400 transition-all duration-300 hover:shadow-md hover:shadow-teal-500/10">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-teal-600/20 border border-teal-600/40 mb-4 group-hover:bg-teal-600/30 transition-colors">
+                <Users size={22} className="text-teal-400" />
+              </div>
+              <h4 className="text-base font-bold text-white mb-2">Solo ou en classe</h4>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Jouez seul pour vous entraîner ou en groupe avec un code de session. Le formateur suit les scores en direct.
+              </p>
+            </div>
+
+          </div>
+
+          {/* Bandeau chiffres clés */}
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { value: "8", label: "décisions par trimestre", icon: Target },
+              { value: "4", label: "entreprises au choix", icon: Building2 },
+              { value: "6–12", label: "trimestres de jeu", icon: Clock },
+              { value: "1h–1h45", label: "durée de partie", icon: Zap },
+            ].map(({ value, label, icon: Icon }) => (
+              <div key={label} className="flex items-center gap-3 bg-gray-800/30 border border-gray-700/40 rounded-xl px-4 py-3">
+                <Icon size={18} className="text-emerald-400 shrink-0" />
+                <div>
+                  <span className="text-lg font-black text-white">{value}</span>
+                  <p className="text-xs text-gray-500">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA vers les blocs d'accès */}
+          <p className="text-center mt-12 text-gray-500 text-sm font-medium">
+            Prêt à piloter votre première entreprise ?{" "}
+            <span className="text-emerald-400">↓</span>
+          </p>
+
         </div>
       </section>
 
