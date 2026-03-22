@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -17,6 +17,14 @@ interface CreditsResponse {
 }
 
 export default function PacksPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Chargement…</div>}>
+      <PacksContent />
+    </Suspense>
+  );
+}
+
+function PacksContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [packs, setPacks] = useState<Pack[]>([]);
