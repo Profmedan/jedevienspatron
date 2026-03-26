@@ -21,7 +21,7 @@ export interface PostePassif {
 export interface Bilan {
   actifs: PosteActif[];
   passifs: PostePassif[];
-  /** Découvert bancaire (max DECOUVERT_MAX = 5) */
+  /** Découvert bancaire (max DECOUVERT_MAX = 8) */
   decouvert: number;
   /** Créances clients à encaisser dans 1 tour */
   creancesPlus1: number;
@@ -287,7 +287,8 @@ export interface IndicateursFinanciers {
 
 // ─── CONSTANTES ───────────────────────────────────────────────
 
-export const DECOUVERT_MAX = 5;
+export const DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 → cessation de paiement
+export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
 export const CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
 export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
 export const NB_TOURS_PAR_AN = 4;

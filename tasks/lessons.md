@@ -141,3 +141,16 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 2. **Homepage** (`app/page.tsx`) : lien "Je joue seul" → `/auth/login?redirectTo=/jeu` + texte "Compte requis — 1 crédit par partie"
 3. **Page jeu** (`app/jeu/page.tsx`) : si `isSolo`, appel `/api/sessions` avant de lancer → consomme 1 crédit, récupère `room_code` → résultats sauvegardés en Supabase
 **Règle** : pour tout accès protégé, vérifier les 3 niveaux. Le middleware seul ne suffit pas (pas de vérification de crédits). La page seule ne suffit pas (contournable). Les deux ensemble = défense en profondeur.
+
+## L20 — 2026-03-26 : Fichiers dupliqués engine.ts = double maintenance
+**Erreur** : le moteur de jeu existe en double — `packages/game-engine/src/engine.ts` et `apps/web/lib/game-engine/engine.ts`. Les corrections Citadel devaient être appliquées aux DEUX.
+**Règle** : toute modification d'engine.ts doit être synchronisée dans les deux emplacements. À terme, supprimer le duplicat et importer depuis le package.
+
+## L21 — 2026-03-26 : IDs hardcodés = dette technique silencieuse
+**Erreur** : les IDs de cartes (`"commercial-junior-dec"`, `"affacturage"`, etc.) étaient hardcodés en strings dans le code. Toute typo passait silencieusement (le `console.warn` ne bloquait pas l'exécution).
+**Fix** : constantes `CARTE_IDS` + `throw Error` sur poste inconnu dans `appliquerDeltaPoste`.
+**Règle** : centraliser tout ID/constante réutilisé ≥2 fois. Préférer `throw` à `console.warn` pour les erreurs de programmation.
+
+## L22 — 2026-03-26 : iCloud Drive bloque les opérations fichiers
+**Contexte** : les fichiers stockés dans iCloud avec "Optimize Mac Storage" sont des stubs. `require()`, `rsync`, `sed`, `cat` peuvent tous échouer ou bloquer indéfiniment.
+**Règle** : pour un projet actif, toujours garder une copie locale hors iCloud (ou un clone Git). Ne jamais dépendre d'iCloud pour le développement.

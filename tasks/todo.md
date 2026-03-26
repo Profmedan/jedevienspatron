@@ -54,6 +54,31 @@
 
 ---
 
+## Tâche 6 : Corrections Citadel engine.ts — 2026-03-26
+
+### 6.1 — CRITICAL ✅
+- [x] `verifierFinTour` : supprimé `appliquerDeltaPoste(joueur, "decouvert", pénalité)` (spirale exponentielle découvert)
+- [x] Appliqué dans `packages/game-engine/src/engine.ts` ET `apps/web/lib/game-engine/engine.ts`
+
+### 6.2 — WARNING ✅
+- [x] `tirerCartesDecision` : recharge pioche AVANT splice (évite retour incomplet)
+- [x] `appliquerDeltaPoste` : throw Error au lieu de console.warn silencieux pour poste inconnu
+- [x] `makePush()` helper : extraction de la closure dupliquée dans 6 fonctions
+- [x] `CARTE_IDS` : constantes centralisées, 6 IDs remplacés (commercial-junior, affacturage, formation, remboursement-anticipe, levee-de-fonds, assurance-prevoyance)
+- [x] Appliqué dans les 2 fichiers engine.ts
+
+### 6.3 — INFO ✅
+- [x] Suppression boucle `for (let i = 0; i < 1; i++)` dans `genererClientsParCommerciaux`
+
+### 6.4 — SKIPPED (trop risqué)
+- [ ] Renommage propriétés accentuées (`effetsImmédiats`, `publicitéCeTour`) — 50+ occurrences, impact cross-file
+
+### 6.5 — Vérification ✅
+- [x] `npx tsc --noEmit` game-engine : 0 erreur
+- [x] `npx tsc --noEmit` apps/web : erreurs pré-existantes uniquement (stripe.ts, utils.ts, supabase)
+
+---
+
 ## Review finale
 - [ ] Test complet flux achat Stripe (carte test)
 - [ ] Test flux formateur (créer session → distribuer code → apprenants jouent)
