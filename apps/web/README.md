@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JE DEVIENS PATRON Web App
 
-## Getting Started
+Application Next.js 15 pour le jeu sérieux de comptabilité JE DEVIENS PATRON.
 
-First, run the development server:
+## Démarrage local
+
+Depuis la racine du monorepo :
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L’application est ensuite disponible sur [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables d’environnement
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Créez [`apps/web/.env.local`](/Users/pierremedan/Projects/jedevienspatron-github/apps/web/.env.local) à partir de l’exemple :
 
-## Learn More
+```bash
+cp apps/web/.env.local.example apps/web/.env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+Variables nécessaires :
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Vérifications utiles
 
-## Deploy on Vercel
+```bash
+npm run lint --workspace=apps/web
+npm run build --workspace=apps/web
+npm run test
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Déploiement Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Ajoutez les variables d’environnement de production dans Vercel.
+2. Déployez l’app `apps/web` comme projet Next.js.
+3. Configurez le webhook Stripe vers `https://votre-domaine/api/stripe/webhook`.
+4. Exécutez les migrations Supabase avant de rendre le flux d’achat public.
+
+Pour un preview deploy via CLI :
+
+```bash
+vercel deploy apps/web --no-wait
+```

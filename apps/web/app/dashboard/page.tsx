@@ -4,6 +4,12 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
 type RecentSession = {
   id: string;
   room_code: string;
@@ -30,35 +36,51 @@ export default async function DashboardPage() {
 
   const serviceClient = createServiceClient();
 
-  const { data: profile } = await serviceClient
-    .from("profiles")
-    .select("*, organizations(name)")
-    .eq("id", user.id)
-    .single();
+  const [
+    { data: profile },
+    { data: recentSessions },
+    { data: classes },
+    { count: totalSessions },
+    { count: totalPlayers },
+  ] = await Promise.all([
+    serviceClient
+      .from("profiles")
+      .select("*, organizations(name)")
+      .eq("id", user.id)
+      .single(),
+    serviceClient
+      .from("game_sessions")
+      .select(`id, room_code, status, nb_tours, created_at, finished_at, classes(name), game_players(id, final_score, is_bankrupt)`)
+      .eq("teacher_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    serviceClient
+      .from("classes")
+      .select(`id, name, created_at, class_members(id)`)
+      .eq("teacher_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(6),
+    serviceClient
+      .from("game_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("teacher_id", user.id),
+    serviceClient
+      .from("game_players")
+      .select("*, game_sessions!inner(teacher_id)", { count: "exact", head: true })
+      .eq("game_sessions.teacher_id", user.id),
+  ]);
 
-  const { data: recentSessions } = await serviceClient
-    .from("game_sessions")
-    .select(`id, room_code, status, nb_tours, created_at, finished_at, classes(name), game_players(id, final_score, is_bankrupt)`)
-    .eq("teacher_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  let creditsDisponibles = 0;
 
-  const { data: classes } = await serviceClient
-    .from("classes")
-    .select(`id, name, created_at, class_members(id)`)
-    .eq("teacher_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(6);
+  if (profile?.organization_id) {
+    const { data: creditsData } = await serviceClient
+      .from("credits_disponibles")
+      .select("sessions_disponibles")
+      .eq("organization_id", profile.organization_id)
+      .single();
 
-  const { count: totalSessions } = await serviceClient
-    .from("game_sessions")
-    .select("*", { count: "exact", head: true })
-    .eq("teacher_id", user.id);
-
-  const { count: totalPlayers } = await serviceClient
-    .from("game_players")
-    .select("*, game_sessions!inner(teacher_id)", { count: "exact", head: true })
-    .eq("game_sessions.teacher_id", user.id);
+    creditsDisponibles = creditsData?.sessions_disponibles ?? 0;
+  }
 
   const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "Utilisateur";
   const orgName = (profile?.organizations as { name?: string } | null)?.name ?? "";
@@ -113,6 +135,38 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+          <div className="rounded-2xl border border-cyan-900/60 bg-cyan-950/20 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+              Prochaine étape
+            </p>
+            <h3 className="mt-3 text-2xl font-bold text-gray-100">
+              {creditsDisponibles > 0
+                ? "Vous avez des crédits prêts à être utilisés"
+                : "Ajoutez des crédits pour ouvrir une nouvelle session"}
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-cyan-100/80">
+              {creditsDisponibles > 0
+                ? "Créez une nouvelle partie, partagez le code à vos apprenants et suivez les résultats ici à la fin de la session."
+                : "Le parcours d’achat est maintenant relié à Stripe. Une fois le paiement confirmé, vos crédits apparaissent automatiquement dans le tableau de bord."}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-700 bg-gray-900 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+              Crédits Disponibles
+            </p>
+            <p className="mt-3 text-4xl font-black text-cyan-300 tabular-nums">
+              {creditsDisponibles}
+            </p>
+            <p className="mt-2 text-sm text-gray-400">
+              {creditsDisponibles > 0
+                ? "Assez pour lancer une nouvelle session maintenant."
+                : "Aucun crédit actif pour le moment."}
+            </p>
+          </div>
+        </div>
+
         {/* Explication du fonctionnement */}
         <div className="bg-indigo-950/30 border border-indigo-800 rounded-2xl p-6">
           <h3 className="font-bold text-indigo-100 text-lg mb-3">💡 Comment ça fonctionne ?</h3>
@@ -139,11 +193,12 @@ export default async function DashboardPage() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard icon="🎮" label="Sessions total" value={totalSessions ?? 0} />
           <StatCard icon="👥" label="Joueurs total" value={totalPlayers ?? 0} />
           <StatCard icon="🏫" label="Classes" value={typedClasses.length} />
           <StatCard icon="✅" label="Sessions terminées" value={typedSessions.filter(s => s.status === "finished").length} />
+          <StatCard icon="💳" label="Crédits actifs" value={creditsDisponibles} />
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -213,9 +268,7 @@ function SessionCard({ session }: { session: RecentSession }) {
   };
 
   const nbPlayers = session.game_players?.length ?? 0;
-  const date = new Date(session.created_at).toLocaleDateString("fr-FR", {
-    day: "numeric", month: "short", year: "numeric",
-  });
+  const date = dateFormatter.format(new Date(session.created_at));
 
   return (
     <div className="block bg-gray-900 border border-gray-700 rounded-xl p-4 hover:border-indigo-700 hover:shadow-lg shadow-black/10 transition-all cursor-pointer">

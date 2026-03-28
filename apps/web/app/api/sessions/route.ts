@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { hasCredits, consumeCredit } from "@/lib/credits";
+import { consumeCredit, releaseCredit } from "@/lib/credits";
 
 // ─── POST /api/sessions — Créer une session ───────────────────
 export async function POST(request: NextRequest) {
@@ -32,22 +32,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ───────────────────────────────────────────────────────────────────────
-    // Vérification et consommation des crédits AVANT création de session
-    // ───────────────────────────────────────────────────────────────────────
-    const creditsAvailable = await hasCredits(profile.organization_id);
-    if (!creditsAvailable) {
-      return NextResponse.json(
-        { error: "Crédits insuffisants" },
-        { status: 403 }
-      );
-    }
-
     const creditId = await consumeCredit(profile.organization_id);
     if (!creditId) {
       return NextResponse.json(
-        { error: "Impossible de consommer un crédit" },
-        { status: 500 }
+        { error: "Crédits insuffisants" },
+        { status: 403 }
       );
     }
 
@@ -77,6 +66,15 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Erreur création session:", insertError);
+
+      const creditRestored = await releaseCredit(creditId);
+      if (!creditRestored) {
+        console.error(
+          "Impossible de restaurer le crédit après échec de création de session:",
+          creditId
+        );
+      }
+
       return NextResponse.json(
         { error: "Impossible de créer la session" },
         { status: 500 }

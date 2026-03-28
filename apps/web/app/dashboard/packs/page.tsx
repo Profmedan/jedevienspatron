@@ -1,266 +1,254 @@
-"use client";
-
-import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect } from "next/navigation";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  ShieldCheck,
+} from "lucide-react";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import PacksCheckoutClient, { type Pack } from "./PacksCheckoutClient";
 
-interface Pack {
-  id: string;
-  segment: "individuel" | "organisme";
-  nb_sessions: number;
-  prix_cents: number;
-  duree_jours: number | null;
+export const dynamic = "force-dynamic";
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+type Notice = {
+  kind: "success" | "error" | "warning";
+  message: string;
+};
+
+function getSearchParam(
+  searchParams: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = searchParams[key];
+  return Array.isArray(value) ? value[0] : value;
 }
 
-interface CreditsResponse {
-  sessions_disponibles: number;
-}
-
-export default function PacksPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Chargement…</div>}>
-      <PacksContent />
-    </Suspense>
-  );
-}
-
-function PacksContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [packs, setPacks] = useState<Pack[]>([]);
-  const [creditsDisponibles, setCreditsDisponibles] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Affiche les messages de succès/annulation depuis Stripe
-  useEffect(() => {
-    const success = searchParams.get("success");
-    const cancelled = searchParams.get("cancelled");
-
-    if (success === "true") {
-      setSuccessMessage("✅ Paiement confirmé ! Vos sessions ont été créditées.");
-      setTimeout(() => {
-        setSuccessMessage(null);
-        router.replace("/dashboard/packs");
-      }, 4000);
-    } else if (cancelled === "true") {
-      setError("Paiement annulé. Vous pouvez réessayer quand vous voulez.");
-      setTimeout(() => {
-        setError(null);
-        router.replace("/dashboard/packs");
-      }, 4000);
-    }
-  }, [searchParams, router]);
-
-  // Charge les packs et les crédits disponibles
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        // Récupère les packs
-        const packsRes = await fetch("/api/packs");
-        if (!packsRes.ok) throw new Error("Impossible de charger les packs");
-        const packsData = await packsRes.json();
-        setPacks(packsData.packs || []);
-
-        // Récupère les crédits disponibles
-        const creditsRes = await fetch("/api/credits");
-        if (creditsRes.ok) {
-          const creditsData = await creditsRes.json();
-          setCreditsDisponibles(creditsData.sessions_disponibles || 0);
-        }
-      } catch (err) {
-        console.error("Erreur chargement données:", err);
-        setError("Erreur lors du chargement des données");
-      } finally {
-        setLoading(false);
-      }
+function getNotice(
+  searchParams: Record<string, string | string[] | undefined>,
+): Notice | null {
+  if (getSearchParam(searchParams, "success") === "true") {
+    return {
+      kind: "success",
+      message: "Paiement confirmé. Vos sessions sont disponibles dans votre crédit.",
     };
-
-    fetchData();
-  }, []);
-
-  // Lance le paiement Stripe pour un pack
-  const handleBuyPack = async (packId: string) => {
-    try {
-      setPurchasing(packId);
-      setError(null);
-
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pack_id: packId }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Erreur création session Stripe");
-      }
-
-      const { url } = await res.json();
-      if (!url) throw new Error("URL Stripe manquante");
-
-      // Redirige vers Stripe Checkout
-      window.location.href = url;
-    } catch (err) {
-      console.error("Erreur achat pack:", err);
-      setError(err instanceof Error ? err.message : "Erreur lors de l'achat");
-      setPurchasing(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-semibold">Chargement des packs...</p>
-        </div>
-      </div>
-    );
   }
 
-  // Sépare les packs par segment
-  const individuels = packs.filter((p) => p.segment === "individuel");
-  const organismes = packs.filter((p) => p.segment === "organisme");
+  if (getSearchParam(searchParams, "cancelled") === "true") {
+    return {
+      kind: "warning",
+      message: "Paiement annulé. Aucun débit n’a été effectué.",
+    };
+  }
+
+  if (getSearchParam(searchParams, "message") === "no-credits") {
+    return {
+      kind: "error",
+      message: "Vous avez besoin d’un crédit disponible pour lancer une nouvelle session.",
+    };
+  }
+
+  return null;
+}
+
+export default async function PacksPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth/login?redirectTo=/dashboard/packs");
+  }
+
+  const serviceClient = createServiceClient();
+
+  const [{ data: profile }, { data: packsData, error: packsError }] =
+    await Promise.all([
+      serviceClient
+        .from("profiles")
+        .select("organization_id, display_name")
+        .eq("id", user.id)
+        .single(),
+      serviceClient
+        .from("packs")
+        .select("*")
+        .eq("actif", true)
+        .order("segment", { ascending: true })
+        .order("nb_sessions", { ascending: true }),
+    ]);
+
+  if (packsError) {
+    throw new Error("Impossible de charger les packs.");
+  }
+
+  let creditsDisponibles = 0;
+
+  if (profile?.organization_id) {
+    const { data: creditsData, error: creditsError } = await serviceClient
+      .from("credits_disponibles")
+      .select("sessions_disponibles")
+      .eq("organization_id", profile.organization_id)
+      .single();
+
+    if (creditsError && creditsError.code !== "PGRST116") {
+      throw new Error("Impossible de charger les crédits disponibles.");
+    }
+
+    creditsDisponibles = creditsData?.sessions_disponibles ?? 0;
+  }
+
+  const packs = (packsData ?? []) as Pack[];
+  const individuels = packs.filter((pack) => pack.segment === "individuel");
+  const organismes = packs.filter((pack) => pack.segment === "organisme");
+  const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "Formateur";
+  const notice = getNotice(resolvedSearchParams);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-700 px-6 py-8">
-        <h1 className="text-4xl font-bold mb-2">Acheter des sessions</h1>
-        <p className="text-gray-300">Sélectionnez un pack et complétez votre paiement</p>
-      </div>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#1e293b_0%,#020617_42%,#020617_100%)] text-white">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Retour au tableau de bord
+          </Link>
 
-      {/* Crédits restants */}
-      <div className="px-6 py-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-sm font-semibold text-gray-300 mb-1">SESSIONS DISPONIBLES</p>
-          <p className="text-5xl font-bold text-blue-400">{creditsDisponibles}</p>
-          <p className="text-gray-400 mt-2">
-            {creditsDisponibles === 0
-              ? "Achetez un pack pour commencer une session"
-              : `Vous pouvez créer ${creditsDisponibles} session(s)`}
-          </p>
-        </div>
-      </div>
-
-      {/* Message de succès */}
-      {successMessage && (
-        <div className="px-6 py-4 bg-green-900/40 border-b border-green-700 text-green-300">
-          <div className="max-w-7xl mx-auto font-semibold">
-            {successMessage}
+          <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100">
+            Compte actif : <span className="font-semibold">{displayName}</span>
           </div>
         </div>
-      )}
 
-      {/* Message d'erreur */}
-      {error && (
-        <div className="px-6 py-4 bg-red-900/30 border-b border-red-700 text-red-300">
-          <div className="max-w-7xl mx-auto">
-            {error}
+        <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 p-8 shadow-2xl shadow-cyan-950/30">
+            <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_58%)] lg:block" />
+            <div className="relative space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100">
+                <CreditCard className="h-4 w-4" aria-hidden="true" />
+                Sessions & Paiement
+              </div>
+
+              <div className="max-w-3xl space-y-4">
+                <h1 className="text-4xl font-black tracking-tight text-white text-balance sm:text-5xl">
+                  Achetez le bon volume de sessions pour vos prochaines classes
+                </h1>
+                <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                  Choisissez un pack adapté à votre rythme d’animation. Le
+                  paiement passe par Stripe et les crédits sont ajoutés
+                  automatiquement à votre organisation.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Sessions Disponibles
+                  </p>
+                  <p className="mt-3 text-4xl font-black text-cyan-300 tabular-nums">
+                    {creditsDisponibles}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    {creditsDisponibles > 0
+                      ? "Vous pouvez lancer de nouvelles parties immédiatement."
+                      : "Achetez un premier pack pour ouvrir une nouvelle session."}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Activation
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-white">
+                    Crédit automatique
+                  </p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Les crédits apparaissent après confirmation du paiement par
+                    Stripe.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Suivi
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-white">
+                    Historique centralisé
+                  </p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Utilisez vos crédits pour créer des codes de session et suivre
+                    les résultats depuis le tableau de bord.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Contenu */}
-      <div className="px-6 py-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Individuel */}
-          <section className="mb-16">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Pour les professeurs</h2>
-              <p className="text-gray-400">
-                Packs avec expiration (30, 60 ou 90 jours)
-              </p>
+          <aside className="space-y-4 rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-xl shadow-slate-950/40">
+            <h2 className="text-lg font-bold text-white">Ce que vous achetez</h2>
+            <ul className="space-y-3 text-sm text-slate-300">
+              <li className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                Paiement sécurisé par Stripe, sans stockage local de carte bancaire.
+              </li>
+              <li className="flex items-start gap-3">
+                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                Packs individuels avec durée limitée, packs organismes sans expiration.
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                Une session créée consomme un crédit, puis le code reste utilisable par votre groupe.
+              </li>
+            </ul>
+
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
+              Les packs <strong>professeurs</strong> sont affichés TTC. Les packs{" "}
+              <strong>organismes</strong> sont affichés HT.
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {individuels.map((pack) => (
-                <div
-                  key={pack.id}
-                  className="bg-gray-900 border border-gray-700 rounded-lg p-8 hover:border-blue-500/50 transition-colors"
-                >
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {pack.nb_sessions}
-                  </h3>
-                  <p className="text-gray-400 mb-6">
-                    sessions • {pack.duree_jours} jours
-                  </p>
-
-                  <div className="mb-8">
-                    <div className="text-4xl font-bold text-blue-400 mb-2">
-                      {(pack.prix_cents / 100).toFixed(2)} €
-                    </div>
-                    <p className="text-xs text-gray-500">TTC</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleBuyPack(pack.id)}
-                    disabled={purchasing === pack.id}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                  >
-                    {purchasing === pack.id ? "Redirection..." : "Acheter maintenant"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Section Organisme */}
-          <section>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Pour les organismes</h2>
-              <p className="text-gray-400">
-                Packs sans expiration pour établissements et CCI
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {organismes.map((pack) => (
-                <div
-                  key={pack.id}
-                  className="bg-gray-900 border border-gray-700 rounded-lg p-6 hover:border-purple-500/50 transition-colors"
-                >
-                  <h3 className="text-xl font-bold text-white mb-1">
-                    {pack.nb_sessions}
-                  </h3>
-                  <p className="text-gray-400 mb-6 text-sm">
-                    sessions • Sans expiration
-                  </p>
-
-                  <div className="mb-8">
-                    <div className="text-3xl font-bold text-purple-400 mb-2">
-                      {(pack.prix_cents / 100).toFixed(2)} €
-                    </div>
-                    <p className="text-xs text-gray-500">HT</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleBuyPack(pack.id)}
-                    disabled={purchasing === pack.id}
-                    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold py-2 px-3 rounded-lg transition-colors text-sm"
-                  >
-                    {purchasing === pack.id ? "Redirection..." : "Acheter"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Lien retour */}
-          <div className="mt-16 text-center">
             <Link
-              href="/dashboard"
-              className="inline-block text-blue-400 hover:text-blue-300 transition-colors"
+              href="/dashboard/sessions/new"
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
-              ← Retour au tableau de bord
+              Créer Une Session
             </Link>
+          </aside>
+        </section>
+
+        {notice ? (
+          <div
+            className={`rounded-2xl border px-5 py-4 text-sm ${
+              notice.kind === "success"
+                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-50"
+                : notice.kind === "warning"
+                  ? "border-amber-400/30 bg-amber-400/10 text-amber-50"
+                  : "border-rose-400/30 bg-rose-400/10 text-rose-50"
+            }`}
+            role={notice.kind === "error" ? "alert" : "status"}
+            aria-live="polite"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>{notice.message}</p>
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        <PacksCheckoutClient
+          individuels={individuels}
+          organismes={organismes}
+        />
       </div>
-    </div>
+    </main>
   );
 }

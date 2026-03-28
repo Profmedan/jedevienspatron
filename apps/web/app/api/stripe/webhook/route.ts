@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
         expiresAt = new Date(now.getTime() + pack.duree_jours * 24 * 60 * 60 * 1000).toISOString();
       }
 
+      if (session.payment_status !== "paid") {
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+
       // Insère le crédit dans session_credits
       const { error: insertError } = await serviceClient
         .from("session_credits")
@@ -83,10 +87,15 @@ export async function POST(request: NextRequest) {
           sessions_total: pack.nb_sessions,
           sessions_used: 0,
           stripe_payment_intent_id: session.payment_intent as string,
+          stripe_checkout_session_id: session.id,
           expires_at: expiresAt,
         });
 
       if (insertError) {
+        if (insertError.code === "23505") {
+          return NextResponse.json({ received: true }, { status: 200 });
+        }
+
         console.error("Erreur insertion crédit:", insertError);
         return NextResponse.json(
           { error: "Erreur insertion crédit" },

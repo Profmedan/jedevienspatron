@@ -245,15 +245,36 @@ export default function Home() {
                 <p className="text-xs text-gray-400 mt-1">Mon formateur m&apos;a donné un code de session</p>
               </div>
               <form onSubmit={handleCode} className="space-y-3 flex-1 flex flex-col justify-end">
+                <label htmlFor="session-code" className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+                  Code De Session
+                </label>
                 <input
+                  id="session-code"
+                  name="session-code"
                   type="text"
                   value={code}
                   onChange={e => { setCode(e.target.value.toUpperCase()); setCodeError(null); }}
-                  placeholder="KIC-4A2B ou code accès"
+                  placeholder="KIC-4A2B ou code accès…"
                   maxLength={8}
+                  autoComplete="off"
+                  spellCheck={false}
+                  inputMode="text"
+                  aria-describedby="session-code-help session-code-error"
                   className="w-full px-4 py-3 border-2 border-gray-700 bg-gray-950/50 text-gray-100 placeholder-gray-500 rounded-xl focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 text-center font-mono font-bold text-lg uppercase tracking-widest"
                 />
-                {codeError && <p className="text-red-400 text-xs text-center">{codeError}</p>}
+                <p id="session-code-help" className="text-xs text-gray-500 text-center">
+                  Saisissez le code fourni par votre formateur ou votre code d&apos;accès.
+                </p>
+                {codeError && (
+                  <p
+                    id="session-code-error"
+                    className="text-red-400 text-xs text-center"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    {codeError}
+                  </p>
+                )}
                 <button
                   type="submit"
                   className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-900/40"

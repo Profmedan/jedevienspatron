@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      request.nextUrl.origin;
+
     // Crée la session Stripe Checkout
     const lineItems = pack.stripe_price_id
       ? [
@@ -80,8 +84,8 @@ export async function POST(request: NextRequest) {
     const session = await getStripe().checkout.sessions.create({
       line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/packs?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/packs?cancelled=true`,
+      success_url: `${appUrl}/dashboard/packs?success=true`,
+      cancel_url: `${appUrl}/dashboard/packs?cancelled=true`,
       metadata: {
         org_id: profile.organization_id,
         pack_id,
