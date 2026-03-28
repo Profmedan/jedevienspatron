@@ -4,12 +4,284 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { KeyRound, Gamepad2, GraduationCap, CheckCircle, Zap, Scale, RefreshCw, TrendingUp, Mail, Shield, FileText, Info, Target, BookOpen, Shuffle, Users, Clock, Building2 } from "lucide-react";
-import { KeyIndicatorsSection } from "@/components/KeyIndicatorsSection";
-import { GlossarySection } from "@/components/GlossarySection";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  ArrowRight,
+  BookOpen,
+  Building2,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Gamepad2,
+  GraduationCap,
+  Info,
+  KeyRound,
+  Mail,
+  RefreshCw,
+  Scale,
+  Shield,
+  Sparkles,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+
+const HERO_POINTS = [
+  "Vous voyez immédiatement l’impact comptable de chaque décision.",
+  "Le bilan & le compte de résultat évoluent pendant la partie.",
+  "Le rythme est pensé pour apprendre sans décrocher.",
+];
+
+const SUPPORT_NUMBERS = [
+  { value: "4", label: "univers d’entreprise" },
+  { value: "8", label: "décisions par trimestre" },
+  { value: "1h", label: "pour une partie complète" },
+];
+
+const AUDIENCE_STRIPS = [
+  "Lycées, BTS & CFA",
+  "CCI & organismes de formation",
+  "Animation en classe ou en autonomie",
+];
+
+const LEARNING_PILLARS = [
+  {
+    title: "Voir",
+    text: "Les mécanismes comptables deviennent visibles au lieu de rester abstraits.",
+    icon: Scale,
+  },
+  {
+    title: "Décider",
+    text: "Achats, ventes, trésorerie, recrutement : chaque choix change l’équilibre.",
+    icon: Building2,
+  },
+  {
+    title: "Comprendre",
+    text: "Les QCM et le score final transforment l’action en raisonnement solide.",
+    icon: BookOpen,
+  },
+];
+
+const JOURNEY_STEPS = [
+  {
+    index: "01",
+    title: "Choisissez une entreprise",
+    text: "Manufacture, transport, commerce ou labo : chaque partie a sa personnalité.",
+  },
+  {
+    index: "02",
+    title: "Pilotez trimestre après trimestre",
+    text: "Charges, achats, créances, ventes, événements et arbitrages stratégiques.",
+  },
+  {
+    index: "03",
+    title: "Lisez les conséquences",
+    text: "Résultat net, trésorerie, solvabilité et équilibre du bilan deviennent concrets.",
+  },
+  {
+    index: "04",
+    title: "Ancrez les bons réflexes",
+    text: "Les notions ne sont plus récitées : elles sont vécues, testées, retenues.",
+  },
+];
+
+const ENTRY_OPTIONS = [
+  {
+    title: "J’ai un code",
+    subtitle: "Rejoindre une session en quelques secondes",
+    description: "Entrez le code donné par votre formateur et commencez directement.",
+    accent: "emerald",
+    icon: KeyRound,
+  },
+  {
+    title: "Je joue seul",
+    subtitle: "S’entraîner à son rythme",
+    description: "Partie autonome, historique sauvegardé et progression dans votre compte.",
+    accent: "cyan",
+    icon: Gamepad2,
+    href: "/auth/register?redirectTo=/jeu&orgType=individuel",
+    cta: "Créer Mon Accès",
+  },
+  {
+    title: "Je suis formateur",
+    subtitle: "Animer et suivre une classe",
+    description: "Créez des sessions, partagez un code, récupérez les résultats.",
+    accent: "amber",
+    icon: GraduationCap,
+    href: "/auth/login",
+    cta: "Ouvrir Le Tableau De Bord",
+    secondaryHref: "/auth/register",
+    secondaryCta: "Créer Un Compte",
+  },
+];
+
+const PRINCIPLES = [
+  {
+    title: "Actif = Passif",
+    text: "Le jeu montre l’équilibre du bilan à chaque étape, sans jargon inutile.",
+    icon: Scale,
+  },
+  {
+    title: "Partie Double",
+    text: "Chaque opération crée deux effets. Vous les voyez apparaître au bon endroit.",
+    icon: RefreshCw,
+  },
+  {
+    title: "Produits − Charges",
+    text: "Le résultat n’est plus une formule sèche : il devient la conséquence de vos choix.",
+    icon: TrendingUp,
+  },
+];
+
+const COMMERCIAL_POINTS = [
+  "Pensé pour un usage de groupe, pas seulement pour le solo.",
+  "Assez lisible pour rassurer un responsable pédagogique.",
+  "Assez engageant pour donner envie à une promotion d’entrer dans le jeu.",
+];
+
+const FOOTER_LINKS = [
+  { href: "/mentions-legales", label: "Mentions légales", icon: Info },
+  { href: "/cgu", label: "CGU", icon: FileText },
+  { href: "/confidentialite", label: "Politique de confidentialité", icon: Shield },
+  { href: "/contact", label: "Contact", icon: Mail },
+];
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-100">
+      <Sparkles className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function SupportColumn({
+  title,
+  text,
+  icon: Icon,
+}: {
+  title: string;
+  text: string;
+  icon: typeof Scale;
+}) {
+  return (
+    <div className="space-y-4 border-t border-white/10 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0 first:md:border-l-0 first:md:pl-0">
+      <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-white/6 text-cyan-200">
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h3 className="text-xl font-bold text-white">{title}</h3>
+      <p className="max-w-sm text-sm leading-6 text-slate-400">{text}</p>
+    </div>
+  );
+}
+
+function JourneyRow({
+  index,
+  title,
+  text,
+}: {
+  index: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="grid gap-4 border-t border-white/10 py-5 first:border-t-0 first:pt-0 md:grid-cols-[80px_minmax(0,1fr)]">
+      <div className="text-sm font-semibold tracking-[0.28em] text-cyan-300">{index}</div>
+      <div className="space-y-2">
+        <h3 className="text-lg font-bold text-white">{title}</h3>
+        <p className="max-w-xl text-sm leading-6 text-slate-400">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function PrincipleColumn({
+  title,
+  text,
+  icon: Icon,
+}: {
+  title: string;
+  text: string;
+  icon: typeof Scale;
+}) {
+  return (
+    <div className="space-y-4 border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 first:lg:border-l-0 first:lg:pl-0">
+      <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h3 className="text-lg font-bold text-white">{title}</h3>
+      <p className="max-w-sm text-sm leading-6 text-slate-400">{text}</p>
+    </div>
+  );
+}
+
+type EntryAccent = "emerald" | "cyan" | "amber";
+
+function getEntryAccentClasses(accent: EntryAccent) {
+  if (accent === "emerald") {
+    return {
+      border: "border-emerald-400/20",
+      icon: "text-emerald-300 border-emerald-400/20 bg-emerald-400/10",
+      button: "bg-emerald-400 text-slate-950 hover:bg-emerald-300",
+      secondaryButton: "border-emerald-400/20 text-emerald-100 hover:bg-emerald-400/10",
+    };
+  }
+
+  if (accent === "amber") {
+    return {
+      border: "border-amber-400/20",
+      icon: "text-amber-200 border-amber-400/20 bg-amber-400/10",
+      button: "bg-amber-300 text-slate-950 hover:bg-amber-200",
+      secondaryButton: "border-amber-400/20 text-amber-50 hover:bg-amber-400/10",
+    };
+  }
+
+  return {
+    border: "border-cyan-400/20",
+    icon: "text-cyan-200 border-cyan-400/20 bg-cyan-400/10",
+    button: "bg-cyan-400 text-slate-950 hover:bg-cyan-300",
+    secondaryButton: "border-cyan-400/20 text-cyan-50 hover:bg-cyan-400/10",
+  };
+}
+
+function EntryPanel({
+  title,
+  subtitle,
+  description,
+  accent,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  description: string;
+  accent: EntryAccent;
+  icon: typeof KeyRound;
+  children: React.ReactNode;
+}) {
+  const classes = getEntryAccentClasses(accent);
+
+  return (
+    <div
+      className={`flex h-full flex-col justify-between rounded-[1.75rem] border bg-slate-950/70 p-6 shadow-xl shadow-slate-950/30 ${classes.border}`}
+    >
+      <div className="space-y-5">
+        <div className={`inline-flex h-12 w-12 items-center justify-center rounded-full border ${classes.icon}`}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{subtitle}</p>
+          <h3 className="text-2xl font-bold text-white">{title}</h3>
+          <p className="text-sm leading-6 text-slate-400">{description}</p>
+        </div>
+      </div>
+      <div className="mt-8">{children}</div>
+    </div>
+  );
+}
 
 export default function Home() {
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
 
@@ -41,211 +313,261 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 flex flex-col">
+    <main className="min-h-screen overflow-hidden bg-[#020617] text-white">
+      <section className="relative overflow-hidden px-6 pb-20 pt-6 sm:px-8 lg:px-12">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_82%_18%,rgba(250,204,21,0.08),transparent_18%),radial-gradient(circle_at_78%_74%,rgba(16,185,129,0.12),transparent_20%),linear-gradient(180deg,#020617_0%,#08111f_52%,#020617_100%)]" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[48vw] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_54%)] lg:block" />
+        <div className="pointer-events-none absolute left-0 top-32 h-px w-full bg-gradient-to-r from-transparent via-white/12 to-transparent" />
 
-      {/* ══════════════════════════════════════════════════ */}
-      {/* HERO — image + texte côte à côte                  */}
-      {/* ══════════════════════════════════════════════════ */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center min-h-[520px]">
-
-          {/* Texte gauche */}
-          <div className="flex-1 px-6 sm:px-10 md:px-14 py-14 z-10">
-            <div className="inline-flex items-center gap-2 mb-6 bg-emerald-950/60 border border-emerald-700/60 px-4 py-2 rounded-full shadow-sm">
-              <Zap size={15} className="text-emerald-400" />
-              <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest">Jeu sérieux innovant</span>
+        <div className="relative mx-auto max-w-7xl">
+          <header className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-white/8 text-cyan-200">
+                <Building2 className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">
+                  Pierre Médan
+                </p>
+                <p className="text-sm font-semibold text-white">JE DEVIENS PATRON</p>
+              </div>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-tight tracking-tight mb-4">
-              Je Deviens<br />
-              <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                Patron
-              </span>
-            </h1>
+            <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+              <a href="#parcours" className="rounded-full px-3 py-2 transition-colors hover:bg-white/6 hover:text-white">
+                Le parcours
+              </a>
+              <a href="#acces" className="rounded-full px-3 py-2 transition-colors hover:bg-white/6 hover:text-white">
+                Commencer
+              </a>
+              <Link
+                href="/auth/login"
+                className="rounded-full border border-white/12 bg-white/6 px-4 py-2 font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                Se connecter
+              </Link>
+            </nav>
+          </header>
 
-            <p className="text-lg text-gray-100 font-semibold mb-2">
-              Apprends la comptabilité générale en jouant
-            </p>
-            <p className="text-sm text-gray-500 mb-8">
-              par Pierre Médan
-            </p>
+          <div className="grid min-h-[calc(100svh-88px)] items-center gap-12 py-8 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] lg:py-10">
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 28 }}
+              animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
+              className="max-w-xl space-y-8"
+            >
+              <SectionEyebrow>Jeu sérieux de comptabilité</SectionEyebrow>
 
-            <div className="space-y-2 text-sm text-gray-400">
-              <div className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Partie complète : charges, stocks, créances, ventes</div>
-              <div className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> Bilan et compte de résultat en temps réel</div>
-              <div className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-400 shrink-0" /> QCM pédagogique après chaque étape</div>
-            </div>
-          </div>
-
-          {/* Image droite */}
-          <div className="flex-1 relative w-full md:min-h-[520px] min-h-[280px]">
-            <Image
-              src="/hero.png"
-              alt="Je Deviens Patron — Jeu sérieux comptabilité"
-              fill
-              priority
-              quality={90}
-              className="object-contain object-center md:object-right"
-              sizes="(max-width: 768px) 100vw, 50vw"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════ */}
-      {/* QU'EST-CE QUE CE JEU ?                             */}
-      {/* ══════════════════════════════════════════════════ */}
-      <section className="relative w-full px-6 py-16 md:py-24 overflow-hidden">
-        {/* Fond subtil */}
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/10 via-transparent to-transparent pointer-events-none" />
-
-        <div className="relative max-w-6xl mx-auto">
-
-          {/* Intro */}
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 mb-5 bg-emerald-950/40 border border-emerald-700/50 px-4 py-2 rounded-full">
-              <Gamepad2 size={15} className="text-emerald-400" />
-              <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest">Ludopédagogie</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
-              Apprendre la comptabilité{" "}
-              <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                en jouant
-              </span>
-            </h2>
-            <p className="text-base text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              Un simulateur de gestion d&apos;entreprise où chaque décision a des conséquences comptables visibles.
-              Vos apprenants pilotent une PME, expérimentent, se trompent et comprennent les vrais mécanismes financiers.
-            </p>
-          </div>
-
-          {/* Bento Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-            {/* CARTE PRINCIPALE — Le cœur du jeu (2×2) */}
-            <div className="md:col-span-2 md:row-span-2 group rounded-3xl border border-emerald-700/40 bg-gradient-to-br from-emerald-950/30 via-emerald-900/10 to-transparent p-8 md:p-10 backdrop-blur-sm hover:border-emerald-600/60 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-emerald-600/5 to-transparent transition-opacity duration-300 pointer-events-none" />
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-5">
-                    <div className="p-3 rounded-2xl bg-emerald-600/20 border border-emerald-600/40 group-hover:bg-emerald-600/30 transition-colors">
-                      <Building2 size={28} className="text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl md:text-2xl font-black text-white">Gérez votre entreprise</h3>
-                      <p className="text-sm text-emerald-300 font-medium">Trimestre après trimestre</p>
-                    </div>
+              <div className="flex flex-wrap gap-2">
+                {AUDIENCE_STRIPS.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-300"
+                  >
+                    {item}
                   </div>
-                  <p className="text-gray-300 leading-relaxed mb-6">
-                    Choisissez parmi 4 entreprises (manufacture, transport, commerce, labo) et pilotez-la sur 6 à 12 trimestres.
-                    À chaque tour : achats de stocks, paiement des charges, ventes clients, investissements stratégiques.
-                    Chaque action modifie votre bilan et votre compte de résultat — en temps réel.
+                ))}
+              </div>
+
+              <div className="space-y-5">
+                <h1 className="max-w-[13ch] text-5xl font-bold leading-[0.92] tracking-[-0.04em] text-white text-balance sm:text-6xl lg:text-7xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
+                  La comptabilité devient un terrain d’apprentissage concret.
+                </h1>
+                <p className="max-w-lg text-base leading-7 text-slate-300 sm:text-lg">
+                  Un simulateur premium pensé pour formateurs, écoles et
+                  établissements qui veulent faire comprendre la logique
+                  comptable par la décision, la visualisation et le jeu.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <a
+                  href="#acces"
+                  className="inline-flex items-center gap-2 rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+                >
+                  Commencer
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </a>
+                <a
+                  href="#parcours"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  Voir Le Fonctionnement
+                </a>
+              </div>
+
+              <div className="space-y-3 border-t border-white/10 pt-6">
+                {HERO_POINTS.map((point) => (
+                  <div key={point} className="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                    <span>{point}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 border-t border-white/10 pt-6 sm:grid-cols-3">
+                {COMMERCIAL_POINTS.map((point) => (
+                  <div
+                    key={point}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-xs leading-5 text-slate-400"
+                  >
+                    {point}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97, y: 24 }}
+              animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut", delay: 0.08 }}
+              className="relative"
+            >
+              <div className="relative mx-auto aspect-[1.08/1] w-full max-w-3xl overflow-hidden rounded-[2.2rem] border border-white/10 bg-[linear-gradient(160deg,rgba(11,18,32,0.7),rgba(9,52,73,0.24))] shadow-[0_35px_120px_rgba(2,8,23,0.65)]">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.18),transparent_24%)]" />
+                <div className="absolute left-5 top-5 z-10 max-w-[220px] rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 backdrop-blur">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">
+                    Pour Formateurs & Établissements
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">
+                    Une expérience pédagogique claire, visible et crédible dès
+                    les premiers instants.
                   </p>
                 </div>
-                <div className="space-y-2.5 pt-4 border-t border-emerald-700/30">
-                  {["8 étapes de décision par trimestre", "Bilan et trésorerie visibles en permanence", "Score final basé sur votre performance financière"].map((item) => (
-                    <div key={item} className="flex items-start gap-3 text-sm text-gray-200">
-                      <CheckCircle size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                      <span>{item}</span>
+
+                <motion.div
+                  animate={shouldReduceMotion ? {} : { y: [0, -8, 0] }}
+                  transition={shouldReduceMotion ? undefined : { duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src="/hero.png"
+                    alt="Interface du jeu JE DEVIENS PATRON"
+                    fill
+                    priority
+                    quality={92}
+                    sizes="(max-width: 1024px) 100vw, 58vw"
+                    className="object-contain object-center"
+                  />
+                </motion.div>
+
+                <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-3 p-5 sm:p-6">
+                  {SUPPORT_NUMBERS.map((item) => (
+                    <div
+                      key={item.label}
+                      className="min-w-[120px] flex-1 rounded-2xl border border-white/12 bg-slate-950/62 px-4 py-3 backdrop-blur"
+                    >
+                      <p className="text-2xl font-black text-cyan-200">{item.value}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Carte 2 — Comptabilité vivante */}
-            <div className="group rounded-2xl border-l-4 border-l-blue-500/70 border border-blue-700/30 bg-gradient-to-br from-blue-950/20 via-blue-900/5 to-transparent p-6 backdrop-blur-sm hover:border-blue-600/50 hover:border-l-blue-400 transition-all duration-300 hover:shadow-md hover:shadow-blue-500/10">
-              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-blue-600/20 border border-blue-600/40 mb-4 group-hover:bg-blue-600/30 transition-colors">
-                <Scale size={22} className="text-blue-400" />
-              </div>
-              <h4 className="text-base font-bold text-white mb-2">Comptabilité vivante</h4>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                L&apos;équation ACTIF = PASSIF n&apos;est plus théorique. Vous la voyez à l&apos;écran après chaque action. La partie double devient tangible.
-              </p>
-            </div>
-
-            {/* Carte 3 — QCM pédagogique */}
-            <div className="group rounded-2xl border-l-4 border-l-amber-500/70 border border-amber-700/30 bg-gradient-to-br from-amber-950/20 via-amber-900/5 to-transparent p-6 backdrop-blur-sm hover:border-amber-600/50 hover:border-l-amber-400 transition-all duration-300 hover:shadow-md hover:shadow-amber-500/10">
-              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-amber-600/20 border border-amber-600/40 mb-4 group-hover:bg-amber-600/30 transition-colors">
-                <BookOpen size={22} className="text-amber-400" />
-              </div>
-              <h4 className="text-base font-bold text-white mb-2">QCM après chaque étape</h4>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Pas juste jouer : comprendre. Un quiz valide votre raisonnement comptable à chaque décision. Zéro passivité.
-              </p>
-            </div>
-
-            {/* Carte 4 — Événements & stratégie */}
-            <div className="group rounded-2xl border-l-4 border-l-violet-500/70 border border-violet-700/30 bg-gradient-to-br from-violet-950/20 via-violet-900/5 to-transparent p-6 backdrop-blur-sm hover:border-violet-600/50 hover:border-l-violet-400 transition-all duration-300 hover:shadow-md hover:shadow-violet-500/10">
-              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-violet-600/20 border border-violet-600/40 mb-4 group-hover:bg-violet-600/30 transition-colors">
-                <Shuffle size={22} className="text-violet-400" />
-              </div>
-              <h4 className="text-base font-bold text-white mb-2">Surprises et décisions</h4>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Cartes de décision (investir, recruter, emprunter) et événements aléatoires (crise, opportunité) forcent à s&apos;adapter.
-              </p>
-            </div>
-
-            {/* Carte 5 — Solo ou en classe */}
-            <div className="group rounded-2xl border-l-4 border-l-teal-500/70 border border-teal-700/30 bg-gradient-to-br from-teal-950/20 via-teal-900/5 to-transparent p-6 backdrop-blur-sm hover:border-teal-600/50 hover:border-l-teal-400 transition-all duration-300 hover:shadow-md hover:shadow-teal-500/10">
-              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-teal-600/20 border border-teal-600/40 mb-4 group-hover:bg-teal-600/30 transition-colors">
-                <Users size={22} className="text-teal-400" />
-              </div>
-              <h4 className="text-base font-bold text-white mb-2">Solo ou en classe</h4>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Jouez seul pour vous entraîner ou en groupe avec un code de session. Le formateur suit les scores en direct.
-              </p>
-            </div>
-
+            </motion.div>
           </div>
-
-          {/* Bandeau chiffres clés */}
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { value: "8", label: "décisions par trimestre", icon: Target },
-              { value: "4", label: "entreprises au choix", icon: Building2 },
-              { value: "6–12", label: "trimestres de jeu", icon: Clock },
-              { value: "1h–1h45", label: "durée de partie", icon: Zap },
-            ].map(({ value, label, icon: Icon }) => (
-              <div key={label} className="flex items-center gap-3 bg-gray-800/30 border border-gray-700/40 rounded-xl px-4 py-3">
-                <Icon size={18} className="text-emerald-400 shrink-0" />
-                <div>
-                  <span className="text-lg font-black text-white">{value}</span>
-                  <p className="text-xs text-gray-500">{label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* CTA vers les blocs d'accès */}
-          <p className="text-center mt-12 text-gray-500 text-sm font-medium">
-            Prêt à piloter votre première entreprise ?{" "}
-            <span className="text-emerald-400">↓</span>
-          </p>
-
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════ */}
-      {/* 3 BLOCS D'ACCÈS                                   */}
-      {/* ══════════════════════════════════════════════════ */}
-      <section className="bg-gradient-to-b from-gray-900 to-gray-950 py-14 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-black text-white text-center mb-10">Comment commencer ?</h2>
+      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-16 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl space-y-10">
+          <div className="max-w-2xl space-y-4">
+            <SectionEyebrow>Pourquoi ça marche</SectionEyebrow>
+            <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
+              Une expérience pédagogique qui se comprend en quelques secondes.
+            </h2>
+            <p className="text-sm leading-7 text-slate-400 sm:text-base">
+              JE DEVIENS PATRON aide les apprenants à relier décisions de gestion,
+              effets comptables et lecture des résultats dans un même parcours,
+              clair pour la classe et crédible pour un établissement.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid gap-8 md:grid-cols-3">
+            {LEARNING_PILLARS.map((pillar) => (
+              <SupportColumn
+                key={pillar.title}
+                title={pillar.title}
+                text={pillar.text}
+                icon={pillar.icon}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Bloc 1 : Code */}
-            <div className="rounded-2xl border border-emerald-700/40 bg-gray-800/40 backdrop-blur-sm p-7 hover:bg-gray-800/60 hover:border-emerald-600/60 transition-all flex flex-col gap-4">
-              <div className="inline-flex p-3 rounded-xl bg-emerald-950/50 text-emerald-400 w-fit">
-                <KeyRound size={26} />
+      <section id="parcours" className="px-6 py-18 sm:px-8 lg:px-12">
+        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="space-y-5">
+            <SectionEyebrow>Le parcours</SectionEyebrow>
+            <h2 className="max-w-md text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
+              Une partie suit une logique claire du début à la fin.
+            </h2>
+            <p className="max-w-md text-sm leading-7 text-slate-400 sm:text-base">
+              Chaque étape donne une vision directe de ce que l’entreprise fait,
+              de ce que la comptabilité enregistre et de ce que le formateur peut
+              exploiter ensuite dans son animation ou son débrief.
+            </p>
+
+            <div className="rounded-[1.75rem] border border-cyan-400/15 bg-cyan-400/7 p-6">
+              <div className="flex items-start gap-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+                  <Users className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white">Pensé pour la classe, crédible pour l’institution</h3>
+                  <p className="text-sm leading-6 text-slate-400">
+                    Le jeu aide à engager les apprenants pendant la séance tout en
+                    donnant au responsable pédagogique un cadre sérieux, lisible
+                    et simple à déployer.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-black text-gray-100">J&apos;ai un code</h3>
-                <p className="text-xs text-gray-400 mt-1">Mon formateur m&apos;a donné un code de session</p>
-              </div>
-              <form onSubmit={handleCode} className="space-y-3 flex-1 flex flex-col justify-end">
-                <label htmlFor="session-code" className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-slate-950/65 p-6 shadow-xl shadow-slate-950/30 sm:p-8">
+            {JOURNEY_STEPS.map((step) => (
+              <JourneyRow
+                key={step.index}
+                index={step.index}
+                title={step.title}
+                text={step.text}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="acces"
+        className="border-y border-white/8 bg-[linear-gradient(180deg,rgba(8,17,31,0.82),rgba(2,8,23,1))] px-6 py-18 sm:px-8 lg:px-12"
+      >
+        <div className="mx-auto max-w-6xl space-y-10">
+          <div className="max-w-2xl space-y-4">
+            <SectionEyebrow>Commencer</SectionEyebrow>
+            <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
+              Trois entrées, une seule logique : aller vite.
+            </h2>
+            <p className="text-sm leading-7 text-slate-400 sm:text-base">
+              Que vous soyez apprenant, joueur autonome ou formateur, vous trouvez
+              immédiatement le bon point d’entrée pour commencer une session,
+              tester le jeu ou piloter une classe.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <EntryPanel
+              title={ENTRY_OPTIONS[0].title}
+              subtitle={ENTRY_OPTIONS[0].subtitle}
+              description={ENTRY_OPTIONS[0].description}
+              accent={ENTRY_OPTIONS[0].accent}
+              icon={ENTRY_OPTIONS[0].icon}
+            >
+              <form onSubmit={handleCode} className="space-y-3">
+                <label
+                  htmlFor="session-code"
+                  className="block text-xs font-semibold uppercase tracking-[0.22em] text-slate-500"
+                >
                   Code De Session
                 </label>
                 <input
@@ -253,173 +575,190 @@ export default function Home() {
                   name="session-code"
                   type="text"
                   value={code}
-                  onChange={e => { setCode(e.target.value.toUpperCase()); setCodeError(null); }}
+                  onChange={(e) => {
+                    setCode(e.target.value.toUpperCase());
+                    setCodeError(null);
+                  }}
                   placeholder="KIC-4A2B ou code accès…"
                   maxLength={8}
                   autoComplete="off"
                   spellCheck={false}
                   inputMode="text"
                   aria-describedby="session-code-help session-code-error"
-                  className="w-full px-4 py-3 border-2 border-gray-700 bg-gray-950/50 text-gray-100 placeholder-gray-500 rounded-xl focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 text-center font-mono font-bold text-lg uppercase tracking-widest"
+                  className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-center font-mono text-lg font-bold uppercase tracking-[0.24em] text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/20"
                 />
-                <p id="session-code-help" className="text-xs text-gray-500 text-center">
-                  Saisissez le code fourni par votre formateur ou votre code d&apos;accès.
+                <p id="session-code-help" className="text-xs leading-5 text-slate-500">
+                  Saisissez le code fourni par votre formateur.
                 </p>
-                {codeError && (
+                {codeError ? (
                   <p
                     id="session-code-error"
-                    className="text-red-400 text-xs text-center"
+                    className="text-xs text-rose-300"
                     role="alert"
                     aria-live="polite"
                   >
                     {codeError}
                   </p>
-                )}
+                ) : null}
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-900/40"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-300"
                 >
-                  Rejoindre →
+                  Rejoindre La Session
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </button>
               </form>
-            </div>
+            </EntryPanel>
 
-            {/* Bloc 2 : Solo */}
-            <div className="rounded-2xl border border-teal-700/40 bg-gray-800/40 backdrop-blur-sm p-7 hover:bg-gray-800/60 hover:border-teal-600/60 transition-all flex flex-col gap-4">
-              <div className="inline-flex p-3 rounded-xl bg-teal-950/50 text-teal-400 w-fit">
-                <Gamepad2 size={26} />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-gray-100">Je joue seul</h3>
-                <p className="text-xs text-gray-400 mt-1">Compte requis — 1 crédit par partie</p>
-              </div>
-              <div className="flex-1 flex flex-col justify-between gap-3">
-                <ul className="text-xs text-gray-400 space-y-2">
-                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Partie complète en autonomie</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Résultats sauvegardés dans votre compte</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Bilan, compte de résultat, indicateurs</li>
-                </ul>
-                <Link href="/auth/register?redirectTo=/jeu&orgType=individuel" className="block w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-black py-3 rounded-xl text-center transition-all active:scale-95 shadow-lg shadow-teal-900/40">
-                  Jouer maintenant →
+            <EntryPanel
+              title={ENTRY_OPTIONS[1].title}
+              subtitle={ENTRY_OPTIONS[1].subtitle}
+              description={ENTRY_OPTIONS[1].description}
+              accent={ENTRY_OPTIONS[1].accent}
+              icon={ENTRY_OPTIONS[1].icon}
+            >
+              <div className="space-y-4">
+                <div className="space-y-2 text-sm text-slate-400">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                    <span>1 crédit par partie</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                    <span>Historique & résultats conservés</span>
+                  </div>
+                </div>
+                <Link
+                  href={ENTRY_OPTIONS[1].href!}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+                >
+                  {ENTRY_OPTIONS[1].cta}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
-            </div>
+            </EntryPanel>
 
-            {/* Bloc 3 : Enseignant */}
-            <div className="rounded-2xl border border-orange-600/50 bg-gradient-to-br from-orange-700 to-orange-800 p-7 shadow-lg shadow-orange-900/40 hover:from-orange-600 hover:to-orange-700 transition-all flex flex-col gap-4 text-white">
-              <div className="inline-flex p-3 rounded-xl bg-white/15 text-white w-fit">
-                <GraduationCap size={26} />
-              </div>
-              <div>
-                <h3 className="text-lg font-black">Enseignant / Formateur</h3>
-                <p className="text-xs text-orange-200 mt-1">Créer des sessions et suivre les résultats</p>
-              </div>
-              <div className="flex-1 flex flex-col justify-between gap-3">
-                <ul className="text-xs text-orange-200 space-y-2">
-                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-orange-300 shrink-0" /> Générer un code de session</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-orange-300 shrink-0" /> Scores en temps réel</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={14} className="text-orange-300 shrink-0" /> Gestion groupes et classes</li>
-                </ul>
-                <div className="space-y-2">
-                  <Link href="/auth/login" className="block w-full bg-white text-orange-700 font-black py-3 rounded-xl text-center hover:bg-orange-50 transition-all text-sm shadow-sm">
-                    Se connecter
+            <EntryPanel
+              title={ENTRY_OPTIONS[2].title}
+              subtitle={ENTRY_OPTIONS[2].subtitle}
+              description={ENTRY_OPTIONS[2].description}
+              accent={ENTRY_OPTIONS[2].accent}
+              icon={ENTRY_OPTIONS[2].icon}
+            >
+              <div className="space-y-4">
+                <div className="space-y-2 text-sm text-slate-400">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" aria-hidden="true" />
+                    <span>Codes de session pour la classe</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" aria-hidden="true" />
+                    <span>Suivi des scores & résultats</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Link
+                    href={ENTRY_OPTIONS[2].href!}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-amber-300 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-200"
+                  >
+                    {ENTRY_OPTIONS[2].cta}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
-                  <Link href="/auth/register" className="block w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-2.5 rounded-xl text-center transition-all text-sm">
-                    Créer un compte gratuit
+                  <Link
+                    href={ENTRY_OPTIONS[2].secondaryHref!}
+                    className="inline-flex w-full items-center justify-center rounded-full border border-amber-400/20 px-5 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-400/10"
+                  >
+                    {ENTRY_OPTIONS[2].secondaryCta}
                   </Link>
                 </div>
               </div>
+            </EntryPanel>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-18 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl space-y-10">
+          <div className="max-w-2xl space-y-4">
+            <SectionEyebrow>Ce qu’on retient</SectionEyebrow>
+            <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
+              Les trois idées que le jeu rend enfin intuitives.
+            </h2>
+            <p className="text-sm leading-7 text-slate-400 sm:text-base">
+              Le jeu fait ressortir les fondamentaux que les apprenants doivent
+              vraiment maîtriser pour comprendre le bilan, la partie double et
+              la formation du résultat.
+            </p>
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-3">
+            {PRINCIPLES.map((principle) => (
+              <PrincipleColumn
+                key={principle.title}
+                title={principle.title}
+                text={principle.text}
+                icon={principle.icon}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 pb-18 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl overflow-hidden rounded-[2.2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(12,20,36,0.96),rgba(5,35,47,0.92))] px-6 py-10 shadow-2xl shadow-cyan-950/25 sm:px-10 sm:py-12">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,0.6fr)] lg:items-end">
+            <div className="space-y-4">
+              <SectionEyebrow>Dernier pas</SectionEyebrow>
+              <h2 className="max-w-lg text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
+                Un outil conçu pour donner envie d’apprendre et assez solide pour être adopté en formation.
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                JE DEVIENS PATRON réunit mise en situation, visualisation comptable
+                et exploitation pédagogique dans une expérience simple à présenter,
+                simple à lancer et simple à faire vivre avec un groupe.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <a
+                href="#acces"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+              >
+                Choisir Mon Point D’entrée
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+              <Link
+                href="/contact"
+                className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                Contacter Pierre Médan
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════ */}
-      {/* VIDÉO DÉMO                                        */}
-      {/* ══════════════════════════════════════════════════ */}
-      <section className="bg-gray-900 py-10 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-black text-white text-center mb-6">🎬 Comment ça marche ?</h2>
-          <div className="bg-gradient-to-br from-emerald-950/30 to-teal-950/30 rounded-2xl h-52 flex items-center justify-center border border-dashed border-emerald-700/40">
-            <div className="text-center text-gray-500">
-              <div className="text-5xl mb-3 opacity-60">▶</div>
-              <p className="text-sm font-semibold">Vidéo de démonstration</p>
-              <p className="text-xs mt-1">Disponible prochainement</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════ */}
-      {/* 3 PRINCIPES COMPTABLES                            */}
-      {/* ══════════════════════════════════════════════════ */}
-      <section className="bg-gradient-to-b from-gray-900 to-gray-950 py-10 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-black text-white text-center mb-8">Les 3 grands principes</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-5 border border-blue-700/30 hover:border-blue-500/60 transition-all">
-              <Scale size={28} className="text-blue-400 mb-3" />
-              <strong className="text-blue-300 block mb-1">ACTIF = PASSIF</strong>
-              <p className="text-gray-400 text-xs leading-snug">Le bilan est toujours équilibré. Ce que tu possèdes est financé par des ressources.</p>
-            </div>
-            <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-5 border border-purple-700/30 hover:border-purple-500/60 transition-all">
-              <RefreshCw size={28} className="text-purple-400 mb-3" />
-              <strong className="text-purple-300 block mb-1">Partie double</strong>
-              <p className="text-gray-400 text-xs leading-snug">Chaque opération a deux effets : un <span className="text-blue-400">emploi</span> (débit) et une <span className="text-orange-400">ressource</span> (crédit).</p>
-            </div>
-            <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl p-5 border border-emerald-700/30 hover:border-emerald-500/60 transition-all">
-              <TrendingUp size={28} className="text-emerald-400 mb-3" />
-              <strong className="text-emerald-300 block mb-1">Résultat = Produits − Charges</strong>
-              <p className="text-gray-400 text-xs leading-snug">Si tes ventes &gt; tes charges → <span className="text-emerald-400">bénéfice</span>. Sinon → <span className="text-red-400">perte</span>.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════ */}
-      {/* INDICATEURS CLÉS                                  */}
-      {/* ══════════════════════════════════════════════════ */}
-      <KeyIndicatorsSection />
-
-      {/* ══════════════════════════════════════════════════ */}
-      {/* GLOSSAIRE COMPTABLE                               */}
-      {/* ══════════════════════════════════════════════════ */}
-      <GlossarySection />
-
-      {/* ══════════════════════════════════════════════════ */}
-      {/* PIED DE PAGE                                      */}
-      {/* ══════════════════════════════════════════════════ */}
-      <footer className="bg-gray-950 border-t border-gray-800 py-10 px-6">
-        <div className="max-w-5xl mx-auto">
-
-          {/* Liens légaux */}
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-6 text-xs text-gray-400">
-            <Link href="/mentions-legales" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-              <Info size={13} />Mentions légales
-            </Link>
-            <Link href="/cgu" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-              <FileText size={13} />CGU
-            </Link>
-            <Link href="/confidentialite" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-              <Shield size={13} />Politique de confidentialité
-            </Link>
-            <Link href="/contact" className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors">
-              <Mail size={13} />Contact
-            </Link>
+      <footer className="border-t border-white/8 px-6 py-10 text-sm sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-3 text-slate-400">
+            {FOOTER_LINKS.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex items-center gap-2 transition-colors hover:text-cyan-200"
+              >
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {label}
+              </Link>
+            ))}
           </div>
 
-          {/* Séparateur */}
-          <div className="border-t border-gray-800 my-5" />
-
-          {/* Copyright + hébergeur */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-gray-600">
+          <div className="flex flex-col gap-2 border-t border-white/8 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <p>© {new Date().getFullYear()} Pierre Médan — Tous droits réservés</p>
-            <p>Hébergé par <span className="text-gray-500">Vercel Inc.</span> · DNS <span className="text-gray-500">OVH</span></p>
+            <p>Hébergé par Vercel · DNS OVH</p>
           </div>
-
         </div>
       </footer>
-
     </main>
   );
 }
