@@ -44,8 +44,8 @@
 - [ ] Vérifier crédits incrémentés après paiement
 - [ ] Mettre à jour URL webhook Stripe → https://jedevienspatron.fr/api/stripe/webhook
 
-### 5.2 — Dashboard formateur
-- [ ] Page suivi apprenants : player_name + room_code + score par session
+### 5.2 — Dashboard formateur ✅
+- [x] Page suivi apprenants : player_name + room_code + score par session (déjà existante : /dashboard/sessions/[id]/page.tsx)
 
 ### 5.3 — Bloquer jeu individuel sans inscription ✅
 - [x] Middleware : si accès /jeu sans session ET sans bypass code → redirect login

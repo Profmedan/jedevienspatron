@@ -278,7 +278,7 @@ export default function Home() {
                   <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Résultats sauvegardés dans votre compte</li>
                   <li className="flex items-center gap-2"><CheckCircle size={14} className="text-teal-400 shrink-0" /> Bilan, compte de résultat, indicateurs</li>
                 </ul>
-                <Link href="/auth/login?redirectTo=/jeu" className="block w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-black py-3 rounded-xl text-center transition-all active:scale-95 shadow-lg shadow-teal-900/40">
+                <Link href="/auth/register?redirectTo=/jeu&orgType=individuel" className="block w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-black py-3 rounded-xl text-center transition-all active:scale-95 shadow-lg shadow-teal-900/40">
                   Jouer maintenant →
                 </Link>
               </div>

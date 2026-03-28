@@ -4,11 +4,12 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getValidRedirectUrl } from "@/lib/auth/redirect";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const redirectTo = getValidRedirectUrl(searchParams.get("redirectTo"));
   const message = searchParams.get("message");
 
   const [email, setEmail] = useState("");
@@ -36,10 +37,11 @@ function LoginForm() {
 
   async function handleGoogleLogin() {
     setLoading(true);
+    document.cookie = `post_auth_redirect=${encodeURIComponent(redirectTo)}; Path=/; Max-Age=600; SameSite=Lax`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?redirectTo=${redirectTo}`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
       },
     });
     if (error) setError("Connexion Google impossible. Réessayez.");

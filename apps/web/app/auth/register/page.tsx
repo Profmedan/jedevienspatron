@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getValidRedirectUrl } from "@/lib/auth/redirect";
 
 const ORG_TYPES = [
   { value: "lycee", label: "Lycée" },
@@ -18,6 +19,10 @@ const ORG_TYPES = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = getValidRedirectUrl(searchParams.get("redirectTo"));
+  const requestedOrgType = searchParams.get("orgType");
+  const initialOrgType = ORG_TYPES.some((type) => type.value === requestedOrgType) ? requestedOrgType : "lycee";
 
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
@@ -29,16 +34,17 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [orgName, setOrgName] = useState("");
-  const [orgType, setOrgType] = useState<string>("lycee");
+  const [orgType, setOrgType] = useState<string>(initialOrgType);
 
   const supabase = createClient();
 
   async function handleGoogleSignup() {
     setLoading(true);
+    document.cookie = `post_auth_redirect=${encodeURIComponent(redirectTo)}; Path=/; Max-Age=600; SameSite=Lax`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?redirectTo=${encodeURIComponent("/dashboard")}`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
       },
     });
     if (error) setError("Inscription Google impossible. Réessayez.");
@@ -69,7 +75,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: { full_name: displayName, org_name: orgName, org_type: orgType },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
       },
     });
 
@@ -87,7 +93,7 @@ export default function RegisterPage() {
       // Email de confirmation envoyé
       setEmailSent(true);
     } else {
-      router.push("/dashboard");
+      router.push(redirectTo);
     }
 
     setLoading(false);
@@ -107,7 +113,7 @@ export default function RegisterPage() {
             Ouvrez cet email et cliquez sur le lien pour activer votre compte, puis revenez vous connecter.
           </p>
           <Link
-            href="/auth/login"
+            href={`/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`}
             className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors"
           >
             Aller à la page de connexion
@@ -284,7 +290,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-gray-400 mt-6">
           Déjà un compte ?{" "}
-          <Link href="/auth/login" className="text-indigo-400 font-semibold hover:underline">
+          <Link href={`/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-indigo-400 font-semibold hover:underline">
             Se connecter
           </Link>
         </p>
