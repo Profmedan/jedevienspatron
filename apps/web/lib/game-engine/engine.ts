@@ -37,6 +37,17 @@ import {
   scorerDemandePret,
 } from "@/lib/game-engine/calculators";
 
+// ─── CONSTANTES IDs CARTES ──────────────────────────────────
+/** Constantes centralisées pour les IDs de cartes — évite les string literals éparpillés */
+const CARTE_IDS = {
+  COMMERCIAL_JUNIOR: "commercial-junior-dec",
+  AFFACTURAGE: "affacturage",
+  FORMATION: "formation",
+  REMBOURSEMENT_ANTICIPE: "remboursement-anticipe",
+  LEVEE_DE_FONDS: "levee-de-fonds",
+  ASSURANCE_PREVOYANCE: "assurance-prevoyance",
+} as const;
+
 // ─── HELPERS INTERNES ────────────────────────────────────────
 
 function melangerTableau<T>(arr: T[]): T[] {
@@ -78,6 +89,23 @@ function creerCompteResultatVierge(): CompteResultat {
       produitsFinanciers: 0,
       revenusExceptionnels: 0,
     },
+  };
+}
+
+/** Crée une closure push(poste, delta, explication) pour tracker les modifications */
+function makePush(
+  joueur: Joueur,
+  modifications: ResultatAction["modifications"]
+) {
+  return (poste: string, delta: number, explication: string) => {
+    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
+    modifications.push({
+      joueurId: joueur.id,
+      poste: poste as any,
+      ancienneValeur,
+      nouvelleValeur,
+      explication,
+    });
   };
 }
 
@@ -145,9 +173,8 @@ function appliquerDeltaPoste(
     return { ancienneValeur: old, nouvelleValeur: passif.valeur };
   }
 
-  // Poste introuvable — cas défensif
-  console.warn(`[GameEngine] Poste inconnu : ${poste}`);
-  return { ancienneValeur: 0, nouvelleValeur: 0 };
+  // Poste introuvable — erreur pour détecter les typos/IDs invalides
+  throw new Error(`[GameEngine] Poste inconnu : "${poste}". Vérifiez l'ID dans types.ts ou cartes.ts.`);
 }
 
 // ─── CRÉATION DE L'ÉTAT INITIAL ──────────────────────────────
@@ -202,7 +229,7 @@ export function creerJoueur(
     compteResultat: creerCompteResultatVierge(),
     // Commercial Junior par défaut : -1 chargesPersonnel, -1 tresorerie, +2 clients Particuliers/tour
     cartesActives: (() => {
-      const comJunior = CARTES_DECISION.find((c) => c.id === "commercial-junior-dec");
+      const comJunior = CARTES_DECISION.find((c) => c.id === CARTE_IDS.COMMERCIAL_JUNIOR);
       return comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${Date.now()}` }] : [];
     })(),
     // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
@@ -253,21 +280,7 @@ export function appliquerEtape0(
 ): ResultatAction {
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
-
-  const push = (poste: string, delta: number, explication: string) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(
-      joueur,
-      poste,
-      delta
-    );
-    modifications.push({
-      joueurId: joueur.id,
-      poste: poste as any,
-      ancienneValeur,
-      nouvelleValeur,
-      explication,
-    });
-  };
+  const push = makePush(joueur, modifications);
 
   // 0. Agios bancaires sur découvert (AVANT remboursement : les intérêts s'ajoutent au découvert)
   if (joueur.bilan.decouvert > 0) {
@@ -418,11 +431,7 @@ export function appliquerAchatMarchandises(
   const modifications: ResultatAction["modifications"] = [];
 
   if (quantite <= 0) return { succes: true, modifications };
-
-  const push = (poste: string, delta: number, explication: string) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
-    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
-  };
+  const push = makePush(joueur, modifications);
 
   // Stocks +quantite
   push("stocks", quantite, `Achat de ${quantite} unité(s) de marchandises`);
@@ -445,13 +454,10 @@ export function appliquerAvancementCreances(
 ): ResultatAction {
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
-  const push = (poste: string, delta: number, explication: string) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
-    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
-  };
+  const push = makePush(joueur, modifications);
 
   // Affacturage actif : toutes créances → Trésorerie immédiatement
-  const hasAffacturage = joueur.cartesActives.some((c) => c.id === "affacturage");
+  const hasAffacturage = joueur.cartesActives.some((c) => c.id === CARTE_IDS.AFFACTURAGE);
 
   if (hasAffacturage) {
     if (joueur.bilan.creancesPlus1 > 0) {
@@ -511,11 +517,7 @@ export function appliquerPaiementCommerciaux(
   const cout = calculerCoutCommerciaux(joueur);
 
   if (cout === 0) return { succes: true, modifications };
-
-  const push = (poste: string, delta: number, explication: string) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
-    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
-  };
+  const push = makePush(joueur, modifications);
 
   push("chargesPersonnel", cout, `Salaires commerciaux : +${cout} charges de personnel`);
   push("tresorerie", -cout, `Paiement salaires : -${cout} trésorerie`);
@@ -540,10 +542,7 @@ export function appliquerCarteClient(
 ): ResultatAction {
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
-  const push = (poste: string, delta: number, explication: string) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
-    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
-  };
+  const push = makePush(joueur, modifications);
 
   const stocks = getTotalStocks(joueur);
   if (stocks < 1) {
@@ -628,22 +627,14 @@ export function obtenirCarteRecrutement(_etat: EtatJeu, _joueurIdx: number): Car
  * elles passent par obtenirCarteRecrutement ci-dessus).
  * Le nombre minimum garanti est 4 cartes.
  */
-export function tirerCartesDecision(etat: EtatJeu, nb: number = 4): CarteDecision[] {
-  // Filtrer les commerciaux de la pioche — ils ont leur propre section
-  etat.piocheDecision = etat.piocheDecision.filter((c) => c.categorie !== "commercial");
-
-  // Toujours tirer au minimum 4 cartes (valeur par défaut mise à jour)
-  const cartesDemandees = Math.max(4, nb);
-
-  // Recharger la pioche si nécessaire pour avoir assez de cartes
-  while (etat.piocheDecision.length < cartesDemandees) {
+export function tirerCartesDecision(etat: EtatJeu, nb: number = 3): CarteDecision[] {
+  // Recharger la pioche AVANT le tirage si insuffisante
+  if (etat.piocheDecision.length < nb) {
     etat.piocheDecision.push(
       ...melangerTableau(CARTES_DECISION.filter((c) => c.categorie !== "commercial"))
     );
   }
-
-  const tirees = etat.piocheDecision.splice(0, cartesDemandees);
-  return tirees;
+  return etat.piocheDecision.splice(0, nb);
 }
 
 export function acheterCarteDecision(
@@ -689,13 +680,13 @@ export function acheterCarteDecision(
   joueur.cartesActives.push(carte);
 
   // Carte Formation : bonus d'1 client grand compte immédiat
-  if (carte.id === "formation") {
+  if (carte.id === CARTE_IDS.FORMATION) {
     const clientGC = CARTES_CLIENTS.find((c) => c.id === "client-grand-compte");
     if (clientGC) joueur.clientsATrait.push(clientGC);
   }
 
   // Remboursement anticipé : solder les emprunts restants
-  if (carte.id === "remboursement-anticipe") {
+  if (carte.id === CARTE_IDS.REMBOURSEMENT_ANTICIPE) {
     const emprunts = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
     if (emprunts && emprunts.valeur > 0) {
       const { ancienneValeur: tresoAncienne, nouvelleValeur: tresoNouvelle } = appliquerDeltaPoste(
@@ -716,12 +707,12 @@ export function acheterCarteDecision(
       });
     }
     // Retirer la carte (usage unique)
-    joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== "remboursement-anticipe");
+    joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== CARTE_IDS.REMBOURSEMENT_ANTICIPE);
   }
 
   // Levée de fonds : usage unique
-  if (carte.id === "levee-de-fonds") {
-    joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== "levee-de-fonds");
+  if (carte.id === CARTE_IDS.LEVEE_DE_FONDS) {
+    joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== CARTE_IDS.LEVEE_DE_FONDS);
   }
 
   return { succes: true, modifications };
@@ -738,7 +729,7 @@ export function appliquerCarteEvenement(
   const modifications: ResultatAction["modifications"] = [];
 
   // Assurance prévoyance annule les événements négatifs
-  const hasAssurance = joueur.cartesActives.some((c) => c.id === "assurance-prevoyance");
+  const hasAssurance = joueur.cartesActives.some((c) => c.id === CARTE_IDS.ASSURANCE_PREVOYANCE);
   const estNegatif = carte.effets.some((e) => e.delta < 0);
 
   if (hasAssurance && carte.annulableParAssurance && estNegatif) {
@@ -890,10 +881,7 @@ export function demanderEmprunt(
     return { resultat, modifications };
   }
 
-  const push = (poste: string, delta: number, explication: string) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
-    modifications.push({ joueurId: joueur.id, poste: poste as any, ancienneValeur, nouvelleValeur, explication });
-  };
+  const push = makePush(joueur, modifications);
 
   const tauxLabel = resultat.tauxMajore ? "8%/an (taux majoré)" : "5%/an (taux standard)";
   push("tresorerie", montant, `Versement emprunt bancaire : +${montant} trésorerie`);
@@ -933,10 +921,7 @@ export function genererClientsParCommerciaux(joueur: Joueur): CarteClient[] {
       (c) => c.id === `client-${carte.clientParTour}`
     );
     if (clientCarte) {
-      const nb = carte.nbClientsParTour ?? 1;
-      for (let i = 0; i < nb; i++) {
-        clients.push(clientCarte);
-      }
+      clients.push(clientCarte);
     }
   }
   return clients;

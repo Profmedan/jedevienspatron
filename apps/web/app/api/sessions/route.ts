@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { hasCredits, consumeCredit } from "@/lib/credits";
 
 // ─── POST /api/sessions — Créer une session ───────────────────
 export async function POST(request: NextRequest) {
@@ -28,6 +29,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Profil incomplet — organization_id manquant" },
         { status: 400 }
+      );
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Vérification et consommation des crédits AVANT création de session
+    // ───────────────────────────────────────────────────────────────────────
+    const creditsAvailable = await hasCredits(profile.organization_id);
+    if (!creditsAvailable) {
+      return NextResponse.json(
+        { error: "Crédits insuffisants" },
+        { status: 403 }
+      );
+    }
+
+    const creditId = await consumeCredit(profile.organization_id);
+    if (!creditId) {
+      return NextResponse.json(
+        { error: "Impossible de consommer un crédit" },
+        { status: 500 }
       );
     }
 

@@ -37,7 +37,9 @@ export default function RegisterPage() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?redirectTo=${encodeURIComponent("/dashboard")}`,
+      },
     });
     if (error) setError("Inscription Google impossible. Réessayez.");
     setLoading(false);
@@ -67,7 +69,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: { full_name: displayName, org_name: orgName, org_type: orgType },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
       },
     });
 
@@ -94,23 +96,23 @@ export default function RegisterPage() {
   // Écran affiché après inscription si confirmation email requise
   if (emailSent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 text-center">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl shadow-black/20 p-8 text-center">
           <div className="text-5xl mb-4">📬</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-3">Confirmez votre email</h2>
-          <p className="text-gray-600 text-sm mb-4">
+          <h2 className="text-xl font-bold text-gray-100 mb-3">Confirmez votre email</h2>
+          <p className="text-gray-300 text-sm mb-4">
             Un email de confirmation a été envoyé à <strong>{email}</strong>.
           </p>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-400 text-sm mb-6">
             Ouvrez cet email et cliquez sur le lien pour activer votre compte, puis revenez vous connecter.
           </p>
           <Link
             href="/auth/login"
-            className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors"
+            className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors"
           >
             Aller à la page de connexion
           </Link>
-          <p className="text-xs text-gray-400 mt-4">
+          <p className="text-xs text-gray-500 mt-4">
             Vous ne trouvez pas l&apos;email ? Vérifiez vos spams.
           </p>
         </div>
@@ -119,31 +121,31 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">🎯</div>
-          <h1 className="text-2xl font-black text-gray-900">JE DEVIENS PATRON</h1>
-          <p className="text-gray-500 text-sm mt-1">Le jeu sérieux de gestion d&apos;entreprise</p>
+          <h1 className="text-2xl font-black text-gray-100">JE DEVIENS PATRON</h1>
+          <p className="text-gray-400 text-sm mt-1">Le jeu sérieux de gestion d&apos;entreprise</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-gray-900 rounded-2xl shadow-2xl shadow-black/20 p-8">
           {/* Indicateur d'étape */}
           <div className="flex items-center gap-2 mb-6">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 1 ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400"}`}>1</div>
-            <div className={`flex-1 h-1 rounded-full transition-colors ${step >= 2 ? "bg-blue-600" : "bg-gray-200"}`} />
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 2 ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400"}`}>2</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 1 ? "bg-indigo-600 text-white" : "bg-gray-700 text-gray-500"}`}>1</div>
+            <div className={`flex-1 h-1 rounded-full transition-colors ${step >= 2 ? "bg-indigo-600" : "bg-gray-700"}`} />
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 2 ? "bg-indigo-600 text-white" : "bg-gray-700 text-gray-500"}`}>2</div>
           </div>
 
           {step === 1 && (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-1">Créer votre compte</h2>
-              <p className="text-gray-500 text-sm mb-6">Accédez au tableau de bord et aux résultats de vos parties</p>
+              <h2 className="text-xl font-bold text-gray-100 mb-1">Créer votre compte</h2>
+              <p className="text-gray-400 text-sm mb-6">Accédez au tableau de bord et aux résultats de vos parties</p>
 
               <button
                 onClick={handleGoogleSignup}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-50 font-medium text-gray-700 transition-colors disabled:opacity-50 mb-5"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-600 rounded-xl bg-gray-900 hover:bg-gray-800 font-medium text-gray-100 transition-colors disabled:opacity-50 mb-5"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -155,38 +157,38 @@ export default function RegisterPage() {
               </button>
 
               <div className="flex items-center gap-3 mb-5">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400 font-medium">OU</span>
-                <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex-1 h-px bg-gray-700" />
+                <span className="text-xs text-gray-500 font-medium">OU</span>
+                <div className="flex-1 h-px bg-gray-700" />
               </div>
 
               <form onSubmit={handleStep1} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Prénom et nom</label>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">Prénom et nom</label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={e => setDisplayName(e.target.value)}
                     placeholder="Marie Dupont"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="votre@email.fr"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">Mot de passe</label>
                   <input
                     type="password"
                     value={password}
@@ -194,29 +196,29 @@ export default function RegisterPage() {
                     placeholder="8 caractères minimum"
                     required
                     minLength={8}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le mot de passe</label>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">Confirmer le mot de passe</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
                   />
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">{error}</div>
+                  <div className="bg-red-950/30 border border-red-800 rounded-lg p-3 text-red-400 text-sm">{error}</div>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors"
                 >
                   Continuer →
                 </button>
@@ -226,16 +228,16 @@ export default function RegisterPage() {
 
           {step === 2 && (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-1">Votre structure</h2>
-              <p className="text-gray-500 text-sm mb-6">Ces informations permettent de personnaliser votre expérience</p>
+              <h2 className="text-xl font-bold text-gray-100 mb-1">Votre structure</h2>
+              <p className="text-gray-400 text-sm mb-6">Ces informations permettent de personnaliser votre expérience</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Type de structure</label>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">Type de structure</label>
                   <select
                     value={orgType}
                     onChange={e => setOrgType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-900 text-gray-100"
                   >
                     {ORG_TYPES.map(t => (
                       <option key={t.value} value={t.value}>{t.label}</option>
@@ -244,33 +246,33 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la structure</label>
+                  <label className="block text-sm font-medium text-gray-200 mb-1">Nom de la structure</label>
                   <input
                     type="text"
                     value={orgName}
                     onChange={e => setOrgName(e.target.value)}
                     placeholder="Lycée Victor Hugo – Besançon"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-900 text-gray-100 text-sm"
                   />
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">{error}</div>
+                  <div className="bg-red-950/30 border border-red-800 rounded-lg p-3 text-red-400 text-sm">{error}</div>
                 )}
 
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="flex-1 border border-gray-300 text-gray-700 font-medium py-3 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="flex-1 border border-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-800 transition-colors"
                   >
                     ← Retour
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
                   >
                     {loading ? "Création…" : "Créer mon compte"}
                   </button>
@@ -280,9 +282,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-400 mt-6">
           Déjà un compte ?{" "}
-          <Link href="/auth/login" className="text-blue-600 font-semibold hover:underline">
+          <Link href="/auth/login" className="text-indigo-400 font-semibold hover:underline">
             Se connecter
           </Link>
         </p>
