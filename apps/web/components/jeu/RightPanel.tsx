@@ -1,10 +1,15 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { DECOUVERT_MAX, Joueur } from "@/lib/game-engine/types";
+
+type RightPanelTab = "resume" | "bilan" | "cr";
+type InsightTone = "emerald" | "amber" | "rose" | "sky";
 
 interface RightPanelProps {
-  joueur: any;
+  joueur: Joueur;
   ca: number;
   marge: number;
   ebe: number;
@@ -14,8 +19,282 @@ interface RightPanelProps {
   fondsRoulement: number;
   solvabilite: number;
   highlightedPoste?: string | null;
-  activeTab: "resume" | "bilan" | "cr";
-  setActiveTab: (tab: "resume" | "bilan" | "cr") => void;
+  activeTab: RightPanelTab;
+  setActiveTab: (tab: RightPanelTab) => void;
+}
+
+interface Insight {
+  tone: InsightTone;
+  badge: string;
+  title: string;
+  description: string;
+}
+
+interface MetricRowProps {
+  label: string;
+  value: number;
+  highlight?: boolean;
+}
+
+interface GaugeRowProps {
+  label: string;
+  valueLabel: string;
+  helper: string;
+  width: number;
+  textClass: string;
+  barClass: string;
+}
+
+interface SectionHeadingProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+}
+
+const amountFormatter = new Intl.NumberFormat("fr-FR", {
+  maximumFractionDigits: 0,
+});
+
+const percentageFormatter = new Intl.NumberFormat("fr-FR", {
+  maximumFractionDigits: 1,
+});
+
+const TAB_LABELS: Record<RightPanelTab, string> = {
+  resume: "Vue d'ensemble",
+  bilan: "Bilan",
+  cr: "Résultat",
+};
+
+const INSIGHT_STYLES: Record<
+  InsightTone,
+  {
+    surface: string;
+    badge: string;
+    title: string;
+  }
+> = {
+  emerald: {
+    surface: "border-emerald-400/20 bg-emerald-500/10",
+    badge: "bg-emerald-400/15 text-emerald-200",
+    title: "text-emerald-100",
+  },
+  amber: {
+    surface: "border-amber-400/20 bg-amber-500/10",
+    badge: "bg-amber-400/15 text-amber-100",
+    title: "text-amber-50",
+  },
+  rose: {
+    surface: "border-rose-400/20 bg-rose-500/10",
+    badge: "bg-rose-400/15 text-rose-100",
+    title: "text-rose-50",
+  },
+  sky: {
+    surface: "border-sky-400/20 bg-sky-500/10",
+    badge: "bg-sky-400/15 text-sky-100",
+    title: "text-sky-50",
+  },
+};
+
+function formatAmount(value: number): string {
+  return amountFormatter.format(value);
+}
+
+function getValueToneClass(value: number): string {
+  if (value > 0) return "text-emerald-300";
+  if (value < 0) return "text-rose-300";
+  return "text-slate-200";
+}
+
+function getGaugeBarClass(percentage: number): string {
+  if (percentage >= 50) return "bg-emerald-400";
+  if (percentage >= 30) return "bg-amber-400";
+  return "bg-rose-400";
+}
+
+function getGaugeTextClass(percentage: number): string {
+  if (percentage >= 50) return "text-emerald-300";
+  if (percentage >= 30) return "text-amber-300";
+  return "text-rose-300";
+}
+
+function getRelativeGaugeWidth(value: number, reference: number): number {
+  if (value === 0 || reference <= 0) return 0;
+  return Math.max(12, Math.min(100, (Math.abs(value) / reference) * 100));
+}
+
+function getBfrTone(bfr: number, fondsRoulement: number) {
+  if (bfr <= 0) {
+    return {
+      textClass: "text-emerald-300",
+      barClass: "bg-emerald-400",
+      helper: "Le cycle d'exploitation soulage la trésorerie.",
+    };
+  }
+
+  if (fondsRoulement > 0 && bfr <= fondsRoulement) {
+    return {
+      textClass: "text-emerald-300",
+      barClass: "bg-emerald-400",
+      helper: "Le BFR reste couvert par tes ressources stables.",
+    };
+  }
+
+  if (fondsRoulement > 0 && bfr <= fondsRoulement * 1.25) {
+    return {
+      textClass: "text-amber-300",
+      barClass: "bg-amber-400",
+      helper: "Le cash se tend : surveille créances et stocks.",
+    };
+  }
+
+  return {
+    textClass: "text-rose-300",
+    barClass: "bg-rose-400",
+    helper: "Le BFR dépasse trop le FR : risque de tension de trésorerie.",
+  };
+}
+
+function getFondsRoulementTone(fondsRoulement: number) {
+  if (fondsRoulement > 0) {
+    return {
+      textClass: "text-emerald-300",
+      barClass: "bg-emerald-400",
+      helper: "Tes ressources longues couvrent une partie du cycle.",
+    };
+  }
+
+  if (fondsRoulement === 0) {
+    return {
+      textClass: "text-amber-300",
+      barClass: "bg-amber-400",
+      helper: "L'entreprise n'a plus de coussin structurel.",
+    };
+  }
+
+  return {
+    textClass: "text-rose-300",
+    barClass: "bg-rose-400",
+    helper: "Structure fragile : les investissements pèsent trop lourd.",
+  };
+}
+
+function buildInsight(
+  joueur: Joueur,
+  tresorerie: number,
+  resultatNet: number,
+  bfr: number,
+  fondsRoulement: number,
+  solvabilite: number,
+): Insight {
+  if (joueur.bilan.decouvert >= Math.floor(DECOUVERT_MAX * 0.75)) {
+    return {
+      tone: "rose",
+      badge: "Priorité",
+      title: "Le découvert devient critique",
+      description: `Tu es à ${joueur.bilan.decouvert}/${DECOUVERT_MAX}. Il faut reconstituer du cash dès ce tour.`,
+    };
+  }
+
+  if (tresorerie < 0) {
+    return {
+      tone: "rose",
+      badge: "Alerte cash",
+      title: "La trésorerie est passée sous zéro",
+      description: "Ralentis les dépenses immédiates et sécurise les encaissements à venir.",
+    };
+  }
+
+  if (bfr > fondsRoulement) {
+    return {
+      tone: "amber",
+      badge: "Sous tension",
+      title: "Le cycle d'exploitation absorbe trop de ressources",
+      description: "Tes créances et ton stock consomment plus que ton fonds de roulement.",
+    };
+  }
+
+  if (resultatNet < 0) {
+    return {
+      tone: "amber",
+      badge: "À corriger",
+      title: "L'activité détruit de la valeur",
+      description: "Relis les charges et les décisions récurrentes avant de développer l'entreprise.",
+    };
+  }
+
+  if (solvabilite < 30) {
+    return {
+      tone: "sky",
+      badge: "Vigilance",
+      title: "La structure reste fragile",
+      description: "L'entreprise tourne, mais le niveau de fonds propres reste encore faible.",
+    };
+  }
+
+  return {
+    tone: "emerald",
+    badge: "Cap clair",
+    title: "Les fondamentaux sont maîtrisés",
+    description: "Tu peux continuer à te développer sans perdre de vue la trésorerie.",
+  };
+}
+
+function SectionHeading({ eyebrow, title, description }: SectionHeadingProps) {
+  return (
+    <div className="mb-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+        {eyebrow}
+      </p>
+      <h3 className="mt-1 text-sm font-semibold text-white text-balance">{title}</h3>
+      <p className="mt-1 text-xs leading-relaxed text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+function MetricRow({ label, value, highlight = false }: MetricRowProps) {
+  return (
+    <div
+      className={`flex items-center justify-between rounded-2xl px-3 py-2.5 ${
+        highlight
+          ? "bg-sky-400/10 ring-1 ring-inset ring-sky-300/30"
+          : "bg-white/[0.03]"
+      }`}
+    >
+      <span className="text-xs font-medium text-slate-300">{label}</span>
+      <span className={`text-sm font-semibold tabular-nums ${getValueToneClass(value)}`}>
+        {formatAmount(value)}
+      </span>
+    </div>
+  );
+}
+
+function GaugeRow({
+  label,
+  valueLabel,
+  helper,
+  width,
+  textClass,
+  barClass,
+}: GaugeRowProps) {
+  return (
+    <div className="rounded-2xl bg-white/[0.03] px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-slate-300">{label}</span>
+        <span className={`text-sm font-semibold tabular-nums ${textClass}`}>
+          {valueLabel}
+        </span>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+        <motion.div
+          className={`h-full rounded-full ${barClass}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${width}%` }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        />
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">{helper}</p>
+    </div>
+  );
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({
@@ -32,503 +311,442 @@ const RightPanel: React.FC<RightPanelProps> = ({
   activeTab,
   setActiveTab,
 }) => {
-  // Utility: format currency
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(0)}k`;
-    }
-    return `${value.toFixed(0)}`;
-  };
-
-  // Utility: determine color based on value (green positive, red negative)
-  const getValueColor = (value: number): string => {
-    if (value > 0) return "text-green-400";
-    if (value < 0) return "text-red-400";
-    return "text-gray-300";
-  };
-
-  // Utility: determine color for gauges (0-100 scale, typically solvabilité)
-  const getGaugeColor = (percentage: number): string => {
-    if (percentage >= 50) return "bg-green-500";
-    if (percentage >= 30) return "bg-yellow-500";
-    return "bg-red-500";
-  };
-
-  // Compute bilan totals from joueur
   const bilanTotals = useMemo(() => {
-    // Extract actifs from nested structure
-    const tresorerie = joueur?.bilan?.actifs?.find((a: any) => a.categorie === "tresorerie")?.valeur || 0;
-    const stocks = joueur?.bilan?.actifs?.find((a: any) => a.categorie === "stocks")?.valeur || 0;
-    const immobilisations = joueur?.bilan?.actifs?.find((a: any) => a.categorie === "immobilisations")?.valeur || 0;
-    const creancesC1 = joueur?.bilan?.creancesPlus1 || 0;
-    const creancesC2 = joueur?.bilan?.creancesPlus2 || 0;
+    const tresorerieActif =
+      joueur.bilan.actifs.find((actif) => actif.categorie === "tresorerie")?.valeur ?? 0;
+    const stocks =
+      joueur.bilan.actifs.find((actif) => actif.categorie === "stocks")?.valeur ?? 0;
+    const immobilisations =
+      joueur.bilan.actifs.find((actif) => actif.categorie === "immobilisations")?.valeur ?? 0;
 
     const actif = {
-      tresorerie,
+      tresorerie: tresorerieActif,
       stocks,
       immobilisations,
-      creancesC1,
-      creancesC2,
+      creancesC1: joueur.bilan.creancesPlus1,
+      creancesC2: joueur.bilan.creancesPlus2,
     };
 
-    // Extract passifs from nested structure
-    const capitaux = joueur?.bilan?.passifs?.find((p: any) => p.categorie === "capitaux")?.valeur || 0;
-    const emprunts = joueur?.bilan?.passifs?.find((p: any) => p.categorie === "emprunts")?.valeur || 0;
-    const dettesFournisseur = joueur?.bilan?.dettes || 0;
+    const capitaux =
+      joueur.bilan.passifs.find((passif) => passif.categorie === "capitaux")?.valeur ?? 0;
+    const emprunts =
+      joueur.bilan.passifs.find((passif) => passif.categorie === "emprunts")?.valeur ?? 0;
 
     const passif = {
       capitaux,
       emprunts,
-      dettesFournisseur,
+      dettesFournisseur: joueur.bilan.dettes,
     };
 
-    const totalActif = Object.values(actif).reduce((a, b) => a + b, 0);
-    const totalPassif = Object.values(passif).reduce((a, b) => a + b, 0);
+    const totalActif = Object.values(actif).reduce((sum, value) => sum + value, 0);
+    const totalPassif = Object.values(passif).reduce((sum, value) => sum + value, 0);
 
     return { actif, passif, totalActif, totalPassif };
   }, [joueur]);
 
-  // Compute CR totals from joueur
   const crTotals = useMemo(() => {
-    // Extract produits from nested structure
-    const ventes = joueur?.compteResultat?.produits?.ventes || 0;
-    const prodStockee = joueur?.compteResultat?.produits?.productionStockee || 0;
-    const revExceptionnels = joueur?.compteResultat?.produits?.revenusExceptionnels || 0;
-
     const produits = {
-      ventes,
-      prodStockee,
-      revExceptionnels,
+      ventes: joueur.compteResultat.produits.ventes,
+      prodStockee: joueur.compteResultat.produits.productionStockee,
+      revExceptionnels: joueur.compteResultat.produits.revenusExceptionnels,
     };
-
-    // Extract charges from nested structure
-    const achatsCMV = joueur?.compteResultat?.charges?.achats || 0;
-    const servicesExt = joueur?.compteResultat?.charges?.servicesExterieurs || 0;
-    const personnel = joueur?.compteResultat?.charges?.chargesPersonnel || 0;
-    const amortissements = joueur?.compteResultat?.charges?.dotationsAmortissements || 0;
-    const interetsEmprunts = joueur?.compteResultat?.charges?.chargesInteret || 0;
-    const chargesExceptionnels = joueur?.compteResultat?.charges?.chargesExceptionnelles || 0;
 
     const charges = {
-      achatsCMV,
-      servicesExt,
-      personnel,
-      amortissements,
-      interetsEmprunts,
-      chargesExceptionnels,
+      achatsCMV: joueur.compteResultat.charges.achats,
+      servicesExt: joueur.compteResultat.charges.servicesExterieurs,
+      personnel: joueur.compteResultat.charges.chargesPersonnel,
+      amortissements: joueur.compteResultat.charges.dotationsAmortissements,
+      interetsEmprunts: joueur.compteResultat.charges.chargesInteret,
+      chargesExceptionnels: joueur.compteResultat.charges.chargesExceptionnelles,
     };
 
-    const totalProduits = Object.values(produits).reduce((a, b) => a + b, 0);
-    const totalCharges = Object.values(charges).reduce((a, b) => a + b, 0);
+    const totalProduits = Object.values(produits).reduce((sum, value) => sum + value, 0);
+    const totalCharges = Object.values(charges).reduce((sum, value) => sum + value, 0);
 
     return { produits, charges, totalProduits, totalCharges };
   }, [joueur]);
 
-  // --- SCORE PRINCIPAL (Sticky)
-  const scoreSection = (
-    <motion.div
-      className="sticky top-0 z-10 bg-gray-800 rounded-xl p-3 mb-1 shadow-lg border border-gray-700"
-      layout
-    >
-      <div className="flex gap-4">
-        {/* Résultat */}
-        <div className="flex-1">
-          <p className="text-xs text-gray-400 font-semibold">📊 Résultat</p>
-          <motion.p
-            key={resultatNet}
-            className={`text-lg font-bold ${getValueColor(resultatNet)}`}
-            initial={{ opacity: 0.5 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {formatCurrency(resultatNet)}
-          </motion.p>
-        </div>
-
-        {/* Trésorerie */}
-        <div className="flex-1">
-          <p className="text-xs text-gray-400 font-semibold">💰 Trésorerie</p>
-          <motion.p
-            key={tresorerie}
-            className={`text-lg font-bold ${getValueColor(tresorerie)}`}
-            initial={{ opacity: 0.5 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {formatCurrency(tresorerie)}
-          </motion.p>
-        </div>
-      </div>
-    </motion.div>
+  const focusInsight = useMemo(
+    () => buildInsight(joueur, tresorerie, resultatNet, bfr, fondsRoulement, solvabilite),
+    [joueur, tresorerie, resultatNet, bfr, fondsRoulement, solvabilite],
   );
 
-  // --- SIG SIMPLIFIÉ (Resume tab main content)
-  const sigSection = (
-    <div className="space-y-1 mb-1">
-      {[
-        { label: "📊 CA", value: ca },
-        { label: "📊 Marge comm.", value: marge },
-        { label: "📊 EBE", value: ebe },
-        { label: "📊 Résultat net", value: resultatNet },
-        { label: "💰 Trésorerie", value: tresorerie },
-      ].map((item, idx) => (
-        <motion.div
-          key={idx}
-          className="bg-gray-800 rounded-lg px-2 py-1.5 flex justify-between items-center text-xs"
-          layout
-        >
-          <span className="text-gray-300 font-medium">{item.label}</span>
-          <motion.span
-            className={`font-bold ${getValueColor(item.value)}`}
-            key={item.value}
-            initial={{ opacity: 0.5 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {formatCurrency(item.value)}
-          </motion.span>
-        </motion.div>
-      ))}
-    </div>
+  const structureScale = useMemo(
+    () => Math.max(Math.abs(bfr), Math.abs(fondsRoulement), 1),
+    [bfr, fondsRoulement],
   );
 
-  // --- SANTÉ FINANCIÈRE (Resume tab)
-  // Fonction pour déterminer la couleur du découvert
-  const getDecouvertColor = (decouvert: number): string => {
-    if (decouvert <= 2) return "text-gray-300"; // Pas d'alerte
-    if (decouvert <= 4) return "text-yellow-400"; // Alerte jaune
-    if (decouvert <= 6) return "text-orange-400"; // Alerte orange
-    return "text-red-400"; // Alerte rouge (7+)
-  };
-
-  const getDecouvertBgClass = (decouvert: number): string => {
-    if (decouvert <= 2) return "bg-gray-700";
-    if (decouvert <= 4) return "bg-yellow-900/30";
-    if (decouvert <= 6) return "bg-orange-900/30";
-    return "bg-red-900/40";
-  };
-
-  const getDecouvertGaugeColor = (decouvert: number): string => {
-    if (decouvert <= 2) return "bg-green-500";
-    if (decouvert <= 4) return "bg-yellow-500";
-    if (decouvert <= 6) return "bg-orange-500";
-    return "bg-red-600";
-  };
-
-  const sante = (
-    <div className="space-y-1 mb-1">
-      {/* Découvert bancaire — affiché seulement si > 0 */}
-      {joueur?.bilan?.decouvert > 0 && (
-        <div className={`rounded-lg p-1.5 ${getDecouvertBgClass(joueur.bilan.decouvert)}`}>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-xs text-gray-400">Découvert bancaire</span>
-            <span className={`text-xs font-bold ${getDecouvertColor(joueur.bilan.decouvert)}`}>
-              {joueur.bilan.decouvert}/8
-            </span>
-          </div>
-          <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-            <motion.div
-              className={getDecouvertGaugeColor(joueur.bilan.decouvert)}
-              initial={{ width: 0 }}
-              animate={{
-                width: `${Math.min(100, (joueur.bilan.decouvert / 8) * 100)}%`,
-              }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* BFR */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-gray-400">BFR</span>
-          <span className={`text-xs font-bold ${getValueColor(bfr)}`}>
-            {formatCurrency(bfr)}
-          </span>
-        </div>
-        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            className={getGaugeColor(Math.max(0, Math.min(100, bfr / 10000 * 100)))}
-            initial={{ width: 0 }}
-            animate={{
-              width: `${Math.max(0, Math.min(100, (bfr / 10000) * 100))}%`,
-            }}
-            transition={{ duration: 0.5 }}
-          />
-        </div>
-      </div>
-
-      {/* Fonds de Roulement */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-gray-400">Fonds roulement</span>
-          <span className={`text-xs font-bold ${getValueColor(fondsRoulement)}`}>
-            {formatCurrency(fondsRoulement)}
-          </span>
-        </div>
-        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            className={getGaugeColor(Math.max(0, Math.min(100, fondsRoulement / 10000 * 100)))}
-            initial={{ width: 0 }}
-            animate={{
-              width: `${Math.max(0, Math.min(100, (fondsRoulement / 10000) * 100))}%`,
-            }}
-            transition={{ duration: 0.5 }}
-          />
-        </div>
-      </div>
-
-      {/* Solvabilité */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-gray-400">Solvabilité</span>
-          <span className={`text-xs font-bold ${getGaugeColor(solvabilite)}`}>
-            {solvabilite.toFixed(1)}%
-          </span>
-        </div>
-        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            className={getGaugeColor(solvabilite)}
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(100, solvabilite)}%` }}
-            transition={{ duration: 0.5 }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  // --- BILAN MINI-TAB
-  const bilanContent = (
-    <motion.div
-      className="space-y-2 text-xs"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* ACTIF */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <p className="text-gray-400 font-semibold mb-2">─── ACTIF ───</p>
-        {[
-          { label: "Trésorerie", value: bilanTotals.actif.tresorerie, key: "tresorerie" },
-          { label: "Stocks", value: bilanTotals.actif.stocks, key: "stocks" },
-          { label: "Immobilisations", value: bilanTotals.actif.immobilisations, key: "immobilisations" },
-          { label: "Créances C+1", value: bilanTotals.actif.creancesC1, key: "creancesC1" },
-          { label: "Créances C+2", value: bilanTotals.actif.creancesC2, key: "creancesC2" },
-        ].map((item) => (
-          <motion.div
-            key={item.key}
-            className={`flex justify-between py-1 px-1 rounded ${
-              highlightedPoste === item.key ? "bg-blue-900 bg-opacity-50" : ""
-            }`}
-            layout
-          >
-            <span className="text-gray-300">{item.label}</span>
-            <span className={`font-bold ${getValueColor(item.value)}`}>
-              {formatCurrency(item.value)}
-            </span>
-          </motion.div>
-        ))}
-        <div className="border-t border-gray-600 my-1" />
-        <div className="flex justify-between py-1 px-1 font-bold">
-          <span className="text-gray-200">Total Actif</span>
-          <span className="text-green-400">{formatCurrency(bilanTotals.totalActif)}</span>
-        </div>
-      </div>
-
-      {/* PASSIF */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <p className="text-gray-400 font-semibold mb-2">─── PASSIF ───</p>
-        {[
-          { label: "Capitaux propres", value: bilanTotals.passif.capitaux, key: "capitaux" },
-          { label: "Emprunts", value: bilanTotals.passif.emprunts, key: "emprunts" },
-          { label: "Dettes fournisseur", value: bilanTotals.passif.dettesFournisseur, key: "dettes" },
-        ].map((item) => (
-          <motion.div
-            key={item.key}
-            className={`flex justify-between py-1 px-1 rounded ${
-              highlightedPoste === item.key ? "bg-blue-900 bg-opacity-50" : ""
-            }`}
-            layout
-          >
-            <span className="text-gray-300">{item.label}</span>
-            <span className={`font-bold ${getValueColor(item.value)}`}>
-              {formatCurrency(item.value)}
-            </span>
-          </motion.div>
-        ))}
-        <div className="border-t border-gray-600 my-1" />
-        <div className="flex justify-between py-1 px-1 font-bold">
-          <span className="text-gray-200">Total Passif + Rés.</span>
-          <span className="text-green-400">
-            {formatCurrency(bilanTotals.totalPassif + resultatNet)}
-          </span>
-        </div>
-      </div>
-    </motion.div>
-  );
-
-  // --- CR MINI-TAB
-  const crContent = (
-    <motion.div
-      className="space-y-2 text-xs"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* PRODUITS */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <p className="text-gray-400 font-semibold mb-2">─── PRODUITS ───</p>
-        {[
-          { label: "Ventes", value: crTotals.produits.ventes, key: "ventes" },
-          { label: "Prod. stockée", value: crTotals.produits.prodStockee, key: "prodStockee" },
-          { label: "Rev. exceptionnels", value: crTotals.produits.revExceptionnels, key: "revExceptionnels" },
-        ].map((item) => (
-          <motion.div
-            key={item.key}
-            className={`flex justify-between py-1 px-1 rounded ${
-              highlightedPoste === item.key ? "bg-blue-900 bg-opacity-50" : ""
-            }`}
-            layout
-          >
-            <span className="text-gray-300">{item.label}</span>
-            <span className={`font-bold ${getValueColor(item.value)}`}>
-              {formatCurrency(item.value)}
-            </span>
-          </motion.div>
-        ))}
-        <div className="border-t border-gray-600 my-1" />
-        <div className="flex justify-between py-1 px-1 font-bold">
-          <span className="text-gray-200">Total Produits</span>
-          <span className="text-green-400">{formatCurrency(crTotals.totalProduits)}</span>
-        </div>
-      </div>
-
-      {/* CHARGES */}
-      <div className="bg-gray-800 rounded-lg p-1.5">
-        <p className="text-gray-400 font-semibold mb-2">─── CHARGES ───</p>
-        {[
-          { label: "Achats/CMV", value: crTotals.charges.achatsCMV, key: "achatsCMV" },
-          { label: "Services ext.", value: crTotals.charges.servicesExt, key: "servicesExt" },
-          { label: "Personnel", value: crTotals.charges.personnel, key: "personnel" },
-          { label: "Amortissements", value: crTotals.charges.amortissements, key: "amortissements" },
-          { label: "Int. emprunts", value: crTotals.charges.interetsEmprunts, key: "interetsEmprunts" },
-          { label: "Charges except.", value: crTotals.charges.chargesExceptionnels, key: "chargesExceptionnels" },
-        ].map((item) => (
-          <motion.div
-            key={item.key}
-            className={`flex justify-between py-1 px-1 rounded ${
-              highlightedPoste === item.key ? "bg-blue-900 bg-opacity-50" : ""
-            }`}
-            layout
-          >
-            <span className="text-gray-300">{item.label}</span>
-            <span className={`font-bold ${getValueColor(item.value)}`}>
-              {formatCurrency(item.value)}
-            </span>
-          </motion.div>
-        ))}
-        <div className="border-t border-gray-600 my-1" />
-        <div className="flex justify-between py-1 px-1 font-bold">
-          <span className="text-gray-200">Total Charges</span>
-          <span className="text-red-400">{formatCurrency(crTotals.totalCharges)}</span>
-        </div>
-      </div>
-
-      {/* RÉSULTAT NET */}
-      <div className="bg-gray-900 rounded-lg p-2 border border-gray-700">
-        <div className="flex justify-between font-bold">
-          <span className="text-gray-200">RÉSULTAT NET</span>
-          <motion.span
-            className={`text-lg ${getValueColor(resultatNet)}`}
-            key={resultatNet}
-            initial={{ opacity: 0.5 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {formatCurrency(resultatNet)}
-          </motion.span>
-        </div>
-      </div>
-    </motion.div>
-  );
-
-  // --- TAB BUTTONS
-  const tabButtons = (
-    <div className="flex gap-0.5 mt-1 pt-1 border-t border-gray-700">
-      {(["resume", "bilan", "cr"] as const).map((tab) => (
-        <button
-          key={tab}
-          onClick={() => setActiveTab(tab)}
-          className={`flex-1 px-2 py-1 rounded text-xs font-semibold transition-colors ${
-            activeTab === tab
-              ? "bg-blue-600 text-white"
-              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
-        >
-          {tab === "resume" && "Résumé"}
-          {tab === "bilan" && "Bilan"}
-          {tab === "cr" && "CR"}
-        </button>
-      ))}
-    </div>
-  );
+  const insightStyle = INSIGHT_STYLES[focusInsight.tone];
+  const bfrTone = getBfrTone(bfr, fondsRoulement);
+  const fondsRoulementTone = getFondsRoulementTone(fondsRoulement);
+  const decouvertWidth = (joueur.bilan.decouvert / DECOUVERT_MAX) * 100;
+  const scoreMetrics = [
+    { label: "Résultat net", value: resultatNet },
+    { label: "Trésorerie", value: tresorerie },
+  ];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-gray-900 rounded-lg p-2">
-      {/* Score principal */}
-      {scoreSection}
+    <div className="h-full overflow-y-auto rounded-[28px] border border-white/10 bg-slate-950/80 p-3 shadow-[0_24px_80px_rgba(2,6,23,0.28)] backdrop-blur-sm">
+      <div className="rounded-[24px] border border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70">
+          Repères financiers
+        </p>
+        <h2 className="mt-2 text-base font-semibold text-white text-balance">
+          Lire les chiffres sans quitter la partie
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          Cette colonne t&apos;aide à identifier ce qui mérite ton attention avant de prendre la
+          prochaine décision.
+        </p>
 
-      {/* Tab content */}
-      <div className="flex-1 min-h-0">
+        <div className={`mt-4 rounded-[22px] border px-4 py-4 ${insightStyle.surface}`}>
+          <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${insightStyle.badge}`}
+          >
+            {focusInsight.badge}
+          </span>
+          <h3 className={`mt-3 text-sm font-semibold text-balance ${insightStyle.title}`}>
+            {focusInsight.title}
+          </h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-300">
+            {focusInsight.description}
+          </p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {scoreMetrics.map((metric) => (
+            <div
+              key={metric.label}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3"
+            >
+              <p className="text-[11px] font-medium text-slate-400">{metric.label}</p>
+              <motion.p
+                key={`${metric.label}-${metric.value}`}
+                className={`mt-2 text-xl font-semibold tabular-nums ${getValueToneClass(metric.value)}`}
+                initial={{ opacity: 0.45, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                {formatAmount(metric.value)}
+              </motion.p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-white/[0.04] p-1"
+        role="tablist"
+        aria-label="Vues financières"
+      >
+        {(Object.keys(TAB_LABELS) as RightPanelTab[]).map((tab) => (
+          <button
+            key={tab}
+            id={`right-panel-tab-${tab}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`right-panel-panel-${tab}`}
+            onClick={() => setActiveTab(tab)}
+            className={`rounded-2xl px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 ${
+              activeTab === tab
+                ? "bg-cyan-400 text-slate-950"
+                : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            {TAB_LABELS[tab]}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 flex-1 min-h-0">
         <AnimatePresence mode="wait">
           {activeTab === "resume" && (
             <motion.div
               key="resume"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              id="right-panel-panel-resume"
+              role="tabpanel"
+              aria-labelledby="right-panel-tab-resume"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
+              className="space-y-4"
             >
-              {sigSection}
-              {sante}
+              <section className="rounded-[24px] bg-white/[0.03] px-3 py-3">
+                <SectionHeading
+                  eyebrow="Performance"
+                  title="Ce que l'activité produit ce tour"
+                  description="Surveille d'abord la création de valeur avant d'accélérer."
+                />
+                <div className="space-y-2">
+                  <MetricRow label="Chiffre d'affaires" value={ca} />
+                  <MetricRow label="Marge commerciale" value={marge} />
+                  <MetricRow label="EBE" value={ebe} />
+                  <MetricRow label="Résultat net" value={resultatNet} />
+                  <MetricRow label="Trésorerie" value={tresorerie} />
+                </div>
+              </section>
+
+              <section className="rounded-[24px] bg-white/[0.03] px-3 py-3">
+                <SectionHeading
+                  eyebrow="Solidité"
+                  title="Ce qui protège ou fragilise l'entreprise"
+                  description="Lis ces trois indicateurs ensemble pour comprendre la pression sur le cash."
+                />
+                <div className="space-y-2">
+                  {joueur.bilan.decouvert > 0 && (
+                    <GaugeRow
+                      label="Découvert bancaire"
+                      valueLabel={`${joueur.bilan.decouvert}/${DECOUVERT_MAX}`}
+                      width={decouvertWidth}
+                      textClass={
+                        joueur.bilan.decouvert <= 2
+                          ? "text-slate-200"
+                          : joueur.bilan.decouvert <= 4
+                            ? "text-amber-300"
+                            : "text-rose-300"
+                      }
+                      barClass={
+                        joueur.bilan.decouvert <= 2
+                          ? "bg-emerald-400"
+                          : joueur.bilan.decouvert <= 4
+                            ? "bg-amber-400"
+                            : "bg-rose-400"
+                      }
+                      helper="Au-delà de 8, la partie bascule vers la faillite."
+                    />
+                  )}
+
+                  <GaugeRow
+                    label="BFR"
+                    valueLabel={formatAmount(bfr)}
+                    width={getRelativeGaugeWidth(bfr, structureScale)}
+                    textClass={bfrTone.textClass}
+                    barClass={bfrTone.barClass}
+                    helper={bfrTone.helper}
+                  />
+
+                  <GaugeRow
+                    label="Fonds de roulement"
+                    valueLabel={formatAmount(fondsRoulement)}
+                    width={getRelativeGaugeWidth(fondsRoulement, structureScale)}
+                    textClass={fondsRoulementTone.textClass}
+                    barClass={fondsRoulementTone.barClass}
+                    helper={fondsRoulementTone.helper}
+                  />
+
+                  <GaugeRow
+                    label="Solvabilité"
+                    valueLabel={`${percentageFormatter.format(solvabilite)}%`}
+                    width={Math.min(100, Math.max(0, solvabilite))}
+                    textClass={getGaugeTextClass(solvabilite)}
+                    barClass={getGaugeBarClass(solvabilite)}
+                    helper="Plus ce ratio monte, plus tes fonds propres absorbent les chocs."
+                  />
+                </div>
+              </section>
             </motion.div>
           )}
 
           {activeTab === "bilan" && (
             <motion.div
               key="bilan"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              id="right-panel-panel-bilan"
+              role="tabpanel"
+              aria-labelledby="right-panel-tab-bilan"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
+              className="space-y-4"
             >
-              {bilanContent}
+              <section className="rounded-[24px] bg-white/[0.03] px-3 py-3">
+                <SectionHeading
+                  eyebrow="Actif"
+                  title="Ce que l'entreprise possède ou doit encaisser"
+                  description="Les créances et la trésorerie racontent ce que tu peux mobiliser rapidement."
+                />
+                <div className="space-y-2">
+                  <MetricRow
+                    label="Trésorerie"
+                    value={bilanTotals.actif.tresorerie}
+                    highlight={highlightedPoste === "tresorerie"}
+                  />
+                  <MetricRow
+                    label="Stocks"
+                    value={bilanTotals.actif.stocks}
+                    highlight={highlightedPoste === "stocks"}
+                  />
+                  <MetricRow
+                    label="Immobilisations"
+                    value={bilanTotals.actif.immobilisations}
+                    highlight={highlightedPoste === "immobilisations"}
+                  />
+                  <MetricRow
+                    label="Créances C+1"
+                    value={bilanTotals.actif.creancesC1}
+                    highlight={highlightedPoste === "creancesC1"}
+                  />
+                  <MetricRow
+                    label="Créances C+2"
+                    value={bilanTotals.actif.creancesC2}
+                    highlight={highlightedPoste === "creancesC2"}
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                  <span className="text-xs font-medium text-slate-400">Total actif</span>
+                  <span className="text-sm font-semibold text-emerald-300 tabular-nums">
+                    {formatAmount(bilanTotals.totalActif)}
+                  </span>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] bg-white/[0.03] px-3 py-3">
+                <SectionHeading
+                  eyebrow="Passif"
+                  title="Ce qui finance ton activité"
+                  description="Capitaux, emprunts et dettes montrent comment l'entreprise tient debout."
+                />
+                <div className="space-y-2">
+                  <MetricRow
+                    label="Capitaux propres"
+                    value={bilanTotals.passif.capitaux}
+                    highlight={highlightedPoste === "capitaux"}
+                  />
+                  <MetricRow
+                    label="Emprunts"
+                    value={bilanTotals.passif.emprunts}
+                    highlight={highlightedPoste === "emprunts"}
+                  />
+                  <MetricRow
+                    label="Dettes fournisseur"
+                    value={bilanTotals.passif.dettesFournisseur}
+                    highlight={highlightedPoste === "dettes"}
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                  <span className="text-xs font-medium text-slate-400">Total passif + résultat</span>
+                  <span className="text-sm font-semibold text-emerald-300 tabular-nums">
+                    {formatAmount(bilanTotals.totalPassif + resultatNet)}
+                  </span>
+                </div>
+              </section>
             </motion.div>
           )}
 
           {activeTab === "cr" && (
             <motion.div
               key="cr"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              id="right-panel-panel-cr"
+              role="tabpanel"
+              aria-labelledby="right-panel-tab-cr"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
+              className="space-y-4"
             >
-              {crContent}
+              <section className="rounded-[24px] bg-white/[0.03] px-3 py-3">
+                <SectionHeading
+                  eyebrow="Produits"
+                  title="Ce qui fait entrer de la valeur"
+                  description="Les ventes restent ton moteur principal, les autres lignes l'accompagnent."
+                />
+                <div className="space-y-2">
+                  <MetricRow
+                    label="Ventes"
+                    value={crTotals.produits.ventes}
+                    highlight={highlightedPoste === "ventes"}
+                  />
+                  <MetricRow
+                    label="Production stockée"
+                    value={crTotals.produits.prodStockee}
+                    highlight={highlightedPoste === "prodStockee"}
+                  />
+                  <MetricRow
+                    label="Revenus exceptionnels"
+                    value={crTotals.produits.revExceptionnels}
+                    highlight={highlightedPoste === "revExceptionnels"}
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                  <span className="text-xs font-medium text-slate-400">Total produits</span>
+                  <span className="text-sm font-semibold text-emerald-300 tabular-nums">
+                    {formatAmount(crTotals.totalProduits)}
+                  </span>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] bg-white/[0.03] px-3 py-3">
+                <SectionHeading
+                  eyebrow="Charges"
+                  title="Ce qui consomme ta marge"
+                  description="Repère vite les postes qui grossissent d'un tour à l'autre."
+                />
+                <div className="space-y-2">
+                  <MetricRow
+                    label="Achats / CMV"
+                    value={crTotals.charges.achatsCMV}
+                    highlight={highlightedPoste === "achatsCMV"}
+                  />
+                  <MetricRow
+                    label="Services extérieurs"
+                    value={crTotals.charges.servicesExt}
+                    highlight={highlightedPoste === "servicesExt"}
+                  />
+                  <MetricRow
+                    label="Personnel"
+                    value={crTotals.charges.personnel}
+                    highlight={highlightedPoste === "personnel"}
+                  />
+                  <MetricRow
+                    label="Amortissements"
+                    value={crTotals.charges.amortissements}
+                    highlight={highlightedPoste === "amortissements"}
+                  />
+                  <MetricRow
+                    label="Intérêts d'emprunts"
+                    value={crTotals.charges.interetsEmprunts}
+                    highlight={highlightedPoste === "interetsEmprunts"}
+                  />
+                  <MetricRow
+                    label="Charges exceptionnelles"
+                    value={crTotals.charges.chargesExceptionnels}
+                    highlight={highlightedPoste === "chargesExceptionnels"}
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                  <span className="text-xs font-medium text-slate-400">Total charges</span>
+                  <span className="text-sm font-semibold text-rose-300 tabular-nums">
+                    {formatAmount(crTotals.totalCharges)}
+                  </span>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] border border-white/10 bg-white/[0.04] px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      Lecture finale
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">Résultat net</h3>
+                  </div>
+                  <motion.span
+                    key={`resultat-net-${resultatNet}`}
+                    className={`text-2xl font-semibold tabular-nums ${getValueToneClass(resultatNet)}`}
+                    initial={{ opacity: 0.45, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    {formatAmount(resultatNet)}
+                  </motion.span>
+                </div>
+              </section>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      {/* Tab buttons */}
-      {tabButtons}
     </div>
   );
 };
