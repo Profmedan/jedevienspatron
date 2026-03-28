@@ -14,7 +14,7 @@ import {
 } from "@/lib/game-engine/engine";
 import {
   calculerScore, getTresorerie, calculerIndicateurs, calculerSIGSimplifie,
-  getResultatNet, getTotalStocks,
+  getTotalStocks,
 } from "@/lib/game-engine/calculators";
 import {
   HeaderJeu, LeftPanel, MainContent,
@@ -22,11 +22,9 @@ import {
   SetupScreen, CompanyIntro,
   type PlayerSetup, type ActiveStep,
   getSens, getPosteValue, applyDeltaToJoueur,
-  ACTIF_KEYS, PASSIF_KEYS, CHARGES_KEYS, PRODUITS_KEYS,
 } from "@/components/jeu";
 import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
 import { ResultatDemandePret, MONTANTS_EMPRUNT } from "@/lib/game-engine/types";
-// [IMPACT-FLASH] import — retirer si on revient en arrière
 import { ImpactFlash } from "@/components/ImpactFlash";
 // ── Nouveaux composants v2 — chargement dynamique (évite panic Turbopack) ────
 const CenterPanel = dynamic(() => import("@/components/jeu/CenterPanel"), {
@@ -124,7 +122,6 @@ export default function JeuPage() {
   const [etat, setEtat]                   = useState<EtatJeu | null>(null);
   const [activeStep, setActiveStep]       = useState<ActiveStep | null>(null);
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
-  // [IMPACT-FLASH] "impact" ajouté au type — retirer si on revient en arrière
   const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs" | "glossaire" | "impact">("bilan");
   const [highlightedPoste, setHighlightedPoste] = useState<string | null>(null);
   const [recentModifications, setRecentModifications] = useState<Array<{
@@ -150,7 +147,6 @@ export default function JeuPage() {
   const [qcmTrimestreQuestions, setQcmTrimestreQuestions] = useState<QuestionQCM[] | undefined>(undefined);
   const [qcmTrimestreScore, setQcmTrimestreScore] = useState<number | undefined>(undefined);
 
-  // [IMPACT-FLASH] flashData state — retirer si on revient en arrière
   const [flashData, setFlashData] = useState<{ poste: string; avant: number; apres: number } | null>(null);
 
   // ── Nouveaux states v2 : panneau central + droit ─────────────────────────
@@ -260,7 +256,6 @@ export default function JeuPage() {
 
   // ─ Auto-switch onglet + surlignage au clic sur une écriture ──────────────
   function handleApplyEntry(poste: string) {
-    // [IMPACT-FLASH] — retirer les 4 lignes suivantes si on revient en arrière
     const mod = recentModifications.find((m) => m.poste === poste);
     if (mod) {
       setFlashData({ poste, avant: mod.ancienneValeur, apres: mod.nouvelleValeur });
@@ -433,7 +428,7 @@ export default function JeuPage() {
       case 4: {
         const joueur = next.joueurs[idx];
         const capacite = calculerCapaciteLogistique(joueur);
-        let clientsAtrait = joueur.clientsATrait;
+        const clientsAtrait = joueur.clientsATrait;
         let clientsPerdusPrise = 0;
 
         // Trier par rentabilité : Grand Compte (delaiPaiement 2) > TPE (1) > Particulier (0)
@@ -976,12 +971,7 @@ export default function JeuPage() {
             setAchatMode={setAchatMode}
             onLaunchAchat={launchAchat}
             onSkipAchat={skipAchat}
-            showCartes={showCartes}
-            setShowCartes={setShowCartes}
             selectedDecision={selectedDecision}
-            setSelectedDecision={setSelectedDecision}
-            cartesDisponibles={cartesDisponibles}
-            onLaunchDecision={launchDecision}
             onSkipDecision={skipDecision}
             decisionError={decisionError}
             onLaunchStep={launchStep}
@@ -1055,7 +1045,6 @@ export default function JeuPage() {
         </div>
       </div>
 
-      {/* [IMPACT-FLASH] overlay centré — retirer si on revient en arrière */}
       <ImpactFlash
         data={flashData}
         onDone={() => setFlashData(null)}
