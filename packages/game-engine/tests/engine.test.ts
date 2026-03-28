@@ -216,16 +216,16 @@ describe("Génération clients par commerciaux", () => {
 // ─── 9. VÉRIFICATION FAILLITE ────────────────────────────────
 
 describe("Vérification faillite", () => {
-  test("Découvert > 5 → faillite", () => {
+  test("Découvert > DECOUVERT_MAX seul ne cause pas la faillite", () => {
     const joueur = joueurOrange();
-    joueur.bilan.decouvert = 6;
+    joueur.bilan.decouvert = 9;
     const { enFaillite } = verifierFaillite(joueur);
-    expect(enFaillite).toBe(true);
+    expect(enFaillite).toBe(false);
   });
 
-  test("Découvert = 5 → pas de faillite", () => {
+  test("Découvert = 8 → pas de faillite", () => {
     const joueur = joueurOrange();
-    joueur.bilan.decouvert = 5;
+    joueur.bilan.decouvert = 8;
     const { enFaillite } = verifierFaillite(joueur);
     expect(enFaillite).toBe(false);
   });
