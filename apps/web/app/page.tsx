@@ -25,15 +25,15 @@ import {
 } from "lucide-react";
 
 const HERO_POINTS = [
-  "Chaque décision produit immédiatement une lecture bilan, résultat et trésorerie.",
-  "Le formateur anime une séance vivante sans sacrifier la rigueur comptable.",
-  "L’établissement dispose d’un format clair, crédible et simple à déployer.",
+  "Chaque décision produit immédiatement un effet financier qui déclenche une conséquence financière.",
+  "Les explications permettent une séance vivante sans sacrifier la rigueur comptable.",
+  "Le formateur (optionnel) dispose d’un format clair, crédible et simple à déployer.",
 ];
 
 const SUPPORT_NUMBERS = [
-  { value: "4", label: "univers d’entreprise" },
+  { value: "4", label: "univers d’entreprise différents" },
   { value: "8", label: "décisions par trimestre" },
-  { value: "1h", label: "de séance active" },
+  { value: "1h+", label: "de séance active" },
 ];
 
 const HERO_TAGS = ["Décider", "Visualiser", "Débriefer"];
@@ -51,7 +51,7 @@ const LEARNING_PILLARS = [
   },
   {
     title: "Comprendre",
-    text: "Le jeu, le score final et le débrief transforment l’action en raisonnement durable.",
+    text: "Le jeu, le score final et le débriefing transforment l’action en raisonnement durable. Les principes comptables sont respectés. Les rendez-vous avec le comptable ne sont plus un charabia technique : chaque notion comptable est expliquée et mise en évidence en fonction des flux financiers.",
     icon: BookOpen,
   },
 ];
@@ -70,12 +70,12 @@ const JOURNEY_STEPS = [
   {
     index: "03",
     title: "Lisez les effets comptables",
-    text: "Résultat net, trésorerie, solvabilité et équilibre du bilan deviennent visibles, discutables et mémorisables.",
+    text: "Résultat net, trésorerie, solvabilité, équilibre du bilan et bien d’autres indicateurs deviennent visibles, discutables, expliqués et mémorisables.",
   },
   {
     index: "04",
-    title: "Débriefez et ancrez les notions",
-    text: "Les notions ne sont plus récitées : elles sont vécues pendant le jeu, puis consolidées dans le débrief.",
+    title: "Le compte rendu financier final",
+    text: "Le compte rendu financier final permet de consolider durablement les notions comptables et financières. Celles-ci ne sont plus simplement apprises ou récitées : elles sont expérimentées au cours du jeu, puis structurées et renforcées lors du débriefing.",
   },
 ];
 
@@ -352,19 +352,20 @@ export default function Home() {
               transition={{ duration: 0.7, ease: "easeOut" }}
               className="max-w-xl space-y-8 lg:pb-8"
             >
-              <SectionEyebrow>Pour lycées, BTS, CFA, CCI et organismes de formation</SectionEyebrow>
+              <SectionEyebrow>Pour futurs entrepreneurs, nouveaux entrepreneurs, lycéens, étudiants, CFA, CCI et organismes de formation</SectionEyebrow>
 
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-200/75">
                   JE DEVIENS PATRON
                 </p>
                 <h1 className="max-w-[12ch] text-5xl font-bold leading-[0.92] tracking-[-0.045em] text-white text-balance sm:text-6xl lg:text-7xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
-                  Faites vivre la comptabilité au lieu de la réciter.
+                  Savoir dépenser pour gagner plus.
                 </h1>
                 <p className="max-w-lg text-base leading-7 text-slate-300 sm:text-lg">
-                  Un jeu sérieux conçu pour une vraie séance de formation :
-                  l’apprenant agit, le formateur débriefe, et l’établissement
-                  dispose d’un format clair à présenter, lancer et faire vivre.
+                  Un jeu sérieux conçu pour comprendre comment les mouvements
+                  d’argent peuvent vous enrichir et vous appauvrir : l’apprenant
+                  est guidé et tout mouvement de trésorerie est expliqué tout au
+                  long du jeu.
                 </p>
               </div>
 
@@ -462,13 +463,14 @@ export default function Home() {
           <div className="space-y-5">
             <SectionEyebrow>Pourquoi ça marche</SectionEyebrow>
             <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
-              Une expérience pensée pour tenir en séance et rester crédible en formation.
+              Une expérience pédagogique pensée pour des séances de travail en autonomie ou guidé.
             </h2>
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
-              JE DEVIENS PATRON relie les décisions de gestion, les effets
+              JEDEVIENSPATRON.fr relie les décisions de gestion, les effets
               comptables et la lecture des résultats dans un même parcours.
-              L’apprenant voit enfin la logique, et l’équipe pédagogique garde
-              un format exploitable avant, pendant et après la séance.
+              L’apprenant voit enfin la logique, et l’équipe pédagogique
+              (optionnelle) garde un format exploitable avant, pendant et après
+              la séance grâce aux nombreux indicateurs financiers disponibles.
             </p>
 
             <div className="rounded-[1.9rem] border border-white/10 bg-white/[0.03] p-6">
@@ -476,8 +478,10 @@ export default function Home() {
                 Un même outil, deux promesses tenues
               </p>
               <p className="mt-3 text-sm leading-7 text-slate-300">
-                Donner envie d’entrer dans le jeu côté apprenant, tout en offrant
-                un cadre rassurant pour un responsable pédagogique ou un établissement.
+                Donner envie d’entrer dans le jeu côté apprenant, en se challengeant
+                ou challengeant les autres joueurs pour obtenir le meilleur score,
+                le meilleur résultat comptable ou financier tout en offrant un cadre
+                rassurant pour un responsable pédagogique ou un établissement.
               </p>
             </div>
           </div>
@@ -507,12 +511,15 @@ export default function Home() {
           <div className="space-y-5">
             <SectionEyebrow>Le parcours</SectionEyebrow>
             <h2 className="max-w-md text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
-              Une partie suit une logique claire du début à la fin.
+              Un parcours ludique structuré pour faire comprendre le fonctionnement de l'entreprise, la comptabilité et la prise de décision.
             </h2>
             <p className="max-w-md text-sm leading-7 text-slate-400 sm:text-base">
-              Chaque étape donne une vision directe de ce que l’entreprise fait,
-              de ce que la comptabilité enregistre et de ce que le formateur
-              peut exploiter dans son animation, son évaluation ou son débrief.
+              Chaque partie suit une progression claire, de l’activité de
+              l’entreprise jusqu’à l’analyse des résultats. Les apprenants
+              peuvent jouer en autonomie ou dans le cadre d’une animation
+              encadrée. À chaque étape, ils agissent, observent les conséquences
+              de leurs choix et relient directement les décisions prises aux
+              mécanismes comptables et financiers.
             </p>
 
             <div className="rounded-[1.75rem] border border-cyan-400/15 bg-cyan-400/7 p-6">
@@ -521,11 +528,11 @@ export default function Home() {
                   <Users className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-white">Pensé pour la classe, crédible pour l’institution</h3>
+                  <h3 className="text-lg font-bold text-white">Pensé pour les apprenants, crédible pour les formateurs</h3>
                   <p className="text-sm leading-6 text-slate-400">
-                    Le jeu aide à engager les apprenants pendant la séance tout en
-                    donnant à l’équipe pédagogique un cadre sérieux, lisible
-                    et simple à présenter dans une offre de formation.
+                    Utilisable en autonomie ou en animation pédagogique, le jeu
+                    s’adapte aussi bien à l’entraînement individuel qu’aux
+                    séances encadrées.
                   </p>
                 </div>
               </div>
@@ -713,9 +720,9 @@ export default function Home() {
               Les trois idées que le jeu rend enfin intuitives.
             </h2>
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
-              Le jeu fait ressortir les fondamentaux que les apprenants doivent
-              vraiment maîtriser pour comprendre le bilan, la partie double et
-              la formation du résultat.
+              Le jeu rend visible et compréhensible les trois notions souvent
+              perçues comme abstraites : l'équilibre du bilan, la partie double
+              et la formation du résultat.
             </p>
           </div>
 
@@ -738,12 +745,13 @@ export default function Home() {
             <div className="space-y-4">
               <SectionEyebrow>Dernier pas</SectionEyebrow>
               <h2 className="max-w-lg text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
-                Un format assez engageant pour la classe, assez solide pour votre offre de formation.
+                Un format engageant pour la classe, les apprenants, solide pour votre offre de formation.
               </h2>
               <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                JE DEVIENS PATRON réunit mise en situation, visualisation comptable
-                et exploitation pédagogique dans une expérience simple à présenter,
-                simple à lancer et simple à faire vivre avec un groupe ou une promotion.
+                JEDEVIENSPATRON.fr associe mise en situation, visualisation comptable
+                et exploitation pédagogique dans une expérience facile à présenter,
+                rapide à prendre en main et simple à déployer auprès d'un groupe
+                ou d'une promotion.
               </p>
             </div>
 
@@ -752,14 +760,14 @@ export default function Home() {
                 href="#acces"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
               >
-                Choisir Mon Point D’entrée
+                Découvrir le jeu
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
               <Link
                 href="/contact"
                 className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
               >
-                Parler D’un Usage En Formation
+                Échanger sur un usage en formation
               </Link>
             </div>
           </div>
