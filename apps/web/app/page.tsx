@@ -153,13 +153,13 @@ function SupportColumn({
   icon: typeof Scale;
 }) {
   return (
-    <div className="grid gap-4 border-t border-white/10 py-6 first:border-t-0 first:pt-0 sm:grid-cols-[72px_minmax(0,1fr)]">
+    <div className="grid gap-3 border-t border-white/10 py-4 first:border-t-0 first:pt-0 sm:grid-cols-[72px_minmax(0,1fr)]">
       <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/6 text-cyan-200">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <h3 className="text-xl font-bold text-white">{title}</h3>
-        <p className="max-w-xl text-sm leading-6 text-slate-400">{text}</p>
+        <p className="text-sm leading-6 text-slate-400">{text}</p>
       </div>
     </div>
   );
@@ -175,15 +175,15 @@ function JourneyRow({
   text: string;
 }) {
   return (
-    <div className="grid gap-4 border-t border-white/10 py-5 first:border-t-0 first:pt-0 md:grid-cols-[80px_minmax(0,1fr)]">
+    <div className="grid gap-3 border-t border-white/10 py-3 first:border-t-0 first:pt-0 md:grid-cols-[80px_minmax(0,1fr)]">
       <div>
         <span className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-sm font-semibold tracking-[0.24em] text-cyan-200">
           {index}
         </span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <h3 className="text-lg font-bold text-white">{title}</h3>
-        <p className="max-w-xl text-sm leading-6 text-slate-400">{text}</p>
+        <p className="text-sm leading-6 text-slate-400">{text}</p>
       </div>
     </div>
   );
@@ -199,12 +199,12 @@ function PrincipleColumn({
   icon: typeof Scale;
 }) {
   return (
-    <div className="space-y-4 border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 first:lg:border-l-0 first:lg:pl-0">
+    <div className="space-y-3 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 first:lg:border-l-0 first:lg:pl-0">
       <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <h3 className="text-lg font-bold text-white">{title}</h3>
-      <p className="max-w-sm text-sm leading-6 text-slate-400">{text}</p>
+      <p className="text-sm leading-6 text-slate-400">{text}</p>
     </div>
   );
 }
@@ -257,10 +257,10 @@ function EntryPanel({
 
   return (
     <div
-      className={`relative flex h-full flex-col justify-between overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(15,23,42,0.84),rgba(2,6,23,0.98))] p-6 shadow-[0_26px_90px_rgba(2,8,23,0.34)] ${classes.border}`}
+      className={`relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border bg-[linear-gradient(180deg,rgba(15,23,42,0.84),rgba(2,6,23,0.98))] p-5 shadow-[0_26px_90px_rgba(2,8,23,0.34)] ${classes.border}`}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_34%)] opacity-70" />
-      <div className="relative space-y-5">
+      <div className="relative space-y-4">
         <div className={`inline-flex h-12 w-12 items-center justify-center rounded-full border ${classes.icon}`}>
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
@@ -310,7 +310,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#020617] text-white">
-      <section className="relative overflow-hidden px-6 pb-14 pt-6 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
+      <section className="relative overflow-hidden px-6 pb-10 pt-6 sm:px-8 sm:pb-12 lg:px-12 lg:pb-14">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_82%_18%,rgba(250,204,21,0.08),transparent_18%),radial-gradient(circle_at_78%_74%,rgba(16,185,129,0.12),transparent_20%),linear-gradient(180deg,#020617_0%,#08111f_52%,#020617_100%)]" />
         <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[48vw] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_54%)] lg:block" />
         <div className="pointer-events-none absolute left-0 top-32 h-px w-full bg-gradient-to-r from-transparent via-white/12 to-transparent" />
@@ -345,12 +345,12 @@ export default function Home() {
             </nav>
           </header>
 
-          <div className="grid gap-10 pb-6 pt-8 lg:min-h-[calc(100svh-152px)] lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] lg:items-center xl:gap-14">
+          <div className="grid gap-6 pb-4 pt-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center xl:gap-10">
             <motion.div
               initial={shouldReduceMotion ? false : { opacity: 0, y: 28 }}
               animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: "easeOut" }}
-              className="max-w-xl space-y-8 lg:pb-8"
+              className="space-y-6 lg:pb-6"
             >
               <SectionEyebrow>Pour futurs entrepreneurs, nouveaux entrepreneurs, lycéens, étudiants, CFA, CCI et organismes de formation</SectionEyebrow>
 
@@ -361,7 +361,7 @@ export default function Home() {
                 <h1 className="max-w-[12ch] text-5xl font-bold leading-[0.92] tracking-[-0.045em] text-white text-balance sm:text-6xl lg:text-7xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
                   Savoir dépenser pour gagner plus.
                 </h1>
-                <p className="max-w-lg text-base leading-7 text-slate-300 sm:text-lg">
+                <p className="text-base leading-7 text-slate-300 sm:text-lg">
                   Un jeu sérieux conçu pour comprendre comment les mouvements
                   d’argent peuvent vous enrichir et vous appauvrir : l’apprenant
                   est guidé et tout mouvement de trésorerie est expliqué tout au
@@ -410,9 +410,9 @@ export default function Home() {
               initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97, y: 24 }}
               animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut", delay: 0.08 }}
-              className="relative lg:-mr-4 xl:-mr-8"
+              className="relative"
             >
-              <div className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-[2.6rem] border border-white/10 bg-[linear-gradient(155deg,rgba(8,15,28,0.96),rgba(6,32,43,0.92))] p-3 shadow-[0_40px_140px_rgba(2,8,23,0.68)] sm:p-4">
+              <div className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(155deg,rgba(8,15,28,0.96),rgba(6,32,43,0.92))] p-2.5 shadow-[0_40px_140px_rgba(2,8,23,0.68)] sm:p-3">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(250,204,21,0.09),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.18),transparent_24%)]" />
                 <div className="absolute left-6 top-6 z-10 inline-flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
                   Simulation d’entreprise & lecture comptable
@@ -421,7 +421,7 @@ export default function Home() {
                 <motion.div
                   animate={shouldReduceMotion ? {} : { y: [0, -8, 0] }}
                   transition={shouldReduceMotion ? undefined : { duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative aspect-[1.08/1] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/55"
+                  className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-slate-950/55"
                 >
                   <Image
                     src="/hero.png"
@@ -434,11 +434,11 @@ export default function Home() {
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.04),rgba(2,6,23,0.26))]" />
                 </motion.div>
 
-                <div className="absolute inset-x-6 bottom-6 z-10 rounded-[1.7rem] border border-white/12 bg-slate-950/78 p-5 backdrop-blur-xl">
+                <div className="absolute inset-x-4 bottom-4 z-10 rounded-xl border border-white/12 bg-slate-950/78 p-4 backdrop-blur-xl">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/75">
                     Dans le jeu
                   </p>
-                  <h2 className="mt-2 max-w-xl text-lg font-semibold leading-7 text-white sm:text-2xl sm:leading-8">
+                  <h2 className="mt-1.5 text-lg font-semibold leading-7 text-white sm:text-2xl sm:leading-8">
                     Le même espace relie stratégie, produit, finance et résultat.
                   </h2>
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -458,8 +458,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-18">
-        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.82fr_1.18fr]">
+      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.88fr_1.12fr]">
           <div className="space-y-5">
             <SectionEyebrow>Pourquoi ça marche</SectionEyebrow>
             <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
@@ -473,7 +473,7 @@ export default function Home() {
               la séance grâce aux nombreux indicateurs financiers disponibles.
             </p>
 
-            <div className="rounded-[1.9rem] border border-white/10 bg-white/[0.03] p-6">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/75">
                 Un même outil, deux promesses tenues
               </p>
@@ -506,8 +506,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="parcours" className="px-6 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-18">
-        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <section id="parcours" className="px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="space-y-5">
             <SectionEyebrow>Le parcours</SectionEyebrow>
             <h2 className="max-w-md text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
@@ -522,7 +522,7 @@ export default function Home() {
               mécanismes comptables et financiers.
             </p>
 
-            <div className="rounded-[1.75rem] border border-cyan-400/15 bg-cyan-400/7 p-6">
+            <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/7 p-5">
               <div className="flex items-start gap-4">
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
                   <Users className="h-5 w-5" aria-hidden="true" />
@@ -539,7 +539,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-slate-950/65 p-6 shadow-xl shadow-slate-950/30 sm:p-8">
+          <div className="rounded-xl border border-white/10 bg-slate-950/65 p-4 shadow-xl shadow-slate-950/30 sm:p-6">
             {JOURNEY_STEPS.map((step) => (
               <JourneyRow
                 key={step.index}
@@ -554,9 +554,9 @@ export default function Home() {
 
       <section
         id="acces"
-        className="border-y border-white/8 bg-[linear-gradient(180deg,rgba(8,17,31,0.82),rgba(2,8,23,1))] px-6 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-18"
+        className="border-y border-white/8 bg-[linear-gradient(180deg,rgba(8,17,31,0.82),rgba(2,8,23,1))] px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14"
       >
-        <div className="mx-auto max-w-6xl space-y-10">
+        <div className="mx-auto max-w-6xl space-y-6">
           <div className="max-w-2xl space-y-4">
             <SectionEyebrow>Commencer</SectionEyebrow>
             <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
@@ -712,8 +712,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-18">
-        <div className="mx-auto max-w-6xl space-y-10">
+      <section className="px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+        <div className="mx-auto max-w-6xl space-y-6">
           <div className="max-w-2xl space-y-4">
             <SectionEyebrow>Ce qu’on retient</SectionEyebrow>
             <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
@@ -739,9 +739,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 pb-14 sm:px-8 sm:pb-16 lg:px-12 lg:pb-18">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-[2.2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(12,20,36,0.96),rgba(5,35,47,0.92))] px-6 py-10 shadow-2xl shadow-cyan-950/25 sm:px-10 sm:py-12">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,0.6fr)] lg:items-end">
+      <section className="px-6 pb-10 sm:px-8 sm:pb-12 lg:px-12 lg:pb-14">
+        <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(12,20,36,0.96),rgba(5,35,47,0.92))] px-5 py-8 shadow-2xl shadow-cyan-950/25 sm:px-8 sm:py-10">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] lg:items-center">
             <div className="space-y-4">
               <SectionEyebrow>Dernier pas</SectionEyebrow>
               <h2 className="max-w-lg text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
@@ -774,9 +774,9 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-white/8 px-6 py-10 text-sm sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <div className="flex flex-wrap gap-x-6 gap-y-3 text-slate-400">
+      <footer className="border-t border-white/8 px-6 py-8 text-sm sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <div className="flex flex-wrap gap-x-4 gap-y-3 text-slate-400">
             {FOOTER_LINKS.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
