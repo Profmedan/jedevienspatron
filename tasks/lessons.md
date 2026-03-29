@@ -151,6 +151,10 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 **Fix** : constantes `CARTE_IDS` + `throw Error` sur poste inconnu dans `appliquerDeltaPoste`.
 **Règle** : centraliser tout ID/constante réutilisé ≥2 fois. Préférer `throw` à `console.warn` pour les erreurs de programmation.
 
+## L23 — 2026-03-28 : Citadel laisse parfois ses méta-commentaires dans le HTML
+**Erreur** : Citadel a écrit ses notes de conception directement dans les textes visibles de `page.tsx` ("L'ancienne page empilait des arguments", "J'ai rééquilibré cette zone"...).
+**Règle** : toujours relire le contenu textuel de la landing après un pass Citadel UI. Les textes visibles aux utilisateurs doivent parler du produit, pas de la démarche de refonte.
+
 ## L22 — 2026-03-26 : iCloud Drive bloque les opérations fichiers
 **Contexte** : les fichiers stockés dans iCloud avec "Optimize Mac Storage" sont des stubs. `require()`, `rsync`, `sed`, `cat` peuvent tous échouer ou bloquer indéfiniment.
 **Règle** : pour un projet actif, toujours garder une copie locale hors iCloud (ou un clone Git). Ne jamais dépendre d'iCloud pour le développement.

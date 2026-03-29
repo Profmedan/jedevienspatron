@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Joueur } from "@/lib/game-engine/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { EtatJeu, Joueur } from "@/lib/game-engine/types";
 import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
-import { EntryCard, type EntryLine } from "./EntryCard";
+
 import { DoubleEntrySalesCard } from "./DoubleEntrySalesCard";
-import { getPosteValue, nomCompte, getDocumentType } from "./utils";
+import { EntryCard, type EntryLine } from "./EntryCard";
+import { getDocumentType, getPosteValue, nomCompte } from "./utils";
 
 export interface ActiveStep {
   titre: string;
@@ -14,8 +16,8 @@ export interface ActiveStep {
   principe: string;
   conseil: string;
   entries: EntryLine[];
-  baseEtat: any; // EtatJeu snapshot
-  previewEtat: any; // EtatJeu preview
+  baseEtat: EtatJeu;
+  previewEtat: EtatJeu;
 }
 
 interface EntryPanelProps {
@@ -26,22 +28,102 @@ interface EntryPanelProps {
   onApplyEntry?: (poste: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
-  /** Tour actuel du jeu — for animations */
   tourActuel?: number;
-  /** Étape actuelle du tour */
   etapeTour?: number;
 }
 
-/**
- * Panneau interactif de saisie des écritures comptables.
- *
- * UX Accordion séquentiel :
- *  - Chaque écriture est une "fenêtre" qui se déplie / replie
- *  - Une seule fenêtre ouverte à la fois (accordion)
- *  - Auto-avance : après saisie d'une écriture, la suivante s'ouvre automatiquement
- *  - Groupes visuels : section Débits puis section Crédits
- *  - Indicateur Σ Débits = Σ Crédits + équilibre bilan en temps réel
- */
+interface SectionHeaderProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+}
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  helper: string;
+  tone?: "neutral" | "emerald" | "rose" | "amber" | "sky";
+}
+
+interface ImpactPreviewRow {
+  poste: string;
+  label: string;
+  docType: "Bilan" | "CR";
+  avant: number;
+  actuel: number;
+  delta: number;
+  pending: boolean;
+}
+
+function SectionHeader({ eyebrow, title, description }: SectionHeaderProps) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+        {eyebrow}
+      </p>
+      <h3 className="mt-1 text-base font-semibold text-white text-balance">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  helper,
+  tone = "neutral",
+}: StatCardProps) {
+  const toneClass = {
+    neutral: "border-white/10 bg-white/[0.04] text-white",
+    emerald: "border-emerald-400/15 bg-emerald-500/10 text-emerald-100",
+    rose: "border-rose-400/15 bg-rose-500/10 text-rose-100",
+    amber: "border-amber-400/15 bg-amber-500/10 text-amber-100",
+    sky: "border-sky-400/15 bg-sky-500/10 text-sky-100",
+  }[tone];
+
+  return (
+    <div className={`rounded-2xl border px-3 py-3 ${toneClass}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold tabular-nums">{value}</p>
+      <p className="mt-2 text-[11px] leading-relaxed text-white/70">{helper}</p>
+    </div>
+  );
+}
+
+function getImpactTone(row: ImpactPreviewRow) {
+  const debtPostes = new Set(["emprunts", "dettes", "decouvert", "dettesFiscales", "dettesD2"]);
+  const revenuePostes = new Set([
+    "ventes",
+    "productionStockee",
+    "produitsFinanciers",
+    "revenusExceptionnels",
+  ]);
+
+  if (row.delta === 0) return "text-slate-400";
+
+  if (row.docType === "Bilan") {
+    const positiveIsGood = !debtPostes.has(row.poste);
+    return positiveIsGood
+      ? row.delta > 0
+        ? "text-emerald-300"
+        : "text-rose-300"
+      : row.delta > 0
+        ? "text-rose-300"
+        : "text-emerald-300";
+  }
+
+  const positiveIsGood = revenuePostes.has(row.poste);
+  return positiveIsGood
+    ? row.delta > 0
+      ? "text-emerald-300"
+      : "text-rose-300"
+    : row.delta > 0
+      ? "text-rose-300"
+      : "text-emerald-300";
+}
+
 export function EntryPanel({
   activeStep,
   displayJoueur,
@@ -53,373 +135,439 @@ export function EntryPanel({
   tourActuel = 0,
   etapeTour = -1,
 }: EntryPanelProps) {
-  // ── Accordion : id de la fenêtre actuellement ouverte ──────────────────
   const [activeEntryId, setActiveEntryId] = useState<string | null>(() => {
-    const first = activeStep.entries.find((e) => !e.applied);
-    return first?.id ?? null;
+    const firstPending = activeStep.entries.find((entry) => !entry.applied);
+    return firstPending?.id ?? null;
   });
 
-  // Reset lors du changement d'étape (nouvelle activeStep)
   const prevTitreRef = useRef(activeStep.titre);
   useEffect(() => {
     if (prevTitreRef.current !== activeStep.titre) {
       prevTitreRef.current = activeStep.titre;
-      const first = activeStep.entries.find((e) => !e.applied);
-      setActiveEntryId(first?.id ?? null);
+      const firstPending = activeStep.entries.find((entry) => !entry.applied);
+      setActiveEntryId(firstPending?.id ?? null);
     }
   }, [activeStep.titre, activeStep.entries]);
 
-  // ── Handler Saisir avec auto-avance ────────────────────────────────────
+  const entries = activeStep.entries;
+  const totalCount = entries.length;
+
+  const pendingEntries = useMemo(
+    () => entries.filter((entry) => !entry.applied),
+    [entries],
+  );
+  const debits = useMemo(
+    () => entries.filter((entry) => entry.sens === "debit"),
+    [entries],
+  );
+  const credits = useMemo(
+    () => entries.filter((entry) => entry.sens === "credit"),
+    [entries],
+  );
+
+  const appliedCount = totalCount - pendingEntries.length;
+  const pendingCount = pendingEntries.length;
+  const allApplied = pendingCount === 0;
+
+  const totalActif = getTotalActif(displayJoueur);
+  const totalPassif = getTotalPassif(displayJoueur);
+  const balanced = Math.abs(totalActif - totalPassif) < 0.01;
+  const canContinue = allApplied && balanced;
+
+  const sumDebits = debits.reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+  const sumCredits = credits.reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+  const partieDoubleOk = Math.abs(sumDebits - sumCredits) < 0.01;
+
+  const impactRows = useMemo<ImpactPreviewRow[]>(() => {
+    const seen = new Set<string>();
+
+    return entries.reduce<ImpactPreviewRow[]>((rows, entry) => {
+      if (seen.has(entry.poste)) return rows;
+      seen.add(entry.poste);
+
+      const avant = baseJoueur ? getPosteValue(baseJoueur, entry.poste) : 0;
+      const actuel = getPosteValue(displayJoueur, entry.poste);
+      const pending = entries
+        .filter((candidate) => candidate.poste === entry.poste)
+        .some((candidate) => !candidate.applied);
+
+      rows.push({
+        poste: entry.poste,
+        label: nomCompte(entry.poste),
+        docType: getDocumentType(entry.poste),
+        avant,
+        actuel,
+        delta: actuel - avant,
+        pending,
+      });
+
+      return rows;
+    }, []);
+  }, [baseJoueur, displayJoueur, entries]);
+
+  const impactApplied = impactRows.filter((row) => row.delta !== 0).length;
+  const nextEntry = pendingEntries[0];
+
+  const isSalesStep = etapeTour === 4;
+  const displayAsSalesGroup = useMemo(() => {
+    if (!isSalesStep) return false;
+
+    const hasVentes = entries.some((entry) => entry.poste === "ventes");
+    const hasStocks = entries.some((entry) => entry.poste === "stocks");
+    const hasAchats = entries.some((entry) => entry.poste === "achats");
+    const hasCashOrCreance = entries.some(
+      (entry) =>
+        entry.poste === "tresorerie"
+        || entry.poste === "creancesPlus1"
+        || entry.poste === "creancesPlus2",
+    );
+
+    return hasVentes && hasStocks && hasAchats && hasCashOrCreance;
+  }, [entries, isSalesStep]);
+
   function handleApply(entryId: string, poste: string) {
     onApply(entryId);
     onApplyEntry?.(poste);
-    // Calcul du prochain non-saisi (exclut l'entrée en cours qui va devenir applied)
-    const remaining = activeStep.entries.filter((e) => !e.applied && e.id !== entryId);
+    const remaining = entries.filter((entry) => !entry.applied && entry.id !== entryId);
     setActiveEntryId(remaining[0]?.id ?? null);
   }
 
-  // ── Stats globales ──────────────────────────────────────────────────────
-  const totalCount   = activeStep.entries.length;
-  const appliedCount = activeStep.entries.filter((e) => e.applied).length;
-  const pendingCount = totalCount - appliedCount;
-  const allApplied   = pendingCount === 0;
-
-  const totalActif  = getTotalActif(displayJoueur);
-  const totalPassif = getTotalPassif(displayJoueur);
-  const balanced    = Math.abs(totalActif - totalPassif) < 0.01;
-  const canContinue = allApplied && balanced;
-
-  const debits  = activeStep.entries.filter((e) => e.sens === "debit");
-  const credits = activeStep.entries.filter((e) => e.sens === "credit");
-
-  // ── Impact par poste (dédoublonné) : avant → maintenant en temps réel ───
-  const impactRows = (() => {
-    const seen = new Set<string>();
-    const rows: Array<{
-      poste: string; label: string;
-      avant: number; actuel: number; delta: number;
-      pending: boolean;
-    }> = [];
-    for (const e of activeStep.entries) {
-      if (seen.has(e.poste)) continue;
-      seen.add(e.poste);
-      const avant  = baseJoueur ? getPosteValue(baseJoueur, e.poste) : 0;
-      const actuel = getPosteValue(displayJoueur, e.poste);
-      const allForPoste = activeStep.entries.filter((en) => en.poste === e.poste);
-      const pending = allForPoste.some((en) => !en.applied);
-      rows.push({ poste: e.poste, label: nomCompte(e.poste), avant, actuel, delta: actuel - avant, pending });
-    }
-    return rows;
-  })();
-  const impactApplied = impactRows.filter((r) => r.actuel !== r.avant).length;
-
-  const sumDebits  = debits.reduce((s, e) => s + Math.abs(e.delta), 0);
-  const sumCredits = credits.reduce((s, e) => s + Math.abs(e.delta), 0);
-  const partieDoubleOk = Math.abs(sumDebits - sumCredits) < 0.01;
-
-  const progressPct = totalCount > 0 ? Math.round((appliedCount / totalCount) * 100) : 0;
-
-  const allDebitsApplied  = debits.every((e) => e.applied);
-  const allCreditsApplied = credits.every((e) => e.applied);
-
-  // ── Détection des groupes de ventes (étape 4) pour affichage synthétique ──
-  // Les écritures de vente : ventes + stocks + achats + tréso/créances
-  // On en regroupe si la majorité des entrées correspondent à ce pattern
-  const isSalesStep = etapeTour === 4;
-  const salesGroups = (() => {
-    if (!isSalesStep) return [];
-
-    // Vérifier si on a au moins une instance de chaque type
-    const hasAnyVentes = activeStep.entries.some((e) => e.poste === "ventes");
-    const hasAnyStocks = activeStep.entries.some((e) => e.poste === "stocks");
-    const hasAnyAchats = activeStep.entries.some((e) => e.poste === "achats");
-    const hasAnyCashOrCreance = activeStep.entries.some(
-      (e) => e.poste === "tresorerie" || e.poste === "creancesPlus1" || e.poste === "creancesPlus2"
-    );
-
-    // Si le pattern global ne correspond pas, afficher en mode normal
-    if (!hasAnyVentes || !hasAnyStocks || !hasAnyAchats || !hasAnyCashOrCreance) {
-      return [];
-    }
-
-    // Créer un groupe avec toutes les entrées (c'est un pattern de ventes)
-    const description = activeStep.titre || "Vente client";
-    return [{ entries: activeStep.entries, description }];
-  })();
-
-  // Déterminer si on affiche en mode synthétique
-  const displayAsSalesGroup = salesGroups.length > 0;
-  const groupToDisplay = displayAsSalesGroup ? salesGroups[0] : null;
-
   return (
-    <div className="space-y-3">
-
-      {/* ── En-tête de l'étape ── */}
-      <div className="bg-gradient-to-br from-indigo-950/50 to-purple-950/30 rounded-xl p-3 border border-indigo-700 shadow-sm">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">{activeStep.icone}</span>
-          <span className="font-bold text-indigo-200 text-sm leading-tight">{activeStep.titre}</span>
+    <div className="space-y-4">
+      <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/10 text-2xl">
+            {activeStep.icone}
+          </div>
+          <div className="min-w-0 flex-1">
+            <SectionHeader
+              eyebrow="Saisie comptable"
+              title={activeStep.titre}
+              description={activeStep.description}
+            />
+          </div>
         </div>
-        <p className="text-xs text-gray-300 leading-relaxed">{activeStep.description}</p>
-      </div>
 
-      {/* ── Bloc écritures ── */}
-      {activeStep.entries.length > 0 ? (
-        <div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Principe
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{activeStep.principe}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-400/15 bg-amber-500/10 px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+              Conseil
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-200">{activeStep.conseil}</p>
+          </div>
+        </div>
+      </section>
 
-          {/* ── Impact sur les comptes : avant → après en temps réel (STICKY) ── */}
-          {impactRows.length > 0 && (
-            <div className="sticky top-0 z-10 mb-3 rounded-xl border border-gray-700 overflow-hidden bg-gray-900 shadow-lg shadow-black/30">
-              <div className="px-3 py-1.5 bg-gray-800 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">📊 Impact sur les comptes</span>
-                <span className={`text-[10px] font-bold tabular-nums transition-colors ${impactApplied === impactRows.length ? "text-emerald-400" : "text-indigo-400"}`}>
-                  {impactApplied}/{impactRows.length} saisis
-                </span>
-              </div>
-              <div className="divide-y divide-gray-800/80">
-                {impactRows.map((row) => {
-                  const changed = row.actuel !== row.avant;
-                  return (
-                    <div
-                      key={row.poste}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-all duration-300 ${
-                        changed ? "bg-gray-800/40" : "opacity-50"
-                      }`}
-                    >
-                      {/* Badge Bilan / CR */}
-                      <span className={`shrink-0 text-[8px] font-black uppercase tracking-wider px-1 py-0.5 rounded ${
-                        getDocumentType(row.poste) === "Bilan"
-                          ? "bg-blue-900/60 text-blue-300 border border-blue-700/40"
-                          : "bg-amber-900/60 text-amber-300 border border-amber-700/40"
-                      }`}>
-                        {getDocumentType(row.poste) === "Bilan" ? "Bilan" : "CR"}
+      <section className="grid gap-2 md:grid-cols-4">
+        <StatCard
+          label="Progression"
+          value={`${appliedCount}/${totalCount}`}
+          helper={
+            allApplied
+              ? "Toutes les écritures sont cochées."
+              : `${pendingCount} écriture${pendingCount > 1 ? "s" : ""} restante${pendingCount > 1 ? "s" : ""}.`
+          }
+          tone={allApplied ? "emerald" : "sky"}
+        />
+        <StatCard
+          label="Prochaine ligne"
+          value={nextEntry ? nomCompte(nextEntry.poste) : "Terminé"}
+          helper={
+            nextEntry
+              ? "C'est la prochaine écriture utile à ouvrir."
+              : "La saisie est terminée, il reste à valider."
+          }
+          tone={nextEntry ? "neutral" : "emerald"}
+        />
+        <StatCard
+          label="Partie double"
+          value={`${sumDebits} = ${sumCredits}`}
+          helper={
+            partieDoubleOk
+              ? "Débits et crédits se compensent bien."
+              : "Les montants ne se répondent pas encore."
+          }
+          tone={partieDoubleOk ? "emerald" : "amber"}
+        />
+        <StatCard
+          label="Équilibre"
+          value={`${totalActif} ${balanced ? "=" : "≠"} ${totalPassif}`}
+          helper={
+            balanced
+              ? "Le bilan reste équilibré en temps réel."
+              : "Le bilan n'est pas encore équilibré."
+          }
+          tone={balanced ? "emerald" : allApplied ? "rose" : "neutral"}
+        />
+      </section>
+
+      {impactRows.length > 0 && (
+        <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+          <SectionHeader
+            eyebrow="Avant / après"
+            title="Impact sur les comptes"
+            description="Cette vue montre immédiatement quels postes ont déjà bougé et lesquels attendent encore une saisie."
+          />
+
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            {impactRows.map((row) => (
+              <div
+                key={row.poste}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                          row.docType === "Bilan"
+                            ? "bg-sky-500/10 text-sky-100"
+                            : "bg-amber-500/10 text-amber-100"
+                        }`}
+                      >
+                        {row.docType}
                       </span>
-                      {/* Nom du compte */}
-                      <span className={`flex-1 text-[11px] truncate ${changed ? "text-gray-200 font-medium" : "text-gray-500"}`}>
+                      <span className="truncate text-xs font-medium text-slate-300">
                         {row.label}
                       </span>
-                      {/* Avant */}
-                      <span className="text-[11px] tabular-nums text-gray-500 min-w-[20px] text-right">
-                        {row.avant}
-                      </span>
-                      {/* Flèche */}
-                      <span className={`text-[10px] transition-colors ${changed ? "text-indigo-400" : "text-gray-700"}`}>→</span>
-                      {/* Maintenant */}
-                      <span className={`text-[11px] font-black tabular-nums min-w-[20px] text-right transition-all duration-300 ${
-                        row.delta > 0 ? "text-emerald-400" : row.delta < 0 ? "text-red-400" : "text-gray-500"
-                      }`}>
-                        {row.actuel}
-                      </span>
-                      {/* Delta */}
-                      <span className={`text-[10px] font-bold tabular-nums w-7 text-right ${
-                        row.delta > 0 ? "text-emerald-600" : row.delta < 0 ? "text-red-600" : "text-gray-700"
-                      }`}>
-                        {changed ? (row.delta > 0 ? `+${row.delta}` : `${row.delta}`) : "—"}
-                      </span>
-                      {/* Statut */}
-                      <span className="text-[10px] w-3 text-center">
-                        {changed ? "✓" : row.pending ? "⋯" : ""}
-                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                      row.pending
+                        ? "bg-white/[0.05] text-slate-300"
+                        : "bg-emerald-500/10 text-emerald-100"
+                    }`}
+                  >
+                    {row.pending ? "En attente" : "Saisi"}
+                  </span>
+                </div>
 
-          {/* Barre de progression */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                ✏️ Saisie des écritures
-              </span>
-              <span className={`text-xs font-black tabular-nums ${allApplied ? "text-emerald-400" : "text-indigo-400"}`}>
-                {appliedCount}/{totalCount}
-                {allApplied ? " ✅" : ` — encore ${pendingCount}`}
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <StatCard label="Avant" value={`${row.avant}`} helper="Valeur de départ." />
+                  <StatCard
+                    label="Après"
+                    value={`${row.actuel}`}
+                    helper="Valeur après saisie."
+                    tone={row.delta > 0 ? "emerald" : row.delta < 0 ? "rose" : "neutral"}
+                  />
+                  <StatCard
+                    label="Écart"
+                    value={row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
+                    helper="Variation visible."
+                    tone={
+                      row.delta === 0
+                        ? "neutral"
+                        : getImpactTone(row).includes("emerald")
+                          ? "emerald"
+                          : "rose"
+                    }
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-white">Postes déjà bougés</p>
+              <span className={`text-sm font-semibold ${impactApplied === impactRows.length ? "text-emerald-300" : "text-cyan-200"}`}>
+                {impactApplied}/{impactRows.length}
               </span>
             </div>
-            <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  allApplied ? "bg-emerald-500" : "bg-indigo-500"
-                }`}
-                style={{ width: `${progressPct}%` }}
+                className={`h-full rounded-full ${impactApplied === impactRows.length ? "bg-emerald-400" : "bg-cyan-400"}`}
+                style={{
+                  width: `${impactRows.length > 0 ? (impactApplied / impactRows.length) * 100 : 0}%`,
+                }}
               />
             </div>
           </div>
-
-          {/* ── Mode synthétique : Groupe de vente (étape 4) ── */}
-          {displayAsSalesGroup && groupToDisplay && (
-            <div>
-              <DoubleEntrySalesCard
-                entries={groupToDisplay.entries}
-                operationTitre={groupToDisplay.description}
-                onApplyAll={() => {
-                  // Appliquer toutes les 4 écritures d'un coup
-                  groupToDisplay.entries.forEach((entry) => {
-                    onApply(entry.id);
-                    onApplyEntry?.(entry.poste);
-                  });
-                  // Aucune autre entrée à traiter
-                  setActiveEntryId(null);
-                }}
-                index={0}
-                tourActuel={tourActuel}
-              />
-            </div>
-          )}
-
-          {/* ── Mode normal : Débits et Crédits séparés ── */}
-          {!displayAsSalesGroup && (
-            <>
-              {/* ── Section DÉBITS ── */}
-              {debits.length > 0 && (
-                <div className="mb-3">
-                  <div className={`flex items-center gap-2 mb-2 px-1 ${allDebitsApplied ? "opacity-60" : ""}`}>
-                    <span className="inline-block w-3 h-0.5 bg-blue-400 rounded" />
-                    <span className="text-xs font-black text-blue-400 uppercase tracking-wider">
-                      📤 Débits
-                    </span>
-                    <span className="text-[10px] font-normal text-blue-500 normal-case tracking-normal">
-                      — emplois / ce qui augmente
-                    </span>
-                    {allDebitsApplied && (
-                      <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
-                    )}
-                  </div>
-
-                  {debits.map((e, idx) => (
-                    <EntryCard
-                      key={e.id}
-                      entry={e}
-                      operationTitre={activeStep.titre}
-                      isExpanded={activeEntryId === e.id}
-                      onToggle={() =>
-                        setActiveEntryId(activeEntryId === e.id ? null : e.id)
-                      }
-                      onApply={() => handleApply(e.id, e.poste)}
-                      index={idx}
-                      tourActuel={tourActuel}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* ── Section CRÉDITS ── */}
-              {credits.length > 0 && (
-                <div className="mb-2">
-                  <div className={`flex items-center gap-2 mb-2 px-1 ${allCreditsApplied ? "opacity-60" : ""}`}>
-                    <span className="inline-block w-3 h-0.5 bg-orange-400 rounded" />
-                    <span className="text-xs font-black text-orange-400 uppercase tracking-wider">
-                      📥 Crédits
-                    </span>
-                    <span className="text-[10px] font-normal text-orange-500 normal-case tracking-normal">
-                      — ressources / d&apos;où vient le financement
-                    </span>
-                    {allCreditsApplied && (
-                      <span className="ml-auto text-emerald-400 text-xs font-bold">✅</span>
-                    )}
-                  </div>
-
-                  {credits.map((e, idx) => (
-                    <EntryCard
-                      key={e.id}
-                      entry={e}
-                      operationTitre={activeStep.titre}
-                      isExpanded={activeEntryId === e.id}
-                      onToggle={() =>
-                        setActiveEntryId(activeEntryId === e.id ? null : e.id)
-                      }
-                      onApply={() => handleApply(e.id, e.poste)}
-                      index={debits.length + idx}
-                      tourActuel={tourActuel}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* ── Règle de la partie double : Σ Débits = Σ Crédits ── */}
-              {debits.length > 0 && credits.length > 0 && (
-                <div className={`mt-2 rounded-xl px-3 py-2 border flex items-center justify-between text-xs font-bold ${
-                  partieDoubleOk
-                    ? "bg-indigo-950/50 border-indigo-700 text-indigo-300"
-                    : "bg-amber-950/40 border-amber-600 text-amber-300"
-                }`}>
-                  <span>
-                    <span className="text-blue-400">Σ Débits</span>{" "}
-                    <span className="font-black tabular-nums">{sumDebits}</span>
-                  </span>
-                  <span className={`text-base ${partieDoubleOk ? "text-indigo-500" : "text-amber-500"}`}>
-                    {partieDoubleOk ? "=" : "≠"}
-                  </span>
-                  <span>
-                    <span className="text-orange-400">Σ Crédits</span>{" "}
-                    <span className="font-black tabular-nums">{sumCredits}</span>
-                  </span>
-                  <span className="text-[10px] font-normal opacity-70 ml-1">
-                    {partieDoubleOk ? "✓ partie double" : "à vérifier"}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="bg-gray-800 rounded-xl p-3 text-xs text-gray-400 text-center italic border border-gray-700">
-          Aucune écriture à passer pour cette étape.
-        </div>
+        </section>
       )}
 
-      {/* ── Équilibre du bilan en temps réel ── */}
-      <div
-        className={`rounded-xl p-2.5 text-center text-xs font-bold transition-all border ${
-          canContinue
-            ? "bg-emerald-950/40 text-emerald-300 border-emerald-700"
-            : !allApplied
-              ? "bg-gray-800 text-gray-400 border-gray-700"
-              : "bg-red-950/40 text-red-400 border-red-700"
-        }`}
-        role="status"
-      >
-        <div className="text-sm">
-          ACTIF <strong className="tabular-nums">{totalActif}</strong>{" "}
-          <span className={balanced ? "text-emerald-400" : "text-red-400"}>{balanced ? "=" : "≠"}</span>{" "}
-          PASSIF <strong className="tabular-nums">{totalPassif}</strong>
-        </div>
-        <div className="mt-0.5 font-medium">
-          {canContinue
-            ? "✅ Bilan équilibré — vous pouvez continuer !"
-            : !allApplied
-              ? `⏳ Encore ${pendingCount} écriture${pendingCount > 1 ? "s" : ""} à saisir`
-              : "⚠️ Déséquilibre — vérifiez vos écritures"}
-        </div>
-      </div>
+      <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+        {entries.length > 0 ? (
+          <>
+            {displayAsSalesGroup ? (
+              <div className="space-y-4">
+                <SectionHeader
+                  eyebrow="Saisie guidée"
+                  title="Séquence de vente regroupée"
+                  description="Cette vente déclenche plusieurs lignes en même temps. Tu peux la saisir d'un seul geste pour garder la logique de la partie double."
+                />
+                <DoubleEntrySalesCard
+                  entries={entries}
+                  operationTitre={activeStep.titre}
+                  onApplyAll={() => {
+                    entries.forEach((entry) => {
+                      onApply(entry.id);
+                      onApplyEntry?.(entry.poste);
+                    });
+                    setActiveEntryId(null);
+                  }}
+                  index={0}
+                  tourActuel={tourActuel}
+                />
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <SectionHeader
+                  eyebrow="Saisie guidée"
+                  title="Passe les écritures dans l'ordre"
+                  description="Débits d'abord, crédits ensuite. Chaque ligne ouverte explique ce qu'elle représente avant d'être cochée."
+                />
 
-      {/* ── Lien vers le Glossaire ── */}
-      <div className="bg-indigo-950/30 rounded-xl px-3 py-2 border border-indigo-800/40 text-[11px] text-indigo-400 flex items-center gap-2">
-        <span>📖</span>
-        <span>Principe comptable et définitions → onglet <strong className="text-indigo-300">Glossaire</strong> (panneau droit)</span>
-      </div>
+                {debits.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-200">
+                          1. Débits
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                          Les débits représentent ici les emplois ou ce qui augmente.
+                        </p>
+                      </div>
+                      {debits.every((entry) => entry.applied) && (
+                        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">
+                          Terminé
+                        </span>
+                      )}
+                    </div>
 
-      {/* ── Boutons d'action ── */}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={onCancel}
-          className="py-2 px-4 border border-gray-600 rounded-xl text-gray-400 text-xs hover:bg-gray-800 transition-colors font-medium shrink-0"
-          aria-label="Revenir à l'étape"
-        >
-          ← Revenir
-        </button>
-        {canContinue && (
-          <button
-            onClick={onConfirm}
-            className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-md shadow-emerald-900/40 active:scale-95"
-            aria-label="Confirmer et continuer"
-          >
-            ✅ Continuer →
-          </button>
+                    <div className="space-y-2">
+                      {debits.map((entry, index) => (
+                        <EntryCard
+                          key={entry.id}
+                          entry={entry}
+                          operationTitre={activeStep.titre}
+                          isExpanded={activeEntryId === entry.id}
+                          onToggle={() =>
+                            setActiveEntryId(activeEntryId === entry.id ? null : entry.id)
+                          }
+                          onApply={() => handleApply(entry.id, entry.poste)}
+                          index={index}
+                          tourActuel={tourActuel}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {credits.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200">
+                          2. Crédits
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                          Les crédits montrent d&apos;où vient la ressource ou le financement.
+                        </p>
+                      </div>
+                      {credits.every((entry) => entry.applied) && (
+                        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">
+                          Terminé
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      {credits.map((entry, index) => (
+                        <EntryCard
+                          key={entry.id}
+                          entry={entry}
+                          operationTitre={activeStep.titre}
+                          isExpanded={activeEntryId === entry.id}
+                          onToggle={() =>
+                            setActiveEntryId(activeEntryId === entry.id ? null : entry.id)
+                          }
+                          onApply={() => handleApply(entry.id, entry.poste)}
+                          index={debits.length + index}
+                          tourActuel={tourActuel}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5 text-center">
+            <p className="text-sm font-medium text-slate-300">Aucune écriture à passer</p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+              Cette étape n&apos;ajoute pas de saisie comptable particulière.
+            </p>
+          </div>
         )}
-      </div>
+      </section>
+
+      <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+        <SectionHeader
+          eyebrow="Validation"
+          title="Vérifier avant de continuer"
+          description="Pour confirmer l'étape, toutes les écritures doivent être passées et le bilan doit rester équilibré."
+        />
+
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          <StatCard
+            label="Partie double"
+            value={`${sumDebits} ${partieDoubleOk ? "=" : "≠"} ${sumCredits}`}
+            helper={
+              partieDoubleOk
+                ? "Les deux côtés de l'écriture se répondent."
+                : "Il reste un écart entre débits et crédits."
+            }
+            tone={partieDoubleOk ? "emerald" : "amber"}
+          />
+          <StatCard
+            label="Bilan"
+            value={`${totalActif} ${balanced ? "=" : "≠"} ${totalPassif}`}
+            helper={
+              canContinue
+                ? "Tout est prêt : tu peux confirmer."
+                : !allApplied
+                  ? `Encore ${pendingCount} écriture${pendingCount > 1 ? "s" : ""} à saisir.`
+                  : "Le bilan doit être rééquilibré avant de poursuivre."
+            }
+            tone={canContinue ? "emerald" : !allApplied ? "neutral" : "rose"}
+          />
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-500/10 px-3 py-3">
+          <p className="text-sm font-medium text-cyan-100">Besoin d&apos;un repère ?</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-200">
+            Le glossaire reste accessible dans la zone centrale si un terme comptable te bloque.
+          </p>
+        </div>
+
+        <div className="mt-4 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-5 py-3 text-sm font-medium text-slate-100 transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+          >
+            Revenir
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!canContinue}
+            className="inline-flex flex-1 items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+          >
+            Confirmer & continuer
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

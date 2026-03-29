@@ -1,28 +1,48 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { nomCompte } from "./utils";
+
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
+
 import type { EntryLine } from "./EntryCard";
+import { nomCompte } from "./utils";
 
 interface DoubleEntrySalesCardProps {
-  /** Groupe de 4 écritures de vente */
   entries: EntryLine[];
-  /** Titre de l'opération (description du client) */
   operationTitre?: string;
-  /** Callback pour appliquer toutes les 4 écritures */
   onApplyAll: () => void;
-  /** Index pour animation */
   index?: number;
-  /** Tour actuel du jeu */
   tourActuel?: number;
 }
 
-/**
- * Carte synthétique "partie double" pour les ventes (étape 4).
- * Affiche les 4 écritures groupées dans un mini-tableau DÉBIT | CRÉDIT
- * avec un seul bouton pour tout saisir d'un coup.
- */
+function SummaryBox({
+  label,
+  value,
+  helper,
+  tone,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  tone: "neutral" | "emerald" | "amber";
+}) {
+  const toneClass = {
+    neutral: "border-white/10 bg-white/[0.04] text-white",
+    emerald: "border-emerald-400/15 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-400/15 bg-amber-500/10 text-amber-100",
+  }[tone];
+
+  return (
+    <div className={`rounded-2xl border px-3 py-3 ${toneClass}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold tabular-nums">{value}</p>
+      <p className="mt-2 text-[11px] leading-relaxed text-white/70">{helper}</p>
+    </div>
+  );
+}
+
 export function DoubleEntrySalesCard({
   entries,
   operationTitre,
@@ -31,119 +51,164 @@ export function DoubleEntrySalesCard({
   tourActuel = 0,
 }: DoubleEntrySalesCardProps) {
   const shouldAnimate = tourActuel <= 3;
-
-  // Séparer débits et crédits
-  const debits = entries.filter((e) => e.sens === "debit");
-  const credits = entries.filter((e) => e.sens === "credit");
-
-  // Calculer les montants
-  const sumDebits = debits.reduce((s, e) => s + Math.abs(e.delta), 0);
-  const sumCredits = credits.reduce((s, e) => s + Math.abs(e.delta), 0);
+  const debits = entries.filter((entry) => entry.sens === "debit");
+  const credits = entries.filter((entry) => entry.sens === "credit");
+  const sumDebits = debits.reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+  const sumCredits = credits.reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+  const isBalanced = Math.abs(sumDebits - sumCredits) < 0.01;
 
   const Wrapper = shouldAnimate ? motion.div : "div";
   const wrapperProps = shouldAnimate
     ? {
-        initial: { opacity: 0, x: -20 },
+        initial: { opacity: 0, x: -18 },
         animate: { opacity: 1, x: 0 },
-        transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
+        transition: {
+          delay: index * 0.1,
+          duration: 0.45,
+          ease: "easeOut" as const,
+        },
       }
     : {};
 
   return (
     <Wrapper
       {...wrapperProps}
-      className="mb-3 rounded-xl border-2 border-indigo-600 bg-gradient-to-br from-indigo-950/40 to-indigo-900/20 shadow-lg overflow-hidden"
+      className="overflow-hidden rounded-[28px] border border-cyan-400/20 bg-cyan-500/10 shadow-[0_16px_40px_rgba(2,6,23,0.18)]"
       role="region"
       aria-label={`Vente groupée : ${operationTitre || "sans titre"}`}
     >
-      {/* En-tête */}
-      <div className="px-3 py-2 bg-indigo-900/60 border-b border-indigo-700">
-        <div className="text-xs font-black uppercase tracking-wide text-indigo-200 mb-1">
-          🤝 Vente client — Partie double
-        </div>
-        {operationTitre && (
-          <div className="text-sm font-semibold text-indigo-100">
-            {operationTitre}
+      <div className="border-b border-cyan-400/20 bg-slate-950/40 px-4 py-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/12 text-2xl">
+            🤝
           </div>
-        )}
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-100">
+              Vente groupée
+            </p>
+            <h3 className="mt-1 text-base font-semibold text-white text-balance">
+              {operationTitre || "Écritures de vente"}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+              Cette opération déclenche plusieurs lignes à la fois. Tu peux les saisir ensemble pour garder la logique complète de la partie double.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Tableau partie double */}
-      <div className="px-3 py-3">
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          {/* COLONNE GAUCHE : DÉBITS (Emplois) */}
-          <div className="space-y-2">
-            <div className="text-xs font-black uppercase tracking-wider text-blue-300 mb-1.5 flex items-center gap-1">
-              <span>📤</span> Débits
-              <span className="text-[10px] font-normal text-blue-400">(emplois)</span>
-            </div>
-            <div className="space-y-1.5">
-              {debits.map((entry, idx) => {
+      <div className="px-4 py-4">
+        <div className="grid gap-4 xl:grid-cols-2">
+          <section className="rounded-[24px] border border-sky-400/20 bg-sky-500/10 px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-100">
+              Débits
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-300">
+              Ce qui s&apos;enregistre comme emploi ou comme augmentation.
+            </p>
+            <div className="mt-3 space-y-2">
+              {debits.map((entry) => {
                 const bon = isBonPourEntreprise(entry.poste, entry.delta);
                 return (
-                  <div key={idx} className="bg-blue-950/40 rounded-lg px-2.5 py-1.5 border border-blue-700/30">
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-semibold text-blue-100 leading-tight truncate">
+                  <div
+                    key={entry.id}
+                    className="rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">
                           {nomCompte(entry.poste)}
-                        </div>
+                        </p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                          {entry.description}
+                        </p>
                       </div>
-                      <div className={`text-sm font-black tabular-nums shrink-0 ${bon ? "text-emerald-400" : "text-red-400"}`}>
+                      <span
+                        className={`shrink-0 text-lg font-semibold tabular-nums ${
+                          bon ? "text-emerald-300" : "text-rose-300"
+                        }`}
+                      >
                         +{entry.delta}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
 
-          {/* COLONNE DROITE : CRÉDITS (Ressources) */}
-          <div className="space-y-2">
-            <div className="text-xs font-black uppercase tracking-wider text-orange-300 mb-1.5 flex items-center gap-1">
-              <span>📥</span> Crédits
-              <span className="text-[10px] font-normal text-orange-400">(ressources)</span>
-            </div>
-            <div className="space-y-1.5">
-              {credits.map((entry, idx) => {
+          <section className="rounded-[24px] border border-amber-400/20 bg-amber-500/10 px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+              Crédits
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-300">
+              Ce qui enregistre la ressource, le financement ou la contrepartie.
+            </p>
+            <div className="mt-3 space-y-2">
+              {credits.map((entry) => {
                 const bon = isBonPourEntreprise(entry.poste, entry.delta);
                 return (
-                  <div key={idx} className="bg-orange-950/40 rounded-lg px-2.5 py-1.5 border border-orange-700/30">
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-semibold text-orange-100 leading-tight truncate">
+                  <div
+                    key={entry.id}
+                    className="rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">
                           {nomCompte(entry.poste)}
-                        </div>
+                        </p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                          {entry.description}
+                        </p>
                       </div>
-                      <div className={`text-sm font-black tabular-nums shrink-0 ${bon ? "text-emerald-400" : "text-red-400"}`}>
+                      <span
+                        className={`shrink-0 text-lg font-semibold tabular-nums ${
+                          bon ? "text-emerald-300" : "text-rose-300"
+                        }`}
+                      >
                         +{entry.delta}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Équilibre partie double */}
-        <div className="bg-indigo-950/50 rounded-lg px-2.5 py-1.5 border border-indigo-600 flex items-center justify-center gap-2 text-xs font-bold">
-          <span className="text-blue-400">Σ Débits: {sumDebits}</span>
-          <span className={`text-base ${Math.abs(sumDebits - sumCredits) < 0.01 ? "text-emerald-400" : "text-amber-500"}`}>
-            {Math.abs(sumDebits - sumCredits) < 0.01 ? "=" : "≠"}
-          </span>
-          <span className="text-orange-400">Σ Crédits: {sumCredits}</span>
+        <div className="mt-4 grid gap-2 md:grid-cols-3">
+          <SummaryBox
+            label="Somme des débits"
+            value={`${sumDebits}`}
+            helper="Total des emplois enregistrés."
+            tone="neutral"
+          />
+          <SummaryBox
+            label="Somme des crédits"
+            value={`${sumCredits}`}
+            helper="Total des contreparties."
+            tone="neutral"
+          />
+          <SummaryBox
+            label="Équilibre"
+            value={isBalanced ? "Équilibré" : "À vérifier"}
+            helper={
+              isBalanced
+                ? "Les deux côtés se compensent parfaitement."
+                : "Débits et crédits ne se compensent pas encore."
+            }
+            tone={isBalanced ? "emerald" : "amber"}
+          />
         </div>
       </div>
 
-      {/* Bouton unique "Saisir tout" */}
-      <div className="px-3 py-2.5 bg-indigo-950/30 border-t border-indigo-700">
+      <div className="border-t border-cyan-400/20 bg-slate-950/35 px-4 py-4">
         <button
+          type="button"
           onClick={onApplyAll}
-          className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white text-xs font-black py-3 rounded-lg transition-all shadow-sm"
+          className="inline-flex w-full items-center justify-center rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
           aria-label="Saisir toutes les écritures de cette vente"
         >
-          ✅ J&apos;ai compris — Saisir tout →
+          J&apos;ai compris, saisir toute la vente
         </button>
       </div>
     </Wrapper>

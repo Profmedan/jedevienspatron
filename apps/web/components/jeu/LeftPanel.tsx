@@ -1,760 +1,1103 @@
 "use client";
 
 import { useState } from "react";
-import { Joueur, CarteDecision } from "@/lib/game-engine/types";
-import { calculerCapaciteLogistique } from "@/lib/game-engine/engine";
-import CarteView from "@/components/CarteView";
-import { EntryPanel, type ActiveStep } from "./EntryPanel";
-import { nomCompte, getDocument } from "./utils";
-import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
-// ─── GameMap v2 : carte narrative de progression ─────────────────────────────
-// Conçu par les agents : UX Researcher · UX Architect · Visual Storyteller
-//                        Whimsy Injector · Brand Guardian · UI Designer
+import { calculerCapaciteLogistique } from "@/lib/game-engine/engine";
+import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
+import { CarteDecision, Joueur } from "@/lib/game-engine/types";
+
+import { EntryPanel, type ActiveStep } from "./EntryPanel";
+import { getDocument, nomCompte } from "./utils";
 
 const ETAPES_MAP = [
-  { icone: "💼", label: "Charges fixes",        court: "Charges",     vibe: "Coûts obligatoires à payer"    },
-  { icone: "📦", label: "Achats stocks",         court: "Achats",      vibe: "Comptant ou à crédit ?"        },
-  { icone: "⏩", label: "Créances clients",      court: "Créances",    vibe: "L'argent rentrant enfin"        },
-  { icone: "👔", label: "Paiement commerciaux",  court: "Commerciaux", vibe: "On paie ceux qui vendent"      },
-  { icone: "🤝", label: "Ventes & clients",      court: "Ventes",      vibe: "Le cœur du trimestre 🎉"       },
-  { icone: "🔄", label: "Effets récurrents",     court: "Récurrents",  vibe: "Tes décisions se répercutent"  },
-  { icone: "🎯", label: "Carte Décision",        court: "Décision",    vibe: "Ton choix stratégique"         },
-  { icone: "🎲", label: "Événement aléatoire",   court: "Événement",   vibe: "Une surprise t'attend…"        },
-  { icone: "📊", label: "Bilan trimestriel",     court: "Bilan",       vibe: "Le verdict du trimestre"       },
+  { icone: "💼", label: "Charges fixes", court: "Charges", vibe: "Coûts obligatoires à payer" },
+  { icone: "📦", label: "Achats de stocks", court: "Achats", vibe: "Comptant ou à crédit ?" },
+  { icone: "⏩", label: "Créances clients", court: "Créances", vibe: "L'argent rentre enfin" },
+  { icone: "👔", label: "Paiement commerciaux", court: "Commerciaux", vibe: "On paie ceux qui vendent" },
+  { icone: "🤝", label: "Ventes & clients", court: "Ventes", vibe: "Le cœur du trimestre" },
+  { icone: "🔄", label: "Effets récurrents", court: "Récurrents", vibe: "Les décisions se répercutent" },
+  { icone: "🎯", label: "Carte décision", court: "Décision", vibe: "Un choix stratégique" },
+  { icone: "🎲", label: "Événement aléatoire", court: "Événement", vibe: "Une surprise arrive" },
+  { icone: "📊", label: "Bilan trimestriel", court: "Bilan", vibe: "Le verdict du trimestre" },
 ];
 
-// Microcopy contextuel par étape (Whimsy Injector + Visual Storyteller)
 const MICROCOPY: Record<number, string> = {
-  0: "Charges fixes et amortissements — obligatoires, gère-les.",
-  1: "Achète des stocks pour les revendre. Comptant ou à crédit ?",
-  2: "Tes créances avancent — l'argent rentre en banque.",
-  3: "Paie tes commerciaux. Ils t'ont ramené des clients.",
-  4: "Les ventes ! C'est le cœur de ton trimestre. 🎉",
-  5: "Les effets de tes cartes actives se répercutent.",
-  6: "Moment clé — investis, recrutes ou passes ton tour ?",
-  7: "Un événement arrive. Bonne ou mauvaise surprise ?",
-  8: "Trimestre terminé. Regarde ce que tu as construit.",
+  0: "Charges fixes et amortissements : une étape obligatoire qui teste ta discipline.",
+  1: "Achète le bon volume et choisis un mode de financement cohérent avec ta trésorerie.",
+  2: "Les créances avancent : la vente devient enfin du cash.",
+  3: "Tu rémunères ceux qui génèrent l'activité commerciale.",
+  4: "Les clients de ce tour font bouger à la fois le chiffre d'affaires, les stocks et la trésorerie.",
+  5: "Les cartes déjà actives continuent de produire leurs effets.",
+  6: "Moment de choix : recrutement ou investissement, selon ce que l'entreprise peut absorber.",
+  7: "Un aléa peut accélérer ou fragiliser ton trimestre.",
+  8: "Relis ce que tu as construit avant de passer au tour suivant.",
 };
 
-function GameMap({ etapeTour, tourActuel, nbToursMax, subEtape6 = "recrutement" }: {
-  etapeTour: number; tourActuel: number; nbToursMax: number;
-  subEtape6?: "recrutement" | "investissement";
-}) {
-  const [detailOpen, setDetailOpen] = useState(false);
-  const currentEtape  = ETAPES_MAP[etapeTour];
-  const pctTour  = Math.round(((tourActuel - 1) / nbToursMax) * 100);
-  const pctEtape = Math.round((etapeTour / 9) * 100);
-
-  // Brand Guardian : étape 6a = indigo, 6b = amber
-  const isEtape6 = etapeTour === 6;
-  const is6b     = isEtape6 && subEtape6 === "investissement";
-  const accentBg  = is6b ? "bg-amber-600"        : "bg-indigo-600";
-  const accentRing = is6b ? "ring-amber-400/40"   : "ring-indigo-400/40";
-  const accentText = is6b ? "text-amber-400"      : "text-indigo-400";
-  const accentMini = is6b ? "text-amber-300/70"   : "text-indigo-300/70";
-  const accentBar  = is6b
-    ? "bg-gradient-to-r from-amber-600 to-amber-400"
-    : "bg-gradient-to-r from-indigo-600 to-indigo-400";
-  const accentZoneB = is6b
-    ? "bg-amber-950/30 border-amber-800/30"
-    : "bg-indigo-950/25 border-indigo-900/20";
-  const accentPing  = is6b ? "bg-amber-400" : "bg-indigo-400";
-  const accentDot   = is6b ? "bg-amber-300" : "bg-indigo-300";
-  const accentLabel = isEtape6
-    ? (is6b ? "6b — Investissement" : "6a — Recrutement")
-    : `Étape ${etapeTour + 1}/9`;
-
-  return (
-    <div className="bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden shadow-md">
-
-      {/* ━━━ ZONE A — Tour + double barre de progression ━━━ */}
-      <div className="px-3 pt-3 pb-2.5 border-b border-gray-800 space-y-2">
-
-        {/* Ligne tours : pastilles + % global */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">
-              Tour {tourActuel}/{nbToursMax}
-            </span>
-            <div className="flex gap-1">
-              {Array.from({ length: nbToursMax }).map((_, i) => (
-                <div key={i} className={`h-2 w-6 rounded-full transition-all duration-300 ${
-                  i < tourActuel - 1
-                    ? "bg-indigo-600"
-                    : i === tourActuel - 1
-                      ? "bg-indigo-400 ring-1 ring-indigo-300/50"
-                      : "bg-gray-700"
-                }`} />
-              ))}
-            </div>
-          </div>
-          <span className="text-[10px] text-gray-500 font-medium tabular-nums shrink-0">
-            {pctTour}% complété
-          </span>
-        </div>
-
-        {/* Ligne étapes du trimestre */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-              Étapes du trimestre
-            </span>
-            <span className={`text-[10px] font-black tabular-nums ${accentText}`}>
-              {etapeTour + 1}/9
-            </span>
-          </div>
-          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${accentBar}`}
-              style={{ width: `${pctEtape}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ━━━ ZONE B — Étape courante (priorité max, Visual Storyteller) ━━━ */}
-      <div className={`px-3 py-3 border-b flex items-start gap-3 ${accentZoneB}`}>
-
-        {/* Icône principale — UI Designer : 44px, rounded-xl, ring */}
-        <div className={`w-11 h-11 rounded-xl ${accentBg} flex items-center justify-center text-2xl
-          shadow-md shrink-0 ring-2 ${accentRing}`}
-        >
-          {currentEtape?.icone ?? "📋"}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          {/* Badge étape + point pulsé */}
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className={`text-[9px] font-black uppercase tracking-widest ${accentText}`}>
-              {accentLabel}
-            </span>
-            {/* Point "live" — Whimsy Injector */}
-            <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${accentPing} opacity-75`} />
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${accentDot}`} />
-            </span>
-          </div>
-
-          {/* Titre de l'étape */}
-          <div className="text-sm font-bold text-white leading-tight">
-            {currentEtape?.label ?? ""}
-          </div>
-
-          {/* Microcopy narratif — Whimsy Injector + Visual Storyteller */}
-          <div className={`text-[10px] mt-1 leading-snug ${accentMini}`}>
-            {MICROCOPY[etapeTour]}
-          </div>
-        </div>
-
-        {/* Étape suivante — UX Architect : anticiper, réduire l'incertitude */}
-        <div className="text-right shrink-0 min-w-[48px]">
-          {etapeTour < 8 ? (
-            <>
-              <div className="text-[8px] text-gray-600 uppercase tracking-wider mb-0.5">Suivante</div>
-              <div className="text-xl leading-none">{ETAPES_MAP[etapeTour + 1]?.icone}</div>
-              <div className="text-[9px] text-gray-600 mt-0.5">{ETAPES_MAP[etapeTour + 1]?.court}</div>
-            </>
-          ) : (
-            <>
-              <div className="text-[8px] text-gray-600 uppercase tracking-wider mb-0.5">Fin du</div>
-              <div className="text-[9px] text-gray-500">trimestre</div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ━━━ ZONE C — Timeline 9 pastilles (UI Designer : 28px, flex-1) ━━━ */}
-      <div className="px-2.5 pt-2.5 pb-2">
-        <div className="flex items-center gap-0.5">
-          {ETAPES_MAP.map((etape, i) => {
-            const done    = i < etapeTour;
-            const current = i === etapeTour;
-            // Brand Guardian : étape 6 couleur selon sous-étape
-            const step6b  = i === 6 && is6b;
-            return (
-              <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
-                <div className={`
-                  relative w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                  transition-all duration-300
-                  ${done    ? "bg-indigo-700 text-emerald-300" : ""}
-                  ${current && !step6b ? "bg-indigo-500 text-white ring-2 ring-indigo-300 scale-125 shadow-md shadow-indigo-900/60 z-10" : ""}
-                  ${current && step6b  ? "bg-amber-500 text-white ring-2 ring-amber-300 scale-125 shadow-md z-10" : ""}
-                  ${!done && !current  ? "bg-gray-800 text-gray-600 border border-gray-700" : ""}
-                `}>
-                  {done
-                    ? <span className="text-[10px] font-black">✓</span>
-                    : <span className={current ? "text-sm" : "text-xs"}>{etape.icone}</span>
-                  }
-                  {current && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${step6b ? "bg-amber-400" : "bg-indigo-400"}`} />
-                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${step6b ? "bg-amber-300" : "bg-indigo-300"}`} />
-                    </span>
-                  )}
-                </div>
-                <span className={`text-[8px] font-bold tabular-nums ${
-                  done ? "text-indigo-500"
-                    : current ? (step6b ? "text-amber-300" : "text-indigo-300")
-                    : "text-gray-700"
-                }`}>{i + 1}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ━━━ ZONE D/E — Parcours narratif dépliable ━━━ */}
-      <button
-        onClick={() => setDetailOpen(!detailOpen)}
-        aria-expanded={detailOpen}
-        className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold
-          text-gray-600 hover:text-gray-300 uppercase tracking-widest
-          border-t border-gray-800 transition-colors"
-      >
-        <span>🗺️ Parcours du trimestre</span>
-        <span className={`text-sm transition-transform duration-200 ${detailOpen ? "rotate-180" : ""}`}>▼</span>
-      </button>
-
-      {detailOpen && (
-        <div className="border-t border-gray-800 bg-gray-950/40 px-2 pb-2 pt-1 space-y-0.5">
-          {ETAPES_MAP.map((etape, i) => {
-            const done    = i < etapeTour;
-            const current = i === etapeTour;
-            const curIs6b = i === 6 && is6b;
-            return (
-              <div
-                key={i}
-                className={`flex items-start gap-2 px-2.5 py-2 rounded-lg text-xs transition-all ${
-                  current
-                    ? curIs6b
-                      ? "bg-amber-900/30 border border-amber-700/40 text-white"
-                      : "bg-indigo-900/30 border border-indigo-700/40 text-white"
-                    : done
-                      ? "text-gray-600"
-                      : "text-gray-500"
-                }`}
-              >
-                <span className="shrink-0 mt-0.5">
-                  {done ? "✅" : current ? "▶️" : "○"}
-                </span>
-                <span className="shrink-0 text-sm">{etape.icone}</span>
-                <div className="flex-1 min-w-0">
-                  <div className={`leading-tight ${current ? "font-bold" : "font-medium"}`}>
-                    {i + 1}. {etape.label}
-                  </div>
-                  {/* Vibe narratif sur l'étape active — Visual Storyteller */}
-                  {current && (
-                    <div className={`text-[9px] mt-0.5 ${curIs6b ? "text-amber-400/80" : "text-indigo-400/80"}`}>
-                      {etape.vibe}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Alias rétrocompatible — accepte subEtape6 en plus
-const ProgressStrip = GameMap;
-
-// ─── Carte pédagogique persistante ──────────────────────────────────────────
-// isLocked=true  → étape nouvelle : carte développée, boutons verrouillés
-// isLocked=false → étape déjà lue : carte collapsée, boutons actifs
-
-function PedagoCard({ etape, isLocked, onUnlock }: {
-  etape: number;
-  isLocked: boolean;
-  onUnlock?: () => void;
-}) {
-  // Auto-open quand verrou actif, auto-close quand le joueur a dit "J'ai compris"
-  const [open, setOpen] = useState(isLocked);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const modal = MODALES_ETAPES[etape];
-  if (!modal) return null;
-
-  // Si le verrou change (nouvelle étape), rouvrir automatiquement
-  // (React re-mount grâce à la key={etape} dans le parent)
-
-  if (!open) {
-    // ── Collapsed : simple reminder cliquable ──
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-2 px-3 py-2 bg-gray-800/60 rounded-xl border border-gray-700 hover:border-indigo-600/60 hover:bg-gray-800 transition-all text-left"
-      >
-        <span className="text-base shrink-0">{ETAPES_MAP[etape]?.icone ?? "📋"}</span>
-        <span className="flex-1 text-xs text-gray-400 font-medium leading-tight truncate">{modal.titre}</span>
-        <span className="text-[10px] text-indigo-400 shrink-0">▼ Relire</span>
-      </button>
-    );
-  }
-
-  // ── Expanded : contenu complet ──
-  return (
-    <div className={`rounded-2xl border-2 p-3 space-y-2.5 shadow-xl transition-all ${
-      isLocked
-        ? "bg-gradient-to-br from-indigo-950 to-gray-900 border-indigo-400/70 ring-2 ring-indigo-500/20"
-        : "bg-gray-800/80 border-gray-600"
-    }`}>
-      {/* En-tête */}
-      <div className="flex items-start gap-2">
-        <span className="text-2xl shrink-0">{ETAPES_MAP[etape]?.icone ?? "📋"}</span>
-        <div className="flex-1 min-w-0">
-          <span className={`text-[10px] font-bold uppercase tracking-widest block ${isLocked ? "text-indigo-400" : "text-gray-500"}`}>
-            {isLocked ? "Étape " + (etape + 1) + " — À lire avant d'agir" : "Rappel — étape " + (etape + 1)}
-          </span>
-          <h3 className="text-sm font-black text-white leading-tight">{modal.titre}</h3>
-        </div>
-        {/* Bouton collapse si lecture libre */}
-        {!isLocked && (
-          <button onClick={() => setOpen(false)} className="text-gray-600 hover:text-gray-300 text-xs shrink-0">▲</button>
-        )}
-      </div>
-
-      {/* Ce qui se passe */}
-      <div className="bg-black/30 rounded-xl p-2.5">
-        <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isLocked ? "text-indigo-400" : "text-gray-500"}`}>Ce qui se passe</p>
-        <p className="text-xs text-gray-200 leading-relaxed">{modal.ceQuiSePasse}</p>
-      </div>
-
-      {/* Détails repliables */}
-      {detailOpen && (
-        <div className="space-y-2">
-          <div className="bg-black/30 rounded-xl p-2.5">
-            <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isLocked ? "text-indigo-400" : "text-gray-500"}`}>Pourquoi c&apos;est important</p>
-            <p className="text-xs text-gray-200 leading-relaxed">{modal.pourquoi}</p>
-          </div>
-          <div className="bg-black/30 rounded-xl p-2.5">
-            <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isLocked ? "text-indigo-400" : "text-gray-500"}`}>Impact sur les comptes</p>
-            <p className="text-xs text-gray-200 leading-relaxed">{modal.impactComptes}</p>
-          </div>
-          <div className="bg-black/30 rounded-xl p-2.5">
-            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1">💡 Conseil</p>
-            <p className="text-xs text-gray-200 leading-relaxed">{modal.conseil}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Contrôles */}
-      <div className={`space-y-2 pt-1 ${isLocked ? "border-t border-indigo-700/40" : "border-t border-gray-700/40"}`}>
-        <button
-          onClick={() => setDetailOpen(!detailOpen)}
-          className="w-full text-xs py-2 rounded-lg bg-black/20 text-gray-400 hover:text-gray-200 hover:bg-black/40 font-medium transition-colors border border-white/10"
-        >
-          {detailOpen ? "▲ Réduire" : "▼ Pourquoi · Impact · Conseil"}
-        </button>
-
-        {isLocked && onUnlock && (
-          <button
-            onClick={() => { onUnlock(); setOpen(false); }}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-black text-sm transition-all active:scale-95 shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2"
-          >
-            ✅ J&apos;ai compris — je peux agir →
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Indicateurs de santé financière ─────────────────────────────────────────
-
-function SanteFinanciere({ joueur }: { joueur: Joueur }) {
-  const treso = (joueur.bilan.actifs.find(a => a.categorie === "tresorerie")?.valeur ?? 0) - joueur.bilan.decouvert;
-  const capitaux = joueur.bilan.passifs.find(p => p.categorie === "capitaux")?.valeur ?? 0;
-  const cr = joueur.compteResultat;
-  const totalProduits = cr.produits.ventes + cr.produits.productionStockee + cr.produits.produitsFinanciers + cr.produits.revenusExceptionnels;
-  const totalCharges = cr.charges.achats + cr.charges.servicesExterieurs + cr.charges.impotsTaxes + cr.charges.chargesInteret + cr.charges.chargesPersonnel + cr.charges.chargesExceptionnelles + cr.charges.dotationsAmortissements;
-  const resultat = totalProduits - totalCharges;
-
-  const COULEUR = {
-    vert:   { dot: "bg-emerald-400", text: "text-emerald-300", bg: "bg-emerald-900/20 border-emerald-700/40" },
-    orange: { dot: "bg-amber-400",   text: "text-amber-300",   bg: "bg-amber-900/20 border-amber-700/40"   },
-    rouge:  { dot: "bg-red-500",     text: "text-red-300",     bg: "bg-red-900/20 border-red-700/40"       },
-  };
-
-  const indicateurs = [
-    { label: "Tréso",    valeur: treso,    niveau: treso < 0 ? "rouge" : treso < 3 ? "orange" : "vert",    hint: treso < 0 ? "Découvert" : treso < 3 ? "Faible" : "Saine" },
-    { label: "Résultat", valeur: resultat, niveau: resultat < -5 ? "rouge" : resultat < 0 ? "orange" : "vert", hint: resultat < 0 ? "Déficit" : resultat === 0 ? "Équilibre" : "Bénéfice" },
-    { label: "Capitaux", valeur: capitaux, niveau: capitaux <= 0 ? "rouge" : capitaux < 5 ? "orange" : "vert", hint: capitaux <= 0 ? "⚠️ Faillite" : capitaux < 5 ? "Fragilisés" : "Solides" },
-  ] as const;
-
-  return (
-    <div className="bg-gray-800/60 rounded-xl border border-gray-700 p-2.5">
-      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Santé financière</p>
-      <div className="grid grid-cols-3 gap-1">
-        {indicateurs.map(({ label, valeur, niveau, hint }) => {
-          const c = COULEUR[niveau];
-          return (
-            <div key={label} className={`rounded-lg border p-1.5 text-center ${c.bg}`}>
-              <div className="flex items-center justify-center gap-0.5 mb-0.5">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
-                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wide">{label}</span>
-              </div>
-              <div className={`text-sm font-black leading-none ${c.text}`}>{valeur > 0 ? `+${valeur}` : valeur}</div>
-              <div className="text-[8px] text-gray-500 mt-0.5 truncate">{hint}</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 interface JournalEntry {
-  id: number; tour: number; etape: number; joueurNom: string; titre: string;
+  id: number;
+  tour: number;
+  etape: number;
+  joueurNom: string;
+  titre: string;
   entries: Array<{ poste: string; delta: number; applied?: boolean }>;
   principe: string;
 }
 
 interface LeftPanelProps {
-  etapeTour: number; tourActuel: number; nbToursMax: number;
-  joueur: Joueur; activeStep: ActiveStep | null;
+  etapeTour: number;
+  tourActuel: number;
+  nbToursMax: number;
+  joueur: Joueur;
+  activeStep: ActiveStep | null;
   onApplyEntry: (id: string) => void;
-  onConfirmStep: () => void; onCancelStep: () => void;
+  onConfirmStep: () => void;
+  onCancelStep: () => void;
   onApplyEntryEffect?: (poste: string) => void;
-  achatQte: number; setAchatQte: (val: number) => void;
-  achatMode: "tresorerie" | "dettes"; setAchatMode: (val: "tresorerie" | "dettes") => void;
-  onLaunchAchat: () => void; onSkipAchat: () => void;
-  showCartes: boolean; setShowCartes: (val: boolean) => void;
-  selectedDecision: CarteDecision | null; setSelectedDecision: (val: CarteDecision | null) => void;
-  cartesDisponibles: CarteDecision[];
-  onLaunchDecision: () => void; onSkipDecision: () => void;
+  achatQte: number;
+  setAchatQte: (val: number) => void;
+  achatMode: "tresorerie" | "dettes";
+  setAchatMode: (val: "tresorerie" | "dettes") => void;
+  onLaunchAchat: () => void;
+  onSkipAchat: () => void;
+  selectedDecision: CarteDecision | null;
+  onSkipDecision: () => void;
   decisionError: string | null;
   onLaunchStep: () => void;
   journal: JournalEntry[];
   subEtape6?: "recrutement" | "investissement";
-  modeRapide?: boolean; setModeRapide?: (val: boolean) => void;
+  modeRapide?: boolean;
+  setModeRapide?: (val: boolean) => void;
   modalEtapeEnAttente?: number | null;
   onCloseModal?: () => void;
-  /** Callback pour ouvrir le modal de demande d'emprunt bancaire */
   onDemanderEmprunt?: () => void;
 }
 
-// ─── Composant principal ──────────────────────────────────────────────────────
+interface StepHeaderProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+}
+
+function StepHeader({ eyebrow, title, description }: StepHeaderProps) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+        {eyebrow}
+      </p>
+      <h2 className="text-base font-semibold text-white text-balance">{title}</h2>
+      <p className="text-sm leading-relaxed text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+function LockedOverlay({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[24px] bg-slate-950/35 backdrop-blur-[1px]">
+      <div
+        className={`rounded-2xl border border-amber-400/20 bg-slate-950/85 text-center ${
+          compact ? "px-3 py-2" : "px-4 py-3"
+        }`}
+      >
+        <p className="text-xs font-semibold text-amber-100">Lis d&apos;abord la carte pédagogique</p>
+        {!compact && (
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+            Déverrouille l&apos;action avec le bouton “J&apos;ai compris”.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GameMap({
+  etapeTour,
+  tourActuel,
+  nbToursMax,
+  subEtape6 = "recrutement",
+}: {
+  etapeTour: number;
+  tourActuel: number;
+  nbToursMax: number;
+  subEtape6?: "recrutement" | "investissement";
+}) {
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const currentEtape = ETAPES_MAP[etapeTour];
+  const pctTour = Math.round(((tourActuel - 1) / nbToursMax) * 100);
+  const pctEtape = Math.round(((etapeTour + 1) / ETAPES_MAP.length) * 100);
+  const isEtape6 = etapeTour === 6;
+  const is6b = isEtape6 && subEtape6 === "investissement";
+  const accent = is6b
+    ? {
+        solid: "bg-amber-400",
+        soft: "bg-amber-500/10",
+        border: "border-amber-400/20",
+        text: "text-amber-100",
+        subtle: "text-amber-200/70",
+      }
+    : {
+        solid: "bg-cyan-400",
+        soft: "bg-cyan-500/10",
+        border: "border-cyan-400/20",
+        text: "text-cyan-100",
+        subtle: "text-cyan-200/70",
+      };
+
+  return (
+    <section className="overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/80 shadow-[0_20px_60px_rgba(2,6,23,0.26)]">
+      <div className="border-b border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 px-4 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-500">
+              Navigation du trimestre
+            </p>
+            <h3 className="mt-1 text-base font-semibold text-white">
+              {currentEtape?.label ?? "Étape en cours"}
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400 sm:hidden">
+              {currentEtape?.vibe ?? MICROCOPY[etapeTour]}
+            </p>
+            <p className="mt-2 hidden max-w-xs text-sm leading-relaxed text-slate-400 sm:block">
+              {MICROCOPY[etapeTour]}
+            </p>
+          </div>
+          <div
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${accent.border} ${accent.soft} text-2xl`}
+          >
+            {currentEtape?.icone ?? "📋"}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-medium text-slate-400">Tour</span>
+              <span className={`text-sm font-semibold ${accent.text}`}>
+                {tourActuel}/{nbToursMax}
+              </span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className={`h-full rounded-full ${accent.solid}`}
+                style={{ width: `${Math.max(8, pctTour)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">{pctTour}% du parcours global</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-medium text-slate-400">Étape</span>
+              <span className={`text-sm font-semibold ${accent.text}`}>
+                {isEtape6
+                  ? subEtape6 === "investissement"
+                    ? "6b"
+                    : "6a"
+                  : `${etapeTour + 1}/9`}
+              </span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className={`h-full rounded-full ${accent.solid}`}
+                style={{ width: `${pctEtape}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              {etapeTour < 8
+                ? `Ensuite : ${ETAPES_MAP[etapeTour + 1]?.court}`
+                : "Fin du trimestre après cette étape"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-3 py-3">
+        <div className="grid grid-cols-9 gap-1">
+          {ETAPES_MAP.map((etape, index) => {
+            const done = index < etapeTour;
+            const current = index === etapeTour;
+            const isCurrent6b = current && is6b;
+
+            return (
+              <div key={etape.label} className="flex flex-col items-center gap-1 text-center">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-all ${
+                    done
+                      ? "border-transparent bg-emerald-500/15 text-emerald-300"
+                      : current
+                        ? isCurrent6b
+                          ? "border-amber-300/40 bg-amber-500/20 text-white ring-2 ring-amber-300/30"
+                          : "border-cyan-300/40 bg-cyan-500/20 text-white ring-2 ring-cyan-300/30"
+                        : "border-white/10 bg-white/[0.03] text-slate-500"
+                  }`}
+                >
+                  {done ? "✓" : etape.icone}
+                </div>
+                <span
+                  className={`text-[9px] font-medium ${
+                    current ? accent.subtle : done ? "text-slate-500" : "text-slate-600"
+                  }`}
+                >
+                  {index + 1}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setDetailOpen((value) => !value)}
+          aria-expanded={detailOpen}
+          className="mt-3 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+        >
+          <span>Parcours détaillé</span>
+          <span className={`text-base transition-transform ${detailOpen ? "rotate-180" : ""}`}>
+            ▾
+          </span>
+        </button>
+
+        {detailOpen && (
+          <div className="mt-2 space-y-2">
+            {ETAPES_MAP.map((etape, index) => {
+              const done = index < etapeTour;
+              const current = index === etapeTour;
+              const isCurrent6b = current && is6b;
+
+              return (
+                <div
+                  key={`${etape.label}-${index}`}
+                  className={`rounded-2xl border px-3 py-3 ${
+                    current
+                      ? isCurrent6b
+                        ? "border-amber-300/20 bg-amber-500/10"
+                        : "border-cyan-300/20 bg-cyan-500/10"
+                      : done
+                        ? "border-white/8 bg-white/[0.02]"
+                        : "border-white/8 bg-slate-950/40"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl">{etape.icone}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white">
+                        {index + 1}. {etape.label}
+                      </p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                        {current ? etape.vibe : done ? "Étape déjà passée." : "Étape à venir."}
+                      </p>
+                    </div>
+                    <span
+                      className={`ml-auto shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                        current
+                          ? isCurrent6b
+                            ? "bg-amber-500/10 text-amber-100"
+                            : "bg-cyan-500/10 text-cyan-100"
+                          : done
+                            ? "bg-emerald-500/10 text-emerald-100"
+                            : "bg-white/[0.05] text-slate-400"
+                      }`}
+                    >
+                      {current ? "Maintenant" : done ? "Fait" : "Après"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+const ProgressStrip = GameMap;
+
+function PedagoCard({
+  etape,
+  isLocked,
+  onUnlock,
+}: {
+  etape: number;
+  isLocked: boolean;
+  onUnlock?: () => void;
+}) {
+  const [open, setOpen] = useState(isLocked);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const modal = MODALES_ETAPES[etape];
+
+  if (!modal) return null;
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-slate-950/75 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+      >
+        <span className="text-2xl">{ETAPES_MAP[etape]?.icone ?? "📋"}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+            Rappel pédagogique
+          </p>
+          <p className="mt-1 truncate text-sm font-medium text-slate-200">{modal.titre}</p>
+        </div>
+        <span className="text-xs font-medium text-cyan-200">Relire</span>
+      </button>
+    );
+  }
+
+  return (
+    <section
+      className={`rounded-[28px] border px-4 py-4 shadow-[0_20px_60px_rgba(2,6,23,0.22)] ${
+        isLocked
+          ? "border-cyan-300/20 bg-cyan-500/10"
+          : "border-white/10 bg-slate-950/75"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+            isLocked ? "bg-cyan-500/12" : "bg-white/[0.05]"
+          } text-2xl`}
+        >
+          {ETAPES_MAP[etape]?.icone ?? "📋"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={`text-[10px] font-semibold uppercase tracking-[0.24em] ${isLocked ? "text-cyan-100" : "text-slate-500"}`}>
+            {isLocked ? `Étape ${etape + 1} · à lire avant d’agir` : `Rappel · étape ${etape + 1}`}
+          </p>
+          <h3 className="mt-1 text-base font-semibold text-white text-balance">{modal.titre}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-slate-300">{modal.ceQuiSePasse}</p>
+        </div>
+        {!isLocked && (
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+          >
+            Réduire
+          </button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setDetailOpen((value) => !value)}
+        className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-medium text-slate-200 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+      >
+        <span>{detailOpen ? "Masquer les détails" : "Voir pourquoi & comment"}</span>
+      </button>
+
+      {detailOpen && (
+        <div className="mt-4 grid gap-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Pourquoi c&apos;est important
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{modal.pourquoi}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Impact sur les comptes
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{modal.impactComptes}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-400/15 bg-amber-500/10 px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+              Conseil
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-200">{modal.conseil}</p>
+          </div>
+        </div>
+      )}
+
+      {isLocked && onUnlock && (
+        <button
+          type="button"
+          onClick={() => {
+            onUnlock();
+            setOpen(false);
+          }}
+          className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+        >
+          J&apos;ai compris, je peux agir
+        </button>
+      )}
+    </section>
+  );
+}
+
+function SanteFinanciere({ joueur }: { joueur: Joueur }) {
+  const tresorerie = (joueur.bilan.actifs.find((actif) => actif.categorie === "tresorerie")?.valeur ?? 0)
+    - joueur.bilan.decouvert;
+  const capitaux = joueur.bilan.passifs.find((passif) => passif.categorie === "capitaux")?.valeur ?? 0;
+  const cr = joueur.compteResultat;
+  const totalProduits =
+    cr.produits.ventes
+    + cr.produits.productionStockee
+    + cr.produits.produitsFinanciers
+    + cr.produits.revenusExceptionnels;
+  const totalCharges =
+    cr.charges.achats
+    + cr.charges.servicesExterieurs
+    + cr.charges.impotsTaxes
+    + cr.charges.chargesInteret
+    + cr.charges.chargesPersonnel
+    + cr.charges.chargesExceptionnelles
+    + cr.charges.dotationsAmortissements;
+  const resultat = totalProduits - totalCharges;
+
+  const metrics = [
+    {
+      label: "Cash",
+      value: tresorerie,
+      helper: tresorerie < 0 ? "Découvert en cours" : tresorerie < 3 ? "Trésorerie tendue" : "Marge de manœuvre",
+      tone: tresorerie < 0 ? "rose" : tresorerie < 3 ? "amber" : "emerald",
+    },
+    {
+      label: "Résultat",
+      value: resultat,
+      helper: resultat < 0 ? "Le trimestre détruit de la valeur" : resultat === 0 ? "Équilibre" : "Le trimestre crée de la valeur",
+      tone: resultat < 0 ? "rose" : resultat === 0 ? "amber" : "emerald",
+    },
+    {
+      label: "Capitaux",
+      value: capitaux,
+      helper: capitaux <= 0 ? "Risque critique" : capitaux < 5 ? "Structure fragile" : "Base solide",
+      tone: capitaux <= 0 ? "rose" : capitaux < 5 ? "amber" : "sky",
+    },
+  ] as const;
+
+  const toneClasses = {
+    emerald: "border-emerald-400/15 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-400/15 bg-amber-500/10 text-amber-100",
+    rose: "border-rose-400/15 bg-rose-500/10 text-rose-100",
+    sky: "border-sky-400/15 bg-sky-500/10 text-sky-100",
+  } as const;
+
+  return (
+    <section className="rounded-[24px] border border-white/10 bg-slate-950/75 px-4 py-4">
+      <StepHeader
+        eyebrow="Lecture rapide"
+        title="Santé financière"
+        description="Trois repères pour sentir immédiatement si l'entreprise peut encaisser la suite du trimestre."
+      />
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        {metrics.map((metric) => (
+          <div
+            key={metric.label}
+            className={`rounded-2xl border px-3 py-3 ${toneClasses[metric.tone]}`}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/75">
+              {metric.label}
+            </p>
+            <p className="mt-2 text-xl font-semibold tabular-nums">
+              {metric.value > 0 ? `+${metric.value}` : metric.value}
+            </p>
+            <p className="mt-2 text-[11px] leading-relaxed text-white/70">{metric.helper}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PurchaseAction({
+  achatQte,
+  setAchatQte,
+  achatMode,
+  setAchatMode,
+  onLaunchAchat,
+  onSkipAchat,
+}: {
+  achatQte: number;
+  setAchatQte: (value: number) => void;
+  achatMode: "tresorerie" | "dettes";
+  setAchatMode: (value: "tresorerie" | "dettes") => void;
+  onLaunchAchat: () => void;
+  onSkipAchat: () => void;
+}) {
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+      <StepHeader
+        eyebrow="Action"
+        title="Acheter des marchandises"
+        description="Choisis le volume et le mode de paiement, puis lance l'étape pour voir son effet comptable."
+      />
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+          <label
+            htmlFor="achat-quantite"
+            className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500"
+          >
+            Quantité
+          </label>
+          <input
+            id="achat-quantite"
+            name="achat_quantite"
+            type="number"
+            min={0}
+            max={10}
+            inputMode="numeric"
+            autoComplete="off"
+            value={achatQte}
+            onChange={(event) => setAchatQte(Math.max(0, Number.parseInt(event.target.value, 10) || 0))}
+            className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-center text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+          />
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+            Mets `0` si tu veux passer l&apos;étape sans achat.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+            Mode de paiement
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {([
+              {
+                value: "tresorerie",
+                label: "Comptant",
+                description: "La sortie de cash est immédiate.",
+              },
+              {
+                value: "dettes",
+                label: "À crédit",
+                description: "Tu repousses la sortie de cash, mais tu crées une dette fournisseur.",
+              },
+            ] as const).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setAchatMode(option.value)}
+                className={`rounded-2xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 ${
+                  achatMode === option.value
+                    ? "border-cyan-300/20 bg-cyan-500/10 text-white"
+                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:bg-white/[0.05]"
+                }`}
+              >
+                <p className="text-sm font-semibold">{option.label}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                  {option.description}
+                </p>
+              </button>
+            ))}
+          </div>
+          {achatMode === "dettes" && achatQte > 0 && (
+            <div className="mt-3 rounded-2xl border border-amber-400/15 bg-amber-500/10 px-3 py-3">
+              <p className="text-sm font-semibold text-amber-100">Dette fournisseur créée</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-200">
+                Une dette de <strong>{achatQte}</strong> sera à rembourser au trimestre prochain.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onLaunchAchat}
+          disabled={achatQte === 0}
+          className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+        >
+          Exécuter & comprendre
+        </button>
+        <button
+          type="button"
+          onClick={onSkipAchat}
+          className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-5 py-3 text-sm font-medium text-slate-100 transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+        >
+          Passer cette étape
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function DecisionAction({
+  subEtape6,
+  selectedDecision,
+  onSkipDecision,
+  decisionError,
+}: {
+  subEtape6: "recrutement" | "investissement";
+  selectedDecision: CarteDecision | null;
+  onSkipDecision: () => void;
+  decisionError: string | null;
+}) {
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+      <StepHeader
+        eyebrow={subEtape6 === "recrutement" ? "Étape 6a" : "Étape 6b"}
+        title={
+          subEtape6 === "recrutement"
+            ? "Validation du recrutement"
+            : "Validation de l'investissement"
+        }
+        description={
+          selectedDecision
+            ? "La carte est sélectionnée. Exécute-la depuis la zone centrale quand tu es certain de ton choix."
+            : "Choisis une carte dans la zone centrale, ou passe simplement si tu ne veux rien engager ce tour."
+        }
+      />
+
+      {decisionError && (
+        <div className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-500/10 px-3 py-3">
+          <p className="text-sm font-semibold text-rose-100">Action impossible</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-200">{decisionError}</p>
+        </div>
+      )}
+
+      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+          Sélection actuelle
+        </p>
+        <p className="mt-2 text-sm font-semibold text-white">
+          {selectedDecision ? selectedDecision.titre : "Aucune carte choisie"}
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-400">
+          {selectedDecision
+            ? "Lis son effet dans le panneau de gauche puis confirme-la depuis la zone centrale."
+            : "Le choix reste optionnel : tu peux aussi poursuivre sans recruter ou investir."}
+        </p>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onSkipDecision}
+          className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-5 py-3 text-sm font-medium text-slate-100 transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+        >
+          {subEtape6 === "recrutement"
+            ? "Passer au volet investissement"
+            : "Passer sans investir"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function OperationalAction({
+  etapeTour,
+  joueur,
+  onLaunchStep,
+}: {
+  etapeTour: number;
+  joueur: Joueur;
+  onLaunchStep: () => void;
+}) {
+  const isSalesStep = etapeTour === 4;
+  const capacite = isSalesStep ? calculerCapaciteLogistique(joueur) : 0;
+  const nbClients = isSalesStep ? joueur.clientsATrait.length : 0;
+  const clientsPerdus = isSalesStep ? joueur.clientsPerdusCeTour ?? 0 : 0;
+  const capaciteUtilisee = Math.min(nbClients, capacite);
+  const isExceeded = isSalesStep && nbClients > capacite;
+
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+      <StepHeader
+        eyebrow="Action"
+        title="Lancer l'étape courante"
+        description="Le bouton ci-dessous déclenche l'explication et l'exécution de cette séquence comptable."
+      />
+
+      {isSalesStep && (
+        <div className="mt-4 space-y-3">
+          <div
+            className={`rounded-2xl border px-3 py-3 ${
+              isExceeded
+                ? "border-rose-400/15 bg-rose-500/10"
+                : "border-amber-400/15 bg-amber-500/10"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Capacité logistique</p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                  {capaciteUtilisee} client{capaciteUtilisee > 1 ? "s" : ""} traité
+                  {capacite > 1 ? "s" : ""} sur {capacite}.
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                  isExceeded ? "bg-rose-500/10 text-rose-100" : "bg-amber-500/10 text-amber-100"
+                }`}
+              >
+                {isExceeded ? "Sous tension" : "À surveiller"}
+              </span>
+            </div>
+            {clientsPerdus > 0 && (
+              <p className="mt-3 text-sm leading-relaxed text-rose-100">
+                {clientsPerdus} client{clientsPerdus > 1 ? "s" : ""} ne pourra
+                pas être traité{clientsPerdus > 1 ? "s" : ""} ce tour.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {joueur.clientsATrait.length > 0 ? (
+              joueur.clientsATrait.map((client, index) => {
+                const tone =
+                  client.delaiPaiement === 0
+                    ? "border-emerald-400/15 bg-emerald-500/10"
+                    : client.delaiPaiement === 1
+                      ? "border-sky-400/15 bg-sky-500/10"
+                      : "border-violet-400/15 bg-violet-500/10";
+
+                return (
+                  <div key={`${client.titre}-${index}`} className={`rounded-2xl border px-3 py-3 ${tone}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">{client.titre}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                          {client.delaiPaiement === 0
+                            ? "Encaissement immédiat"
+                            : client.delaiPaiement === 1
+                              ? "Encaissement en C+1"
+                              : "Encaissement en C+2"}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+                        +{client.montantVentes} CA
+                      </span>
+                    </div>
+                    <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                      Cette vente fera bouger les ventes, les stocks, le coût des ventes et la trésorerie ou les créances.
+                    </p>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-center">
+                <p className="text-sm font-medium text-slate-300">Aucun client à traiter ce tour</p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                  L&apos;étape peut quand même être exécutée pour faire avancer le trimestre.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onLaunchStep}
+          className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100"
+        >
+          Exécuter & comprendre cette étape
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ModeRapideCard({
+  modeRapide,
+  setModeRapide,
+}: {
+  modeRapide: boolean;
+  setModeRapide: (value: boolean) => void;
+}) {
+  return (
+    <section className="rounded-[24px] border border-white/10 bg-slate-950/75 px-4 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Confort de jeu
+          </p>
+          <h3 className="mt-1 text-sm font-semibold text-white">Mode accéléré</h3>
+          <p className="mt-2 text-sm leading-relaxed text-slate-400">
+            Pré-coche les étapes répétitives à partir du troisième tour pour se concentrer sur la lecture des impacts.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setModeRapide(!modeRapide)}
+          aria-pressed={modeRapide}
+          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 ${
+            modeRapide ? "bg-cyan-400" : "bg-white/15"
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+              modeRapide ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function JournalPanel({
+  journal,
+  showJournal,
+  setShowJournal,
+}: {
+  journal: JournalEntry[];
+  showJournal: boolean;
+  setShowJournal: (value: boolean) => void;
+}) {
+  return (
+    <section className="rounded-[24px] border border-white/10 bg-slate-950/75 px-4 py-4">
+      <button
+        type="button"
+        onClick={() => setShowJournal(!showJournal)}
+        aria-expanded={showJournal}
+        className="flex w-full items-center justify-between gap-3 text-left transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+      >
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Traçabilité
+          </p>
+          <h3 className="mt-1 text-sm font-semibold text-white">
+            Journal comptable ({journal.length})
+          </h3>
+        </div>
+        <span className={`text-lg text-slate-400 transition-transform ${showJournal ? "rotate-180" : ""}`}>
+          ▾
+        </span>
+      </button>
+
+      {showJournal && (
+        <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
+          {journal.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-4 text-center">
+              <p className="text-sm font-medium text-slate-300">Aucune opération pour l&apos;instant</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                Le journal se remplira au fur et à mesure des étapes.
+              </p>
+            </div>
+          ) : (
+            journal.map((entry) => (
+              <article
+                key={entry.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {entry.joueurNom} · Tour {entry.tour} · Étape {entry.etape + 1}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">{entry.titre}</p>
+                  </div>
+                  <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                    {entry.entries.length} lignes
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {entry.entries
+                    .filter((item) => item.applied !== false || entry.entries.length === 0)
+                    .map((item, index) => {
+                      const document = getDocument(item.poste);
+                      return (
+                        <div
+                          key={`${item.poste}-${index}`}
+                          className="flex items-center justify-between gap-3 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-slate-200">{nomCompte(item.poste)}</p>
+                            <span
+                              className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${document.badge}`}
+                            >
+                              {document.detail || document.label}
+                            </span>
+                          </div>
+                          <span className={`shrink-0 font-semibold tabular-nums ${item.delta >= 0 ? "text-sky-300" : "text-amber-300"}`}>
+                            {item.delta > 0 ? "+" : ""}
+                            {item.delta}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+                  Principe : {entry.principe}
+                </p>
+              </article>
+            ))
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LoanButton({
+  onDemanderEmprunt,
+  emphasized = false,
+}: {
+  onDemanderEmprunt: () => void;
+  emphasized?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onDemanderEmprunt}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 ${
+        emphasized
+          ? "border border-amber-400/20 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15"
+          : "border border-white/12 bg-white/[0.05] text-slate-200 hover:bg-white/[0.08]"
+      }`}
+    >
+      <span aria-hidden="true">🏦</span>
+      <span>Demander un prêt bancaire</span>
+    </button>
+  );
+}
 
 export function LeftPanel({
-  etapeTour, tourActuel, nbToursMax, joueur, activeStep,
-  onApplyEntry, onConfirmStep, onCancelStep, onApplyEntryEffect,
-  achatQte, setAchatQte, achatMode, setAchatMode, onLaunchAchat, onSkipAchat,
-  showCartes, setShowCartes, selectedDecision, setSelectedDecision,
-  cartesDisponibles, onLaunchDecision, onSkipDecision, decisionError,
-  onLaunchStep, journal,
-  subEtape6 = "recrutement", modeRapide = false, setModeRapide,
-  modalEtapeEnAttente = null, onCloseModal,
+  etapeTour,
+  tourActuel,
+  nbToursMax,
+  joueur,
+  activeStep,
+  onApplyEntry,
+  onConfirmStep,
+  onCancelStep,
+  onApplyEntryEffect,
+  achatQte,
+  setAchatQte,
+  achatMode,
+  setAchatMode,
+  onLaunchAchat,
+  onSkipAchat,
+  selectedDecision,
+  onSkipDecision,
+  decisionError,
+  onLaunchStep,
+  journal,
+  subEtape6 = "recrutement",
+  modeRapide = false,
+  setModeRapide,
+  modalEtapeEnAttente = null,
+  onCloseModal,
   onDemanderEmprunt,
 }: LeftPanelProps) {
   const [showJournal, setShowJournal] = useState(false);
   const isLocked = modalEtapeEnAttente !== null;
-  // currentEtape = étape dont on affiche la carte (toujours etapeTour, même après dismiss)
-  const cardEtape = etapeTour;
 
-  // ── Branch : formulaire de saisie actif ──────────────────────────────────
   if (activeStep) {
     return (
-      <aside className="w-full flex flex-col gap-3 p-3 bg-gray-900 overflow-y-auto">
-        <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} subEtape6={subEtape6} />
+      <aside className="w-full overflow-y-auto bg-slate-950/60 p-3">
+        <div className="space-y-4">
+          <ProgressStrip
+            etapeTour={etapeTour}
+            tourActuel={tourActuel}
+            nbToursMax={nbToursMax}
+            subEtape6={subEtape6}
+          />
 
-        {/* Carte pédagogique — toujours visible, verrouillée si nouvelle étape */}
-        <PedagoCard
-          key={etapeTour}
-          etape={cardEtape}
-          isLocked={isLocked}
-          onUnlock={onCloseModal}
-        />
+          <PedagoCard
+            key={etapeTour}
+            etape={etapeTour}
+            isLocked={isLocked}
+            onUnlock={onCloseModal}
+          />
 
-        {/* Formulaire : bloqué si carte pas lue */}
-        <div className={`relative transition-opacity duration-200 ${isLocked ? "opacity-40 pointer-events-none select-none" : ""}`}>
-          {isLocked && (
-            <div className="absolute inset-0 z-10 rounded-xl flex items-center justify-center pointer-events-none">
-              <div className="text-center bg-gray-950/80 rounded-xl px-3 py-2 border border-amber-700/40">
-                <p className="text-xs font-bold text-amber-300">🔒 Lis d&apos;abord la carte ci-dessus</p>
+          <div className={`relative transition-opacity ${isLocked ? "pointer-events-none select-none opacity-40" : ""}`}>
+            {isLocked && <LockedOverlay compact />}
+            <div className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
+              <StepHeader
+                eyebrow="Saisie"
+                title={activeStep.titre}
+                description="Complète les écritures ci-dessous. L'impact apparaît au fur et à mesure dans la zone centrale."
+              />
+              <div className="mt-4">
+                <EntryPanel
+                  activeStep={activeStep}
+                  displayJoueur={joueur}
+                  baseJoueur={
+                    activeStep.baseEtat?.joueurs?.[activeStep.baseEtat?.joueurActif] as Joueur | undefined
+                  }
+                  onApply={onApplyEntry}
+                  onApplyEntry={onApplyEntryEffect}
+                  onConfirm={onConfirmStep}
+                  onCancel={onCancelStep}
+                  tourActuel={tourActuel}
+                  etapeTour={etapeTour}
+                />
               </div>
             </div>
-          )}
-          <EntryPanel
-            activeStep={activeStep}
-            displayJoueur={joueur}
-            baseJoueur={
-              activeStep.baseEtat?.joueurs?.[activeStep.baseEtat?.joueurActif] as import("@/lib/game-engine/types").Joueur | undefined
-            }
-            onApply={onApplyEntry}
-            onApplyEntry={onApplyEntryEffect}
-            onConfirm={onConfirmStep}
-            onCancel={onCancelStep}
-            tourActuel={tourActuel}
-            etapeTour={etapeTour}
-          />
-        </div>
+          </div>
 
-        {/* Emprunt bancaire — toujours disponible à l'étape 6b même avec activeStep */}
-        {etapeTour === 6 && subEtape6 === "investissement" && onDemanderEmprunt && (
-          <button
-            onClick={onDemanderEmprunt}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-amber-700 bg-amber-900/20 hover:bg-amber-900/40 hover:border-amber-600 text-amber-400 hover:text-amber-300 transition-all text-xs font-medium"
-          >
-            <span className="text-sm">🏦</span>
-            <span>Demander un prêt bancaire</span>
-          </button>
-        )}
+          {etapeTour === 6 && subEtape6 === "investissement" && onDemanderEmprunt && (
+            <LoanButton onDemanderEmprunt={onDemanderEmprunt} emphasized />
+          )}
+        </div>
       </aside>
     );
   }
 
-  // ── Branch : panneau d'action (pas de saisie en cours) ───────────────────
   return (
-    <aside className="w-full flex flex-col gap-3 p-3 bg-gray-900 overflow-y-auto">
+    <aside className="w-full overflow-y-auto bg-slate-950/60 p-3">
+      <div className="space-y-4">
+        <ProgressStrip
+          etapeTour={etapeTour}
+          tourActuel={tourActuel}
+          nbToursMax={nbToursMax}
+          subEtape6={subEtape6}
+        />
 
-      {/* 1. Progression */}
-      <ProgressStrip etapeTour={etapeTour} tourActuel={tourActuel} nbToursMax={nbToursMax} subEtape6={subEtape6} />
+        {!isLocked && <SanteFinanciere joueur={joueur} />}
 
-      {/* 2. Santé financière */}
-      {!isLocked && <SanteFinanciere joueur={joueur} />}
+        <PedagoCard
+          key={etapeTour}
+          etape={etapeTour}
+          isLocked={isLocked}
+          onUnlock={onCloseModal}
+        />
 
-      {/* 3. Carte pédagogique — toujours présente */}
-      <PedagoCard
-        key={etapeTour}
-        etape={cardEtape}
-        isLocked={isLocked}
-        onUnlock={onCloseModal}
-      />
+        <div className={`relative transition-opacity ${isLocked ? "pointer-events-none select-none opacity-40" : ""}`}>
+          {isLocked && <LockedOverlay />}
 
-      {/* 4. Panneau d'action : bloqué si carte pas lue */}
-      <div className={`relative transition-opacity duration-200 ${isLocked ? "opacity-40 pointer-events-none select-none" : ""}`}>
-        {isLocked && (
-          <div className="absolute inset-0 z-10 rounded-2xl flex items-center justify-center pointer-events-none">
-            <div className="text-center bg-gray-950/80 rounded-xl px-3 py-2 border border-amber-700/40">
-              <p className="text-xs font-bold text-amber-300">🔒 Lis d&apos;abord la carte ci-dessus</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">puis clique sur ✅ J&apos;ai compris</p>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-3 shadow-sm">
-
-          {/* ── ÉTAPE 1 : Achats ── */}
           {etapeTour === 1 && (
-            <div className="space-y-3">
-              <div className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                <span>📦</span><span>Achats de marchandises</span>
-              </div>
-              <button
-                onClick={onLaunchAchat}
-                disabled={achatQte === 0}
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-40 text-white text-sm py-3 rounded-xl font-bold transition-all active:scale-95 shadow-sm"
-              >
-                📝 Exécuter & Comprendre
-              </button>
-              {achatQte === 0 && (
-                <p className="text-[10px] text-gray-500 text-center -mt-1">Choisis une quantité pour activer</p>
-              )}
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500 font-medium">Quantité :</label>
-                <input
-                  type="number" min={0} max={10} value={achatQte}
-                  onChange={(e) => setAchatQte(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-16 border border-indigo-700 rounded-lg px-2 py-1 text-center text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none bg-gray-800 text-gray-100"
-                />
-              </div>
-              <div className="flex gap-2">
-                {(["tresorerie", "dettes"] as const).map((m) => (
-                  <button key={m} onClick={() => setAchatMode(m)}
-                    className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${achatMode === m ? "bg-indigo-600 text-white shadow-sm" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}
-                  >
-                    {m === "tresorerie" ? "💵 Comptant" : "📋 À crédit"}
-                  </button>
-                ))}
-              </div>
-              <button onClick={onSkipAchat} className="w-full border border-gray-500 hover:border-gray-400 bg-transparent hover:bg-gray-700/30 text-gray-300 hover:text-gray-100 text-sm py-2 rounded-xl font-medium transition-colors">
-                ⏭️ Passer cette étape
-              </button>
-              {achatMode === "dettes" && achatQte > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-amber-950/40 border border-amber-700 rounded-xl text-xs text-amber-300">
-                  <span>💳</span>
-                  <span>Dette fournisseur de <strong className="text-white">{achatQte}</strong> à rembourser au trimestre prochain</span>
-                </div>
-              )}
-            </div>
+            <PurchaseAction
+              achatQte={achatQte}
+              setAchatQte={setAchatQte}
+              achatMode={achatMode}
+              setAchatMode={setAchatMode}
+              onLaunchAchat={onLaunchAchat}
+              onSkipAchat={onSkipAchat}
+            />
           )}
 
-          {/* ── ÉTAPE 6 : Cartes Décision ── */}
-          {/* Le bouton "Exécuter" est dans le panneau central (MainContent) au plus proche des cartes */}
           {etapeTour === 6 && (
-            <div className="space-y-2">
-              <div className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                <span>{subEtape6 === "recrutement" ? "🧑‍💼" : "💡"}</span>
-                <span>{subEtape6 === "recrutement" ? "6a — Recrutement (optionnel)" : "6b — Investissement (optionnel)"}</span>
-              </div>
-              {decisionError && (
-                <div className="bg-red-950/40 border border-red-700 text-red-300 rounded-xl px-3 py-2 text-xs font-semibold">❌ {decisionError}</div>
-              )}
-              {selectedDecision && (
-                <div className="px-3 py-2 bg-indigo-950/40 border border-indigo-700/50 rounded-xl text-xs text-indigo-300 flex items-center gap-2">
-                  <span>✅</span>
-                  <span>Sélectionné : <strong className="text-white">{selectedDecision.titre}</strong> — clique sur <strong>Exécuter</strong> ci-contre</span>
-                </div>
-              )}
-              <button onClick={onSkipDecision} className="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 rounded-xl font-medium transition-colors">
-                {subEtape6 === "recrutement" ? "⏭️ Passer le recrutement → Investissement" : "⏭️ Passer (aucun investissement)"}
-              </button>
-            </div>
+            <DecisionAction
+              subEtape6={subEtape6}
+              selectedDecision={selectedDecision}
+              onSkipDecision={onSkipDecision}
+              decisionError={decisionError}
+            />
           )}
 
-          {/* ── AUTRES ÉTAPES ── */}
           {etapeTour !== 1 && etapeTour !== 6 && (
-            <div className="space-y-2">
-              {/* Clients étape 4 */}
-              {etapeTour === 4 && (
-                <div>
-                  {/* Afficher la capacité logistique */}
-                  {(() => {
-                    const capacite = calculerCapaciteLogistique(joueur);
-                    const nbClients = joueur.clientsATrait.length;
-                    const clientsPerdus = joueur.clientsPerdusCeTour ?? 0;
-                    const capaciteUtilisee = Math.min(nbClients, capacite);
-                    const isExceeded = nbClients > capacite;
-                    return (
-                      <div className={`rounded-xl border-2 px-3 py-2.5 mb-2 flex items-center justify-between ${
-                        isExceeded
-                          ? "border-red-700 bg-red-950/30 text-red-300"
-                          : "border-amber-700 bg-amber-950/30 text-amber-300"
-                      }`}>
-                        <div className="space-y-1">
-                          <div className="text-sm font-bold">📦 Capacité logistique</div>
-                          <div className="text-xs font-semibold">{capaciteUtilisee} / {capacite} clients</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xl font-black">{capaciteUtilisee}</div>
-                          <div className="text-[10px] opacity-60 font-medium">à traiter</div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Affichage des clients */}
-                  {joueur.clientsATrait.length > 0 ? (
-                    <>
-                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤝 Clients à traiter ce tour</div>
-                      {joueur.clientsATrait.map((client, i) => {
-                        const colorCls = client.delaiPaiement === 0
-                          ? "border-green-700 bg-green-950/30 text-green-300"
-                          : client.delaiPaiement === 1
-                            ? "border-blue-700 bg-blue-950/30 text-blue-300"
-                            : "border-purple-700 bg-purple-950/30 text-purple-300";
-                        return (
-                          <div key={i} className={`rounded-xl border-2 overflow-hidden mb-1.5 ${colorCls}`}>
-                            <div className="px-2.5 pt-2 pb-1 flex items-center justify-between">
-                              <div className="font-bold text-sm">{client.titre}</div>
-                              <div className="text-right">
-                                <div className="font-bold text-lg">+{client.montantVentes}</div>
-                                <div className="text-[10px] opacity-60 font-medium -mt-0.5">chiffre d&apos;affaires</div>
-                              </div>
-                            </div>
-                            <div className="px-2.5 pb-2 space-y-0.5">
-                              <div className="text-xs font-semibold">
-                                {client.delaiPaiement === 0 ? "💵 Encaissé immédiatement" : client.delaiPaiement === 1 ? "⏰ Encaissé dans 1 trimestre" : "⏰⏰ Encaissé dans 2 trimestres"}
-                              </div>
-                              <div className="text-[10px] opacity-50 mt-0.5 pt-0.5 border-t border-current border-opacity-20">
-                                Génère 4 écritures : Ventes ↑ · Stocks ↓ · Coût des ventes ↑ · Trésorerie ou Créance ↑
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </>
-                  ) : (
-                    <div className="text-xs text-gray-400 italic py-2">Aucun client à traiter ce trimestre</div>
-                  )}
-                </div>
-              )}
-              <button
-                onClick={onLaunchStep}
-                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-3 rounded-xl text-sm shadow-sm transition-all active:scale-95"
-              >
-                📝 Exécuter & Comprendre cette étape
-              </button>
-            </div>
+            <OperationalAction
+              etapeTour={etapeTour}
+              joueur={joueur}
+              onLaunchStep={onLaunchStep}
+            />
           )}
         </div>
-      </div>
 
-      {/* 4b. Emprunt bancaire — discret, après les actions principales */}
-
-      {/* 5. Mode Rapide */}
-      {tourActuel >= 3 && setModeRapide && (
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-3">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <span className="text-base">⚡</span>
-              <span className="text-xs font-bold text-gray-300">Mode Accéléré</span>
-            </div>
-            <button
-              onClick={() => setModeRapide(!modeRapide)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${modeRapide ? "bg-amber-600" : "bg-gray-600"}`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${modeRapide ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
-          </div>
-          <p className="text-[10px] text-gray-500 leading-tight">
-            {modeRapide ? "✅ Actif — Les étapes auto seront pré-cochées. Tu valides d'un clic." : "Mode normal — coche chaque écriture une par une."}
-          </p>
-        </div>
-      )}
-
-      {/* 6. Journal comptable */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 p-3">
-        <button
-          onClick={() => setShowJournal(!showJournal)}
-          className="w-full flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-gray-200 transition-colors"
-        >
-          <span>📖 Journal comptable ({journal.length})</span>
-          <span className="text-lg">{showJournal ? "▲" : "▼"}</span>
-        </button>
-        {showJournal && (
-          <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
-            {journal.length === 0 ? (
-              <p className="text-xs text-gray-300 italic">Aucune opération encore</p>
-            ) : (
-              journal.map((e) => (
-                <div key={e.id} className="bg-gray-900 rounded-lg p-2 border border-gray-700 text-xs space-y-1">
-                  <div className="font-bold text-indigo-400">{e.joueurNom} — Tour {e.tour}, Étape {e.etape + 1}</div>
-                  <div className="text-gray-500 text-xs">{e.titre}</div>
-                  {e.entries.filter((en) => en.applied !== false || e.entries.length === 0).map((en, i) => {
-                    const doc = getDocument(en.poste);
-                    return (
-                      <div key={i} className={`flex items-center justify-between text-xs gap-2 ${en.delta > 0 ? "text-blue-600" : "text-orange-600"}`}>
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="truncate">{nomCompte(en.poste)}</span>
-                          <span className={`shrink-0 text-[9px] font-semibold px-1 py-0.5 rounded-full ${doc.badge}`}>{doc.detail || doc.label}</span>
-                        </div>
-                        <span className="shrink-0 font-bold">{en.delta > 0 ? "+" : ""}{en.delta}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-          </div>
+        {tourActuel >= 3 && setModeRapide && (
+          <ModeRapideCard modeRapide={modeRapide} setModeRapide={setModeRapide} />
         )}
-      </div>
 
-      {/* 7. Emprunt bancaire — discret, en bas du panneau */}
-      {onDemanderEmprunt && (
-        <button
-          onClick={onDemanderEmprunt}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-gray-700 bg-gray-800/50 hover:bg-gray-800 hover:border-gray-600 text-gray-500 hover:text-gray-300 transition-all text-xs font-medium"
-        >
-          <span className="text-sm">🏦</span>
-          <span>Demander un prêt bancaire</span>
-        </button>
-      )}
+        <JournalPanel
+          journal={journal}
+          showJournal={showJournal}
+          setShowJournal={setShowJournal}
+        />
+
+        {onDemanderEmprunt && <LoanButton onDemanderEmprunt={onDemanderEmprunt} />}
+      </div>
     </aside>
   );
 }

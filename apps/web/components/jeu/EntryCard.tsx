@@ -1,8 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { nomCompte, getDocument, getEffetTexte, getSensExplication, getPedagogieContexte, type SensEcriture } from "./utils";
+
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
+
+import {
+  getDocument,
+  getEffetTexte,
+  getPedagogieContexte,
+  nomCompte,
+  type SensEcriture,
+} from "./utils";
 
 export interface EntryLine {
   id: string;
@@ -16,323 +24,255 @@ export interface EntryLine {
 interface EntryCardProps {
   entry: EntryLine;
   onApply: () => void;
-  /** Titre de l'opération courante (ex : "Charges fixes & Amortissements") */
   operationTitre?: string;
-  /** Accordion : fenêtre actuellement ouverte */
   isExpanded: boolean;
-  /** Callback pour ouvrir/fermer manuellement */
   onToggle: () => void;
-  /** Index dans la liste pour stagger animations */
   index?: number;
-  /** Tour actuel du jeu — animations seulement si <= 3 */
   tourActuel?: number;
 }
 
-/**
- * Carte de saisie d'une écriture comptable — 3 états visuels :
- *
- * 1. APPLIED   : bandeau compact vert célébratoire (non cliquable)
- * 2. COLLAPSED : header compact avec chevron — clic pour ouvrir
- * 3. EXPANDED  : carte complète avec bouton Saisir
- *
- * Design pédagogique :
- *  - Description engine affichée en 1er (le "pourquoi" concret)
- *  - Contexte comptable (ce que ça signifie pour le bilan/CR)
- *  - Header coloré (bleu=débit / orange=crédit)
- *  - Montant coloré selon l'impact financier réel
- *  - Effet mémoire : ce que ça fait concrètement
- */
-export function EntryCard({ entry, onApply, operationTitre, isExpanded, onToggle, index = 0, tourActuel = 0 }: EntryCardProps) {
+interface AccentTheme {
+  surface: string;
+  surfaceSoft: string;
+  border: string;
+  badge: string;
+  badgeSoft: string;
+  title: string;
+  icon: string;
+  iconLabel: string;
+  ring: string;
+}
+
+function formatSigned(delta: number): string {
+  return delta > 0 ? `+${delta}` : `${delta}`;
+}
+
+function InfoBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+        {title}
+      </p>
+      <div className="mt-2 text-sm leading-relaxed text-slate-300">{children}</div>
+    </div>
+  );
+}
+
+function getAccentTheme(isDebit: boolean): AccentTheme {
+  return isDebit
+    ? {
+        surface: "bg-sky-500/10",
+        surfaceSoft: "bg-sky-500/[0.08]",
+        border: "border-sky-400/20",
+        badge: "text-sky-100",
+        badgeSoft: "bg-sky-500/12",
+        title: "text-sky-100",
+        icon: "📤",
+        iconLabel: "Débit",
+        ring: "focus-visible:ring-sky-200",
+      }
+    : {
+        surface: "bg-amber-500/10",
+        surfaceSoft: "bg-amber-500/[0.08]",
+        border: "border-amber-400/20",
+        badge: "text-amber-100",
+        badgeSoft: "bg-amber-500/12",
+        title: "text-amber-100",
+        icon: "📥",
+        iconLabel: "Crédit",
+        ring: "focus-visible:ring-amber-200",
+      };
+}
+
+export function EntryCard({
+  entry,
+  onApply,
+  operationTitre,
+  isExpanded,
+  onToggle,
+  index = 0,
+  tourActuel = 0,
+}: EntryCardProps) {
   const isDebit = entry.sens === "debit";
-  const bon     = isBonPourEntreprise(entry.poste, entry.delta);
-  const doc     = getDocument(entry.poste);
-  const effetTexte      = getEffetTexte(entry.poste, entry.delta);
-  const sensExplication = getSensExplication(entry.sens);
-  const shouldAnimate = tourActuel <= 3;
-
-  // ── 1. État APPLIED ─────────────────────────────────────────────────────
-  if (entry.applied) {
-    // 1a. Déplié → mode lecture seule (revue pédagogique, sans bouton Saisir)
-    if (isExpanded) {
-      const Wrapper = shouldAnimate ? motion.div : "div";
-      const wrapperProps = shouldAnimate ? {
-        initial: { opacity: 0, x: -20 },
-        animate: { opacity: 1, x: 0, scale: 1.02 },
-        transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
-      } : {};
-
-      return (
-        <Wrapper
-          {...wrapperProps}
-          className="mb-1.5 rounded-xl border-2 border-emerald-700 bg-emerald-950/20 shadow-sm transition-all duration-200"
-          role="region"
-          aria-label={`Écriture déjà saisie (lecture) : ${nomCompte(entry.poste)}`}
-        >
-          {/* En-tête cliquable pour replier */}
-          <button
-            onClick={onToggle}
-            className="w-full rounded-t-[10px] px-3 py-2 flex items-center justify-between gap-2 bg-emerald-900/40"
-            aria-expanded={true}
-            aria-label={`Replier la revue : ${nomCompte(entry.poste)}`}
-          >
-            <span className="text-xs font-black uppercase tracking-wide text-emerald-300">
-              ✅ Déjà saisi — lecture seule
-            </span>
-            <span className="text-xs text-emerald-500 rotate-180 inline-block">▼</span>
-          </button>
-
-          {/* Corps en lecture seule */}
-          <div className="flex items-start p-2.5 gap-2">
-            <div className="flex-1 min-w-0">
-
-              {/* Nom du compte */}
-              <div className="font-bold text-sm text-gray-100 mb-1.5 leading-tight">
-                {nomCompte(entry.poste)}
-              </div>
-
-              {/* Badges */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${doc.badge}`}>
-                  {doc.label === "Bilan" ? "📋" : "📈"} {doc.label} · {doc.detail}
-                </span>
-                {(doc.detail === "Charge" || doc.detail === "Produit") && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                    doc.detail === "Charge"
-                      ? "bg-red-900/50 text-red-300"
-                      : "bg-emerald-900/50 text-emerald-300"
-                  }`}>
-                    {doc.detail === "Charge" ? "↓ résultat net" : "↑ résultat net"}
-                  </span>
-                )}
-              </div>
-
-              {/* Montant */}
-              <div className={`text-2xl font-black tabular-nums mb-1.5 ${bon ? "text-emerald-400" : "text-red-400"}`}>
-                {entry.delta > 0 ? "+" : ""}{entry.delta}
-              </div>
-
-              {/* Effet mémoire */}
-              {effetTexte && (
-                <div className={`text-[11px] font-semibold mb-1.5 leading-tight rounded-lg px-2 py-1 ${
-                  bon ? "bg-emerald-900/40 text-emerald-300" : "bg-red-950/30 text-red-400"
-                }`}>
-                  {effetTexte}
-                </div>
-              )}
-
-              {/* Description technique */}
-              <div className="text-xs text-gray-500 leading-snug italic">
-                {entry.description}
-              </div>
-            </div>
-
-            {/* Badge Déjà saisi (remplace le bouton Saisir) */}
-            <div className="shrink-0 mt-1">
-              <span className="inline-block bg-emerald-900/50 text-emerald-400 text-xs font-bold px-2.5 py-2 rounded-lg border border-emerald-700">
-                ✅ Saisi
-              </span>
-            </div>
-          </div>
-        </Wrapper>
-      );
-    }
-
-    // 1b. Replié → bandeau compact cliquable pour rouvrir
-    const CollapsedWrapper = shouldAnimate ? motion.button : "button";
-    const collapsedProps = shouldAnimate ? {
-      initial: { opacity: 0, x: -20 },
-      animate: { opacity: 1, x: 0, scale: entry.applied ? 1.02 : 1 },
-      transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
-    } : {};
-
-    return (
-      <CollapsedWrapper
-        {...collapsedProps}
-        onClick={onToggle}
-        className="w-full mb-1.5 rounded-xl border-2 border-emerald-700 bg-emerald-950/30 flex items-center gap-2.5 px-3 py-2 hover:bg-emerald-950/50 hover:border-emerald-500 transition-all duration-200 text-left"
-        aria-label={`Revoir la saisie : ${nomCompte(entry.poste)}`}
-      >
-        <span className="text-lg shrink-0">✅</span>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-emerald-300 text-sm leading-tight truncate">
-            {nomCompte(entry.poste)}
-          </div>
-          {effetTexte && (
-            <div className="text-[10px] text-emerald-400 leading-tight mt-0.5">{effetTexte}</div>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className={`text-sm font-black tabular-nums ${bon ? "text-emerald-400" : "text-red-400"}`}>
-            {entry.delta > 0 ? "+" : ""}{entry.delta}
-          </span>
-          <span className="text-[10px] text-emerald-600 opacity-70">▼</span>
-        </div>
-      </CollapsedWrapper>
-    );
-  }
-
-  // ── 2. État COLLAPSED — fenêtre fermée ──────────────────────────────────
-  if (!isExpanded) {
-    const CollapsedNotAppliedWrapper = shouldAnimate ? motion.button : "button";
-    const collapsedNotAppliedProps = shouldAnimate ? {
-      initial: { opacity: 0, x: -20 },
-      animate: { opacity: 1, x: 0 },
-      transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
-    } : {};
-
-    return (
-      <CollapsedNotAppliedWrapper
-        {...collapsedNotAppliedProps}
-        onClick={onToggle}
-        className={`w-full mb-1.5 rounded-xl border-2 px-3 py-2.5 flex items-center justify-between gap-2
-          transition-all duration-200 hover:shadow-md text-left
-          ${isDebit
-            ? "bg-blue-950/20 border-blue-800/40 hover:border-blue-500 hover:bg-blue-950/30"
-            : "bg-orange-950/20 border-orange-800/40 hover:border-orange-500 hover:bg-orange-950/30"
-          }`}
-        aria-expanded={false}
-        aria-label={`Ouvrir la saisie : ${nomCompte(entry.poste)}`}
-      >
-        {/* Gauche : icône sens + nom */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-base shrink-0 ${isDebit ? "text-blue-400" : "text-orange-400"}`}>
-            {isDebit ? "📤" : "📥"}
-          </span>
-          <div className="min-w-0">
-            <div className="font-semibold text-sm text-gray-200 truncate leading-tight">
-              {nomCompte(entry.poste)}
-            </div>
-            <div className={`text-[10px] font-medium ${isDebit ? "text-blue-400" : "text-orange-400"}`}>
-              {isDebit ? "Débit — Emploi" : "Crédit — Ressource"}
-            </div>
-          </div>
-        </div>
-        {/* Droite : montant + chevron */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={`font-black tabular-nums text-sm ${bon ? "text-emerald-400" : "text-red-400"}`}>
-            {entry.delta > 0 ? "+" : ""}{entry.delta}
-          </span>
-          <span className={`text-xs ${isDebit ? "text-blue-500" : "text-orange-500"}`}>▼</span>
-        </div>
-      </CollapsedNotAppliedWrapper>
-    );
-  }
-
-  // ── 3. État EXPANDED — fenêtre ouverte avec Saisir ──────────────────────
-  // Contexte pédagogique générique (poste + sens)
+  const doc = getDocument(entry.poste);
+  const bon = isBonPourEntreprise(entry.poste, entry.delta);
+  const effetTexte = getEffetTexte(entry.poste, entry.delta);
   const contexte = getPedagogieContexte(entry.poste, entry.delta, isDebit);
+  const shouldAnimate = tourActuel <= 3;
+  const theme = getAccentTheme(isDebit);
 
-  const ExpandedWrapper = shouldAnimate ? motion.div : "div";
-  const expandedProps = shouldAnimate ? {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-    transition: { delay: index * 0.15, duration: 1.5, type: "spring" as const, damping: 15 },
-  } : {};
+  const MotionButton = shouldAnimate ? motion.button : "button";
+  const MotionDiv = shouldAnimate ? motion.div : "div";
+  const entryName = nomCompte(entry.poste);
+  const statusTone = bon ? "text-emerald-300" : "text-rose-300";
+
+  const initialProps = shouldAnimate
+    ? {
+        initial: { opacity: 0, x: -18 },
+        animate: { opacity: 1, x: 0 },
+        transition: {
+          delay: index * 0.1,
+          duration: 0.45,
+          ease: "easeOut" as const,
+        },
+      }
+    : {};
+
+  if (entry.applied && !isExpanded) {
+    return (
+      <MotionButton
+        {...initialProps}
+        type="button"
+        onClick={onToggle}
+        className="mb-2 flex w-full items-center gap-3 rounded-[24px] border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-left transition-colors hover:bg-emerald-500/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+        aria-label={`Revoir l'écriture saisie : ${entryName}`}
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/12 text-lg">
+          ✅
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold text-white">{entryName}</p>
+            <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">
+              Saisi
+            </span>
+          </div>
+          <p className="mt-1 truncate text-[11px] leading-relaxed text-slate-400">
+            {effetTexte ?? "Tu peux rouvrir cette ligne pour relire son explication."}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-lg font-semibold tabular-nums ${statusTone}`}>{formatSigned(entry.delta)}</p>
+          <p className="text-[11px] text-slate-500">Relire</p>
+        </div>
+      </MotionButton>
+    );
+  }
+
+  if (!entry.applied && !isExpanded) {
+    return (
+      <MotionButton
+        {...initialProps}
+        type="button"
+        onClick={onToggle}
+        className={`mb-2 flex w-full items-center gap-3 rounded-[24px] border px-4 py-3 text-left transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 ${theme.border} ${theme.surfaceSoft} ${theme.ring}`}
+        aria-expanded={false}
+        aria-label={`Ouvrir la saisie : ${entryName}`}
+      >
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${theme.badgeSoft} text-lg`}>
+          {theme.icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold text-white">{entryName}</p>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${theme.badgeSoft} ${theme.badge}`}>
+              {theme.iconLabel}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-[11px] leading-relaxed text-slate-400">
+            Ouvre la ligne pour comprendre puis la saisir.
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-lg font-semibold tabular-nums ${statusTone}`}>{formatSigned(entry.delta)}</p>
+          <p className="text-[11px] text-slate-500">Ouvrir</p>
+        </div>
+      </MotionButton>
+    );
+  }
 
   return (
-    <ExpandedWrapper
-      {...expandedProps}
-      className={`mb-1.5 rounded-xl border-2 shadow-md transition-all duration-200
-        ${isDebit
-          ? "bg-blue-950/30 border-blue-600 shadow-blue-900/30"
-          : "bg-orange-950/30 border-orange-600 shadow-orange-900/30"
-        }`}
+    <MotionDiv
+      {...initialProps}
+      className={`mb-2 rounded-[28px] border px-4 py-4 shadow-[0_16px_40px_rgba(2,6,23,0.18)] ${entry.applied ? "border-emerald-400/20 bg-emerald-500/10" : `${theme.border} ${theme.surface}`}`}
       role="region"
-      aria-label={`Écriture ouverte : ${nomCompte(entry.poste)}`}
+      aria-label={`${entry.applied ? "Écriture déjà saisie" : "Écriture à saisir"} : ${entryName}`}
     >
-      {/* ── En-tête cliquable (permet de replier) ── */}
-      <button
-        onClick={onToggle}
-        className={`w-full rounded-t-[10px] px-3 py-2 flex items-center justify-between gap-2
-          ${isDebit ? "bg-blue-900/50" : "bg-orange-900/50"}`}
-        aria-expanded={true}
-        aria-label={`Replier : ${nomCompte(entry.poste)}`}
-      >
-        <span className={`text-xs font-black uppercase tracking-wide ${isDebit ? "text-blue-200" : "text-orange-200"}`}>
-          {isDebit ? "📤 DÉBIT — Emploi" : "📥 CRÉDIT — Ressource"}
-        </span>
-        <span className={`text-xs rotate-180 inline-block ${isDebit ? "text-blue-400" : "text-orange-400"}`}>▼</span>
-      </button>
-
-      {/* ── BLOC 1 : Pourquoi cette écriture ? (raison concrète de l'engine) ── */}
-      <div className="px-3 pt-2.5 pb-0">
-        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-          Pourquoi ?
-        </div>
-        <div className={`text-[13px] font-bold leading-snug ${isDebit ? "text-blue-100" : "text-orange-100"}`}>
-          {entry.description}
-        </div>
-        {operationTitre && (
-          <div className="text-[10px] text-gray-500 mt-0.5">
-            Opération : {operationTitre}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+              entry.applied ? "bg-emerald-500/12" : theme.badgeSoft
+            } text-2xl`}
+          >
+            {entry.applied ? "✅" : theme.icon}
           </div>
-        )}
-      </div>
-
-      {/* ── BLOC 2 : Ce que ça signifie concrètement ── */}
-      {contexte && (
-        <div className="px-3 pt-2 pb-0">
-          <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-            Ce que ça fait
-          </div>
-          <div className="text-[11px] text-gray-300 leading-snug">
-            {contexte}
-          </div>
-        </div>
-      )}
-
-      {/* ── BLOC 3 : Écriture comptable ── */}
-      <div className="px-3 pt-2.5 pb-0">
-        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-          Écriture dans le {doc.label === "Bilan" ? "Bilan" : "Compte de résultat"}
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className={`font-bold text-sm leading-tight ${isDebit ? "text-blue-200" : "text-orange-200"}`}>
-              {nomCompte(entry.poste)}
-            </div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${doc.badge}`}>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                  entry.applied
+                    ? "bg-emerald-500/12 text-emerald-100"
+                    : `${theme.badgeSoft} ${theme.badge}`
+                }`}
+              >
+                {entry.applied ? "Saisi" : theme.iconLabel}
+              </span>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${doc.badge}`}>
                 {doc.label} · {doc.detail}
               </span>
-              {(doc.detail === "Charge" || doc.detail === "Produit") && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  doc.detail === "Charge"
-                    ? "bg-red-900/50 text-red-300"
-                    : "bg-emerald-900/50 text-emerald-300"
-                }`}>
-                  {doc.detail === "Charge" ? "↓ résultat" : "↑ résultat"}
-                </span>
-              )}
             </div>
+            <h4 className="mt-2 text-base font-semibold text-white text-balance">{entryName}</h4>
+            {operationTitre && (
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Opération : {operationTitre}
+              </p>
+            )}
           </div>
-          <div className={`text-2xl font-black tabular-nums shrink-0 ${bon ? "text-emerald-400" : "text-red-400"}`}>
-            {entry.delta > 0 ? "+" : ""}{entry.delta}
-          </div>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className={`text-2xl font-semibold tabular-nums ${statusTone}`}>
+            {formatSigned(entry.delta)}
+          </p>
+          <button
+            type="button"
+            onClick={onToggle}
+            className={`mt-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 ${theme.ring}`}
+          >
+            Réduire
+          </button>
         </div>
       </div>
 
-      {/* ── BLOC 4 : Impact mémoire ── */}
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <InfoBlock title="Pourquoi cette ligne existe">{entry.description}</InfoBlock>
+        <InfoBlock title="Ce que ça provoque">
+          {contexte ?? "Cette ligne enregistre l'impact comptable immédiat de l'opération."}
+        </InfoBlock>
+      </div>
+
       {effetTexte && (
-        <div className="px-3 pt-2 pb-0">
-          <div className={`text-[11px] font-semibold leading-tight rounded-lg px-2 py-1.5 ${
-            bon ? "bg-emerald-900/40 text-emerald-300" : "bg-red-950/30 text-red-400"
-          }`}>
-            {effetTexte}
-          </div>
+        <div
+          className={`mt-4 rounded-2xl border px-3 py-3 ${
+            bon
+              ? "border-emerald-400/15 bg-emerald-500/10"
+              : "border-rose-400/15 bg-rose-500/10"
+          }`}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70">
+            Repère mémoire
+          </p>
+          <p className={`mt-2 text-sm font-medium ${statusTone}`}>{effetTexte}</p>
         </div>
       )}
 
-      {/* ── Bouton Saisir — pleine largeur ── */}
-      <div className="p-2.5">
+      {!entry.applied && (
         <button
+          type="button"
           onClick={onApply}
-          className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white text-xs font-black py-2.5 rounded-lg transition-all shadow-sm"
-          aria-label={`Saisir l'écriture : ${nomCompte(entry.poste)}`}
+          className={`mt-4 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 ${theme.ring} ${isDebit ? "bg-sky-300" : "bg-amber-300"}`}
+          aria-label={`Saisir l'écriture : ${entryName}`}
         >
-          ✅ J&apos;ai compris — Saisir →
+          J&apos;ai compris, saisir cette ligne
         </button>
-      </div>
-    </ExpandedWrapper>
+      )}
+    </MotionDiv>
   );
 }

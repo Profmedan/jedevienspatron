@@ -946,15 +946,15 @@ export default function JeuPage() {
       />
 
       {/* ─── ALERTE DÉCOUVERT BANCAIRE ─── */}
-      <div className="px-6 py-2">
+      <div className="px-4 py-2 sm:px-6">
         <AlerteDecouvert decouvert={displayJoueur.bilan.decouvert} />
       </div>
 
-      {/* ─── CORPS 3 COLONNES : Décisions (30%) | Entreprise (45%) | Indicateurs (25%) ─── */}
-      <div className="grid grid-cols-[30%_45%_25%] flex-1 overflow-hidden">
+      {/* ─── CORPS RESPONSIVE : mobile empilé | laptop 2 colonnes | desktop 3 colonnes ─── */}
+      <div className="grid flex-1 gap-4 px-4 pb-4 sm:px-6 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] xl:min-h-0 xl:grid-cols-[minmax(300px,30%)_minmax(420px,45%)_minmax(280px,25%)] xl:overflow-hidden">
 
         {/* ── COLONNE GAUCHE : Décisions & Actions + CenterPanel ── */}
-        <div className="flex flex-col overflow-y-auto">
+        <div className="order-1 min-w-0 xl:min-h-0">
           <LeftPanel
             etapeTour={etat.etapeTour}
             tourActuel={etat.tourActuel}
@@ -986,7 +986,7 @@ export default function JeuPage() {
         </div>
 
         {/* ── COLONNE CENTRALE : Contenu Principal ── */}
-        <div className="flex flex-col overflow-y-auto">
+        <div className="order-2 min-w-0 xl:min-h-0">
           {/* Contenu existant : sélection cartes, onglets, écritures */}
           <MainContent
             joueur={joueur}
@@ -1010,7 +1010,7 @@ export default function JeuPage() {
         </div>
 
         {/* ── COLONNE DROITE : Indicateurs & SIG + CenterPanel ── */}
-        <div className="flex flex-col overflow-y-auto">
+        <div className="order-3 flex min-w-0 flex-col gap-4 lg:col-span-2 xl:col-span-1 xl:min-h-0 xl:overflow-y-auto">
           <RightPanel
             joueur={displayJoueur}
             ca={sig.ca}

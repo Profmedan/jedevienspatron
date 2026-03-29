@@ -1,24 +1,28 @@
 "use client";
 
-// [IMPACT-B] imports — retirer si on revient en arrière
-import { useEffect } from "react";
-import { Joueur, CarteDecision } from "@/lib/game-engine/types";
+import { useEffect, type ReactNode } from "react";
+
+import {
+  CarteDecision,
+  Joueur,
+  type DelaiPaiement,
+} from "@/lib/game-engine/types";
 import { getTresorerie } from "@/lib/game-engine/calculators";
-import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
 import { GlossairePanel } from "@/components/GlossairePanel";
 import CarteView from "@/components/CarteView";
-import { getPosteValue, getDocumentType, nomCompte } from "./utils";
 
-// [IMPACT-B] "impact" ajouté au type — retirer si on revient en arrière
+import { type ActiveStep } from "./EntryPanel";
+import { getDocumentType, getPosteValue, nomCompte } from "./utils";
+
 type TabType = "bilan" | "cr" | "indicateurs" | "glossaire" | "impact";
 
 interface MainContentProps {
   joueur: Joueur;
   displayJoueur: Joueur;
-  activeStep: any; // ActiveStep | null
+  activeStep: ActiveStep | null;
   highlightedPoste: string | null;
   etapeTour: number;
   activeTab: TabType;
@@ -27,88 +31,327 @@ interface MainContentProps {
   selectedDecision: CarteDecision | null;
   setSelectedDecision: (val: CarteDecision | null) => void;
   cartesDisponibles: CarteDecision[];
-  /** Cartes commerciales disponibles au recrutement (toujours dispo, indépendant de la pioche) */
   cartesRecrutement?: CarteDecision[];
-  /** Modifications récentes (avant/après) pour affichage dans les panneaux */
-  recentModifications?: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
-  /** Sous-étape de l'étape 6 : "recrutement" (6a) ou "investissement" (6b) */
+  recentModifications?: Array<{
+    poste: string;
+    ancienneValeur: number;
+    nouvelleValeur: number;
+  }>;
   subEtape6?: "recrutement" | "investissement";
-  /** Mode Rapide : étapes auto pré-cochées à partir du T3 */
   modeRapide?: boolean;
-  /** Passer l'étape 6 courante (6a → 6b, ou 6b → 7) */
   onSkipDecision?: () => void;
-  /** Exécuter la carte Décision sélectionnée */
   onLaunchDecision?: () => void;
 }
 
-const TABS_BASE: Array<[TabType, string]> = [
-  ["bilan", "📋 Bilan"],
-  ["cr", "📈 CR"],
-  ["indicateurs", "📊 Indicateurs"],
-  ["glossaire", "📖 Glossaire"],
-];
-// [IMPACT-B] onglet Impact — retirer si on revient en arrière
-const TAB_IMPACT: [TabType, string] = ["impact", "🔍 Impact"];
+interface TabMeta {
+  label: string;
+  title: string;
+  description: string;
+}
 
-/**
- * Montant CA par type de client (pour l'affichage dans le portefeuille)
- */
+interface SectionHeadingProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+}
+
+interface SummaryTileProps {
+  label: string;
+  value: string;
+  tone?: "neutral" | "emerald" | "rose" | "sky" | "amber";
+}
+
+interface CommercialCardProps {
+  carte: CarteDecision;
+}
+
+interface ImpactRow {
+  poste: string;
+  label: string;
+  docType: "Bilan" | "CR";
+  avant: number;
+  actuel: number;
+  delta: number;
+  applied: boolean;
+}
+
+const TABS_BASE: Array<[TabType, string]> = [
+  ["bilan", "Bilan"],
+  ["cr", "Résultat"],
+  ["indicateurs", "Indicateurs"],
+  ["glossaire", "Glossaire"],
+];
+
+const TAB_IMPACT: [TabType, string] = ["impact", "Impact"];
+
+const TAB_META: Record<TabType, TabMeta> = {
+  bilan: {
+    label: "Bilan",
+    title: "Lire la structure de l'entreprise",
+    description: "Actif et passif montrent ce que l'entreprise possède et comment elle se finance.",
+  },
+  cr: {
+    label: "Compte de résultat",
+    title: "Comprendre ce qui crée ou détruit de la valeur",
+    description: "Repère l'effet des ventes, des charges et des événements sur le résultat du trimestre.",
+  },
+  indicateurs: {
+    label: "Indicateurs",
+    title: "Relier les comptes aux grands équilibres",
+    description: "Les ratios aident à prendre du recul sur la trésorerie, le BFR et la solvabilité.",
+  },
+  glossaire: {
+    label: "Glossaire",
+    title: "Retrouver une définition sans quitter la partie",
+    description: "Garde ce repère à portée de main si un terme comptable te bloque pendant le tour.",
+  },
+  impact: {
+    label: "Impact",
+    title: "Suivre l'avant / après pendant la saisie",
+    description: "Cette vue montre immédiatement quels postes bougent au fur et à mesure des écritures.",
+  },
+};
+
 const MONTANT_PAR_TYPE: Record<string, number> = {
   particulier: 2,
   tpe: 3,
   grand_compte: 4,
 };
 
-/** Délai d'encaissement par type de client (0 = immédiat, 1 = C+1, 2 = C+2) */
-const DELAI_PAR_TYPE: Record<string, number> = {
+const DELAI_PAR_TYPE: Record<string, DelaiPaiement> = {
   particulier: 0,
   tpe: 1,
   grand_compte: 2,
 };
 
-/** Labels court de risque BFR */
-const BFR_LABELS: Record<number, { label: string; color: string; icon: string }> = {
-  0: { label: "Aucun",    color: "text-emerald-400", icon: "✓" },
-  1: { label: "Élevé",    color: "text-orange-400",  icon: "⚠️" },
-  2: { label: "Critique", color: "text-red-400",     icon: "🚨" },
+const BFR_LABELS: Record<number, { label: string; tone: string }> = {
+  0: { label: "Paiement immédiat", tone: "text-emerald-300" },
+  1: { label: "BFR élevé", tone: "text-amber-300" },
+  2: { label: "BFR critique", tone: "text-rose-300" },
 };
 
-/** Labels lisibles pour les postes du moteur */
-const POSTE_LABELS: Record<string, string> = {
-  tresorerie: "Trésorerie",
-  stocks: "Stocks",
-  immobilisations: "Immobilisations",
-  creancesPlus1: "Créances (1 trim.)",
-  creancesPlus2: "Créances (2 trim.)",
-  capitaux: "Capitaux propres",
-  emprunts: "Emprunts",
-  dettes: "Dettes fournisseurs",
-  dettesFiscales: "Dettes fiscales",
-  decouvert: "Découvert",
-  ventes: "Ventes",
-  achats: "Coût marchandises",
-  servicesExterieurs: "Services ext.",
-  impotsTaxes: "Impôts & taxes",
-  chargesInteret: "Charges intérêt",
-  chargesPersonnel: "Charges personnel",
-  chargesExceptionnelles: "Ch. exceptionnelles",
-  dotationsAmortissements: "Amortissements",
-  productionStockee: "Production stockée",
-  produitsFinanciers: "Produits financiers",
-  revenusExceptionnels: "Revenus except.",
+const CLIENT_META: Record<
+  string,
+  { icon: string; label: string; accent: string; accentSoft: string }
+> = {
+  particulier: {
+    icon: "👤",
+    label: "Clients particuliers",
+    accent: "text-emerald-200",
+    accentSoft: "border-emerald-400/30 bg-emerald-500/10",
+  },
+  tpe: {
+    icon: "🏠",
+    label: "Clients TPE",
+    accent: "text-sky-200",
+    accentSoft: "border-sky-400/30 bg-sky-500/10",
+  },
+  grand_compte: {
+    icon: "🏢",
+    label: "Grands comptes",
+    accent: "text-violet-200",
+    accentSoft: "border-violet-400/30 bg-violet-500/10",
+  },
 };
 
-/**
- * Contenu principal : affichage du bilan, CR, indicateurs, cartes actives et sélecteur de cartes.
- *
- * Ordre des sections :
- *   1. En-tête joueur
- *   2. Onglets Bilan / CR / Indicateurs
- *   3. Contenu de l'onglet actif
- *   4. Portefeuille Commerciaux & Clients (toujours visible)
- *   5. Cartes actives
- *   6. Sélecteur de cartes Décision (étape 6 uniquement)
- */
+function formatSignedValue(value: number): string {
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function getToneClass(tone: SummaryTileProps["tone"]) {
+  switch (tone) {
+    case "emerald":
+      return "text-emerald-300";
+    case "rose":
+      return "text-rose-300";
+    case "sky":
+      return "text-sky-300";
+    case "amber":
+      return "text-amber-300";
+    default:
+      return "text-white";
+  }
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  action,
+}: SectionHeadingProps) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+          {eyebrow}
+        </p>
+        <h2 className="mt-1 text-base font-semibold text-white text-balance">{title}</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function SummaryTile({ label, value, tone = "neutral" }: SummaryTileProps) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+      <p className="text-[11px] font-medium text-slate-400">{label}</p>
+      <p className={`mt-2 text-lg font-semibold tabular-nums ${getToneClass(tone)}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function TabShell({
+  meta,
+  children,
+}: {
+  meta: TabMeta;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="rounded-[24px] border border-white/10 bg-slate-950/70 px-4 py-4">
+        <SectionHeading
+          eyebrow={meta.label}
+          title={meta.title}
+          description={meta.description}
+        />
+      </div>
+      <div className="overflow-hidden rounded-[24px] border border-white/10 bg-slate-950/60 p-2">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-dashed border-white/12 bg-white/[0.03] px-4 py-5 text-center">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+function CommercialCard({ carte }: CommercialCardProps) {
+  const clientType = carte.clientParTour ?? "particulier";
+  const meta = CLIENT_META[clientType] ?? CLIENT_META.particulier;
+  const nbClients = carte.nbClientsParTour ?? 1;
+  const montant = MONTANT_PAR_TYPE[clientType] ?? 1;
+  const delai = DELAI_PAR_TYPE[clientType] ?? 0;
+  const typeLabel = meta.label;
+  const caTotal = montant * nbClients;
+
+  const coutCharges = (carte.effetsRecurrents ?? [])
+    .filter((effet) => effet.poste === "chargesPersonnel")
+    .reduce((sum, effet) => sum + effet.delta, 0);
+
+  const coutTreso = (carte.effetsRecurrents ?? [])
+    .filter((effet) => effet.poste === "tresorerie")
+    .reduce((sum, effet) => sum + effet.delta, 0);
+
+  const cmvTotal = nbClients;
+  const resultatNet = caTotal - cmvTotal - coutCharges;
+  const tresoNette = (delai === 0 ? caTotal : 0) + coutTreso;
+  const bfrInfo = BFR_LABELS[delai] ?? BFR_LABELS[0];
+
+  return (
+    <article className={`rounded-[24px] border px-4 py-4 ${meta.accentSoft}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            Commercial actif
+          </p>
+          <h3 className="mt-1 text-sm font-semibold text-white">{carte.titre}</h3>
+          <p className={`mt-1 text-xs ${meta.accent}`}>
+            {meta.icon} {nbClients} {typeLabel.toLowerCase()} / trimestre
+          </p>
+        </div>
+        <span className="rounded-full bg-black/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">
+          C+{delai}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-2xl bg-black/15 px-3 py-3">
+          <p className="text-[11px] font-medium text-slate-300">Ce que cette carte apporte</p>
+          <p className="mt-2 text-sm font-semibold text-emerald-300">+{caTotal} de CA</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-300">
+            {delai === 0
+              ? "Le chiffre d'affaires devient immédiatement du cash."
+              : `Le CA sera encaissé en C+${delai}, donc avec un décalage de trésorerie.`}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-black/15 px-3 py-3">
+          <p className="text-[11px] font-medium text-slate-300">Ce que cette carte coûte</p>
+          <p className="mt-2 text-sm font-semibold text-rose-300">
+            {coutCharges > 0 ? `+${coutCharges} charges personnel` : "Pas de charge personnel"}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-300">
+            {coutTreso < 0 ? `${coutTreso} de trésorerie chaque trimestre.` : "Pas de sortie de cash directe."}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <SummaryTile
+          label="Résultat"
+          value={formatSignedValue(resultatNet)}
+          tone={resultatNet >= 0 ? "emerald" : "rose"}
+        />
+        <SummaryTile
+          label="Trésorerie"
+          value={formatSignedValue(tresoNette)}
+          tone={tresoNette >= 0 ? "emerald" : "rose"}
+        />
+        <SummaryTile label="BFR" value={bfrInfo.label} tone={delai === 0 ? "emerald" : delai === 1 ? "amber" : "rose"} />
+      </div>
+    </article>
+  );
+}
+
+function getImpactTone(row: ImpactRow) {
+  const debtPostes = new Set(["emprunts", "dettes", "decouvert", "dettesFiscales", "dettesD2"]);
+  const revenuePostes = new Set([
+    "ventes",
+    "productionStockee",
+    "produitsFinanciers",
+    "revenusExceptionnels",
+  ]);
+
+  if (row.docType === "Bilan") {
+    if (row.delta === 0) return "text-slate-500";
+    const positiveIsGood = !debtPostes.has(row.poste);
+    return positiveIsGood
+      ? row.delta > 0
+        ? "text-emerald-300"
+        : "text-rose-300"
+      : row.delta > 0
+        ? "text-rose-300"
+        : "text-emerald-300";
+  }
+
+  if (row.delta === 0) return "text-slate-500";
+  const positiveIsGood = revenuePostes.has(row.poste);
+  return positiveIsGood
+    ? row.delta > 0
+      ? "text-emerald-300"
+      : "text-rose-300"
+    : row.delta > 0
+      ? "text-rose-300"
+      : "text-emerald-300";
+}
+
 export function MainContent({
   joueur,
   displayJoueur,
@@ -128,639 +371,515 @@ export function MainContent({
   onSkipDecision,
   onLaunchDecision,
 }: MainContentProps) {
-  // Les cartes de recrutement viennent de la prop dédiée (obtenirCarteRecrutement)
-  // Si non fournie (rétrocompat), on filtre depuis cartesDisponibles
-  const cartesRecrutement = cartesRecrutementProp
-    ?? cartesDisponibles.filter((c) => c.categorie === "commercial");
+  const cartesRecrutement =
+    cartesRecrutementProp ?? cartesDisponibles.filter((carte) => carte.categorie === "commercial");
+  const cartesAutres = cartesDisponibles.filter((carte) => carte.categorie !== "commercial");
 
-  // La pioche ne contient plus de commerciaux — uniquement investissements
-  const cartesAutres = cartesDisponibles.filter(
-    (c) => c.categorie !== "commercial"
+  const cartesCommerciales = joueur.cartesActives.filter((carte) => carte.clientParTour);
+  const cartesAutresActives = joueur.cartesActives.filter((carte) => !carte.clientParTour);
+
+  const cartesInvestDisponibles = cartesAutres.filter(
+    (carte) => !joueur.cartesActives.some((active) => active.id === carte.id),
   );
 
-  // Séparation des cartes ACTIVES (déjà achetées)
-  const cartesCommerciales = joueur.cartesActives.filter((c) => c.clientParTour);
-  const cartesAutresActives = joueur.cartesActives.filter((c) => !c.clientParTour);
+  const currentCash = getTresorerie(displayJoueur);
+  const currentTabMeta = TAB_META[activeTab];
+  const tabs = activeStep ? [TAB_IMPACT, ...TABS_BASE] : TABS_BASE;
 
-  // [IMPACT-B] Auto-switch vers "impact" quand une étape commence — retirer si on revient en arrière
   useEffect(() => {
     if (activeStep) {
       setActiveTab("impact");
-    } else {
-      // Quand l'étape se termine, revenir au Bilan si on était sur l'onglet impact
-      if (activeTab === "impact") setActiveTab("bilan");
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!activeStep]);
 
-  // [IMPACT-B] Onglets dynamiques : "impact" apparaît uniquement pendant une étape active
-  const TABS = activeStep
-    ? [TAB_IMPACT, ...TABS_BASE]
-    : TABS_BASE;
+    if (activeTab === "impact") {
+      setActiveTab("bilan");
+    }
+  }, [activeStep, activeTab, setActiveTab]);
+
+  const actionState = activeStep
+    ? {
+        badge: "Écriture en cours",
+        description: "Complète les saisies comptables avant de passer à l'étape suivante.",
+        tone: "bg-violet-500/10 text-violet-100 border-violet-400/20",
+      }
+    : etapeTour === 6 && selectedDecision
+      ? {
+          badge: "Carte prête",
+          description: `Tu as sélectionné ${selectedDecision.titre}. Il reste à l'exécuter.`,
+          tone: "bg-cyan-500/10 text-cyan-100 border-cyan-400/20",
+        }
+      : etapeTour === 6 || showCartes
+        ? {
+            badge: "Choix stratégique",
+            description: "Choisis une carte utile ou passe l'étape si rien n'est pertinent maintenant.",
+            tone: "bg-amber-500/10 text-amber-100 border-amber-400/20",
+          }
+        : {
+            badge: "Lecture libre",
+            description: "Tu peux relire les comptes, les indicateurs et les cartes déjà actives.",
+            tone: "bg-white/[0.05] text-slate-100 border-white/10",
+          };
+
+  const impactRows: ImpactRow[] =
+    activeStep?.entries.reduce<ImpactRow[]>((rows, entry) => {
+      if (rows.some((row) => row.poste === entry.poste)) {
+        return rows;
+      }
+
+      const baseJoueur = activeStep.baseEtat?.joueurs?.[activeStep.baseEtat?.joueurActif] as
+        | Joueur
+        | undefined;
+      const avant = baseJoueur ? getPosteValue(baseJoueur, entry.poste) : 0;
+      const actuel = getPosteValue(displayJoueur, entry.poste);
+      const applied = activeStep.entries
+        .filter((candidate) => candidate.poste === entry.poste)
+        .every((candidate) => candidate.applied);
+
+      rows.push({
+        poste: entry.poste,
+        label: nomCompte(entry.poste),
+        docType: getDocumentType(entry.poste),
+        avant,
+        actuel,
+        delta: actuel - avant,
+        applied,
+      });
+
+      return rows;
+    }, []) ?? [];
+
+  const bilanRows = impactRows.filter((row) => row.docType === "Bilan");
+  const crRows = impactRows.filter((row) => row.docType === "CR");
+  const appliedImpactRows = impactRows.filter((row) => row.applied).length;
 
   return (
-    <main className="flex-1 overflow-y-auto p-4 space-y-4">
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 1. En-tête joueur                                 */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-sm border border-gray-700">
-        <span className="text-3xl">{joueur.entreprise.icon}</span>
-        <div className="flex-1">
-          <div className="font-bold text-xl text-gray-100">{joueur.pseudo}</div>
-          <div className="text-sm text-gray-400">
-            {joueur.entreprise.nom} · {joueur.entreprise.specialite}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-gray-400 font-medium">Trésorerie</div>
-          <div
-            className={`font-bold text-lg transition-colors ${
-              getTresorerie(displayJoueur) < 0 ? "text-red-600" : "text-green-700"
-            }`}
-          >
-            {getTresorerie(displayJoueur)}
-          </div>
-          {activeStep && (
-            <div className="text-xs text-indigo-500 font-medium mt-0.5 flex items-center gap-1">
-              <span className="inline-block animate-pulse">🔴</span>
-              <span>Saisie en cours…</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 1b. ÉTAPE 6 — Zone d'action principale (EN HAUT)  */}
-      {/* Affichée AVANT les onglets pour que le joueur voit*/}
-      {/* immédiatement ce qu'il peut / doit faire.         */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {etapeTour === 6 && !activeStep && (
-        <div className="rounded-2xl border-2 border-indigo-700 bg-indigo-950/40 overflow-hidden">
-
-          {/* ── Header de l'étape 6 ── */}
-          <div className={`px-4 py-3 flex items-center gap-3 ${
-            subEtape6 === "recrutement"
-              ? "bg-indigo-900/60 border-b border-indigo-700"
-              : "bg-amber-900/60 border-b border-amber-700"
-          }`}>
-            <span className="text-2xl">{subEtape6 === "recrutement" ? "🧑‍💼" : "💡"}</span>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  subEtape6 === "recrutement"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-amber-600 text-white"
-                }`}>
-                  {subEtape6 === "recrutement" ? "ÉTAPE 6a" : "ÉTAPE 6b"}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                  subEtape6 === "recrutement"
-                    ? "border-indigo-500 text-indigo-300 bg-gray-800/50"
-                    : "border-amber-500 text-amber-300 bg-gray-800/50"
-                }`}>
-                  {subEtape6 === "recrutement" ? "6b Investissement →" : "← 6a Recrutement ✓"}
-                </span>
+    <main className="flex-1 overflow-y-auto px-4 pb-6 pt-4">
+      <div className="space-y-5">
+        <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4 shadow-[0_24px_80px_rgba(2,6,23,0.26)] backdrop-blur-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/[0.06] text-3xl shadow-inner shadow-white/5">
+                {joueur.entreprise.icon}
               </div>
-              <div className={`font-bold text-base mt-0.5 ${
-                subEtape6 === "recrutement" ? "text-indigo-100" : "text-amber-100"
-              }`}>
-                {subEtape6 === "recrutement"
-                  ? "Recrute un Commercial (optionnel)"
-                  : "Investis dans ton Entreprise (optionnel)"}
+              <div className="space-y-2">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-500">
+                    Entreprise active
+                  </p>
+                  <h1 className="mt-1 text-xl font-semibold text-white">{joueur.pseudo}</h1>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {joueur.entreprise.nom} · {joueur.entreprise.specialite}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-200">
+                    Étape {etapeTour + 1}
+                  </span>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${actionState.tone}`}
+                  >
+                    {actionState.badge}
+                  </span>
+                  {modeRapide && (
+                    <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-100">
+                      Mode accéléré
+                    </span>
+                  )}
+                </div>
+                <p className="max-w-2xl text-sm leading-relaxed text-slate-400">
+                  {actionState.description}
+                </p>
               </div>
             </div>
+
+            <div className="grid gap-2 sm:grid-cols-3 lg:w-[380px]">
+              <SummaryTile label="Trésorerie" value={`${currentCash}`} tone={currentCash >= 0 ? "emerald" : "rose"} />
+              <SummaryTile label="Commerciaux" value={`${cartesCommerciales.length}`} tone="sky" />
+              <SummaryTile
+                label="Cartes actives"
+                value={`${joueur.cartesActives.length}`}
+                tone="neutral"
+              />
+            </div>
           </div>
+        </section>
 
-          {/* ── Instruction claire ── */}
-          <div className={`px-4 py-2 text-sm leading-relaxed ${
-            subEtape6 === "recrutement"
-              ? "text-indigo-300 bg-indigo-950/30"
-              : "text-amber-300 bg-amber-950/30"
-          }`}>
-            {subEtape6 === "recrutement" ? (
-              <>
-                👇 <strong>Clique sur une carte</strong> pour recruter, puis tape sur{" "}
-                <strong className="text-white">Exécuter</strong> dans le panneau gauche.
-                Un commercial génère des clients <em>dès le tour suivant</em>.
-              </>
-            ) : (
-              <>
-                👇 <strong>Clique sur une carte</strong> pour investir, puis tape sur{" "}
-                <strong className="text-white">Exécuter</strong> dans le panneau gauche.
-                Chaque investissement génère des <em>clients récurrents</em> et des{" "}
-                <em>amortissements</em>.
-              </>
-            )}
-          </div>
+        {modeRapide && (
+          <section className="rounded-[24px] border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <span className="text-base" aria-hidden="true">
+                ⚡
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-amber-100">Mode accéléré actif</p>
+                <p className="mt-1 text-sm leading-relaxed text-amber-50/80">
+                  Certaines étapes comptables sont déjà pré-cochées pour aller plus vite. Il reste surtout à valider et à interpréter ce qui change.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
-          {/* ── Cartes ── */}
-          <div className="px-4 py-3 space-y-3">
+        {etapeTour === 6 && !activeStep && (
+          <section className="rounded-[28px] border border-cyan-400/20 bg-cyan-500/10 px-4 py-4">
+            <SectionHeading
+              eyebrow={subEtape6 === "recrutement" ? "Étape 6a" : "Étape 6b"}
+              title={
+                subEtape6 === "recrutement"
+                  ? "Choisir un recrutement utile maintenant"
+                  : "Choisir un investissement qui renforce l'entreprise"
+              }
+              description={
+                subEtape6 === "recrutement"
+                  ? "Choisis un commercial si tu veux générer plus de clients à partir du prochain tour, sinon passe simplement à l'investissement."
+                  : "Choisis une carte qui améliore durablement ton activité, ou passe cette étape si aucun investissement n'est pertinent."
+              }
+              action={
+                <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-100">
+                  {selectedDecision ? "1 carte sélectionnée" : "Aucune carte sélectionnée"}
+                </span>
+              }
+            />
 
-            {/* Section Recrutement */}
-            {subEtape6 === "recrutement" && (
-              <>
-                {cartesRecrutement.length === 0 ? (
-                  <div className="text-center py-4 bg-green-950/30 border border-green-800/50 rounded-xl text-sm text-green-300 font-semibold">
-                    ✅ Tous les commerciaux sont déjà dans ton équipe !
+            <div className="mt-4 rounded-[24px] border border-white/10 bg-slate-950/55 px-4 py-4">
+              {selectedDecision ? (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
+                      Carte prête
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">{selectedDecision.titre}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                      Vérifie son effet dans le panneau de gauche, puis exécute-la si elle sert bien ta stratégie du trimestre.
+                    </p>
                   </div>
+                  {onLaunchDecision && (
+                    <button
+                      type="button"
+                      onClick={onLaunchDecision}
+                      className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                    >
+                      Exécuter {selectedDecision.titre}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed text-slate-300">
+                  Commence par cliquer sur une carte ci-dessous pour afficher une option claire à exécuter.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4">
+              {subEtape6 === "recrutement" ? (
+                cartesRecrutement.length === 0 ? (
+                  <EmptyState
+                    title="Tous les commerciaux sont déjà disponibles"
+                    description="Tu peux passer directement à l'investissement si tu veux avancer sans recruter davantage."
+                  />
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {cartesRecrutement.map((c) => (
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {cartesRecrutement.map((carte) => (
                       <CarteView
-                        key={c.id}
-                        carte={c}
+                        key={carte.id}
+                        carte={carte}
                         onClick={() =>
-                          setSelectedDecision(selectedDecision?.id === c.id ? null : c)
+                          setSelectedDecision(selectedDecision?.id === carte.id ? null : carte)
                         }
-                        selected={selectedDecision?.id === c.id}
+                        selected={selectedDecision?.id === carte.id}
                       />
                     ))}
                   </div>
-                )}
-              </>
-            )}
-
-            {/* Section Investissement */}
-            {subEtape6 === "investissement" && (
-              <>
-                {/* Filtrer les cartes déjà actives : PCG — un compte ne se duplique pas */}
-                {(() => {
-                  const cartesDispos = cartesAutres.filter(
-                    (c) => !joueur.cartesActives.some((a) => a.id === c.id)
-                  );
-                  return cartesDispos.length === 0 ? (
-                    <div className="text-center py-4 bg-green-950/30 border border-green-800/50 rounded-xl text-sm text-green-300 font-semibold">
-                      ✅ Tous les investissements disponibles sont déjà actifs !
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {cartesDispos.map((c) => (
-                        <CarteView
-                          key={c.id}
-                          carte={c}
-                          onClick={() =>
-                            setSelectedDecision(selectedDecision?.id === c.id ? null : c)
-                          }
-                          selected={selectedDecision?.id === c.id}
-                        />
-                      ))}
-                    </div>
-                  );
-                })()}
-              </>
-            )}
-
-          </div>
-
-          {/* ── CTAs en bas du bloc ── */}
-          <div className="px-4 py-3 border-t border-gray-700/50 bg-gray-900/30 flex flex-col gap-2">
-            {selectedDecision && onLaunchDecision && (
-              <button
-                onClick={onLaunchDecision}
-                className={`w-full py-3 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 ${
-                  subEtape6 === "recrutement"
-                    ? "bg-indigo-600 hover:bg-indigo-500"
-                    : "bg-amber-600 hover:bg-amber-500"
-                }`}
-              >
-                <span>📝</span>
-                <span>Exécuter — {selectedDecision.titre}</span>
-              </button>
-            )}
-            {onSkipDecision && (
-              <button
-                onClick={onSkipDecision}
-                className="w-full py-2.5 rounded-xl font-semibold text-gray-300 text-sm border border-gray-600 bg-gray-800/50 hover:bg-gray-700/50 flex items-center justify-center gap-2 transition-colors"
-              >
-                {subEtape6 === "recrutement" ? (
-                  <><span>⏭️</span><span>Passer le recrutement → Investissement</span></>
-                ) : (
-                  <><span>⏭️</span><span>Passer — aucun investissement ce trimestre</span></>
-                )}
-              </button>
-            )}
-          </div>
-
-        </div>
-      )}
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 2. Onglets Bilan / CR / Indicateurs               */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="flex gap-2 flex-wrap">
-        {TABS.map(([tab, label]) => {
-          const isImpact = tab === "impact";
-          const isLive   = !!activeStep && !isImpact && tab !== "indicateurs";
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                // [IMPACT-B] styles spéciaux pour l'onglet impact
-                isImpact && activeTab === "impact"
-                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-900/40 ring-2 ring-violet-400/30"
-                  : isImpact
-                    ? "bg-violet-900/40 text-violet-300 border-2 border-violet-500 hover:border-violet-400 animate-pulse"
-                    : activeTab === tab
-                      ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm"
-                      : isLive
-                        ? "bg-gray-800 text-indigo-300 border-2 border-indigo-400 hover:border-indigo-500"
-                        : "bg-gray-800 text-gray-300 border border-gray-600 hover:border-indigo-400"
-              }`}
-              aria-pressed={activeTab === tab}
-            >
-              {label}
-              {isLive && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500" />
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 3. Bandeau modifications + Contenu de l'onglet    */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-
-      {/* Bandeau modifications supprimé — remplacé par le panneau Impact sticky dans le panneau de gauche */}
-
-      <div>
-        {/* [IMPACT-B] Onglet Impact — retirer ce bloc si on revient en arrière */}
-        {activeTab === "impact" && activeStep && (() => {
-          const baseJoueur = activeStep.baseEtat?.joueurs?.[activeStep.baseEtat?.joueurActif] as Joueur | undefined;
-          // Dédoublonnage par poste
-          const seen = new Set<string>();
-          const rows: Array<{
-            poste: string; label: string; docType: "Bilan" | "CR";
-            avant: number; actuel: number; delta: number;
-            applied: boolean;
-          }> = [];
-          for (const e of activeStep.entries) {
-            if (seen.has(e.poste)) continue;
-            seen.add(e.poste);
-            const avant  = baseJoueur ? getPosteValue(baseJoueur, e.poste) : 0;
-            const actuel = getPosteValue(displayJoueur, e.poste);
-            const allForPoste = activeStep.entries.filter((en: { poste: string; applied?: boolean }) => en.poste === e.poste);
-            const applied = allForPoste.every((en: { applied?: boolean }) => en.applied);
-            rows.push({
-              poste: e.poste,
-              label: nomCompte(e.poste),
-              docType: getDocumentType(e.poste),
-              avant, actuel,
-              delta: actuel - avant,
-              applied,
-            });
-          }
-          const bilanRows = rows.filter(r => r.docType === "Bilan");
-          const crRows    = rows.filter(r => r.docType === "CR");
-          const totalRows = rows.length;
-          const doneRows  = rows.filter(r => r.applied).length;
-
-          return (
-            <div className="rounded-2xl border border-violet-700/50 bg-gray-900 overflow-hidden shadow-lg">
-              {/* En-tête */}
-              <div className="bg-gradient-to-r from-violet-900 to-indigo-900 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{activeStep.icone}</span>
-                  <div>
-                    <div className="text-xs font-black text-violet-300 uppercase tracking-widest">Impact de l&apos;étape</div>
-                    <div className="text-sm font-bold text-white leading-tight">{activeStep.titre}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-2xl font-black tabular-nums ${doneRows === totalRows ? "text-emerald-400" : "text-violet-300"}`}>
-                    {doneRows}/{totalRows}
-                  </div>
-                  <div className="text-[10px] text-violet-400">saisies</div>
-                </div>
-              </div>
-              {/* Barre progression */}
-              <div className="h-1.5 bg-gray-800">
-                <div
-                  className={`h-full transition-all duration-500 ${doneRows === totalRows ? "bg-emerald-500" : "bg-violet-500"}`}
-                  style={{ width: `${totalRows > 0 ? (doneRows / totalRows) * 100 : 0}%` }}
+                )
+              ) : cartesInvestDisponibles.length === 0 ? (
+                <EmptyState
+                  title="Tous les investissements disponibles sont déjà actifs"
+                  description="L'entreprise tourne déjà avec tout son éventail d'investissements. Tu peux passer cette étape sans perdre d'opportunité."
                 />
-              </div>
-              {/* Grille Bilan | CR */}
-              <div className="grid grid-cols-2 divide-x divide-gray-700/50">
-                {/* Colonne Bilan */}
-                <div className="p-3">
-                  <div className="text-center text-[10px] font-black text-blue-300 uppercase tracking-widest bg-blue-900/30 rounded-lg py-1 mb-3">
-                    📋 Bilan
-                  </div>
-                  {bilanRows.length === 0 ? (
-                    <p className="text-xs text-gray-600 italic text-center py-2">Aucun poste bilan</p>
-                  ) : bilanRows.map((row) => {
-                    const changed = row.actuel !== row.avant;
-                    const bon = row.delta > 0
-                      ? !["emprunts","dettes","decouvert","dettesFiscales","dettesD2"].includes(row.poste)
-                      : ["emprunts","dettes","decouvert","dettesFiscales","dettesD2"].includes(row.poste);
-                    return (
-                      <div key={row.poste} className={`mb-3 rounded-xl p-2.5 border transition-all duration-500 ${
-                        row.applied
-                          ? changed
-                            ? "bg-gray-800/60 border-gray-600"
-                            : "bg-gray-800/30 border-gray-700 opacity-50"
-                          : "bg-blue-950/20 border-blue-800/40"
-                      }`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold text-blue-300 truncate">{row.label}</span>
-                          {row.applied
-                            ? <span className="text-[10px] text-emerald-400 font-bold">✓</span>
-                            : <span className="text-[10px] text-blue-500 animate-pulse">⋯</span>
-                          }
-                        </div>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-xl font-black tabular-nums text-gray-400">{row.avant}</span>
-                          <span className="text-gray-600 text-sm">→</span>
-                          <span className={`text-2xl font-black tabular-nums ${
-                            !changed ? "text-gray-500" : bon ? "text-emerald-400" : "text-red-400"
-                          }`}>{row.actuel}</span>
-                        </div>
-                        {changed && (
-                          <div className={`text-center text-xs font-black mt-1 tabular-nums ${bon ? "text-emerald-500" : "text-red-500"}`}>
-                            {row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Colonne CR */}
-                <div className="p-3">
-                  <div className="text-center text-[10px] font-black text-amber-300 uppercase tracking-widest bg-amber-900/30 rounded-lg py-1 mb-3">
-                    📈 Compte de Résultat
-                  </div>
-                  {crRows.length === 0 ? (
-                    <p className="text-xs text-gray-600 italic text-center py-2">Aucun poste CR</p>
-                  ) : crRows.map((row) => {
-                    const changed = row.actuel !== row.avant;
-                    const bon = ["ventes","productionStockee","produitsFinanciers","revenusExceptionnels"].includes(row.poste)
-                      ? row.delta > 0 : row.delta < 0;
-                    return (
-                      <div key={row.poste} className={`mb-3 rounded-xl p-2.5 border transition-all duration-500 ${
-                        row.applied
-                          ? changed
-                            ? "bg-gray-800/60 border-gray-600"
-                            : "bg-gray-800/30 border-gray-700 opacity-50"
-                          : "bg-amber-950/20 border-amber-800/40"
-                      }`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold text-amber-300 truncate">{row.label}</span>
-                          {row.applied
-                            ? <span className="text-[10px] text-emerald-400 font-bold">✓</span>
-                            : <span className="text-[10px] text-amber-500 animate-pulse">⋯</span>
-                          }
-                        </div>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-xl font-black tabular-nums text-gray-400">{row.avant}</span>
-                          <span className="text-gray-600 text-sm">→</span>
-                          <span className={`text-2xl font-black tabular-nums ${
-                            !changed ? "text-gray-500" : bon ? "text-emerald-400" : "text-red-400"
-                          }`}>{row.actuel}</span>
-                        </div>
-                        {changed && (
-                          <div className={`text-center text-xs font-black mt-1 tabular-nums ${bon ? "text-emerald-500" : "text-red-500"}`}>
-                            {row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {/* Message fin */}
-              {doneRows === totalRows && (
-                <div className="mx-3 mb-3 py-2 rounded-xl bg-emerald-900/30 border border-emerald-700/50 text-center text-xs font-bold text-emerald-300">
-                  ✅ Toutes les écritures saisies — bilan et CR mis à jour !
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {cartesInvestDisponibles.map((carte) => (
+                    <CarteView
+                      key={carte.id}
+                      carte={carte}
+                      onClick={() =>
+                        setSelectedDecision(selectedDecision?.id === carte.id ? null : carte)
+                      }
+                      selected={selectedDecision?.id === carte.id}
+                    />
+                  ))}
                 </div>
               )}
             </div>
-          );
-        })()}
-        {/* Fin [IMPACT-B] */}
 
-        {activeTab === "bilan" && (
-          <BilanPanel
-            joueur={displayJoueur}
-            highlightedPoste={highlightedPoste}
-            recentModifications={recentModifications}
-          />
-        )}
-        {activeTab === "cr" && (
-          <CompteResultatPanel
-            joueur={displayJoueur}
-            highlightedPoste={highlightedPoste}
-            etapeTour={etapeTour}
-            hasActiveStep={!!activeStep}
-            recentModifications={recentModifications}
-          />
-        )}
-        {activeTab === "indicateurs" && (
-          <IndicateursPanel joueur={displayJoueur} />
-        )}
-        {activeTab === "glossaire" && (
-          <GlossairePanel />
-        )}
-      </div>
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* 4. Cartes actives : Commerciaux + Investissements  */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="space-y-3">
-        <div className="text-sm font-bold text-gray-400 uppercase tracking-wider">
-          🎴 Cartes actives
-        </div>
-
-        {/* ── Sous-section Commerciaux ─────────────────────────── */}
-        {cartesCommerciales.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-px flex-1 bg-indigo-900/50" />
-              <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider whitespace-nowrap">
-                🧑‍💼 Commerciaux
+            {onSkipDecision && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={onSkipDecision}
+                  className="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/[0.05] px-5 py-3 text-sm font-medium text-slate-100 transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                >
+                  {subEtape6 === "recrutement"
+                    ? "Passer au volet investissement"
+                    : "Passer sans investir ce trimestre"}
+                </button>
               </div>
-              <div className="h-px flex-1 bg-indigo-900/50" />
-            </div>
+            )}
+          </section>
+        )}
 
-            <div className="flex flex-wrap gap-3">
-              {cartesCommerciales.map((c) => {
-                const icon =
-                  c.clientParTour === "particulier"
-                    ? "👤"
-                    : c.clientParTour === "tpe"
-                      ? "🏠"
-                      : "🏢";
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const nb = (c as any).nbClientsParTour ?? 1;
-                const typeLabelPluriel =
-                  c.clientParTour === "particulier"
-                    ? "clients particuliers"
-                    : c.clientParTour === "tpe"
-                      ? "clients TPE"
-                      : "grands comptes";
-                const montant    = MONTANT_PAR_TYPE[c.clientParTour ?? ""] ?? 1;
-                const caTotal    = montant * nb;
-                const delai      = DELAI_PAR_TYPE[c.clientParTour ?? ""] ?? 0;
-
-                // Extraire les coûts récurrents depuis effetsRecurrents
-                const coutCharges = (c.effetsRecurrents ?? [])
-                  .filter((e) => e.poste === "chargesPersonnel")
-                  .reduce((sum, e) => sum + e.delta, 0);
-                const coutTreso = (c.effetsRecurrents ?? [])
-                  .filter((e) => e.poste === "tresorerie")
-                  .reduce((sum, e) => sum + e.delta, 0);
-
-                // Calcul du bilan net (logique des agents)
-                const cmvTotal    = nb * 1;                                    // 1 stock consommé par vente
-                const resultatNet = caTotal - cmvTotal - coutCharges;          // résultat net/trim
-                const tresoNette  = (delai === 0 ? caTotal : 0) + coutTreso;  // encaissé imméd. − salaire
-                const bfrInfo     = BFR_LABELS[delai] ?? BFR_LABELS[0];
-
-                // Couleur du header selon type de client
-                const headerBg =
-                  c.clientParTour === "particulier"
-                    ? "bg-green-700"
-                    : c.clientParTour === "tpe"
-                      ? "bg-blue-700"
-                      : "bg-purple-700";
-                const borderCol =
-                  c.clientParTour === "particulier"
-                    ? "border-green-500/60"
-                    : c.clientParTour === "tpe"
-                      ? "border-blue-500/60"
-                      : "border-purple-500/60";
-
-                // Label délai
-                const delaiLabel =
-                  delai === 0 ? "comptant C+0" : `créance C+${delai}`;
+        <section className="space-y-3">
+          <div className="rounded-[24px] border border-white/10 bg-slate-950/70 px-3 py-3">
+            <div
+              className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0"
+              role="tablist"
+              aria-label="Lectures comptables"
+            >
+              {tabs.map(([tab, label]) => {
+                const isActive = activeTab === tab;
+                const isImpact = tab === "impact";
 
                 return (
-                  <div
-                    key={c.id}
-                    className={`border-2 ${borderCol} rounded-xl overflow-hidden bg-gray-900 min-w-[180px] shadow-md`}
+                  <button
+                    key={tab}
+                    id={`main-tab-${tab}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls={`main-tab-panel-${tab}`}
+                    onClick={() => setActiveTab(tab)}
+                    className={`relative min-w-[112px] shrink-0 rounded-2xl px-3 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 sm:min-w-0 sm:shrink ${
+                      isActive
+                        ? "bg-cyan-400 text-slate-950"
+                        : isImpact
+                          ? "bg-violet-500/10 text-violet-100 hover:bg-violet-500/15"
+                          : "bg-white/[0.04] text-slate-200 hover:bg-white/[0.07]"
+                    }`}
                   >
-                    {/* ── En-tête : titre du commercial ── */}
-                    <div className={`${headerBg} text-white px-3 py-2.5 flex items-center gap-1.5`}>
-                      <span className="text-base">🧑‍💼</span>
-                      <span className="font-bold text-sm leading-tight">{c.titre}</span>
-                    </div>
-
-                    {/* ── Coûts récurrents (rouge) ── */}
-                    <div className="px-3 py-2.5 border-b border-gray-700/60 bg-red-950/20">
-                      <div className="text-[10px] font-bold text-red-400 uppercase tracking-wide mb-1">
-                        💸 Coût / trimestre
-                      </div>
-                      <div className="space-y-0.5">
-                        {coutCharges > 0 && (
-                          <div className="text-xs text-red-300 flex items-center gap-1">
-                            <span className="font-bold">↑</span>
-                            <span>+{coutCharges} charges personnel</span>
-                          </div>
-                        )}
-                        {coutTreso < 0 && (
-                          <div className="text-xs text-red-300 flex items-center gap-1">
-                            <span className="font-bold">↓</span>
-                            <span>{coutTreso} trésorerie</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* ── Revenus générés (vert) ── */}
-                    <div className="px-3 py-2.5 border-b border-gray-700/60 bg-emerald-950/20">
-                      <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide mb-1">
-                        📈 Revenu / trimestre
-                      </div>
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-sm">{Array(nb).fill(icon).join("")}</span>
-                        <span className="text-xs text-emerald-300 font-semibold">
-                          +{nb} {typeLabelPluriel}
-                        </span>
-                      </div>
-                      <div className="text-xs text-emerald-200 font-bold flex items-center gap-1">
-                        <span className="text-emerald-400">→</span>
-                        <span>+{caTotal} CA ({delaiLabel})</span>
-                      </div>
-                    </div>
-
-                    {/* ── Bilan net / agents (indigo) ── */}
-                    <div className="px-3 py-2.5 bg-indigo-950/30">
-                      <div className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide mb-1.5">
-                        📊 Impact net / trimestre
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        {/* Résultat net */}
-                        <div className="bg-gray-800 border border-gray-700 rounded p-1">
-                          <div className="text-[9px] text-gray-500 uppercase leading-tight">Résultat</div>
-                          <div className={`text-sm font-black leading-tight ${resultatNet >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                            {resultatNet >= 0 ? "+" : ""}{resultatNet}
-                          </div>
-                        </div>
-                        {/* Trésorerie nette */}
-                        <div className="bg-gray-800 border border-gray-700 rounded p-1">
-                          <div className="text-[9px] text-gray-500 uppercase leading-tight">Tréso</div>
-                          <div className={`text-sm font-black leading-tight ${tresoNette >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                            {tresoNette >= 0 ? "+" : ""}{tresoNette}
-                          </div>
-                        </div>
-                        {/* BFR */}
-                        <div className="bg-gray-800 border border-gray-700 rounded p-1">
-                          <div className="text-[9px] text-gray-500 uppercase leading-tight">BFR</div>
-                          <div className={`text-xs font-bold leading-tight ${bfrInfo.color}`}>
-                            {bfrInfo.icon} {bfrInfo.label}
-                          </div>
-                        </div>
-                      </div>
-                      {delai > 0 && (
-                        <div className="mt-1.5 text-[10px] text-gray-500 italic leading-tight">
-                          ⚠️ CA encaissé en C+{delai} → décalage tréso, gérez votre BFR !
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    <span>{label}</span>
+                    {isImpact && !isActive && activeStep && (
+                      <span className="absolute right-2 top-2 flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-300 opacity-70" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-200" />
+                      </span>
+                    )}
+                  </button>
                 );
               })}
             </div>
           </div>
-        )}
 
-        {/* ── Sous-section Investissements & Décisions ─────────── */}
-        {cartesAutresActives.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-px flex-1 bg-gray-700" />
-              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                📋 Investissements & Décisions
+          <div id={`main-tab-panel-${activeTab}`} role="tabpanel" aria-labelledby={`main-tab-${activeTab}`}>
+            {activeTab === "impact" && activeStep && (
+              <section className="space-y-3">
+                <div className="rounded-[24px] border border-violet-400/20 bg-violet-500/10 px-4 py-4">
+                  <SectionHeading
+                    eyebrow="Impact"
+                    title={activeStep.titre}
+                    description="Relis cette vue comme un avant / après. Dès qu'un poste change, tu vois si l'effet va dans le bon sens."
+                    action={
+                      <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100">
+                        {appliedImpactRows}/{impactRows.length} postes saisis
+                      </span>
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {[
+                    {
+                      key: "bilan",
+                      title: "Bilan",
+                      description: "Ce que l'entreprise possède ou doit.",
+                      rows: bilanRows,
+                      accent: "text-sky-200",
+                      background: "bg-sky-500/10 border-sky-400/20",
+                    },
+                    {
+                      key: "cr",
+                      title: "Compte de résultat",
+                      description: "Ce que l'activité gagne ou consomme.",
+                      rows: crRows,
+                      accent: "text-amber-200",
+                      background: "bg-amber-500/10 border-amber-400/20",
+                    },
+                  ].map((column) => (
+                    <section
+                      key={column.key}
+                      className={`rounded-[24px] border px-4 py-4 ${column.background}`}
+                    >
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.24em] ${column.accent}`}>
+                        {column.title}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                        {column.description}
+                      </p>
+                      <div className="mt-4 space-y-3">
+                        {column.rows.length === 0 ? (
+                          <EmptyState
+                            title={`Aucun mouvement dans ${column.title.toLowerCase()}`}
+                            description="Cette étape ne modifie pas cette partie des comptes."
+                          />
+                        ) : (
+                          column.rows.map((row) => {
+                            const changed = row.delta !== 0;
+                            return (
+                              <div
+                                key={row.poste}
+                                className={`rounded-[22px] border px-3 py-3 ${
+                                  row.applied
+                                    ? "border-white/10 bg-slate-950/60"
+                                    : "border-white/10 bg-white/[0.03]"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-xs font-semibold text-white">{row.label}</p>
+                                    <p className="mt-1 text-[11px] text-slate-400">
+                                      {row.applied
+                                        ? "Écriture saisie"
+                                        : "En attente de saisie"}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                                      row.applied
+                                        ? "bg-emerald-500/10 text-emerald-100"
+                                        : "bg-white/[0.05] text-slate-300"
+                                    }`}
+                                  >
+                                    {row.applied ? "Saisi" : "À faire"}
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                  <SummaryTile label="Avant" value={`${row.avant}`} tone="neutral" />
+                                  <SummaryTile label="Après" value={`${row.actuel}`} tone={changed ? (row.delta > 0 ? "emerald" : "rose") : "neutral"} />
+                                  <SummaryTile
+                                    label="Écart"
+                                    value={formatSignedValue(row.delta)}
+                                    tone={
+                                      changed
+                                        ? getImpactTone(row).includes("emerald")
+                                          ? "emerald"
+                                          : "rose"
+                                        : "neutral"
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {activeTab === "bilan" && (
+              <TabShell meta={currentTabMeta}>
+                <BilanPanel
+                  joueur={displayJoueur}
+                  highlightedPoste={highlightedPoste}
+                  recentModifications={recentModifications}
+                />
+              </TabShell>
+            )}
+
+            {activeTab === "cr" && (
+              <TabShell meta={currentTabMeta}>
+                <CompteResultatPanel
+                  joueur={displayJoueur}
+                  highlightedPoste={highlightedPoste}
+                  etapeTour={etapeTour}
+                  hasActiveStep={!!activeStep}
+                  recentModifications={recentModifications}
+                />
+              </TabShell>
+            )}
+
+            {activeTab === "indicateurs" && (
+              <TabShell meta={currentTabMeta}>
+                <IndicateursPanel joueur={displayJoueur} />
+              </TabShell>
+            )}
+
+            {activeTab === "glossaire" && (
+              <TabShell meta={currentTabMeta}>
+                <GlossairePanel />
+              </TabShell>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4 shadow-[0_24px_80px_rgba(2,6,23,0.2)]">
+          <SectionHeading
+            eyebrow="Ressources actives"
+            title="Ce qui travaille déjà pour l'entreprise"
+            description="Retrouve ici les commerciaux et les investissements déjà en place, sans devoir chercher dans plusieurs zones."
+            action={
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-200">
+                {joueur.cartesActives.length} cartes actives
+              </span>
+            }
+          />
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <SummaryTile label="Commerciaux" value={`${cartesCommerciales.length}`} tone="sky" />
+            <SummaryTile
+              label="Investissements"
+              value={`${cartesAutresActives.length}`}
+              tone="neutral"
+            />
+            <SummaryTile
+              label="Trésorerie actuelle"
+              value={`${currentCash}`}
+              tone={currentCash >= 0 ? "emerald" : "rose"}
+            />
+          </div>
+
+          <div className="mt-5 space-y-5">
+            {cartesCommerciales.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Commerciaux
+                </p>
+                <div className="grid gap-3 xl:grid-cols-2">
+                  {cartesCommerciales.map((carte) => (
+                    <CommercialCard key={carte.id} carte={carte} />
+                  ))}
+                </div>
               </div>
-              <div className="h-px flex-1 bg-gray-700" />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {cartesAutresActives.map((c) => (
-                <CarteView key={c.id} carte={c} compact />
-              ))}
-            </div>
+            ) : (
+              <EmptyState
+                title="Aucun commercial actif pour l'instant"
+                description="Quand tu recrutes un commercial, son effet récurrent apparaîtra ici pour t'aider à mesurer sa rentabilité."
+              />
+            )}
+
+            {cartesAutresActives.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Investissements & décisions récurrentes
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {cartesAutresActives.map((carte) => (
+                    <CarteView key={carte.id} carte={carte} compact />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <EmptyState
+                title="Aucun investissement actif pour l'instant"
+                description="Les cartes d'investissement achetées apparaîtront ici pour rappeler ce qu'elles continuent de produire tour après tour."
+              />
+            )}
           </div>
-        )}
+        </section>
       </div>
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* Badge Mode Rapide actif */}
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {modeRapide && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-950/30 border border-amber-700 rounded-xl text-xs text-amber-300">
-          <span className="text-base">⚡</span>
-          <div>
-            <span className="font-bold">Mode Accéléré actif</span>
-            <span className="text-amber-400 ml-1">— étapes comptables pré-cochées, tu n'as qu'à valider</span>
-          </div>
-        </div>
-      )}
-
     </main>
   );
 }
