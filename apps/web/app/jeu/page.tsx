@@ -27,10 +27,6 @@ import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/p
 import { ResultatDemandePret, MONTANTS_EMPRUNT } from "@/lib/game-engine/types";
 import { ImpactFlash } from "@/components/ImpactFlash";
 // ── Nouveaux composants v2 — chargement dynamique (évite panic Turbopack) ────
-const CenterPanel = dynamic(() => import("@/components/jeu/CenterPanel"), {
-  ssr: false,
-  loading: () => <div className="flex-1 flex items-center justify-center bg-gray-900 text-gray-600 text-sm">Chargement…</div>,
-});
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
   ssr: false,
   loading: () => <div className="bg-gray-900 rounded-lg" />,
@@ -122,7 +118,7 @@ export default function JeuPage() {
   const [etat, setEtat]                   = useState<EtatJeu | null>(null);
   const [activeStep, setActiveStep]       = useState<ActiveStep | null>(null);
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
-  const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs" | "glossaire" | "impact">("bilan");
+  const [activeTab, setActiveTab]         = useState<"bilan" | "cr" | "indicateurs" | "glossaire" | "vue-ensemble" | "impact">("bilan");
   const [highlightedPoste, setHighlightedPoste] = useState<string | null>(null);
   const [recentModifications, setRecentModifications] = useState<Array<{
     poste: string; ancienneValeur: number; nouvelleValeur: number;
@@ -149,9 +145,8 @@ export default function JeuPage() {
 
   const [flashData, setFlashData] = useState<{ poste: string; avant: number; apres: number } | null>(null);
 
-  // ── Nouveaux states v2 : panneau central + droit ─────────────────────────
+  // ── Nouveaux states v2 : panneau droit ──────────────────────────────────
   const [rightTab, setRightTab] = useState<"resume" | "bilan" | "cr">("resume");
-  const [pedagogicalMsg, setPedagogicalMsg] = useState<string | null>(null);
 
   // ─ Emprunt bancaire ───────────────────────────────────────────────────────
   const [showDemandeEmprunt, setShowDemandeEmprunt] = useState(false);
@@ -395,11 +390,7 @@ export default function JeuPage() {
       ).length ?? 0,
       decouvert: nextJoueur.bilan.decouvert,
     };
-    const msg = generatePedagogicalMessage(ctx);
-    if (msg) {
-      setPedagogicalMsg(msg);
-      setTimeout(() => setPedagogicalMsg(null), 8000);
-    }
+    generatePedagogicalMessage(ctx); // Message is no longer displayed with CenterPanel removed
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -951,9 +942,9 @@ export default function JeuPage() {
       </div>
 
       {/* ─── CORPS RESPONSIVE : mobile empilé | laptop 2 colonnes | desktop 3 colonnes ─── */}
-      <div className="grid flex-1 gap-4 px-4 pb-4 sm:px-6 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] xl:min-h-0 xl:grid-cols-[minmax(300px,30%)_minmax(420px,45%)_minmax(280px,25%)] xl:overflow-hidden">
+      <div className="grid flex-1 gap-4 px-4 pb-4 sm:px-6 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] xl:min-h-0 xl:grid-cols-[minmax(300px,25%)_minmax(420px,50%)_minmax(280px,25%)] xl:overflow-hidden">
 
-        {/* ── COLONNE GAUCHE : Décisions & Actions + CenterPanel ── */}
+        {/* ── COLONNE GAUCHE : Décisions & Actions ── */}
         <div className="order-1 min-w-0 xl:min-h-0">
           <LeftPanel
             etapeTour={etat.etapeTour}
@@ -1009,7 +1000,7 @@ export default function JeuPage() {
           />
         </div>
 
-        {/* ── COLONNE DROITE : Indicateurs & SIG + CenterPanel ── */}
+        {/* ── COLONNE DROITE : Indicateurs & SIG ── */}
         <div className="order-3 flex min-w-0 flex-col gap-4 lg:col-span-2 xl:col-span-1 xl:min-h-0 xl:overflow-y-auto">
           <RightPanel
             joueur={displayJoueur}
@@ -1025,23 +1016,6 @@ export default function JeuPage() {
             activeTab={rightTab}
             setActiveTab={setRightTab}
           />
-
-          {/* Panneau narratif : évolution, BFR, flux, chaîne causale (shown only when tourActuel <= 3) */}
-          {etat.tourActuel <= 3 && (
-            <CenterPanel
-              tour={etat.tourActuel}
-              etape={etat.etapeTour}
-              joueur={displayJoueur}
-              nbCommerciaux={nbCommerciaux}
-              nbCartesActives={nbCartesActives}
-              tresorerie={sig.tresorerie}
-              resultatNet={sig.resultatNet}
-              ca={sig.ca}
-              creancesPlus1={displayJoueur.bilan.creancesPlus1}
-              creancesPlus2={displayJoueur.bilan.creancesPlus2}
-              pedagogicalMessage={pedagogicalMsg ?? tensionAlert ?? undefined}
-            />
-          )}
         </div>
       </div>
 

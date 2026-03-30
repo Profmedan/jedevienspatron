@@ -46,50 +46,50 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const steps = [
     /* ── Étape 0 : D'où vient l'argent ── */
     <div key={0} className="space-y-4">
-      <h3 className="font-bold text-orange-200 text-lg">📥 D&apos;où vient l&apos;argent de départ ?</h3>
+      <h3 className="font-bold text-purple-200 text-lg">📥 D&apos;où vient l&apos;argent de départ ?</h3>
       <p className="text-gray-300 text-sm leading-relaxed">
         Toute entreprise naît grâce à des <strong>RESSOURCES</strong> : l&apos;argent
         investi par les propriétaires (<em>capitaux propres</em>) et/ou des emprunts
         bancaires. C&apos;est la colonne <strong>PASSIF</strong> du bilan.
       </p>
-      <div className="bg-orange-950/20 border border-orange-800/50 rounded-xl p-4">
-        <div className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-3">
+      <div className="bg-purple-950/20 border border-purple-800/50 rounded-xl p-4">
+        <div className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-3">
           📥 RESSOURCES (Passif) — Qui finance ?
         </div>
         <div className="space-y-2">
           {capitaux && (
-            <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-orange-900/40">
+            <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-purple-900/40">
               <div>
                 <div className="font-medium text-sm text-gray-100">{capitaux.nom}</div>
                 <div className="text-xs text-gray-400">
                   Apport des associés — ressource permanente, ne se rembourse pas
                 </div>
               </div>
-              <span className="font-bold text-orange-400 text-lg">
+              <span className="font-bold text-purple-400 text-lg">
                 {capitaux.valeur}
               </span>
             </div>
           )}
           {emprunts && (
-            <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-orange-900/40">
+            <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-purple-900/40">
               <div>
                 <div className="font-medium text-sm text-gray-100">{emprunts.nom}</div>
                 <div className="text-xs text-gray-400">
                   Financement bancaire — remboursement de −1 par trimestre pendant {emprunts.valeur} trimestres
                 </div>
               </div>
-              <span className="font-bold text-orange-400 text-lg">
+              <span className="font-bold text-purple-400 text-lg">
                 {emprunts.valeur}
               </span>
             </div>
           )}
-          <div className="flex justify-between items-center bg-orange-900/40 rounded-lg p-2 font-bold text-orange-200">
+          <div className="flex justify-between items-center bg-purple-900/40 rounded-lg p-2 font-bold text-purple-200">
             <span>TOTAL RESSOURCES (Passif)</span>
             <span className="text-lg">{totalPassif}</span>
           </div>
         </div>
       </div>
-      <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-3 text-xs text-amber-300 leading-relaxed">
+      <div className="bg-purple-950/30 border border-purple-700/50 rounded-xl p-3 text-xs text-purple-300 leading-relaxed">
         <span className="font-bold">💡 Pourquoi emprunter ?</span> Les emprunts ont permis d&apos;acheter
         les équipements productifs ({totalImmos} d&apos;immobilisations). Sans ces outils,
         pas de production ni de ventes possibles !
@@ -98,7 +98,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
     /* ── Étape 1 : Comment cet argent est utilisé ── */
     <div key={1} className="space-y-4">
-      <h3 className="font-bold text-emerald-200 text-lg">
+      <h3 className="font-bold text-sky-200 text-lg">
         📤 Comment cet argent a-t-il été utilisé ?
       </h3>
       <p className="text-gray-300 text-sm leading-relaxed">
@@ -106,8 +106,8 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
         biens durables (immobilisations), marchandises (stocks) et liquidités (trésorerie).
         C&apos;est la colonne <strong>ACTIF</strong> du bilan.
       </p>
-      <div className="bg-emerald-950/20 border border-emerald-800/50 rounded-xl p-4">
-        <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">
+      <div className="bg-sky-950/20 border border-sky-800/50 rounded-xl p-4">
+        <div className="text-xs font-bold text-sky-400 uppercase tracking-wider mb-3">
           📤 EMPLOIS (Actif) — À quoi sert l&apos;argent ?
         </div>
         <div className="space-y-2">
@@ -122,7 +122,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                 return (
                   <div
                     key={a.nom}
-                    className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-emerald-900/40"
+                    className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-sky-900/40"
                   >
                     <div>
                       <div className="font-medium text-sm text-gray-100">
@@ -137,7 +137,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                         )}
                       </div>
                     </div>
-                    <span className="font-bold text-emerald-400">{a.valeur}</span>
+                    <span className="font-bold text-sky-400">{a.valeur}</span>
                   </div>
                 );
               })}
@@ -152,13 +152,13 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               {stocks.map((a) => (
                 <div
                   key={a.nom}
-                  className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-emerald-900/40"
+                  className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-sky-900/40"
                 >
                   <div>
                     <div className="font-medium text-sm text-gray-100">📦 {a.nom}</div>
                     <div className="text-xs text-gray-400">Marchandises prêtes à être vendues ou transformées</div>
                   </div>
-                  <span className="font-bold text-emerald-400">{a.valeur}</span>
+                  <span className="font-bold text-sky-400">{a.valeur}</span>
                 </div>
               ))}
             </>
@@ -169,16 +169,16 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2 mb-1">
                 💰 Trésorerie
               </div>
-              <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-emerald-900/40">
+              <div className="flex justify-between items-center bg-gray-800 rounded-lg p-2 border border-sky-900/40">
                 <div>
                   <div className="font-medium text-sm text-gray-100">💰 {tresorerie.nom}</div>
                   <div className="text-xs text-gray-400">Liquidités disponibles pour payer les charges</div>
                 </div>
-                <span className="font-bold text-emerald-400">{tresorerie.valeur}</span>
+                <span className="font-bold text-sky-400">{tresorerie.valeur}</span>
               </div>
             </>
           )}
-          <div className="flex justify-between items-center bg-emerald-900/40 rounded-lg p-2 font-bold text-emerald-200 mt-2">
+          <div className="flex justify-between items-center bg-sky-900/40 rounded-lg p-2 font-bold text-sky-200 mt-2">
             <span>TOTAL EMPLOIS (Actif)</span>
             <span className="text-lg">{totalActif}</span>
           </div>
