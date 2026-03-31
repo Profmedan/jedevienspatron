@@ -44,7 +44,11 @@ interface LeftPanelProps {
   onLaunchAchat: () => void;
   onSkipAchat: () => void;
   selectedDecision: CarteDecision | null;
+  setSelectedDecision?: (val: CarteDecision | null) => void;
+  cartesDisponibles?: CarteDecision[];
+  cartesRecrutement?: CarteDecision[];
   onSkipDecision: () => void;
+  onLaunchDecision?: () => void;
   decisionError: string | null;
   onLaunchStep: () => void;
   journal: JournalEntry[];
@@ -83,7 +87,11 @@ export function LeftPanel({
   onLaunchAchat,
   onSkipAchat,
   selectedDecision,
+  setSelectedDecision,
+  cartesDisponibles = [],
+  cartesRecrutement = [],
   onSkipDecision,
+  onLaunchDecision,
   onLaunchStep,
   onDemanderEmprunt,
   subEtape6,
@@ -245,21 +253,46 @@ export function LeftPanel({
 
             {etapeTour === 6 && (
               <div className="space-y-2">
-                <p className="text-xs text-slate-400">
-                  {subEtape6 === "recrutement" ? "6a — Recrutement : engagez un commercial." : "6b — Investissement : équipement."}
+                <p className="text-xs font-semibold text-slate-300">
+                  {subEtape6 === "recrutement" ? "6a — Recrutement" : "6b — Investissement"}
                 </p>
-                <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 p-2">
-                  <p className="text-[10px] text-sky-100">💡 Sélectionne une carte dans le panneau central.</p>
-                </div>
-                {selectedDecision ? (
+
+                {/* Card list */}
+                {(() => {
+                  const cards = subEtape6 === "recrutement" ? cartesRecrutement : cartesDisponibles;
+                  return cards.length > 0 ? (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {cards.map((carte) => (
+                        <button
+                          key={carte.id}
+                          type="button"
+                          onClick={() => setSelectedDecision?.(
+                            selectedDecision?.id === carte.id ? null : carte
+                          )}
+                          className={`w-full rounded-lg border px-2 py-2 text-left text-xs transition-colors ${
+                            selectedDecision?.id === carte.id
+                              ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-100"
+                              : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]"
+                          }`}
+                        >
+                          <p className="font-semibold">{carte.titre}</p>
+                          {carte.description && (
+                            <p className="mt-0.5 text-[10px] text-slate-400 line-clamp-2">{carte.description}</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">Aucune carte disponible.</p>
+                  );
+                })()}
+
+                {selectedDecision && (
                   <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-2">
                     <p className="text-xs font-semibold text-emerald-100">✅ {selectedDecision.titre}</p>
                   </div>
-                ) : (
-                  <div className="rounded-lg bg-amber-500/10 border border-amber-400/20 p-2">
-                    <p className="text-xs text-amber-100">Aucune carte sélectionnée</p>
-                  </div>
                 )}
+
                 <div className="flex gap-2">
                   <button
                     onClick={onSkipDecision}
@@ -268,7 +301,7 @@ export function LeftPanel({
                     Passer
                   </button>
                   <button
-                    onClick={onLaunchStep}
+                    onClick={onLaunchDecision ?? onLaunchStep}
                     disabled={!selectedDecision}
                     className="flex-1 rounded-lg bg-cyan-400 px-2 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

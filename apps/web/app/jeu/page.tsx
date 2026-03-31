@@ -963,7 +963,11 @@ export default function JeuPage() {
             onLaunchAchat={launchAchat}
             onSkipAchat={skipAchat}
             selectedDecision={selectedDecision}
+            setSelectedDecision={setSelectedDecision}
+            cartesDisponibles={cartesDisponibles}
+            cartesRecrutement={cartesRecrutement}
             onSkipDecision={skipDecision}
+            onLaunchDecision={launchDecision}
             decisionError={decisionError}
             onLaunchStep={launchStep}
             journal={journal}
