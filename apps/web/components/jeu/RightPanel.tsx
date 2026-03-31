@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 
 import { Joueur } from "@/lib/game-engine/types";
@@ -45,65 +45,135 @@ function getSolvabilityColor(solvabilite: number): string {
 const RightPanel: React.FC<RightPanelProps> = ({
   joueur,
   ca,
-  marge,
-  ebe,
+  marge: _marge,
+  ebe: _ebe,
   resultatNet,
   tresorerie,
   bfr,
   fondsRoulement,
   solvabilite,
-  highlightedPoste,
-  activeTab,
-  setActiveTab,
+  highlightedPoste: _highlightedPoste,
+  activeTab: _activeTab,
+  setActiveTab: _setActiveTab,
 }) => {
+  const [tab, setTab] = useState<"overview" | "glossary">("overview");
+
   const kpis = [
-    { label: "CA", value: ca, isPercentage: false },
-    { label: "Résultat net", value: resultatNet, isPercentage: false },
-    { label: "Trésorerie", value: tresorerie, isPercentage: false },
-    { label: "BFR", value: bfr, isPercentage: false },
-    { label: "Fonds de roulement", value: fondsRoulement, isPercentage: false },
-    { label: "Solvabilité", value: solvabilite, isPercentage: true },
+    { label: "CA", value: ca },
+    { label: "Résultat", value: resultatNet },
+    { label: "Trésorerie", value: tresorerie },
+    { label: "BFR", value: bfr },
+    { label: "FR", value: fondsRoulement },
+    { label: "Solvab.", value: solvabilite, isPercent: true },
   ];
 
   return (
-    <div className="h-full overflow-y-auto rounded-2xl border border-gray-700 bg-gray-950 p-4 shadow-lg">
-      <div className="mb-6">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+    <div className="flex h-full flex-col gap-4 rounded-2xl border border-gray-700 bg-gray-950 p-4 shadow-lg">
+      {/* Window 1: INDICATEURS CLÉS (always visible) */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex-shrink-0"
+      >
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
           Indicateurs clés
         </p>
-      </div>
-
-      <div className="space-y-3">
-        {kpis.map((kpi) => {
-          const isLastKpi = kpi.label === "Solvabilité";
-          const isSolvabilite = kpi.isPercentage;
-
-          return (
-            <motion.div
+        <div className="grid grid-cols-2 gap-2">
+          {kpis.map((kpi) => (
+            <div
               key={kpi.label}
-              initial={{ opacity: 0.5, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex items-center justify-between rounded-lg bg-gray-900/50 px-3 py-2.5 border border-gray-800/50"
+              className="rounded-lg border border-gray-800/50 bg-gray-900/50 px-2.5 py-2"
             >
-              <span className="text-xs font-medium text-gray-300">{kpi.label}</span>
-              <motion.span
+              <p className="text-[10px] font-medium text-gray-400">{kpi.label}</p>
+              <motion.p
                 key={`${kpi.label}-${kpi.value}`}
                 className={`text-sm font-semibold tabular-nums ${
-                  isSolvabilite
+                  kpi.isPercent
                     ? getSolvabilityColor(kpi.value)
                     : getValueToneClass(kpi.value)
                 }`}
-                initial={{ opacity: 0.45, y: 2 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0.5 }}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 0.25 }}
               >
-                {isSolvabilite ? `${formatAmount(kpi.value)}%` : `${formatAmount(kpi.value)} u`}
-              </motion.span>
+                {kpi.isPercent ? `${formatAmount(kpi.value)}%` : `${formatAmount(kpi.value)} u`}
+              </motion.p>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Window 2: Tabbed content (secondary) */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="flex flex-1 flex-col overflow-hidden"
+      >
+        {/* Tab bar */}
+        <div className="flex gap-2 border-b border-gray-800 pb-2">
+          {(["overview", "glossary"] as const).map((tabName) => (
+            <button
+              key={tabName}
+              onClick={() => setTab(tabName)}
+              className={`text-xs font-medium transition-colors ${
+                tab === tabName
+                  ? "border-b-2 border-emerald-500 pb-2 text-emerald-400"
+                  : "text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              {tabName === "overview" ? "Vue d'ensemble" : "Glossaire"}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="mt-3 flex-1 overflow-y-auto">
+          {tab === "overview" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-2 text-xs text-gray-300"
+            >
+              <div className="flex justify-between">
+                <span className="text-gray-400">Entreprise:</span>
+                <span className="font-medium">{joueur.entreprise.nom}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Pseudo:</span>
+                <span className="font-medium">{joueur.pseudo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Actif total:</span>
+                <span className="font-medium text-emerald-400">
+                  {formatAmount(ca || 0)} u
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Passif total:</span>
+                <span className="font-medium text-red-400">
+                  {formatAmount(Math.abs(bfr) || 0)} u
+                </span>
+              </div>
             </motion.div>
-          );
-        })}
-      </div>
+          )}
+
+          {tab === "glossary" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              className="text-xs text-gray-300"
+            >
+              <p className="text-gray-400">
+                Consulte le glossaire depuis l'onglet central
+              </p>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
