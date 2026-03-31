@@ -20,9 +20,9 @@ function SIGRow({
   const [showNote, setShowNote] = useState(false);
   const positive = value >= 0;
   const baseClass = isTotal
-    ? "bg-indigo-600 text-white rounded-xl"
+    ? "bg-indigo-900/70 border border-indigo-600/40 rounded-xl text-white"
     : isSubtotal
-    ? "bg-indigo-50 border-l-4 border-indigo-400 rounded-r-lg"
+    ? "bg-slate-800/60 border-l-4 border-cyan-500 rounded-r-lg"
     : "pl-4";
 
   return (
@@ -32,31 +32,31 @@ function SIGRow({
         <div className="flex items-center gap-2 flex-1">
           {sign && (
             <span className={`text-xs font-black w-4 text-center ${
-              sign === "=" ? "text-indigo-600" :
-              sign === "−" ? "text-red-500" : "text-green-600"
-            } ${isTotal ? "text-white opacity-70" : ""}`}>{sign}</span>
+              sign === "=" ? "text-cyan-400" :
+              sign === "−" ? "text-red-400" : "text-emerald-400"
+            } ${isTotal ? "opacity-70" : ""}`}>{sign}</span>
           )}
-          <span className={`text-xs ${isTotal ? "font-bold text-white" : isSubtotal ? "font-semibold text-indigo-700" : "text-gray-600"}`}>
+          <span className={`text-xs ${isTotal ? "font-bold text-white" : isSubtotal ? "font-semibold text-cyan-300" : "text-gray-300"}`}>
             {label}
           </span>
           {note && (
-            <span className={`text-xs transition-transform ${showNote ? "rotate-0" : ""} ${isTotal ? "text-white opacity-60" : "text-indigo-400"}`}>
+            <span className={`text-xs transition-transform ${showNote ? "rotate-0" : ""} ${isTotal ? "opacity-60 text-cyan-300" : "text-cyan-400"}`}>
               {showNote ? "▲" : "ⓘ"}
             </span>
           )}
         </div>
         <div className={`font-bold text-sm tabular-nums ${
           isTotal
-            ? (positive ? "text-green-300" : "text-red-300")
+            ? (positive ? "text-emerald-400" : "text-red-400")
             : isSubtotal
-            ? (positive ? "text-indigo-700" : "text-red-600")
-            : (positive ? "text-gray-700" : "text-red-600")
+            ? (positive ? "text-cyan-300" : "text-red-400")
+            : (positive ? "text-gray-300" : "text-red-400")
         }`}>
           {value >= 0 ? "+" : ""}{value}
         </div>
       </div>
       {showNote && note && (
-        <div className="mx-2 mb-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-800 leading-relaxed">
+        <div className="mx-2 mb-1 bg-blue-950/30 border border-blue-800/40 rounded-lg px-3 py-2 text-xs text-blue-200 leading-relaxed">
           {note}
         </div>
       )}
@@ -78,27 +78,27 @@ function Gauge({ value, config }: { value: number; config: GaugeConfig }) {
   return (
     <div className="mt-2 select-none">
       <div className="relative mb-3">
-        <div className="flex h-4 rounded-lg overflow-hidden border border-gray-200">
+        <div className="flex h-4 rounded-lg overflow-hidden border border-gray-700">
           {zones.map((z, i) => {
             const w = ((Math.min(z.to, max) - Math.max(z.from, min)) / (max - min)) * 100;
-            return <div key={i} style={{ width: `${w}%`, backgroundColor: z.color }} />;
+            return <div key={i} style={{ width: `${w}%`, backgroundColor: z.color, opacity: 0.7 }} />;
           })}
         </div>
-        <div className="absolute top-0 h-4 w-0.5 bg-gray-900 rounded" style={{ left: `calc(${pct}% - 1px)` }} />
+        <div className="absolute top-0 h-4 w-0.5 bg-gray-300 rounded" style={{ left: `calc(${pct}% - 1px)` }} />
         <div className="absolute w-0 h-0" style={{ left: `calc(${pct}% - 5px)`, bottom: "-7px",
-          borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "7px solid #111827" }} />
+          borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "7px solid #d1d5db" }} />
       </div>
-      <div className="text-center text-xs font-bold text-gray-800 mb-1">
+      <div className="text-center text-xs font-bold text-gray-200 mb-1">
         {value > 0 && "+"}{typeof value === "number" ? value.toFixed(value % 1 === 0 ? 0 : 1) : value}{unit}
-        {outOfRange && <span className="text-gray-400 font-normal"> (hors échelle)</span>}
+        {outOfRange && <span className="text-gray-500 font-normal"> (hors échelle)</span>}
       </div>
-      <div className="flex justify-between text-xs text-gray-400 px-0.5">
+      <div className="flex justify-between text-xs text-gray-500 px-0.5">
         <span>{min}{unit}</span><span>+{max}{unit}</span>
       </div>
       <div className="flex gap-1 flex-wrap mt-1">
         {zones.map((z, i) => (
           <span key={i} className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: z.color + "22", color: z.color, border: `1px solid ${z.color}55` }}>
+            style={{ backgroundColor: z.color + "33", color: z.color, border: `1px solid ${z.color}66` }}>
             {z.label}
           </span>
         ))}
@@ -185,47 +185,47 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
 
   return (
     <div className="relative z-0">
-      <div className={`bg-gray-50 rounded-xl p-3 border border-gray-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50 transition-all ${open ? "ring-2 ring-indigo-300" : ""}`}
+      <div className={`bg-gray-800 rounded-xl p-3 border border-gray-600 cursor-pointer hover:border-cyan-400/40 hover:bg-gray-700/80 transition-all ${open ? "ring-2 ring-cyan-500/50" : ""}`}
         onClick={() => setOpen(s => !s)}>
         <div className="flex items-start justify-between gap-1">
-          <div className="text-xs text-gray-500 leading-tight flex-1">{label}</div>
-          <span className="text-xs text-gray-300">ⓘ</span>
+          <div className="text-xs text-gray-400 leading-tight flex-1">{label}</div>
+          <span className="text-xs text-cyan-400">ⓘ</span>
         </div>
         <div className={`text-lg font-bold tabular-nums mt-1 ${
-          positive === undefined ? "text-gray-800" : positive ? "text-green-700" : "text-red-600"
+          positive === undefined ? "text-gray-200" : positive ? "text-emerald-400" : "text-red-400"
         }`}>
           {value >= 0 ? "+" : ""}{typeof value === "number" ? value.toFixed(value % 1 === 0 ? 0 : 1) : value}{unit ?? ""}
         </div>
       </div>
       {open && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-96 overflow-y-auto"
+        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-gray-900/95 border border-gray-700 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-96 overflow-y-auto"
           style={{ minWidth: "280px" }}>
           <div className="flex items-start justify-between gap-2">
-            <div className="font-bold text-indigo-700 text-sm">{label}</div>
+            <div className="font-bold text-cyan-300 text-sm">{label}</div>
             <button onClick={e => { e.stopPropagation(); setOpen(false); }}
-              className="text-gray-300 hover:text-gray-500 text-lg leading-none">×</button>
+              className="text-gray-500 hover:text-gray-300 text-lg leading-none">×</button>
           </div>
           {formule && (
-            <div className="bg-indigo-50 rounded-lg p-2 font-mono text-indigo-800 text-xs">= {formule}</div>
+            <div className="bg-blue-950/40 border border-blue-800/40 rounded-lg p-2 font-mono text-blue-200 text-xs">= {formule}</div>
           )}
           {gaugeConfig && (
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-              <div className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">📍 Position actuelle</div>
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+              <div className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">📍 Position actuelle</div>
               <Gauge value={value} config={gaugeConfig} />
             </div>
           )}
-          {definition && <div><div className="font-semibold text-gray-600 mb-0.5">📖 Définition</div><p className="text-gray-600 leading-relaxed break-words">{definition}</p></div>}
-          {interpretation && <div><div className="font-semibold text-gray-600 mb-0.5">🔍 Interprétation</div><p className="text-gray-600 leading-relaxed break-words">{interpretation}</p></div>}
+          {definition && <div><div className="font-semibold text-gray-300 mb-0.5">📖 Définition</div><p className="text-gray-300 leading-relaxed break-words">{definition}</p></div>}
+          {interpretation && <div><div className="font-semibold text-gray-300 mb-0.5">🔍 Interprétation</div><p className="text-gray-300 leading-relaxed break-words">{interpretation}</p></div>}
           {analyseTexte && (
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <p className="text-xs font-bold text-indigo-700 mb-1">🎯 Pour toi ce trimestre</p>
-              <p className="text-xs text-gray-600 leading-relaxed break-words">{analyseTexte}</p>
+            <div className="mt-2 pt-2 border-t border-gray-700">
+              <p className="text-xs font-bold text-cyan-300 mb-1">🎯 Pour toi ce trimestre</p>
+              <p className="text-xs text-gray-300 leading-relaxed break-words">{analyseTexte}</p>
             </div>
           )}
           {objectif && (
-            <div className={`rounded-lg p-2 border ${positive === undefined ? "bg-gray-50 border-gray-200" : positive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-              <div className="font-semibold mb-0.5">🎯 Objectif</div>
-              <p className="leading-relaxed break-words">{objectif}</p>
+            <div className={`rounded-lg p-2 border ${positive === undefined ? "bg-gray-800/40 border-gray-700" : positive ? "bg-emerald-950/30 border-emerald-700/40" : "bg-red-950/30 border-red-700/40"}`}>
+              <div className={`font-semibold mb-0.5 ${positive === undefined ? "text-gray-300" : positive ? "text-emerald-300" : "text-red-300"}`}>🎯 Objectif</div>
+              <p className="text-gray-300 leading-relaxed break-words">{objectif}</p>
             </div>
           )}
         </div>
@@ -251,18 +251,18 @@ export default function IndicateursPanel({ joueur }: Props) {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col max-h-full">
+    <div className="bg-gray-900 rounded-2xl shadow-sm border border-gray-700 flex flex-col max-h-full">
       <div className="px-4 pt-4 pb-2 flex-shrink-0">
-        <h3 className="font-bold text-center text-gray-800 mb-1 tracking-wide">📊 INDICATEURS FINANCIERS</h3>
-        <p className="text-center text-xs text-gray-400 mb-3">Clique sur un indicateur pour son explication détaillée ⓘ</p>
+        <h3 className="font-bold text-center text-gray-100 mb-1 tracking-wide">📊 INDICATEURS FINANCIERS</h3>
+        <p className="text-center text-xs text-gray-500 mb-3">Clique sur un indicateur pour son explication détaillée ⓘ</p>
         {/* Onglets */}
-        <div className="grid grid-cols-4 gap-1 border-b border-gray-200 pb-0">
+        <div className="grid grid-cols-4 gap-1 border-b border-gray-700 pb-0">
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={`text-xs font-bold px-2 py-2 rounded-t-lg text-center transition-all border-b-2 truncate ${
                 tab === t
-                  ? "bg-indigo-50 text-indigo-700 border-indigo-600 shadow-sm"
-                  : "text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-700"
+                  ? "bg-gray-800 text-cyan-300 border-cyan-500 shadow-sm"
+                  : "text-gray-500 border-transparent hover:bg-gray-800/50 hover:text-gray-400"
               }`}>
               {label}
             </button>
@@ -275,8 +275,8 @@ export default function IndicateursPanel({ joueur }: Props) {
         {tab === "sig" && (
           <div className="space-y-0.5">
             <div className="mb-2">
-              <div className="text-xs font-bold text-gray-600 uppercase tracking-wider">Comment se forme votre résultat ?</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">Soldes Intermédiaires de Gestion (SIG) — cliquez sur chaque ligne ⓘ</div>
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Comment se forme votre résultat ?</div>
+              <div className="text-[10px] text-gray-600 mt-0.5">Soldes Intermédiaires de Gestion (SIG) — cliquez sur chaque ligne ⓘ</div>
             </div>
 
             <SIGRow label="Chiffre d'affaires" value={sig.chiffreAffaires} sign="=" isSubtotal
@@ -328,7 +328,7 @@ export default function IndicateursPanel({ joueur }: Props) {
             </div>
 
             {/* Rappel pédagogique */}
-            <div className="mt-3 bg-indigo-50 rounded-xl p-3 text-xs text-indigo-700 leading-relaxed">
+            <div className="mt-3 bg-blue-950/30 border border-blue-800/40 rounded-xl p-3 text-xs text-blue-200 leading-relaxed">
               <strong>📚 À retenir — la cascade du résultat :</strong>
               <div className="mt-1.5 space-y-0.5 font-mono text-[10px]">
                 <div>Valeur Ajoutée (VA)</div>
@@ -349,7 +349,7 @@ export default function IndicateursPanel({ joueur }: Props) {
         {/* ── ONGLET RENTABILITÉ ──────────────────────────────────────── */}
         {tab === "rentabilite" && (
           <div className="space-y-3">
-            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">
               Indicateurs de rentabilité
             </div>
             <div className="grid grid-cols-2 gap-2 min-w-0">
@@ -436,7 +436,7 @@ export default function IndicateursPanel({ joueur }: Props) {
         {/* ── ONGLET STRUCTURE ────────────────────────────────────────── */}
         {tab === "structure" && (
           <div className="space-y-3">
-            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">
               Structure financière & Liquidité
             </div>
             <div className="grid grid-cols-2 gap-2 min-w-0">
@@ -531,17 +531,17 @@ export default function IndicateursPanel({ joueur }: Props) {
 
             {/* Totaux Actif/Passif + équilibre */}
             <div className="grid grid-cols-2 gap-2 min-w-0">
-              <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
-                <div className="text-xs text-blue-600 mb-1 font-semibold">Total Actif</div>
-                <div className="text-xl font-bold text-blue-800">{ind.totalActif}</div>
+              <div className="bg-blue-950/30 border border-blue-800/40 rounded-xl p-3">
+                <div className="text-xs text-blue-300 mb-1 font-semibold">Total Actif</div>
+                <div className="text-xl font-bold text-blue-200">{ind.totalActif}</div>
               </div>
-              <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
-                <div className="text-xs text-orange-600 mb-1 font-semibold">Total Passif</div>
-                <div className="text-xl font-bold text-orange-800">{ind.totalPassif}</div>
+              <div className="bg-amber-950/30 border border-amber-700/40 rounded-xl p-3">
+                <div className="text-xs text-amber-300 mb-1 font-semibold">Total Passif</div>
+                <div className="text-xl font-bold text-amber-200">{ind.totalPassif}</div>
               </div>
             </div>
             <div className={`text-center text-xs font-bold py-1.5 rounded-lg ${
-              ind.equilibre ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+              ind.equilibre ? "bg-emerald-950/30 text-emerald-300 border border-emerald-700/40" : "bg-amber-950/30 text-amber-300 border border-amber-700/40"
             }`}>
               {ind.equilibre ? "✅ Bilan équilibré (Actif = Passif)" : "⚠️ Bilan déséquilibré — vérifiez vos écritures"}
             </div>
@@ -551,7 +551,7 @@ export default function IndicateursPanel({ joueur }: Props) {
         {/* ── ONGLET RATIOS DE GESTION ───────────────────────────────── */}
         {tab === "ratios" && (
           <div className="space-y-3">
-            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">
               Ratios de gestion
             </div>
             <Indicateur
@@ -570,7 +570,7 @@ export default function IndicateursPanel({ joueur }: Props) {
               ]}}
             />
 
-            <div className="bg-indigo-50 rounded-xl p-3 text-xs text-indigo-700 leading-relaxed">
+            <div className="bg-blue-950/30 border border-blue-800/40 rounded-xl p-3 text-xs text-blue-200 leading-relaxed">
               <strong>📌 Note pédagogique :</strong> Dans ce jeu simplifié, il n'y a pas d'achats à crédit ni de
               stocks tournants. Le délai fournisseur et la rotation des stocks ne sont donc pas calculables.
               Dans une vraie entreprise : Délai fournisseurs = Dettes × 360 / Achats.
@@ -578,14 +578,14 @@ export default function IndicateursPanel({ joueur }: Props) {
             </div>
 
             {/* Récap des 8 indicateurs essentiels — groupés par catégorie */}
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+            <div className="bg-gray-800/40 rounded-xl p-3 border border-gray-700/50">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                 🎓 Les 8 indicateurs essentiels à maîtriser
               </div>
               <div className="space-y-2">
                 {/* Groupe 1 : Résultats */}
-                <div className="bg-indigo-50 rounded-lg p-2 border border-indigo-100">
-                  <div className="text-xs font-bold text-indigo-600 mb-1.5">📊 Résultats</div>
+                <div className="bg-indigo-950/40 border border-indigo-700/40 rounded-lg p-2">
+                  <div className="text-xs font-bold text-indigo-300 mb-1.5">📊 Résultats</div>
                   {[
                     ["1️⃣", "Valeur Ajoutée (VA)", sig.valeurAjoutee, ""],
                     ["2️⃣", "Excédent Brut d'Exploitation (EBE)", sig.ebe, ""],
@@ -593,38 +593,38 @@ export default function IndicateursPanel({ joueur }: Props) {
                     ["4️⃣", "Résultat net", sig.resultatNet, ""],
                   ].map(([num, label, val, unit]) => (
                     <div key={label as string} className="flex items-center justify-between py-0.5">
-                      <span className="text-xs text-gray-600">{num} {label}</span>
-                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                      <span className="text-xs text-gray-400">{num} {label}</span>
+                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {(val as number) >= 0 ? "+" : ""}{val}{unit}
                       </span>
                     </div>
                   ))}
                 </div>
                 {/* Groupe 2 : Structure */}
-                <div className="bg-orange-50 rounded-lg p-2 border border-orange-100">
-                  <div className="text-xs font-bold text-orange-600 mb-1.5">🏗️ Structure</div>
+                <div className="bg-amber-950/30 border border-amber-700/40 rounded-lg p-2">
+                  <div className="text-xs font-bold text-amber-300 mb-1.5">🏗️ Structure</div>
                   {[
                     ["5️⃣", "Fonds de Roulement (FR)", ind.fondsDeRoulement, ""],
                     ["6️⃣", "Besoin en Fonds de Roulement (BFR)", ind.besoinFondsRoulement, ""],
                   ].map(([num, label, val, unit]) => (
                     <div key={label as string} className="flex items-center justify-between py-0.5">
-                      <span className="text-xs text-gray-600">{num} {label}</span>
-                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                      <span className="text-xs text-gray-400">{num} {label}</span>
+                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {(val as number) >= 0 ? "+" : ""}{val}{unit}
                       </span>
                     </div>
                   ))}
                 </div>
                 {/* Groupe 3 : Trésorerie & Rentabilité */}
-                <div className="bg-green-50 rounded-lg p-2 border border-green-100">
-                  <div className="text-xs font-bold text-green-600 mb-1.5">💰 Trésorerie & Rentabilité</div>
+                <div className="bg-emerald-950/30 border border-emerald-700/40 rounded-lg p-2">
+                  <div className="text-xs font-bold text-emerald-300 mb-1.5">💰 Trésorerie & Rentabilité</div>
                   {[
                     ["7️⃣", "Trésorerie Nette", ind.tresorerieNette, ""],
                     ["8️⃣", "Rentabilité financière (ROE)", parseFloat(sig.roe.toFixed(1)), "%"],
                   ].map(([num, label, val, unit]) => (
                     <div key={label as string} className="flex items-center justify-between py-0.5">
-                      <span className="text-xs text-gray-600">{num} {label}</span>
-                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                      <span className="text-xs text-gray-400">{num} {label}</span>
+                      <span className={`text-xs font-bold tabular-nums ${(val as number) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {(val as number) >= 0 ? "+" : ""}{val}{unit}
                       </span>
                     </div>
