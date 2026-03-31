@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 
 import { Joueur } from "@/lib/game-engine/types";
+import IndicateursPanel from "@/components/IndicateursPanel";
+import { GlossairePanel } from "@/components/GlossairePanel";
 
-type RightPanelTab = "resume" | "bilan" | "cr";
+type RightPanelTab = "cartes" | "indicateurs" | "glossaire" | "analyse" | "progression" | "resume" | "bilan" | "cr";
 
 interface RightPanelProps {
   joueur: Joueur;
@@ -18,8 +20,8 @@ interface RightPanelProps {
   fondsRoulement: number;
   solvabilite: number;
   highlightedPoste?: string | null;
-  activeTab: RightPanelTab;
-  setActiveTab: (tab: RightPanelTab) => void;
+  activeTab?: any;
+  setActiveTab?: any;
 }
 
 const amountFormatter = new Intl.NumberFormat("fr-FR", {
@@ -45,18 +47,34 @@ function getSolvabilityColor(solvabilite: number): string {
 const RightPanel: React.FC<RightPanelProps> = ({
   joueur,
   ca,
-  marge: _marge,
-  ebe: _ebe,
+  marge,
+  ebe,
   resultatNet,
   tresorerie,
   bfr,
   fondsRoulement,
   solvabilite,
   highlightedPoste: _highlightedPoste,
-  activeTab: _activeTab,
-  setActiveTab: _setActiveTab,
+  activeTab,
+  setActiveTab,
 }) => {
-  const [tab, setTab] = useState<"overview" | "glossary">("overview");
+  const [localTab, setLocalTab] = useState<RightPanelTab>("cartes");
+
+  // Map old tab names to new ones
+  const mapTabName = (tab?: string | null): RightPanelTab => {
+    if (!tab) return localTab;
+    if (tab === "resume" || tab === "bilan" || tab === "cr") return "cartes";
+    return tab as RightPanelTab;
+  };
+
+  const currentTab = mapTabName(activeTab);
+  const handleTabChange = (tab: RightPanelTab) => {
+    if (setActiveTab) {
+      setActiveTab(tab);
+    } else {
+      setLocalTab(tab);
+    }
+  };
 
   const kpis = [
     { label: "CA", value: ca },
@@ -66,6 +84,197 @@ const RightPanel: React.FC<RightPanelProps> = ({
     { label: "FR", value: fondsRoulement },
     { label: "Solvab.", value: solvabilite, isPercent: true },
   ];
+
+  // Tab definitions
+  const tabs: Array<{ id: RightPanelTab; icon: string; label: string }> = [
+    { id: "cartes", icon: "🃏", label: "Cartes" },
+    { id: "indicateurs", icon: "📊", label: "Indicateurs" },
+    { id: "glossaire", icon: "📖", label: "Glossaire" },
+    { id: "analyse", icon: "💡", label: "Analyse" },
+    { id: "progression", icon: "📈", label: "Progression" },
+  ];
+
+  // Compute card stats
+  const cartesCommerciales = joueur.cartesActives.filter((c) =>
+    c.categorie === "commercial"
+  );
+  const countByType = {
+    junior: cartesCommerciales.filter((c) => c.titre.includes("Junior")).length,
+    senior: cartesCommerciales.filter((c) => c.titre.includes("Senior")).length,
+    directeur: cartesCommerciales.filter(
+      (c) => c.titre.includes("Directeur") || c.titre.includes("Directrice")
+    ).length,
+  };
+  const totalCommercials = countByType.junior + countByType.senior + countByType.directeur;
+  const autresCartes = joueur.cartesActives.filter((c) =>
+    c.categorie !== "commercial"
+  );
+
+  // Render tab content
+  const renderTabContent = () => {
+    switch (currentTab) {
+      case "cartes":
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4 text-xs text-gray-300"
+          >
+            <div>
+              <h3 className="font-semibold text-emerald-400 mb-2">Commerciaux actifs</h3>
+              <div className="space-y-1 bg-gray-900/40 rounded-lg p-2">
+                <div>🧑‍💼 Junior × {countByType.junior} (1 particulier/tour)</div>
+                <div>👔 Senior × {countByType.senior} (1 PME/tour)</div>
+                <div>👑 Directeur × {countByType.directeur} (1 grand compte/tour)</div>
+                <div className="border-t border-gray-700 mt-2 pt-2 font-medium">
+                  Total: {totalCommercials} commercial{totalCommercials > 1 ? "s" : ""}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-yellow-400 mb-2">
+                Clients à traiter ({joueur.clientsATrait.length})
+              </h3>
+              {joueur.clientsATrait.length > 0 ? (
+                <div className="space-y-1 bg-gray-900/40 rounded-lg p-2">
+                  {joueur.clientsATrait.map((client, idx) => (
+                    <div key={idx}>
+                      {client.titre}{" "}
+                      {client.delaiPaiement === 0 && "(paiement immédiat)"}
+                      {client.delaiPaiement === 1 && "(paiement C+1)"}
+                      {client.delaiPaiement === 2 && "(paiement C+2)"}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 italic">Aucun client en attente</div>
+              )}
+            </div>
+
+            {autresCartes.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-blue-400 mb-2">Autres cartes actives</h3>
+                <div className="space-y-1 bg-gray-900/40 rounded-lg p-2">
+                  {autresCartes.map((carte) => (
+                    <div key={carte.id}>{carte.titre}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        );
+
+      case "indicateurs":
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="flex-1 overflow-y-auto"
+          >
+            <IndicateursPanel joueur={joueur} />
+          </motion.div>
+        );
+
+      case "glossaire":
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="flex-1 overflow-y-auto"
+          >
+            <GlossairePanel />
+          </motion.div>
+        );
+
+      case "analyse":
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-3 text-xs text-gray-300"
+          >
+            {tresorerie < 0 && (
+              <div className="bg-red-950/30 border border-red-800/40 rounded-lg p-2">
+                <div className="font-semibold text-red-300">⚠️ Trésorerie négative</div>
+                <div className="text-gray-400 mt-1">
+                  Risque de découvert. Encaissez rapidement ou réduisez les charges.
+                </div>
+              </div>
+            )}
+            {bfr > fondsRoulement && (
+              <div className="bg-yellow-950/30 border border-yellow-800/40 rounded-lg p-2">
+                <div className="font-semibold text-yellow-300">⚠️ BFR &gt; FR</div>
+                <div className="text-gray-400 mt-1">
+                  Tension de trésorerie. Réduisez les délais de paiement clients.
+                </div>
+              </div>
+            )}
+            {solvabilite < 30 && (
+              <div className="bg-orange-950/30 border border-orange-800/40 rounded-lg p-2">
+                <div className="font-semibold text-orange-300">⚠️ Solvabilité faible</div>
+                <div className="text-gray-400 mt-1">
+                  Situation fragile face aux chocs. Consolidez vos capitaux propres.
+                </div>
+              </div>
+            )}
+            {resultatNet < 0 && (
+              <div className="bg-blue-950/30 border border-blue-800/40 rounded-lg p-2">
+                <div className="font-semibold text-blue-300">💡 Résultat négatif</div>
+                <div className="text-gray-400 mt-1">
+                  Les charges dépassent les produits. Augmentez ventes ou réduisez coûts.
+                </div>
+              </div>
+            )}
+            {tresorerie >= 0 &&
+              bfr <= fondsRoulement &&
+              solvabilite >= 30 &&
+              resultatNet >= 0 && (
+                <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2">
+                  <div className="font-semibold text-emerald-300">✅ Situation saine</div>
+                  <div className="text-gray-400 mt-1">
+                    Continue sur cette lancée. Maintenez l'équilibre et investissez stratégiquement.
+                  </div>
+                </div>
+              )}
+          </motion.div>
+        );
+
+      case "progression":
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-2 text-xs text-gray-300"
+          >
+            <ProgressBar label="CA" value={ca} max={Math.max(ca, 100)} />
+            <ProgressBar
+              label="Résultat"
+              value={resultatNet}
+              max={Math.max(Math.abs(resultatNet), 50)}
+            />
+            <ProgressBar
+              label="Trésorerie"
+              value={tresorerie}
+              max={Math.max(Math.abs(tresorerie), 50)}
+            />
+            <ProgressBar label="BFR" value={bfr} max={Math.max(bfr, 50)} />
+            <ProgressBar label="FR" value={fondsRoulement} max={Math.max(fondsRoulement, 50)} />
+            <ProgressBar label="Solvabilité" value={solvabilite} max={100} isPercent />
+            <ProgressBar label="Marge" value={marge} max={Math.max(Math.abs(marge), 50)} />
+            <ProgressBar label="EBE" value={ebe} max={Math.max(Math.abs(ebe), 50)} />
+          </motion.div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="flex h-full flex-col gap-4 rounded-2xl border border-gray-700 bg-gray-950 p-4 shadow-lg">
@@ -79,7 +288,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
           Indicateurs clés
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {kpis.map((kpi) => (
             <div
               key={kpi.label}
@@ -112,70 +321,60 @@ const RightPanel: React.FC<RightPanelProps> = ({
         className="flex flex-1 flex-col overflow-hidden"
       >
         {/* Tab bar */}
-        <div className="flex gap-2 border-b border-gray-800 pb-2">
-          {(["overview", "glossary"] as const).map((tabName) => (
+        <div className="flex gap-1 border-b border-gray-800 pb-2 overflow-x-auto">
+          {tabs.map((tab) => (
             <button
-              key={tabName}
-              onClick={() => setTab(tabName)}
-              className={`text-xs font-medium transition-colors ${
-                tab === tabName
-                  ? "border-b-2 border-emerald-500 pb-2 text-emerald-400"
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`whitespace-nowrap text-xs font-medium transition-colors px-2 py-1 rounded-t-lg ${
+                currentTab === tab.id
+                  ? "border-b-2 border-emerald-500 text-emerald-400 bg-gray-800/50"
                   : "text-gray-400 hover:text-gray-300"
               }`}
             >
-              {tabName === "overview" ? "Vue d'ensemble" : "Glossaire"}
+              {tab.icon} {tab.label}
             </button>
           ))}
         </div>
 
         {/* Tab content */}
-        <div className="mt-3 flex-1 overflow-y-auto">
-          {tab === "overview" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-2 text-xs text-gray-300"
-            >
-              <div className="flex justify-between">
-                <span className="text-gray-400">Entreprise:</span>
-                <span className="font-medium">{joueur.entreprise.nom}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Pseudo:</span>
-                <span className="font-medium">{joueur.pseudo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Actif total:</span>
-                <span className="font-medium text-emerald-400">
-                  {formatAmount(ca || 0)} u
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Passif total:</span>
-                <span className="font-medium text-red-400">
-                  {formatAmount(Math.abs(bfr) || 0)} u
-                </span>
-              </div>
-            </motion.div>
-          )}
-
-          {tab === "glossary" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="text-xs text-gray-300"
-            >
-              <p className="text-gray-400">
-                Consulte le glossaire depuis l'onglet central
-              </p>
-            </motion.div>
-          )}
-        </div>
+        <div className="mt-3 flex-1 overflow-y-auto">{renderTabContent()}</div>
       </motion.div>
     </div>
   );
 };
+
+function ProgressBar({
+  label,
+  value,
+  max,
+  isPercent,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  isPercent?: boolean;
+}) {
+  const percentage = Math.min(Math.abs(value) / Math.max(max, 1), 1) * 100;
+  const isNegative = value < 0;
+  const barColor = value > 0 ? "bg-emerald-600" : value < 0 ? "bg-red-600" : "bg-gray-600";
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-16 text-left text-gray-400">{label}</span>
+      <div className="flex-1 h-4 bg-gray-800 rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full ${barColor}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+      <span className="w-12 text-right text-gray-400">
+        {isPercent ? `${formatAmount(value)}%` : formatAmount(value)}
+      </span>
+    </div>
+  );
+}
 
 export default RightPanel;
