@@ -34,7 +34,7 @@ const ETAPES: EtapeData[] = [
       { label: "Dotation amort.",      debit: "Dotation aux amort. +N",credit: "Immobilisations −N",
         note: "N = nombre de biens immobilisés actifs" },
     ],
-    conseil: "💡 L'amortissement est une charge calculée : aucune sortie de trésorerie, mais le résultat net diminue. CAF = Résultat + Dotations.",
+    conseil: "💡 Les charges fixes font sortir de l'argent de ta banque. L'amortissement, lui, ne coûte rien en trésorerie : c'est juste une écriture pour comptabiliser l'usure de tes équipements. Ton résultat baisse, mais ta banque ne bouge pas.",
   },
 
   /* ── 1 ─ Achats de marchandises ── */
@@ -47,7 +47,7 @@ const ETAPES: EtapeData[] = [
       { label: "Paiement à crédit",   debit: "Stocks +N",  credit: "Dettes fournisseurs +N",
         note: "Dette remboursée automatiquement au tour suivant" },
     ],
-    conseil: "💡 Acheter à crédit préserve la trésorerie aujourd'hui mais crée une dette fournisseur à rembourser le trimestre prochain.",
+    conseil: "💡 Acheter à crédit, c'est reporter le paiement : ta trésorerie reste intacte aujourd'hui, mais tu devras payer ton fournisseur au trimestre suivant. Pratique quand ta banque est basse, mais gare à l'accumulation de dettes !",
   },
 
   /* ── 2 ─ Avancement des créances ── */
@@ -60,7 +60,7 @@ const ETAPES: EtapeData[] = [
       { label: "Avancement C+2→C+1",     debit: "Créances C+1 +Y",  credit: "Créances C+2 −Y",
         note: "Mouvement interne à l'Actif — le total Actif ne change pas" },
     ],
-    conseil: "💡 Un Grand Compte paie en C+2 : la vente est enregistrée aujourd'hui, l'argent arrive dans 2 trimestres. Anticipe le décalage de trésorerie !",
+    conseil: "💡 Un particulier paie tout de suite, une TPE en 1 trimestre, un Grand Compte en 2 trimestres. Plus le client est gros, plus tu attends avant de toucher l'argent. Anticipe ce décalage !",
   },
 
   /* ── 3 ─ Paiement des commerciaux ── */
@@ -72,7 +72,7 @@ const ETAPES: EtapeData[] = [
       { label: "Salaires commerciaux", debit: "Charges personnel +N", credit: "Trésorerie −N",
         note: "N = total des coûts salariaux de tes commerciaux actifs" },
     ],
-    conseil: "🤝 Junior : +2 particuliers/trim, Senior : +2 TPE/trim, Directrice : +2 grands comptes/trim. Recrute via une Carte Décision à l'étape 6.",
+    conseil: "🤝 Un Junior ramène 2 particuliers par trimestre (paiement cash). Un Senior ramène 2 TPE (paiement en 1 trimestre). Une Directrice ramène 2 Grands Comptes (paiement en 2 trimestres). Pour recruter, c'est à l'étape 6.",
   },
 
   /* ── 4 ─ Traitement des ventes (Cartes Client) ── */
@@ -85,7 +85,7 @@ const ETAPES: EtapeData[] = [
         note: "Trésorerie si paiement immédiat, Créance C+1 ou C+2 selon délai" },
       { label: "CMV — coût marchand.",debit: "Achats / CMV +1",          credit: "Stocks −1" },
     ],
-    conseil: "🔑 1 vente = 2 écritures qui s'équilibrent. Le produit augmente le résultat, le CMV le diminue. Net = Ventes − CMV.",
+    conseil: "🔑 Chaque vente touche plusieurs comptes en même temps : ton chiffre d'affaires monte (tu gagnes), ton stock baisse (la marchandise part), et l'argent arrive dans ta banque ou en créance selon le délai de paiement du client.",
   },
 
   /* ── 5 ─ Effets récurrents des cartes ── */
@@ -98,7 +98,7 @@ const ETAPES: EtapeData[] = [
       { label: "Charges d'intérêts",        debit: "Charges intérêt +N",   credit: "Trésorerie −N",
         note: "Uniquement si tu as souscrit un Prêt Bancaire" },
     ],
-    conseil: "💡 Les revenus récurrents (CIR, loyers perçus) s'enregistrent à l'inverse : D: Trésorerie / C: Produits. Surveille le solde net récurrent.",
+    conseil: "💡 Certaines cartes génèrent des coûts chaque trimestre (maintenance, intérêts d'emprunt, abonnements). Vérifie que tes ventes couvrent ces frais récurrents, sinon ils grignoteront ta trésorerie tour après tour.",
   },
 
   /* ── 6 ─ Carte Décision ── */
@@ -112,7 +112,7 @@ const ETAPES: EtapeData[] = [
       { label: "Financement (emprunt)",   debit: "Trésorerie +N",       credit: "Emprunts +N",
         note: "Effet de levier : Actif ↑ et Passif ↑ simultanément" },
     ],
-    conseil: "🛡️ L'assurance annule les événements négatifs. La R&D bénéficie du Crédit d'Impôt Recherche (+1 produit exceptionnel/trim). Chaque nouveau client consomme 1 stock.",
+    conseil: "🧑‍💼 Tu démarres avec un Junior. Recruter un Senior dès le 2e tour booste tes ventes. Investir tôt, c'est répartir le coût sur plus de tours. Et l'Assurance Prévoyance te protège contre les mauvaises surprises !",
   },
 
   /* ── 7 ─ Événement aléatoire ── */
@@ -126,7 +126,7 @@ const ETAPES: EtapeData[] = [
       { label: "Événement négatif", debit: "Charges except. +N",  credit: "Trésorerie −N",
         note: "Ex. contrôle fiscal, litige, perte de données" },
     ],
-    conseil: "🎲 L'Assurance Prévoyance annule certains événements négatifs (marqués 🛡️). Constitue des réserves de trésorerie pour absorber les chocs.",
+    conseil: "🎲 Tu ne peux pas prévoir ces événements, mais tu peux t'y préparer : garde une réserve de trésorerie pour encaisser les coups durs. L'Assurance Prévoyance peut annuler certains événements négatifs (ceux marqués 🛡️).",
   },
 
   /* ── 8 ─ Bilan de fin de trimestre ── */
@@ -140,7 +140,7 @@ const ETAPES: EtapeData[] = [
       { label: "Clôture si perte",    debit: "Capitaux propres ↓", credit: "Résultat net → 0",
         note: "La perte érode le patrimoine. Si Capitaux < 0 → faillite !" },
     ],
-    conseil: "📊 Résultat Net = Produits − Charges. Objectif : capitaux propres positifs et bilan équilibré (Actif = Passif).",
+    conseil: "📊 Ton résultat = ce que tu as gagné (ventes) moins ce que tu as dépensé (charges). S'il est positif, tes capitaux propres augmentent et ton entreprise se renforce. Objectif : terminer avec des capitaux propres positifs !",
   },
 ];
 
