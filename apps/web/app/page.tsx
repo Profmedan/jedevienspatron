@@ -23,17 +23,15 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { KeyIndicatorsSection } from "@/components/KeyIndicatorsSection";
-import { GlossarySection } from "@/components/GlossarySection";
 
 const HERO_POINTS = [
   "Chaque décision produit immédiatement un effet financier qui déclenche une conséquence financière.",
   "Les explications permettent une séance vivante sans sacrifier la rigueur comptable.",
-  "Le formateur (optionnel) dispose d'un format clair, crédible et simple à déployer.",
+  "Le formateur (optionnel) dispose d’un format clair, crédible et simple à déployer.",
 ];
 
 const SUPPORT_NUMBERS = [
-  { value: "4", label: "univers d'entreprise différents" },
+  { value: "4", label: "univers d’entreprise différents" },
   { value: "8", label: "décisions par trimestre" },
   { value: "1h+", label: "de séance active" },
 ];
@@ -48,12 +46,12 @@ const LEARNING_PILLARS = [
   },
   {
     title: "Décider",
-    text: "Achats, ventes, trésorerie, recrutement : chaque choix modifie immédiatement l'équilibre de l'entreprise.",
+    text: "Achats, ventes, trésorerie, recrutement : chaque choix modifie immédiatement l’équilibre de l’entreprise.",
     icon: Building2,
   },
   {
     title: "Comprendre",
-    text: "Le jeu, le score final et le débriefing transforment l'action en raisonnement durable. Les principes comptables sont respectés. Les rendez-vous avec le comptable ne sont plus un charabia technique : chaque notion comptable est expliquée et mise en évidence en fonction des flux financiers.",
+    text: "Le jeu, le score final et le débriefing transforment l’action en raisonnement durable. Les principes comptables sont respectés. Les rendez-vous avec le comptable ne sont plus un charabia technique : chaque notion comptable est expliquée et mise en évidence en fonction des flux financiers.",
     icon: BookOpen,
   },
 ];
@@ -61,7 +59,7 @@ const LEARNING_PILLARS = [
 const JOURNEY_STEPS = [
   {
     index: "01",
-    title: "Choisissez un univers d'entreprise",
+    title: "Choisissez un univers d’entreprise",
     text: "Manufacture, transport, commerce ou laboratoire : chaque partie donne un contexte clair et une dynamique différente.",
   },
   {
@@ -72,7 +70,7 @@ const JOURNEY_STEPS = [
   {
     index: "03",
     title: "Lisez les effets comptables",
-    text: "Résultat net, trésorerie, solvabilité, équilibre du bilan et bien d'autres indicateurs deviennent visibles, discutables, expliqués et mémorisables.",
+    text: "Résultat net, trésorerie, solvabilité, équilibre du bilan et bien d’autres indicateurs deviennent visibles, discutables, expliqués et mémorisables.",
   },
   {
     index: "04",
@@ -83,7 +81,7 @@ const JOURNEY_STEPS = [
 
 const ENTRY_OPTIONS = [
   {
-    title: "J'ai un code",
+    title: "J’ai un code",
     subtitle: "Entrer dans la séance immédiatement",
     description: "Saisissez le code diffusé par votre formateur et démarrez la partie sans configuration supplémentaire.",
     accent: "emerald",
@@ -91,7 +89,7 @@ const ENTRY_OPTIONS = [
   },
   {
     title: "Je joue seul",
-    subtitle: "Découvrir l'expérience en autonomie",
+    subtitle: "Découvrir l’expérience en autonomie",
     description: "Idéal pour tester le jeu, réviser à son rythme ou préparer une future séance de formation.",
     accent: "cyan",
     icon: Gamepad2,
@@ -101,7 +99,7 @@ const ENTRY_OPTIONS = [
   {
     title: "Je suis formateur",
     subtitle: "Lancer, animer, suivre une promotion",
-    description: "Créez des sessions, diffusez un code d'accès et récupérez les résultats de la classe.",
+    description: "Créez des sessions, diffusez un code d’accès et récupérez les résultats de la classe.",
     accent: "amber",
     icon: GraduationCap,
     href: "/auth/login",
@@ -114,7 +112,7 @@ const ENTRY_OPTIONS = [
 const PRINCIPLES = [
   {
     title: "Actif = Passif",
-    text: "L'équilibre du bilan se voit à chaque étape, sans laisser l'apprenant seul face à une règle abstraite.",
+    text: "L’équilibre du bilan se voit à chaque étape, sans laisser l’apprenant seul face à une règle abstraite.",
     icon: Scale,
   },
   {
@@ -365,7 +363,7 @@ export default function Home() {
                 </h1>
                 <p className="text-base leading-7 text-slate-300 sm:text-lg">
                   Un jeu sérieux conçu pour comprendre comment les mouvements
-                  d'argent peuvent vous enrichir et vous appauvrir : l'apprenant
+                  d’argent peuvent vous enrichir et vous appauvrir : l’apprenant
                   est guidé et tout mouvement de trésorerie est expliqué tout au
                   long du jeu.
                 </p>
@@ -417,7 +415,7 @@ export default function Home() {
               <div className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(155deg,rgba(8,15,28,0.96),rgba(6,32,43,0.92))] p-2.5 shadow-[0_40px_140px_rgba(2,8,23,0.68)] sm:p-3">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(250,204,21,0.09),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.18),transparent_24%)]" />
                 <div className="absolute left-6 top-6 z-10 inline-flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
-                  Simulation d'entreprise & lecture comptable
+                  Simulation d’entreprise & lecture comptable
                 </div>
 
                 <motion.div
@@ -470,7 +468,7 @@ export default function Home() {
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
               JEDEVIENSPATRON.fr relie les décisions de gestion, les effets
               comptables et la lecture des résultats dans un même parcours.
-              L'apprenant voit enfin la logique, et l'équipe pédagogique
+              L’apprenant voit enfin la logique, et l’équipe pédagogique
               (optionnelle) garde un format exploitable avant, pendant et après
               la séance grâce aux nombreux indicateurs financiers disponibles.
             </p>
@@ -480,7 +478,7 @@ export default function Home() {
                 Un même outil, deux promesses tenues
               </p>
               <p className="mt-3 text-sm leading-7 text-slate-300">
-                Donner envie d'entrer dans le jeu côté apprenant, en se challengeant
+                Donner envie d’entrer dans le jeu côté apprenant, en se challengeant
                 ou challengeant les autres joueurs pour obtenir le meilleur score,
                 le meilleur résultat comptable ou financier tout en offrant un cadre
                 rassurant pour un responsable pédagogique ou un établissement.
@@ -516,9 +514,9 @@ export default function Home() {
               Un parcours ludique structuré pour faire comprendre le fonctionnement de l'entreprise, la comptabilité et la prise de décision.
             </h2>
             <p className="max-w-md text-sm leading-7 text-slate-400 sm:text-base">
-              Chaque partie suit une progression claire, de l'activité de
-              l'entreprise jusqu'à l'analyse des résultats. Les apprenants
-              peuvent jouer en autonomie ou dans le cadre d'une animation
+              Chaque partie suit une progression claire, de l’activité de
+              l’entreprise jusqu’à l’analyse des résultats. Les apprenants
+              peuvent jouer en autonomie ou dans le cadre d’une animation
               encadrée. À chaque étape, ils agissent, observent les conséquences
               de leurs choix et relient directement les décisions prises aux
               mécanismes comptables et financiers.
@@ -533,7 +531,7 @@ export default function Home() {
                   <h3 className="text-lg font-bold text-white">Pensé pour les apprenants, crédible pour les formateurs</h3>
                   <p className="text-sm leading-6 text-slate-400">
                     Utilisable en autonomie ou en animation pédagogique, le jeu
-                    s'adapte aussi bien à l'entraînement individuel qu'aux
+                    s’adapte aussi bien à l’entraînement individuel qu’aux
                     séances encadrées.
                   </p>
                 </div>
@@ -566,8 +564,8 @@ export default function Home() {
             </h2>
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
               Apprenant, joueur autonome ou formateur : chacun trouve immédiatement
-              la bonne porte d'entrée pour rejoindre une session, découvrir
-              l'expérience ou piloter une promotion.
+              la bonne porte d’entrée pour rejoindre une session, découvrir
+              l’expérience ou piloter une promotion.
             </p>
           </div>
 
@@ -717,7 +715,7 @@ export default function Home() {
       <section className="px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="max-w-2xl space-y-4">
-            <SectionEyebrow>Ce qu'on retient</SectionEyebrow>
+            <SectionEyebrow>Ce qu’on retient</SectionEyebrow>
             <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
               Les trois idées que le jeu rend enfin intuitives.
             </h2>
@@ -740,10 +738,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <KeyIndicatorsSection />
-
-      <GlossarySection />
 
       <section className="px-6 pb-10 sm:px-8 sm:pb-12 lg:px-12 lg:pb-14">
         <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(12,20,36,0.96),rgba(5,35,47,0.92))] px-5 py-8 shadow-2xl shadow-cyan-950/25 sm:px-8 sm:py-10">
