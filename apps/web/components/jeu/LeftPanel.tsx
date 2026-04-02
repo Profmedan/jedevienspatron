@@ -177,6 +177,15 @@ export function LeftPanel({
             {totalActif.toFixed(0)} = {totalPassif.toFixed(0)} {balanced && "✓"}
           </div>
         </section>
+
+        <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-3">
+          <button
+            onClick={onDemanderEmprunt}
+            className="w-full rounded-lg border border-white/10 bg-slate-900/50 px-3 py-2 text-xs font-semibold text-slate-100 hover:bg-slate-900/75 hover:border-white/20"
+          >
+            Demander un emprunt
+          </button>
+        </section>
       </div>
     );
   }

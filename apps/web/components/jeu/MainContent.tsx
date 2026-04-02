@@ -66,12 +66,23 @@ export function MainContent({
   };
 
   // Auto-switch to the tab matching the current entry's document type (Bilan or CR)
+  // When an entry is applied → show its document so the user sees the impact.
+  // On first load (nothing applied yet) → show the first pending entry's document.
   const appliedCount = _activeStep?.entries.filter(e => e.applied).length ?? 0;
   useEffect(() => {
     if (!_activeStep) return;
-    const firstPending = _activeStep.entries.find(e => !e.applied);
-    if (!firstPending) return;
-    const docType = getDocumentType(firstPending.poste);
+    const appliedEntries = _activeStep.entries.filter(e => e.applied);
+    let poste: string | undefined;
+    if (appliedEntries.length > 0) {
+      // Show the document for the entry that was just applied
+      poste = appliedEntries[appliedEntries.length - 1].poste;
+    } else {
+      // Initial load: show the first pending entry's document
+      const firstPending = _activeStep.entries.find(e => !e.applied);
+      poste = firstPending?.poste;
+    }
+    if (!poste) return;
+    const docType = getDocumentType(poste);
     const target: TabType = docType === "CR" ? "cr" : "bilan";
     setLocalActiveTab(target);
     setActiveTab(target);
