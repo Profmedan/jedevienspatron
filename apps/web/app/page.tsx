@@ -39,26 +39,6 @@ const SUPPORT_NUMBERS = [
 
 const HERO_TAGS = ["Décider", "Visualiser", "Débriefer"];
 
-const TESTIMONIALS = [
-  {
-    quote: "Les apprenants comprennent enfin pourquoi le bilan doit s'équilibrer. En une heure, ils voient ce qu'un cours magistral n'arrive pas à transmettre en trois séances.",
-    author: "Formateur en gestion, CFA",
-    initials: "ML",
-    color: "emerald",
-  },
-  {
-    quote: "J'ai utilisé le jeu pour préparer mon stage en entreprise. Les notions de trésorerie et de résultat net sont devenues concrètes pour moi.",
-    author: "Étudiante BTS Gestion",
-    initials: "SP",
-    color: "cyan",
-  },
-  {
-    quote: "Un outil clé en main pour animer une séance de sensibilisation à la comptabilité. Les participants repartent avec une vraie compréhension des enjeux financiers.",
-    author: "Responsable pédagogique, CCI",
-    initials: "FR",
-    color: "amber",
-  },
-];
 
 const LEARNING_PILLARS = [
   {
@@ -341,8 +321,8 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#020617] text-white">
-      <section className="relative overflow-hidden px-6 pb-10 pt-6 sm:px-8 sm:pb-12 lg:px-12 lg:pb-14">
+    <main className="min-h-screen bg-[#020617] text-white">
+      <section className="relative overflow-hidden px-6 pb-8 pt-6 sm:px-8 sm:pb-10 lg:px-12 lg:pb-12">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_82%_18%,rgba(250,204,21,0.08),transparent_18%),radial-gradient(circle_at_78%_74%,rgba(16,185,129,0.12),transparent_20%),linear-gradient(180deg,#020617_0%,#08111f_52%,#020617_100%)]" />
         <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[48vw] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_54%)] lg:block" />
         <div className="pointer-events-none absolute left-0 top-32 h-px w-full bg-gradient-to-r from-transparent via-white/12 to-transparent" />
@@ -362,12 +342,6 @@ export default function Home() {
             </div>
 
             <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-              <a href="#parcours" className="rounded-full px-3 py-2 transition-colors hover:bg-white/6 hover:text-white">
-                Le parcours
-              </a>
-              <a href="#acces" className="rounded-full px-3 py-2 transition-colors hover:bg-white/6 hover:text-white">
-                Commencer
-              </a>
               <Link
                 href="/auth/login"
                 className="rounded-full border border-white/12 bg-white/6 px-4 py-2 font-semibold text-white transition-colors hover:bg-white/10"
@@ -461,7 +435,7 @@ export default function Home() {
                 <motion.div
                   animate={shouldReduceMotion ? {} : { y: [0, -8, 0] }}
                   transition={shouldReduceMotion ? undefined : { duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-slate-950/55"
+                  className="relative min-h-[280px] overflow-hidden rounded-xl border border-white/10 bg-slate-950/55 sm:min-h-[360px]"
                 >
                   <Image
                     src="/hero.png"
@@ -498,7 +472,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.88fr_1.12fr]">
           <div className="space-y-5">
             <SectionEyebrow>Pourquoi ça marche</SectionEyebrow>
@@ -546,7 +520,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="parcours" className="px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+      <section id="parcours" className="px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="space-y-5">
             <SectionEyebrow>Le parcours</SectionEyebrow>
@@ -594,7 +568,7 @@ export default function Home() {
 
       <section
         id="acces"
-        className="border-y border-white/8 bg-[linear-gradient(180deg,rgba(8,17,31,0.82),rgba(2,8,23,1))] px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14"
+        className="border-y border-white/8 bg-[linear-gradient(180deg,rgba(8,17,31,0.82),rgba(2,8,23,1))] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
       >
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="max-w-2xl space-y-4">
@@ -752,48 +726,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
-        <div className="mx-auto max-w-6xl space-y-8">
-          <div className="max-w-xl space-y-4">
-            <SectionEyebrow>Ils l’ont utilisé</SectionEyebrow>
-            <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,’Times_New_Roman’,serif]">
-              Ce que disent formateurs et apprenants.
-            </h2>
-          </div>
-          <div className="grid gap-6 lg:grid-cols-3">
-            {TESTIMONIALS.map((t) => {
-              const colorMap: Record<string, { border: string; avatar: string; quote: string }> = {
-                emerald: { border: "border-emerald-400/15", avatar: "bg-emerald-400/10 text-emerald-300 border-emerald-400/20", quote: "text-emerald-300/60" },
-                cyan: { border: "border-cyan-400/15", avatar: "bg-cyan-400/10 text-cyan-300 border-cyan-400/20", quote: "text-cyan-300/60" },
-                amber: { border: "border-amber-400/15", avatar: "bg-amber-400/10 text-amber-300 border-amber-400/20", quote: "text-amber-300/60" },
-              };
-              const c = colorMap[t.color];
-              return (
-                <motion.div
-                  key={t.author}
-                  initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-                  whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  viewport={{ once: true, amount: 0.25 }}
-                  className={`flex flex-col justify-between gap-6 rounded-2xl border bg-[linear-gradient(180deg,rgba(15,23,42,0.84),rgba(2,6,23,0.98))] p-6 ${c.border}`}
-                >
-                  <p className={`text-3xl font-serif leading-none ${c.quote}`}>"</p>
-                  <p className="flex-1 text-sm leading-7 text-slate-300 italic">{t.quote}</p>
-                  <div className="flex items-center gap-3 border-t border-white/8 pt-4">
-                    <div className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-xs font-bold ${c.avatar}`}>
-                      {t.initials}
-                    </div>
-                    <p className="text-xs text-slate-400">{t.author}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
-      <section className="px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+      <section className="px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="max-w-2xl space-y-4">
             <SectionEyebrow>Ce qu’on retient</SectionEyebrow>
@@ -820,7 +754,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 pb-10 sm:px-8 sm:pb-12 lg:px-12 lg:pb-14">
+      <section className="px-6 pb-8 sm:px-8 sm:pb-10 lg:px-12 lg:pb-12">
         <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(12,20,36,0.96),rgba(5,35,47,0.92))] px-5 py-8 shadow-2xl shadow-cyan-950/25 sm:px-8 sm:py-10">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] lg:items-center">
             <div className="space-y-4">
