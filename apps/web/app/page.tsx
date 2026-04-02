@@ -352,12 +352,7 @@ export default function Home() {
           </header>
 
           <div className="grid gap-6 pb-4 pt-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center xl:gap-10">
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 28 }}
-              animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
-              className="space-y-6 lg:pb-6"
-            >
+            <div className="space-y-6 lg:pb-6">
               <SectionEyebrow>Jeu sérieux · Comptabilité · Gestion d'entreprise</SectionEyebrow>
 
               <div className="space-y-4">
@@ -418,14 +413,9 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97, y: 24 }}
-              animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut", delay: 0.08 }}
-              className="relative"
-            >
+            <div className="relative">
               <div className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(155deg,rgba(8,15,28,0.96),rgba(6,32,43,0.92))] p-2.5 shadow-[0_40px_140px_rgba(2,8,23,0.68)] sm:p-3">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(250,204,21,0.09),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.18),transparent_24%)]" />
                 <div className="absolute left-6 top-6 z-10 inline-flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
@@ -467,7 +457,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
