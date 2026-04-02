@@ -31,12 +31,34 @@ const HERO_POINTS = [
 ];
 
 const SUPPORT_NUMBERS = [
-  { value: "4", label: "univers d’entreprise différents" },
-  { value: "8", label: "décisions par trimestre" },
-  { value: "1h+", label: "de séance active" },
+  { value: "4", label: "univers métier" },
+  { value: "8", label: "décisions / trimestre" },
+  { value: "1h45", label: "de jeu max" },
+  { value: "100%", label: "guidé pas à pas" },
 ];
 
 const HERO_TAGS = ["Décider", "Visualiser", "Débriefer"];
+
+const TESTIMONIALS = [
+  {
+    quote: "Les apprenants comprennent enfin pourquoi le bilan doit s'équilibrer. En une heure, ils voient ce qu'un cours magistral n'arrive pas à transmettre en trois séances.",
+    author: "Formateur en gestion, CFA",
+    initials: "ML",
+    color: "emerald",
+  },
+  {
+    quote: "J'ai utilisé le jeu pour préparer mon stage en entreprise. Les notions de trésorerie et de résultat net sont devenues concrètes pour moi.",
+    author: "Étudiante BTS Gestion",
+    initials: "SP",
+    color: "cyan",
+  },
+  {
+    quote: "Un outil clé en main pour animer une séance de sensibilisation à la comptabilité. Les participants repartent avec une vraie compréhension des enjeux financiers.",
+    author: "Responsable pédagogique, CCI",
+    initials: "FR",
+    color: "amber",
+  },
+];
 
 const LEARNING_PILLARS = [
   {
@@ -79,7 +101,17 @@ const JOURNEY_STEPS = [
   },
 ];
 
-const ENTRY_OPTIONS = [
+const ENTRY_OPTIONS: Array<{
+  title: string;
+  subtitle: string;
+  description: string;
+  accent: EntryAccent;
+  icon: typeof KeyRound;
+  href?: string;
+  cta?: string;
+  secondaryHref?: string;
+  secondaryCta?: string;
+}> = [
   {
     title: "J’ai un code",
     subtitle: "Entrer dans la séance immédiatement",
@@ -352,7 +384,7 @@ export default function Home() {
               transition={{ duration: 0.7, ease: "easeOut" }}
               className="space-y-6 lg:pb-6"
             >
-              <SectionEyebrow>Pour futurs entrepreneurs, nouveaux entrepreneurs, lycéens, étudiants, CFA, CCI et organismes de formation</SectionEyebrow>
+              <SectionEyebrow>Jeu sérieux · Comptabilité · Gestion d'entreprise</SectionEyebrow>
 
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-200/75">
@@ -370,22 +402,30 @@ export default function Home() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <a
-                  href="#acces"
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-200"
+                >
+                  <GraduationCap className="h-4 w-4" aria-hidden="true" />
+                  Espace Formateur
+                </Link>
+                <Link
+                  href="/auth/register?redirectTo=/jeu&orgType=individuel"
                   className="inline-flex items-center gap-2 rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
                 >
-                  Commencer
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </a>
+                  <Gamepad2 className="h-4 w-4" aria-hidden="true" />
+                  Jouer En Solo
+                </Link>
                 <a
-                  href="#parcours"
+                  href="#acces"
                   className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                 >
-                  Voir Le Fonctionnement
+                  <KeyRound className="h-4 w-4" aria-hidden="true" />
+                  J'ai Un Code
                 </a>
               </div>
 
-              <div className="grid gap-3 border-t border-white/10 pt-6 sm:grid-cols-3">
+              <div className="grid gap-3 border-t border-white/10 pt-6 grid-cols-2 sm:grid-cols-4">
                 {SUPPORT_NUMBERS.map((item) => (
                   <div key={item.label} className="space-y-2 border-l border-white/10 pl-4 first:border-l-0 first:pl-0">
                     <p className="text-2xl font-black tracking-[-0.04em] text-white">{item.value}</p>
@@ -708,6 +748,47 @@ export default function Home() {
                 </div>
               </EntryPanel>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="border-y border-white/8 bg-slate-950/55 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+        <div className="mx-auto max-w-6xl space-y-8">
+          <div className="max-w-xl space-y-4">
+            <SectionEyebrow>Ils l’ont utilisé</SectionEyebrow>
+            <h2 className="text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,’Times_New_Roman’,serif]">
+              Ce que disent formateurs et apprenants.
+            </h2>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {TESTIMONIALS.map((t) => {
+              const colorMap: Record<string, { border: string; avatar: string; quote: string }> = {
+                emerald: { border: "border-emerald-400/15", avatar: "bg-emerald-400/10 text-emerald-300 border-emerald-400/20", quote: "text-emerald-300/60" },
+                cyan: { border: "border-cyan-400/15", avatar: "bg-cyan-400/10 text-cyan-300 border-cyan-400/20", quote: "text-cyan-300/60" },
+                amber: { border: "border-amber-400/15", avatar: "bg-amber-400/10 text-amber-300 border-amber-400/20", quote: "text-amber-300/60" },
+              };
+              const c = colorMap[t.color];
+              return (
+                <motion.div
+                  key={t.author}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
+                  whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  viewport={{ once: true, amount: 0.25 }}
+                  className={`flex flex-col justify-between gap-6 rounded-2xl border bg-[linear-gradient(180deg,rgba(15,23,42,0.84),rgba(2,6,23,0.98))] p-6 ${c.border}`}
+                >
+                  <p className={`text-3xl font-serif leading-none ${c.quote}`}>"</p>
+                  <p className="flex-1 text-sm leading-7 text-slate-300 italic">{t.quote}</p>
+                  <div className="flex items-center gap-3 border-t border-white/8 pt-4">
+                    <div className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-xs font-bold ${c.avatar}`}>
+                      {t.initials}
+                    </div>
+                    <p className="text-xs text-slate-400">{t.author}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
