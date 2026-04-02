@@ -491,20 +491,14 @@ export default function Home() {
           </div>
 
           <div className="space-y-1">
-            {LEARNING_PILLARS.map((pillar, index) => (
-              <motion.div
-                key={pillar.title}
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-                whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, ease: "easeOut", delay: index * 0.05 }}
-                viewport={{ once: true, amount: 0.25 }}
-              >
+            {LEARNING_PILLARS.map((pillar) => (
+              <div key={pillar.title}>
                 <SupportColumn
                   title={pillar.title}
                   text={pillar.text}
                   icon={pillar.icon}
                 />
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -574,12 +568,7 @@ export default function Home() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: "easeOut" }}
-              viewport={{ once: true, amount: 0.25 }}
-            >
+            <div>
               <EntryPanel
                 title={ENTRY_OPTIONS[0].title}
                 subtitle={ENTRY_OPTIONS[0].subtitle}
@@ -633,14 +622,9 @@ export default function Home() {
                   </button>
                 </form>
               </EntryPanel>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: "easeOut", delay: 0.05 }}
-              viewport={{ once: true, amount: 0.25 }}
-            >
+            <div>
               <EntryPanel
                 title={ENTRY_OPTIONS[1].title}
                 subtitle={ENTRY_OPTIONS[1].subtitle}
@@ -668,14 +652,9 @@ export default function Home() {
                   </Link>
                 </div>
               </EntryPanel>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: "easeOut", delay: 0.1 }}
-              viewport={{ once: true, amount: 0.25 }}
-            >
+            <div>
               <EntryPanel
                 title={ENTRY_OPTIONS[2].title}
                 subtitle={ENTRY_OPTIONS[2].subtitle}
@@ -711,11 +690,10 @@ export default function Home() {
                   </div>
                 </div>
               </EntryPanel>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
-
 
       <section className="px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
         <div className="mx-auto max-w-6xl space-y-6">
