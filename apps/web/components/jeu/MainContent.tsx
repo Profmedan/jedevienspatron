@@ -186,7 +186,7 @@ export function MainContent({
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
             >
-              <BilanPanel joueur={displayJoueur} highlightedPoste={null} />
+              <BilanPanel joueur={displayJoueur} highlightedPoste={_highlightedPoste} recentModifications={_recentModifications} />
             </motion.div>
           )}
 
@@ -200,7 +200,8 @@ export function MainContent({
             >
               <CompteResultatPanel
                 joueur={displayJoueur}
-                highlightedPoste={null}
+                highlightedPoste={_highlightedPoste}
+                recentModifications={_recentModifications}
                 etapeTour={etapeTour}
                 hasActiveStep={!!_activeStep}
               />

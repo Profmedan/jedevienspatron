@@ -110,31 +110,35 @@ export function LeftPanel({
       <div className="space-y-4">
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <div className="space-y-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+            {/* ── Titre de l'action en cours — bien visible ── */}
+            <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
                 Écriture {activeStep.entries.filter((e) => e.applied).length + 1} / {activeStep.entries.length}
               </p>
-              <h3 className="mt-1 text-base font-semibold text-white">{activeStep.titre}</h3>
+              <h3 className="mt-1 text-lg font-bold text-white leading-snug">{activeStep.titre}</h3>
             </div>
 
             {firstPending ? (
-              <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 mb-1">
+              <div className="space-y-3 rounded-xl border border-cyan-400/15 bg-white/[0.04] p-3">
+                {/* ── Compte + montant — gros et clair ── */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-cyan-200 mb-1">
                     {nomCompte(firstPending.poste)}
                   </p>
                   <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-slate-400">{firstPending.sens === "debit" ? "DÉBIT" : "CRÉDIT"}</span>
-                    <span className="text-lg font-bold text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta}u</span>
+                    <span className="text-sm font-semibold text-slate-200">{firstPending.sens === "debit" ? "DÉBIT" : "CRÉDIT"}</span>
+                    <span className="text-2xl font-black text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta}u</span>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-300">{firstPending.description}</p>
-                <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-2 py-2">
-                  <p className="text-[10px] text-sky-100">💡 {activeStep.principe}</p>
+                {/* ── Description de l'écriture — lisible ── */}
+                <p className="text-sm leading-relaxed text-slate-200">{firstPending.description}</p>
+                {/* ── Bulle pédagogique ── */}
+                <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                  <p className="text-xs leading-relaxed text-sky-100">💡 {activeStep.principe}</p>
                 </div>
                 <button
                   onClick={() => onApplyEntry(firstPending.id)}
-                  className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+                  className="w-full rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
                 >
                   Appliquer cette écriture
                 </button>

@@ -71,7 +71,7 @@ function Row({
     <div
       ref={rowRef}
       className={`flex justify-between items-center px-2.5 py-1.5 text-sm rounded-lg mb-1 transition-all duration-300 ${
-        highlighted ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-md shadow-amber-400/20 scale-[1.02] -mx-0.5" : ""
+        highlighted ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-md shadow-amber-400/20 scale-[1.02] -mx-0.5 animate-pulse" : ""
       }`}
       style={{
         backgroundColor: highlighted ? undefined : `${color}28`,

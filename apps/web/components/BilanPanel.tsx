@@ -126,7 +126,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
           sub ? "text-sm" : "font-semibold"
         } ${
           highlighted
-            ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-lg shadow-amber-400/20 scale-[1.03] -mx-0.5"
+            ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-lg shadow-amber-400/20 scale-[1.03] -mx-0.5 animate-pulse"
             : ""
         } ${
           show && info ? "ring-1 ring-white/20 bg-white/5" : ""
