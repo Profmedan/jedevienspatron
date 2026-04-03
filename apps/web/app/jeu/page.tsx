@@ -696,6 +696,14 @@ export default function JeuPage() {
     setSubEtape6("recrutement"); // reset pour le prochain tour
   }
 
+  // ── Affichage progressif : ne montrer les badges avant/après que pour les écritures déjà appliquées
+  // DOIT être avant tous les early returns pour respecter les règles des hooks React
+  const effectiveRecentMods = useMemo(() => {
+    if (!activeStep) return recentModifications;
+    const appliedPostes = new Set(activeStep.entries.filter(e => e.applied).map(e => e.poste));
+    return recentModifications.filter(m => appliedPostes.has(m.poste));
+  }, [activeStep, recentModifications]);
+
   // ─── RENDU ────────────────────────────────────────────────────────────────
 
   if (soloLoading) return (
@@ -806,13 +814,6 @@ export default function JeuPage() {
   const cartesDisponibles  = tirerCartesDecision(cloneEtat(etat), 4);
   const cartesRecrutement  = obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif);
   const etapeInfo     = ETAPE_INFO[etat.etapeTour];
-
-  // ── Affichage progressif : ne montrer les badges avant/après que pour les écritures déjà appliquées
-  const effectiveRecentMods = useMemo(() => {
-    if (!activeStep) return recentModifications;
-    const appliedPostes = new Set(activeStep.entries.filter(e => e.applied).map(e => e.poste));
-    return recentModifications.filter(m => appliedPostes.has(m.poste));
-  }, [activeStep, recentModifications]);
 
   // ── Métriques v2 ──────────────────────────────────────────────
   const sig           = calculerSIGSimplifie(displayJoueur);

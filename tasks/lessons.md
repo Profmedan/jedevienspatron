@@ -158,3 +158,16 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 ## L22 — 2026-03-26 : iCloud Drive bloque les opérations fichiers
 **Contexte** : les fichiers stockés dans iCloud avec "Optimize Mac Storage" sont des stubs. `require()`, `rsync`, `sed`, `cat` peuvent tous échouer ou bloquer indéfiniment.
 **Règle** : pour un projet actif, toujours garder une copie locale hors iCloud (ou un clone Git). Ne jamais dépendre d'iCloud pour le développement.
+
+## L24 — 2026-04-03 : useMemo après early returns = React error #310
+**Erreur** : un `useMemo` (ou tout hook) placé APRÈS des `if (condition) return ...` est appelé de façon conditionnelle. React exige que tous les hooks soient appelés dans le même ordre à chaque rendu.
+**Symptôme** : React error #310 "Cannot update a component while rendering a different component" — déclenché lors de la transition de phase (ex: "intro" → "playing") car le hook est appelé pour la première fois.
+**Stack trace** : présence de `at Object.aq [as useMemo]` dans l'appel de la fonction de rendu.
+**Fix** : déplacer TOUS les hooks (useState, useEffect, useMemo, useCallback) AVANT le premier `if (...) return` dans le composant. Utiliser des gardes internes (`if (!data) return defaultValue`) plutôt que des early returns pour protéger la logique.
+**Règle** : lors de tout bug React error #310, rechercher immédiatement les hooks placés après des early returns dans le composant fautif.
+
+### Leçon — Deux versions du jeu en parallèle (2026-04-03)
+- `/jeu/page.tsx` et `/jeu-v2/page.tsx` coexistent
+- Pierre utilise `/jeu`, pas `/jeu-v2`
+- **Toujours appliquer les correctifs sur les DEUX fichiers**
+- Vérifier dans quel fichier le joueur est redirigé pour éviter de corriger le mauvais
