@@ -1,7 +1,7 @@
 // JEDEVIENSPATRON — QCM obligatoire après chaque étape (3 questions, 3 choix)
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QCM_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
 interface Props {
@@ -34,10 +34,11 @@ export default function QCMEtape({ etape, tourActuel, onTermine }: Props) {
   const [aRepondu, setARepondu] = useState(false);
   const [score, setScore] = useState(0);
 
-  if (!questions) {
-    onTermine(3);
-    return null;
-  }
+  useEffect(() => {
+    if (!questions) onTermine(3);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!questions) return null;
 
   const question = questions[indexQuestion];
   const estBonne = reponseChoisie === question.bonneReponse;
