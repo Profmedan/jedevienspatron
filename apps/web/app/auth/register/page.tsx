@@ -22,7 +22,7 @@ function RegisterPageContent() {
   const searchParams = useSearchParams();
   const redirectTo = getValidRedirectUrl(searchParams.get("redirectTo"));
   const requestedOrgType = searchParams.get("orgType");
-  const initialOrgType = ORG_TYPES.some((type) => type.value === requestedOrgType) ? requestedOrgType : "lycee";
+  const initialOrgType = (ORG_TYPES.some((type) => type.value === requestedOrgType) && requestedOrgType) ? requestedOrgType : "lycee";
 
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);

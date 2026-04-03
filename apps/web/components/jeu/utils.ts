@@ -175,9 +175,9 @@ export function getPosteValue(j: Joueur, poste: string): number {
   if (actif) return actif.valeur;
   const passif = j.bilan.passifs.find(p => (p.categorie as string) === poste);
   if (passif) return passif.valeur;
-  const charges = j.compteResultat.charges as Record<string, number>;
+  const charges = j.compteResultat.charges as unknown as Record<string, number>;
   if (poste in charges) return charges[poste];
-  const produits = j.compteResultat.produits as Record<string, number>;
+  const produits = j.compteResultat.produits as unknown as Record<string, number>;
   if (poste in produits) return produits[poste];
   return 0;
 }
@@ -218,9 +218,9 @@ export function applyDeltaToJoueur(j: Joueur, poste: string, delta: number): voi
   const passif = j.bilan.passifs.find(p => (p.categorie as string) === poste);
   if (passif) { passif.valeur += delta; return; }
   if (poste in j.compteResultat.charges)
-    (j.compteResultat.charges as Record<string, number>)[poste] += delta;
+    (j.compteResultat.charges as unknown as Record<string, number>)[poste] += delta;
   else if (poste in j.compteResultat.produits)
-    (j.compteResultat.produits as Record<string, number>)[poste] += delta;
+    (j.compteResultat.produits as unknown as Record<string, number>)[poste] += delta;
 }
 
 // ─── ANALYSE FINANCIÈRE FIN DE TRIMESTRE ──────────────────────────────────────
