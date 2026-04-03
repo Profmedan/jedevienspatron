@@ -441,7 +441,21 @@ export default function JeuPage() {
     const { resultat, modifications } = demanderEmprunt(next, next.joueurActif, montantEmpruntChoisi);
     setReponseEmprunt(resultat);
     if (resultat.accepte) {
+      const mods = modifications.map(m => ({
+        poste: m.poste,
+        ancienneValeur: m.ancienneValeur,
+        nouvelleValeur: m.nouvelleValeur,
+      }));
       setEtat({ ...next });
+      setRecentModifications(mods);
+      // Rendre les changements visibles dans le Bilan (trésorerie + emprunts)
+      const firstMod = mods[0];
+      if (firstMod) {
+        setActiveTab("bilan");
+        setFlashData({ poste: firstMod.poste, avant: firstMod.ancienneValeur, apres: firstMod.nouvelleValeur });
+        setHighlightedPoste(firstMod.poste);
+        setTimeout(() => setHighlightedPoste(null), 5000);
+      }
       // Ajouter au journal
       addToJournal(next, modifications.map((m, i) => ({
         id: `emprunt_${i}`,
