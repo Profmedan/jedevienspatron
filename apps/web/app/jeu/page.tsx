@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -591,7 +591,21 @@ export default function JeuPage() {
     const { resultat, modifications } = demanderEmprunt(next, next.joueurActif, montantEmpruntChoisi);
     setReponseEmprunt(resultat);
     if (resultat.accepte) {
+      const mods = modifications.map(m => ({
+        poste: m.poste,
+        ancienneValeur: m.ancienneValeur,
+        nouvelleValeur: m.nouvelleValeur,
+      }));
       setEtat({ ...next });
+      setRecentModifications(mods);
+      // Rendre les changements visibles dans le Bilan (trésorerie + emprunts)
+      const firstMod = mods[0];
+      if (firstMod) {
+        setActiveTab("bilan");
+        setFlashData({ poste: firstMod.poste, avant: firstMod.ancienneValeur, apres: firstMod.nouvelleValeur });
+        setHighlightedPoste(firstMod.poste);
+        setTimeout(() => setHighlightedPoste(null), 5000);
+      }
       // Ajouter au journal
       addToJournal(next, modifications.map((m, i) => ({
         id: `emprunt_${i}`,
@@ -792,6 +806,13 @@ export default function JeuPage() {
   const cartesDisponibles  = tirerCartesDecision(cloneEtat(etat), 4);
   const cartesRecrutement  = obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif);
   const etapeInfo     = ETAPE_INFO[etat.etapeTour];
+
+  // ── Affichage progressif : ne montrer les badges avant/après que pour les écritures déjà appliquées
+  const effectiveRecentMods = useMemo(() => {
+    if (!activeStep) return recentModifications;
+    const appliedPostes = new Set(activeStep.entries.filter(e => e.applied).map(e => e.poste));
+    return recentModifications.filter(m => appliedPostes.has(m.poste));
+  }, [activeStep, recentModifications]);
 
   // ── Métriques v2 ──────────────────────────────────────────────
   const sig           = calculerSIGSimplifie(displayJoueur);
@@ -996,7 +1017,7 @@ export default function JeuPage() {
             setSelectedDecision={setSelectedDecision}
             cartesDisponibles={cartesDisponibles}
             cartesRecrutement={cartesRecrutement}
-            recentModifications={recentModifications}
+            recentModifications={effectiveRecentMods}
             subEtape6={subEtape6}
             modeRapide={modeRapide}
             onSkipDecision={skipDecision}
