@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -648,6 +648,13 @@ export default function JeuPage() {
   const cartesRecrutement  = obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif);
   const etapeInfo     = ETAPE_INFO[etat.etapeTour];
 
+  // ── Affichage progressif : ne montrer les badges avant/après que pour les écritures déjà appliquées
+  const effectiveRecentMods = useMemo(() => {
+    if (!activeStep) return recentModifications;
+    const appliedPostes = new Set(activeStep.entries.filter(e => e.applied).map(e => e.poste));
+    return recentModifications.filter(m => appliedPostes.has(m.poste));
+  }, [activeStep, recentModifications]);
+
   // ── Métriques v2 ──────────────────────────────────────────────
   const sig           = calculerSIGSimplifie(displayJoueur);
   const indicateurs   = calculerIndicateurs(displayJoueur);
@@ -851,7 +858,7 @@ export default function JeuPage() {
             setSelectedDecision={setSelectedDecision}
             cartesDisponibles={cartesDisponibles}
             cartesRecrutement={cartesRecrutement}
-            recentModifications={recentModifications}
+            recentModifications={effectiveRecentMods}
             subEtape6={subEtape6}
             modeRapide={modeRapide}
             onSkipDecision={skipDecision}
