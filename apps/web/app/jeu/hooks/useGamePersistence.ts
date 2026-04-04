@@ -1,0 +1,151 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  EtatJeu,
+  calculerIndicateurs,
+  calculerScore,
+  getTresorerie,
+} from "@jedevienspatron/game-engine";
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+type Phase = "setup" | "intro" | "playing" | "gameover";
+
+interface UseGamePersistenceParams {
+  phase: Phase;
+  etat: EtatJeu | null;
+}
+
+interface UseGamePersistenceReturn {
+  roomCode: string | null;
+  savedToDb: boolean;
+  setSavedToDb: (v: boolean) => void;
+  isSolo: boolean;
+  soloLoading: boolean;
+  soloError: string | null;
+  setSoloError: (v: string | null) => void;
+  /** Crée une session solo (consomme 1 crédit). Retourne true si OK, false si erreur/redirect. */
+  createSoloSession: (nbTours: number) => Promise<boolean>;
+}
+
+// ─── Hook ──────────────────────────────────────────────────────────────────
+
+export function useGamePersistence({
+  phase,
+  etat,
+}: UseGamePersistenceParams): UseGamePersistenceReturn {
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [savedToDb, setSavedToDb] = useState(false);
+  const [isSolo, setIsSolo] = useState(false);
+  const [soloLoading, setSoloLoading] = useState(false);
+  const [soloError, setSoloError] = useState<string | null>(null);
+
+  const router = useRouter();
+
+  // ── Effet 1 : lecture des paramètres URL au montage ──────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const access = params.get("access");
+    if (code) {
+      setRoomCode(code);
+    } else if (!access) {
+      // Ni room_code ni bypass → mode solo (auth + crédit requis)
+      setIsSolo(true);
+    }
+  }, []);
+
+  // ── Effet 2 : sauvegarde historique solo dans localStorage ───────────────
+  useEffect(() => {
+    if (phase !== "gameover" || !etat || roomCode) return;
+    const j = etat.joueurs[0];
+    const indicateurs = calculerIndicateurs(j);
+    const partie = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      pseudo: j.pseudo,
+      entreprise: j.entreprise.nom,
+      score: calculerScore(j),
+      resultatNet: indicateurs.resultatNet,
+      tresorerie: getTresorerie(j),
+      trimestresJoues: etat.tourActuel,
+      faillite: j.elimine,
+    };
+    try {
+      const existant = JSON.parse(localStorage.getItem("jdp_historique_solo") ?? "[]");
+      localStorage.setItem("jdp_historique_solo", JSON.stringify([partie, ...existant].slice(0, 20)));
+    } catch { /* localStorage indisponible (mode privé strict) */ }
+  }, [phase, etat, roomCode]);
+
+  // ── Effet 3 : sauvegarde Supabase si room_code présent ──────────────────
+  useEffect(() => {
+    if (phase !== "gameover" || !etat || !roomCode || savedToDb) return;
+    const joueurs = etat.joueurs.map(j => ({
+      pseudo: j.pseudo,
+      entreprise: j.entreprise.nom,
+      scoreTotal: calculerScore(j),
+      elimine: j.elimine,
+      etatFinal: j,
+    }));
+    fetch("/api/sessions/results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_code: roomCode, joueurs }),
+    })
+      .then(r => r.json())
+      .then(() => { setSavedToDb(true); console.log("✅ Résultats sauvegardés dans Supabase"); })
+      .catch(err => console.error("❌ Erreur save résultats:", err));
+  }, [phase, etat, roomCode, savedToDb]);
+
+  // ── Créer une session solo (consomme 1 crédit) ──────────────────────────
+  async function createSoloSession(nbTours: number): Promise<boolean> {
+    if (!isSolo) return true; // pas en mode solo, rien à faire
+
+    setSoloLoading(true);
+    setSoloError(null);
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nb_tours: nbTours }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 402 || (data.message ?? data.error ?? "").toLowerCase().includes("crédit")) {
+          router.push("/dashboard/packs?message=no-credits");
+          setSoloLoading(false);
+          return false;
+        }
+        if (res.status === 401) {
+          router.push("/auth/login?redirectTo=/jeu");
+          setSoloLoading(false);
+          return false;
+        }
+        setSoloError(data.message ?? data.error ?? "Erreur lors de la création de la session.");
+        setSoloLoading(false);
+        return false;
+      }
+      // Session créée → utiliser le room_code pour sauvegarder en Supabase
+      setRoomCode(data.session.room_code);
+    } catch {
+      setSoloError("Erreur réseau, veuillez réessayer.");
+      setSoloLoading(false);
+      return false;
+    }
+    setSoloLoading(false);
+    return true;
+  }
+
+  return {
+    roomCode,
+    savedToDb,
+    setSavedToDb,
+    isSolo,
+    soloLoading,
+    soloError,
+    setSoloError,
+    createSoloSession,
+  };
+}
