@@ -20,8 +20,8 @@ interface RightPanelProps {
   fondsRoulement: number;
   solvabilite: number;
   highlightedPoste?: string | null;
-  activeTab?: any;
-  setActiveTab?: any;
+  activeTab?: string | null;
+  setActiveTab?: (tab: RightPanelTab) => void;
 }
 
 const amountFormatter = new Intl.NumberFormat("fr-FR", {
@@ -237,7 +237,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2">
                   <div className="font-semibold text-emerald-300">✅ Situation saine</div>
                   <div className="text-gray-400 mt-1">
-                    Continue sur cette lancée. Maintenez l'équilibre et investissez stratégiquement.
+                    Continue sur cette lancée. Maintenez l’équilibre et investissez stratégiquement.
                   </div>
                 </div>
               )}

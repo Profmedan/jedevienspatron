@@ -14,7 +14,6 @@ import {
 } from "@/lib/game-engine/engine";
 import {
   calculerScore, getTresorerie, calculerIndicateurs, calculerSIGSimplifie,
-  getTotalStocks,
 } from "@/lib/game-engine/calculators";
 import {
   HeaderJeu, LeftPanel, MainContent,
@@ -31,7 +30,6 @@ const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
   ssr: false,
   loading: () => <div className="bg-gray-900 rounded-lg" />,
 });
-import { generatePedagogicalMessage, generateTensionAlert, type PedagogicalContext } from "@/components/jeu/pedagogicalMessages";
 import AlerteDecouvert from "@/components/jeu/AlerteDecouvert";
 
 // ─── UTILITAIRE ───────────────────────────────────────────────────────────────
@@ -55,33 +53,33 @@ interface JournalEntry {
 const ETAPE_INFO: Record<number, { icone: string; titre: string; description: string; principe: string; conseil: string }> = {
   0: {
     icone: "💼", titre: "Charges fixes & Dotation aux amortissements",
-    description: "Chaque trimestre, ton entreprise paie ses charges fixes (loyer, énergie, assurances…) et constate l'usure de chaque bien immobilisé (−1 par bien). Si tu as un emprunt, les intérêts sont prélevés une fois par an.",
-    principe: "Ton entreprise paie ses charges obligatoires (loyer, énergie…) : ta trésorerie diminue. Tes équipements s'usent : leur valeur au bilan baisse, et une charge d'amortissement est enregistrée. Si tu as un emprunt, les intérêts sont aussi prélevés.",
-    conseil: "Ces charges sont obligatoires. L'amortissement n'est pas une sortie d'argent réelle, mais il réduit ton résultat — et donc tes capitaux propres à terme.",
+    description: "Chaque trimestre, ton entreprise paie ses charges fixes (loyer, énergie, assurances…) et constate l’usure de chaque bien immobilisé (−1 par bien). Si tu as un emprunt, les intérêts sont prélevés une fois par an.",
+    principe: "Ton entreprise paie ses charges obligatoires (loyer, énergie…) : ta trésorerie diminue. Tes équipements s’usent : leur valeur au bilan baisse, et une charge d’amortissement est enregistrée. Si tu as un emprunt, les intérêts sont aussi prélevés.",
+    conseil: "Ces charges sont obligatoires. L’amortissement n’est pas une sortie d’argent réelle, mais il réduit ton résultat — et donc tes capitaux propres à terme.",
   },
   1: {
     icone: "📦", titre: "Achats de marchandises",
     description: "Tu peux acheter des stocks pour les revendre. Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
-    principe: "Tu achètes des marchandises. Si tu paies comptant, ta trésorerie baisse immédiatement. Si tu achètes à crédit, tu gardes ta trésorerie aujourd'hui mais tu crées une dette à payer au trimestre suivant.",
+    principe: "Tu achètes des marchandises. Si tu paies comptant, ta trésorerie baisse immédiatement. Si tu achètes à crédit, tu gardes ta trésorerie aujourd’hui mais tu crées une dette à payer au trimestre suivant.",
     conseil: "Acheter à crédit préserve ta trésorerie, mais crée une dette à rembourser au prochain tour. Trouve le bon équilibre.",
   },
   2: {
     icone: "⏩", titre: "Avancement des créances clients",
     description: "Les clients règlent à échéance : les créances à 2 trimestres passent à 1, et celles à 1 trimestre entrent en trésorerie.",
-    principe: "Tes clients te paient selon leur délai. Les créances à 1 trimestre entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant. L'argent arrive, mais avec du retard.",
+    principe: "Tes clients te paient selon leur délai. Les créances à 1 trimestre entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant. L’argent arrive, mais avec du retard.",
     conseil: "Un client Grand Compte est rentable mais paie en 2 trimestres. Attention au décalage : tu peux être en bénéfice et à court de cash en même temps.",
   },
   3: {
     icone: "👔", titre: "Paiement des commerciaux",
-    description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1.",
+    description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c’est normal au T1.",
     principe: "Tu verses les salaires de tes commerciaux : ta trésorerie baisse et tes charges de personnel augmentent. En contrepartie, chaque commercial te ramène de nouveaux clients.",
-    conseil: "Junior → 1 client particulier/trim. Senior → 1 TPE/trim. Directrice → 1 Grand Compte/trim. Recrute via les cartes Décision à l'étape 6.",
+    conseil: "Junior → 1 client particulier/trim. Senior → 1 TPE/trim. Directrice → 1 Grand Compte/trim. Recrute via les cartes Décision à l’étape 6.",
   },
   4: {
     icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
-    description: "Chaque vente génère plusieurs écritures simultanées. Au T1, 2 clients initiaux sont traités ici — sans commercial, c'est normal.",
-    principe: "Chaque vente déclenche 4 mouvements : ton chiffre d'affaires augmente, ton stock diminue, le coût des marchandises vendues est enregistré, et tu encaisses (comptant ou à terme). C'est la partie double en action.",
-    conseil: "C'est le cœur du jeu : une seule vente crée 4 écritures qui s'équilibrent. Plus tu as de commerciaux, plus tu vends.",
+    description: "Chaque vente génère plusieurs écritures simultanées. Au T1, 2 clients initiaux sont traités ici — sans commercial, c’est normal.",
+    principe: "Chaque vente déclenche 4 mouvements : ton chiffre d’affaires augmente, ton stock diminue, le coût des marchandises vendues est enregistré, et tu encaisses (comptant ou à terme). C’est la partie double en action.",
+    conseil: "C’est le cœur du jeu : une seule vente crée 4 écritures qui s’équilibrent. Plus tu as de commerciaux, plus tu vends.",
   },
   5: {
     icone: "🔄", titre: "Effets récurrents des cartes Décision",
@@ -90,21 +88,21 @@ const ETAPE_INFO: Record<number, { icone: string; titre: string; description: st
     conseil: "Chaque carte active a un coût récurrent. Si tes charges dépassent tes revenus, ta trésorerie fond chaque trimestre.",
   },
   6: {
-    icone: "🎯", titre: "Choix d'une carte Décision",
+    icone: "🎯", titre: "Choix d’une carte Décision",
     description: "Tu peux investir dans une carte Décision ce trimestre. Chaque carte a des effets immédiats et des effets récurrents. Ce choix est OPTIONNEL.",
     principe: "Tu peux recruter un commercial (charge de personnel) ou investir dans un équipement (immobilisation). Chaque choix a un coût immédiat et des effets à long terme sur ton entreprise.",
-    conseil: "L'assurance protège des événements négatifs. La levée de fonds apporte des capitaux. Anticipe tes besoins avant d'investir.",
+    conseil: "L’assurance protège des événements négatifs. La levée de fonds apporte des capitaux. Anticipe tes besoins avant d’investir.",
   },
   7: {
     icone: "🎲", titre: "Événement aléatoire",
     description: "Un événement imprévu affecte ton entreprise. Positif ou négatif : tu ne peux pas le refuser.",
-    principe: "Un événement imprévu touche ton entreprise. S'il est positif, ta trésorerie ou tes revenus augmentent. S'il est négatif, tu subis une charge exceptionnelle. L'assurance peut te protéger.",
-    conseil: "Avoir des réserves de trésorerie absorbe les chocs. L'assurance prévoyance annule certains événements négatifs.",
+    principe: "Un événement imprévu touche ton entreprise. S’il est positif, ta trésorerie ou tes revenus augmentent. S’il est négatif, tu subis une charge exceptionnelle. L’assurance peut te protéger.",
+    conseil: "Avoir des réserves de trésorerie absorbe les chocs. L’assurance prévoyance annule certains événements négatifs.",
   },
   8: {
     icone: "✅", titre: "Bilan de fin de trimestre",
-    description: "On vérifie l'équilibre du bilan, on contrôle la solvabilité et on calcule ton score. Si c'est le dernier trimestre, on clôture l'exercice.",
-    principe: "Fin du trimestre : on calcule ton résultat (produits − charges). S'il est positif, tes capitaux propres augmentent et ta solvabilité s'améliore. S'il est négatif, attention à la faillite.",
+    description: "On vérifie l’équilibre du bilan, on contrôle la solvabilité et on calcule ton score. Si c’est le dernier trimestre, on clôture l’exercice.",
+    principe: "Fin du trimestre : on calcule ton résultat (produits − charges). S’il est positif, tes capitaux propres augmentent et ta solvabilité s’améliore. S’il est négatif, attention à la faillite.",
     conseil: "Résultat Net = Produits − Charges. Positif = tes capitaux propres montent. Négatif = ta solvabilité baisse.",
   },
 };
@@ -136,7 +134,7 @@ export default function JeuPage() {
   // Mode Rapide : les étapes automatiques (0,2,3,4,5) pré-cochent toutes leurs écritures
   const [modeRapide, setModeRapide] = useState(false);
 
-  // ─ Pédagogie : modal d'explication + QCM fin de trimestre ──────────────────
+  // ─ Pédagogie : modal d’explication + QCM fin de trimestre ──────────────────
   const [etapesPedagoVues, setEtapesPedagoVues] = useState<Set<number>>(new Set());
   const [modalEtapeEnAttente, setModalEtapeEnAttente] = useState<number | null>(null);
   // QCM trimestriel : 4 questions tirées à la fin de chaque trimestre
@@ -146,7 +144,7 @@ export default function JeuPage() {
   const [flashData, setFlashData] = useState<{ poste: string; avant: number; apres: number } | null>(null);
 
   // ── Nouveaux states v2 : panneau droit ──────────────────────────────────
-  const [rightTab, setRightTab] = useState<"resume" | "bilan" | "cr">("resume");
+  const [rightTab, setRightTab] = useState<string>("resume");
 
   // ─ Emprunt bancaire ───────────────────────────────────────────────────────
   const [showDemandeEmprunt, setShowDemandeEmprunt] = useState(false);
@@ -216,7 +214,7 @@ export default function JeuPage() {
       .catch(err => console.error("❌ Erreur save résultats:", err));
   }, [phase, etat, roomCode, savedToDb]);
 
-  // Auto-ouvre les cartes dès que le joueur arrive à l'étape 6
+  // Auto-ouvre les cartes dès que le joueur arrive à l’étape 6
   useEffect(() => {
     if (etat?.etapeTour === 6 && !activeStep) {
       setShowCartes(true);
@@ -255,8 +253,8 @@ export default function JeuPage() {
     if (mod) {
       setFlashData({ poste, avant: mod.ancienneValeur, apres: mod.nouvelleValeur });
     }
-    // L'onglet "impact" est désormais géré par le useEffect dans MainContent.
-    // On garde setHighlightedPoste pour l'auto-scroll dans Bilan/CR quand le joueur change d'onglet.
+    // L’onglet "impact" est désormais géré par le useEffect dans MainContent.
+    // On garde setHighlightedPoste pour l’auto-scroll dans Bilan/CR quand le joueur change d’onglet.
     setHighlightedPoste(poste);
     setTimeout(() => setHighlightedPoste(null), 4000);
   }
@@ -303,7 +301,7 @@ export default function JeuPage() {
     setPhase("intro");
   }
 
-  // ─ Construire l'étape active à partir des modifications du moteur ─────────
+  // ─ Construire l’étape active à partir des modifications du moteur ─────────
   function buildActiveStep(
     baseEtat: EtatJeu,
     mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string }>,
@@ -341,14 +339,14 @@ export default function JeuPage() {
     );
   }
 
-  // ─ Valider l'étape (toutes écritures cochées + bilan équilibré) ──────────
+  // ─ Valider l’étape (toutes écritures cochées + bilan équilibré) ──────────
   function confirmActiveStep() {
     if (!activeStep || !etat) return;
     const next = activeStep.previewEtat;
     addToJournal(next, activeStep.entries, next.etapeTour);
     const etapeAvantAvancement = next.etapeTour;
 
-    // Sous-étape 6a (recrutement) → passer à 6b (investissement) sans avancer à l'étape 7
+    // Sous-étape 6a (recrutement) → passer à 6b (investissement) sans avancer à l’étape 7
     if (etapeAvantAvancement === 6 && subEtape6 === "recrutement") {
       setSubEtape6("investissement");
       setEtat({ ...next });
@@ -361,7 +359,7 @@ export default function JeuPage() {
 
     avancerEtape(next);
     // Montrer la modal de la PROCHAINE étape dans le MÊME batch que setEtat+setActiveStep(null)
-    // → la modal s'affiche dès le 1er rendu de la nouvelle étape (avant que l'utilisateur
+    // → la modal s’affiche dès le 1er rendu de la nouvelle étape (avant que l’utilisateur
     //   puisse cliquer sur quoi que ce soit dans le LeftPanel)
     const prochEtape = next.etapeTour;
     if (!etapesPedagoVues.has(prochEtape)) {
@@ -371,29 +369,12 @@ export default function JeuPage() {
     setEtat({ ...next });
     setActiveStep(null);
     setRecentModifications([]);
-    // Réinitialiser la sous-étape après la validation de l'investissement (6b)
+    // Réinitialiser la sous-étape après la validation de l’investissement (6b)
     if (etapeAvantAvancement === 6) setSubEtape6("recrutement");
 
-    // ── Message pédagogique automatique après validation ──
-    const nextJoueur = next.joueurs[next.joueurActif];
-    const nextSig = calculerSIGSimplifie(nextJoueur);
-    const nextIndic = calculerIndicateurs(nextJoueur);
-    const ctx: PedagogicalContext = {
-      tour: next.tourActuel, etape: next.etapeTour,
-      resultatNet: nextSig.resultatNet, tresorerie: nextSig.tresorerie,
-      bfr: nextIndic.besoinFondsRoulement,
-      creancesPlus1: nextJoueur.bilan.creancesPlus1,
-      creancesPlus2: nextJoueur.bilan.creancesPlus2,
-      ca: nextSig.ca, stocks: getTotalStocks(nextJoueur),
-      nbCommerciaux: nextJoueur.cartesActives?.filter(
-        (c: { categorie?: string }) => c.categorie === "commercial"
-      ).length ?? 0,
-      decouvert: nextJoueur.bilan.decouvert,
-    };
-    generatePedagogicalMessage(ctx); // Message is no longer displayed with CenterPanel removed
   }
 
-  // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
+  // ─ Lancer la prévisualisation d’une étape automatique ────────────────────
   function launchStep() {
     if (!etat) return;
     const next = cloneEtat(etat);
@@ -424,12 +405,12 @@ export default function JeuPage() {
 
         // Trier par rentabilité : Grand Compte (delaiPaiement 2) > TPE (1) > Particulier (0)
         clientsAtrait.sort((a, b) => {
-          const rentabilitéA = b.delaiPaiement - a.delaiPaiement; // Plus haut d'abord
+          const rentabilitéA = b.delaiPaiement - a.delaiPaiement; // Plus haut d’abord
           if (rentabilitéA !== 0) return rentabilitéA;
           return b.montantVentes - a.montantVentes; // Puis par montant
         });
 
-        // Traiter les clients jusqu'à atteindre la capacité
+        // Traiter les clients jusqu’à atteindre la capacité
         const clientsTraites = clientsAtrait.slice(0, capacite);
         const clientsPerdus = clientsAtrait.slice(capacite);
 
@@ -442,7 +423,7 @@ export default function JeuPage() {
         joueur.clientsPerdusCeTour = clientsPerdusPrise;
         joueur.clientsATrait = [];
 
-        // Ajouter un message d'alerte si clients perdus
+        // Ajouter un message d’alerte si clients perdus
         if (clientsPerdusPrise > 0) {
           mods.push({
             joueurId: joueur.id,
@@ -492,7 +473,7 @@ export default function JeuPage() {
     const AUTO_ETAPES = [0, 2, 3, 4, 5]; // étapes automatisables en mode rapide
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
-      // Mode rapide : toutes les écritures pré-cochées, l'étudiant voit tout d'un coup
+      // Mode rapide : toutes les écritures pré-cochées, l’étudiant voit tout d’un coup
       setActiveStep({
         ...step,
         entries: step.entries.map(e => ({ ...e, applied: true })),
@@ -526,13 +507,13 @@ export default function JeuPage() {
       next.tourActuel = oldTour + 1;
       next.etapeTour = 0;
       next.joueurActif = 0;
-      // Montrer la modal d'étape 0 au début de chaque nouveau tour (si pas encore vue)
+      // Montrer la modal d’étape 0 au début de chaque nouveau tour (si pas encore vue)
       if (!etapesPedagoVues.has(0)) {
         setModalEtapeEnAttente(0);
         setEtapesPedagoVues(prev => new Set(prev).add(0));
       }
       setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
-      // Tirer 4 questions QCM pour ce trimestre et les passer à l'overlay
+      // Tirer 4 questions QCM pour ce trimestre et les passer à l’overlay
       const questions = tirerQuestionsTrimestriel();
       setQcmTrimestreQuestions(questions);
       setQcmTrimestreScore(undefined);
@@ -541,7 +522,7 @@ export default function JeuPage() {
       avancerEtape(next);
       next.joueurActif = nextJoueurIdx;
       next.etapeTour = 0;
-      // Montrer la modal d'étape 0 pour le prochain joueur (si pas encore vue)
+      // Montrer la modal d’étape 0 pour le prochain joueur (si pas encore vue)
       if (!etapesPedagoVues.has(0)) {
         setModalEtapeEnAttente(0);
         setEtapesPedagoVues(prev => new Set(prev).add(0));
@@ -645,13 +626,13 @@ export default function JeuPage() {
     const next = cloneEtat(etat);
     const r = acheterCarteDecision(next, next.joueurActif, selectedDecision);
     if (!r.succes) {
-      setDecisionError(r.messageErreur ?? "Impossible d'activer cette carte");
+      setDecisionError(r.messageErreur ?? "Impossible d’activer cette carte");
       return;
     }
     setDecisionError(null);
     let mods = r.modifications;
 
-    // Cartes sans effets immédiats : appliquer les effets récurrents dès l'activation
+    // Cartes sans effets immédiats : appliquer les effets récurrents dès l’activation
     if (mods.length === 0 && selectedDecision.effetsRecurrents.length > 0) {
       const joueur = next.joueurs[next.joueurActif];
       const syntheticMods: typeof mods = [];
@@ -681,7 +662,7 @@ export default function JeuPage() {
       setDecisionError(null);
       return;
     }
-    // Sous-étape 6b : passer l'investissement → avancer à l'étape 7
+    // Sous-étape 6b : passer l’investissement → avancer à l’étape 7
     const next = cloneEtat(etat);
     avancerEtape(next);
     const prochEtape = next.etapeTour;
@@ -732,8 +713,8 @@ export default function JeuPage() {
     <CompanyIntro
       joueurs={etat.joueurs}
       onStart={() => {
-        // Montrer la modal de l'étape 0 dans le MÊME batch que le passage en "playing"
-        // → 1er rendu du jeu = modal déjà visible, jamais de flash des boutons d'action
+        // Montrer la modal de l’étape 0 dans le MÊME batch que le passage en "playing"
+        // → 1er rendu du jeu = modal déjà visible, jamais de flash des boutons d’action
         if (!etapesPedagoVues.has(0)) {
           setModalEtapeEnAttente(0);
           setEtapesPedagoVues(prev => new Set(prev).add(0));
@@ -818,20 +799,6 @@ export default function JeuPage() {
   // ── Métriques v2 ──────────────────────────────────────────────
   const sig           = calculerSIGSimplifie(displayJoueur);
   const indicateurs   = calculerIndicateurs(displayJoueur);
-  const nbCommerciaux = displayJoueur.cartesActives?.filter(
-    (c: { categorie?: string }) => c.categorie === "commercial"
-  ).length ?? 0;
-  const nbCartesActives = displayJoueur.cartesActives?.length ?? 0;
-  const pedaCtx: PedagogicalContext = {
-    tour: etat.tourActuel, etape: etat.etapeTour,
-    resultatNet: sig.resultatNet, tresorerie: sig.tresorerie,
-    bfr: indicateurs.besoinFondsRoulement,
-    creancesPlus1: displayJoueur.bilan.creancesPlus1,
-    creancesPlus2: displayJoueur.bilan.creancesPlus2,
-    ca: sig.ca, stocks: getTotalStocks(displayJoueur),
-    nbCommerciaux, decouvert: displayJoueur.bilan.decouvert,
-  };
-  const tensionAlert = generateTensionAlert(pedaCtx);
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">

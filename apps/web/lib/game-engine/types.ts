@@ -132,6 +132,7 @@ export interface EffetCarte {
     | "capitaux"
     | "emprunts"
     | "dettes"
+    | "dettesFiscales"
     | "decouvert"
     | "creancesPlus1"
     | "creancesPlus2"

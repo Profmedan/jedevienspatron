@@ -15,6 +15,7 @@ import {
   NomEntreprise,
   ResultatAction,
   EtapeTour,
+  EffetCarte,
   DECOUVERT_MAX,
   CHARGES_FIXES_PAR_TOUR,
   REMBOURSEMENT_EMPRUNT_PAR_TOUR,
@@ -97,11 +98,11 @@ function makePush(
   joueur: Joueur,
   modifications: ResultatAction["modifications"]
 ) {
-  return (poste: string, delta: number, explication: string) => {
+  return (poste: EffetCarte["poste"], delta: number, explication: string) => {
     const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
     modifications.push({
       joueurId: joueur.id,
-      poste: poste as any,
+      poste,
       ancienneValeur,
       nouvelleValeur,
       explication,
@@ -329,7 +330,7 @@ export function appliquerEtape0(
       // Pas assez de trésorerie pour rembourser → message pédagogique
       modifications.push({
         joueurId: joueur.id,
-        poste: "decouvert" as any,
+        poste: "decouvert",
         ancienneValeur: joueur.bilan.decouvert,
         nouvelleValeur: joueur.bilan.decouvert,
         explication: `Découvert maintenu à ${joueur.bilan.decouvert} — trésorerie insuffisante pour rembourser ce trimestre. Attention aux agios !`,
@@ -390,7 +391,7 @@ export function appliquerEtape0(
     // Enregistrer UNE modification agrégée pour les immobilisations (total avant/après)
     modifications.push({
       joueurId: joueur.id,
-      poste: "immobilisations" as any,
+      poste: "immobilisations",
       ancienneValeur: totalAvant,
       nouvelleValeur: totalApres,
       explication: `Amortissement de ${immoAmortissables.length} bien(s) immobilisé(s) : -1 par bien, valeur nette ${totalAvant} → ${totalApres}`,
@@ -485,7 +486,7 @@ export function appliquerAvancementCreances(
   if (joueur.bilan.creancesPlus1 === 0 && joueur.bilan.creancesPlus2 === 0) {
     modifications.push({
       joueurId: joueur.id,
-      poste: "creancesPlus1" as any,
+      poste: "creancesPlus1",
       ancienneValeur: 0,
       nouvelleValeur: 0,
       explication: "Aucune créance en attente ce trimestre. Avec des clients TPE ou Grands Comptes, tu verras ici les encaissements différés.",
