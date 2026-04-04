@@ -82,10 +82,7 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "chargesPersonnel", delta: 1 },
       { poste: "tresorerie", delta: -1 },
     ],
-    effetsRecurrents: [
-      { poste: "chargesPersonnel", delta: 1 },
-      { poste: "tresorerie", delta: -1 },
-    ],
+    effetsRecurrents: [], // salaire déjà géré par appliquerPaiementCommerciaux (étape 3)
     clientParTour: "particulier",
     nbClientsParTour: 2,
   },
@@ -99,10 +96,7 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "chargesPersonnel", delta: 2 },
       { poste: "tresorerie", delta: -2 },
     ],
-    effetsRecurrents: [
-      { poste: "chargesPersonnel", delta: 2 },
-      { poste: "tresorerie", delta: -2 },
-    ],
+    effetsRecurrents: [], // salaire déjà géré par appliquerPaiementCommerciaux (étape 3)
     clientParTour: "tpe",
     nbClientsParTour: 2,
   },
@@ -116,10 +110,7 @@ export const CARTES_DECISION: CarteDecision[] = [
       { poste: "chargesPersonnel", delta: 3 },
       { poste: "tresorerie", delta: -3 },
     ],
-    effetsRecurrents: [
-      { poste: "chargesPersonnel", delta: 3 },
-      { poste: "tresorerie", delta: -3 },
-    ],
+    effetsRecurrents: [], // salaire déjà géré par appliquerPaiementCommerciaux (étape 3)
     clientParTour: "grand_compte",
     nbClientsParTour: 2,
   },

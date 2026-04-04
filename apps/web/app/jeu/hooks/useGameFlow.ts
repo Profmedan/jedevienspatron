@@ -54,7 +54,7 @@ const ETAPE_INFO: Record<number, { icone: string; titre: string; description: st
     icone: "👔", titre: "Paiement des commerciaux",
     description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1.",
     principe: "Tu verses les salaires de tes commerciaux : ta trésorerie baisse et tes charges de personnel augmentent. En contrepartie, chaque commercial te ramène de nouveaux clients.",
-    conseil: "Junior → 1 client particulier/trim. Senior → 1 TPE/trim. Directrice → 1 Grand Compte/trim. Recrute via les cartes Décision à l'étape 6.",
+    conseil: "Junior → 2 clients particuliers/trim. Senior → 2 TPE/trim. Directrice → 2 Grands Comptes/trim. Recrute via les cartes Décision à l'étape 6.",
   },
   4: {
     icone: "🤝", titre: "Traitement des ventes (Cartes Client)",

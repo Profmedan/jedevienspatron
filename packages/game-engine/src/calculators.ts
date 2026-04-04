@@ -397,7 +397,7 @@ export function verifierFaillite(joueur: Joueur): ResultatVerifFaillite {
     .reduce((s, p) => s + p.valeur, 0);
   const resultatNet = getResultatNet(joueur);
   const capitauxTotaux = capitauxPropres + resultatNet;
-  const dettesTotales = joueur.bilan.dettes + joueur.bilan.dettesFiscales + emprunts;
+  const dettesTotales = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales + emprunts;
 
   if (decouvert > DECOUVERT_MAX) {
     return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > ${DECOUVERT_MAX} maximum)` };
