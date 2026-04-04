@@ -3,8 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Building2, Clock3, Users } from "lucide-react";
-import { NomEntreprise } from "@/lib/game-engine/types";
-import { ENTREPRISES } from "@/lib/game-engine/data/entreprises";
+import { NomEntreprise, ENTREPRISES } from "@jedevienspatron/game-engine";
 
 export interface PlayerSetup {
   pseudo: string;

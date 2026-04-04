@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur } from "@jedevienspatron/game-engine";
 import IndicateursPanel from "@/components/IndicateursPanel";
 import { GlossairePanel } from "@/components/GlossairePanel";
 

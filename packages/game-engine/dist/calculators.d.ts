@@ -1,4 +1,4 @@
-import { Joueur, IndicateursFinanciers, Charges, Produits } from "./types";
+import { Joueur, IndicateursFinanciers, Charges, Produits, ResultatDemandePret } from "./types";
 export declare function getTotalActif(joueur: Joueur): number;
 export declare function getTotalImmobilisations(joueur: Joueur): number;
 export declare function getTotalStocks(joueur: Joueur): number;
@@ -19,6 +19,44 @@ export declare function verifierEquilibre(joueur: Joueur): {
     ecart: number;
 };
 export declare function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers;
+export interface SIGSimplifie {
+    ca: number;
+    marge: number;
+    ebe: number;
+    resultatNet: number;
+    tresorerie: number;
+}
+export declare function calculerSIGSimplifie(joueur: Joueur): SIGSimplifie;
+export declare function calculerInterets(empruntsTotal: number, majore?: boolean): number;
+export declare function scorerDemandePret(joueur: Joueur, montantDemande: number): ResultatDemandePret;
+export declare function verifierFailliteProgressive(joueur: Joueur): {
+    enFaillite: boolean;
+    raison?: string;
+};
+export interface SIG {
+    chiffreAffaires: number;
+    achats: number;
+    servicesExterieurs: number;
+    valeurAjoutee: number;
+    chargesPersonnel: number;
+    impotsTaxes: number;
+    ebe: number;
+    dotations: number;
+    resultatExploitation: number;
+    produitsFinanciers: number;
+    chargesInteret: number;
+    rcai: number;
+    revenusExceptionnels: number;
+    chargesExceptionnelles: number;
+    resultatExceptionnel: number;
+    resultatNet: number;
+    tauxMargeNette: number;
+    tauxMargeEBE: number;
+    roe: number;
+    rentabiliteEconomique: number;
+    delaiClients: number;
+}
+export declare function calculerSIG(joueur: Joueur): SIG;
 /**
  * Score = (Résultat Net × 3) + (Immobilisations × 2) + Trésorerie + Solvabilité
  */

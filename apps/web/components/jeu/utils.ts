@@ -160,8 +160,7 @@ export function getSensExplication(sens: SensEcriture): string {
 
 // ─── MANIPULATION DU JOUEUR (pour saisie interactive) ─────────────────────────
 
-import { Joueur } from "@/lib/game-engine/types";
-import { calculerIndicateurs } from "@/lib/game-engine/calculators";
+import { Joueur, calculerIndicateurs } from "@jedevienspatron/game-engine";
 
 /** Lit la valeur courante d'un poste sur le joueur */
 export function getPosteValue(j: Joueur, poste: string): number {

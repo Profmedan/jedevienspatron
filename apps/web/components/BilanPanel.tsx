@@ -1,6 +1,5 @@
 "use client";
-import { Joueur, DECOUVERT_MAX } from "@/lib/game-engine/types";
-import { getTotalActif, getTotalPassif, getResultatNet } from "@/lib/game-engine/calculators";
+import { Joueur, DECOUVERT_MAX, getTotalActif, getTotalPassif, getResultatNet } from "@jedevienspatron/game-engine";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import { useState, useRef, useEffect } from "react";
 

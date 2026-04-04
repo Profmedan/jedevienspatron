@@ -4,17 +4,15 @@ import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EtatJeu, CarteDecision } from "@/lib/game-engine/types";
 import {
+  EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, tirerCartesDecision, acheterCarteDecision,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
-} from "@/lib/game-engine/engine";
-import {
   calculerScore, getTresorerie, calculerIndicateurs, calculerSIGSimplifie,
-} from "@/lib/game-engine/calculators";
+} from "@jedevienspatron/game-engine";
 import {
   HeaderJeu, LeftPanel, MainContent,
   OverlayTransition, OverlayFaillite,
@@ -23,7 +21,6 @@ import {
   getSens, getPosteValue, applyDeltaToJoueur,
 } from "@/components/jeu";
 import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
-import { ResultatDemandePret, MONTANTS_EMPRUNT } from "@/lib/game-engine/types";
 import { ImpactFlash } from "@/components/ImpactFlash";
 // ── Nouveaux composants v2 — chargement dynamique (évite panic Turbopack) ────
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {

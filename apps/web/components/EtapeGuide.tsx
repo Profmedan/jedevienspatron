@@ -1,5 +1,5 @@
 "use client";
-import { EtapeTour } from "@/lib/game-engine/types";
+import { EtapeTour } from "@jedevienspatron/game-engine";
 
 interface Props {
   etape: EtapeTour;

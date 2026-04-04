@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur } from "@jedevienspatron/game-engine";
 
 interface HeaderJeuProps {
   joueurs: Joueur[];

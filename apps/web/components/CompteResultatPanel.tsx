@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Joueur } from "@/lib/game-engine/types";
-import { getTotalCharges, getTotalProduits, getResultatNet } from "@/lib/game-engine/calculators";
+import { Joueur, getTotalCharges, getTotalProduits, getResultatNet } from "@jedevienspatron/game-engine";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };

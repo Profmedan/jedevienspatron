@@ -14,8 +14,14 @@ exports.getTotalProduits = getTotalProduits;
 exports.getResultatNet = getResultatNet;
 exports.verifierEquilibre = verifierEquilibre;
 exports.calculerIndicateurs = calculerIndicateurs;
+exports.calculerSIGSimplifie = calculerSIGSimplifie;
+exports.calculerInterets = calculerInterets;
+exports.scorerDemandePret = scorerDemandePret;
+exports.verifierFailliteProgressive = verifierFailliteProgressive;
+exports.calculerSIG = calculerSIG;
 exports.calculerScore = calculerScore;
 exports.verifierFaillite = verifierFaillite;
+const types_1 = require("./types");
 // ─── TOTAUX BILAN ────────────────────────────────────────────
 function getTotalActif(joueur) {
     const actifs = joueur.bilan.actifs.reduce((s, a) => s + a.valeur, 0);
@@ -38,12 +44,9 @@ function getTresorerie(joueur) {
     return t ? t.valeur : 0;
 }
 function getTotalPassif(joueur) {
-    const passifs = joueur.bilan.actifs
-        .filter((a) => a.categorie !== "tresorerie") // hors tréso
-        .reduce((s) => s, 0); // placeholder
     const passifsBruts = joueur.bilan.passifs.reduce((s, p) => s + p.valeur, 0);
     const decouvert = joueur.bilan.decouvert;
-    const dettes = joueur.bilan.dettes + joueur.bilan.dettesFiscales;
+    const dettes = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
     const resultat = getResultatNet(joueur);
     return passifsBruts + decouvert + dettes + resultat;
 }
@@ -76,7 +79,7 @@ function getResultatNet(joueur) {
 function verifierEquilibre(joueur) {
     const totalActif = getTotalActif(joueur);
     const totalPassif = joueur.bilan.passifs.reduce((s, p) => s + p.valeur, 0) +
-        joueur.bilan.decouvert + joueur.bilan.dettes + joueur.bilan.dettesFiscales;
+        joueur.bilan.decouvert + joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
     const ecart = totalActif - totalPassif - getResultatNet(joueur);
     return {
         equilibre: Math.abs(ecart) < 0.001,
@@ -98,7 +101,7 @@ function calculerIndicateurs(joueur) {
     const emprunts = joueur.bilan.passifs
         .filter((p) => p.categorie === "emprunts")
         .reduce((s, p) => s + p.valeur, 0);
-    const dettes = joueur.bilan.dettes + joueur.bilan.dettesFiscales;
+    const dettes = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
     const resultatNet = getResultatNet(joueur);
     const totalPassif = capitauxPropres + emprunts + dettes + joueur.bilan.decouvert + resultatNet;
     const dotations = joueur.compteResultat.charges.dotationsAmortissements;
@@ -133,6 +136,191 @@ function calculerIndicateurs(joueur) {
         equilibre,
     };
 }
+function calculerSIGSimplifie(joueur) {
+    const ca = joueur.compteResultat.produits.ventes;
+    const achats = joueur.compteResultat.charges.achats;
+    const marge = ca - achats;
+    const servExt = joueur.compteResultat.charges.servicesExterieurs;
+    const va = marge - servExt; // Valeur Ajoutée simplifiée
+    const personnel = joueur.compteResultat.charges.chargesPersonnel;
+    const impots = joueur.compteResultat.charges.impotsTaxes;
+    const ebe = va - personnel - impots;
+    const resultatNet = getResultatNet(joueur);
+    const tresorerie = getTresorerie(joueur);
+    return { ca, marge, ebe, resultatNet, tresorerie };
+}
+// ─── INTÉRÊTS SUR EMPRUNT ─────────────────────────────────────
+function calculerInterets(empruntsTotal, majore = false) {
+    const taux = majore ? types_1.TAUX_INTERET_MAJORE : types_1.TAUX_INTERET_ANNUEL;
+    return Math.round(empruntsTotal * taux / 400);
+}
+// ─── SCORING BANCAIRE ─────────────────────────────────────────
+function scorerDemandePret(joueur, montantDemande) {
+    const ind = calculerIndicateurs(joueur);
+    let score = 0;
+    const details = [];
+    const solv = ind.ratioSolvabilite;
+    if (solv >= 40) {
+        score += 30;
+        details.push("Solvabilité solide ✓");
+    }
+    else if (solv >= 30) {
+        score += 20;
+        details.push("Solvabilité acceptable");
+    }
+    else if (solv >= 20) {
+        score += 10;
+        details.push("Solvabilité fragile");
+    }
+    else {
+        details.push("Solvabilité insuffisante ✗");
+    }
+    if (ind.resultatNet > 0) {
+        score += 25;
+        details.push("Résultat bénéficiaire ✓");
+    }
+    else if (ind.resultatNet === 0) {
+        score += 10;
+        details.push("Résultat nul (neutre)");
+    }
+    else {
+        details.push("Résultat déficitaire ✗");
+    }
+    const treso = getTresorerie(joueur);
+    if (treso >= 5) {
+        score += 20;
+        details.push("Trésorerie confortable ✓");
+    }
+    else if (treso >= 2) {
+        score += 10;
+        details.push("Trésorerie limitée");
+    }
+    else if (treso >= 0) {
+        score += 5;
+        details.push("Trésorerie très faible");
+    }
+    else {
+        details.push("Découvert bancaire ✗");
+    }
+    const emprunts = joueur.bilan.passifs
+        .filter((p) => p.categorie === "emprunts")
+        .reduce((s, p) => s + p.valeur, 0);
+    const tauxEndettement = ind.totalActif > 0 ? (emprunts / ind.totalActif) * 100 : 100;
+    if (tauxEndettement < 30) {
+        score += 15;
+        details.push("Endettement faible ✓");
+    }
+    else if (tauxEndettement < 50) {
+        score += 10;
+        details.push("Endettement modéré");
+    }
+    else if (tauxEndettement < 70) {
+        score += 5;
+        details.push("Endettement élevé");
+    }
+    else {
+        details.push("Endettement excessif ✗");
+    }
+    const ratioPret = ind.totalActif > 0 ? (montantDemande / ind.totalActif) * 100 : 100;
+    if (ratioPret <= 10) {
+        score += 10;
+        details.push("Montant raisonnable ✓");
+    }
+    else if (ratioPret <= 20) {
+        score += 5;
+        details.push("Montant acceptable");
+    }
+    else {
+        details.push("Montant trop élevé ✗");
+    }
+    const accepte = score >= 50;
+    const tauxMajore = accepte && score < 65;
+    let raison;
+    if (!accepte) {
+        raison = `Score ${score}/100 — insuffisant (min 50). ${details.filter(d => d.includes("✗")).join(", ")}.`;
+    }
+    else if (tauxMajore) {
+        raison = `Score ${score}/100 — accordé avec taux majoré (8%/an). ${details.filter(d => !d.includes("✓")).join(", ")}.`;
+    }
+    else {
+        raison = `Score ${score}/100 — accordé au taux standard (5%/an). ${details.filter(d => d.includes("✓")).join(", ")}.`;
+    }
+    return { accepte, montantAccorde: accepte ? montantDemande : 0, tauxMajore, score, raison };
+}
+// ─── VÉRIFICATION FAILLITE (PROGRESSIVE) ─────────────────────
+function verifierFailliteProgressive(joueur) {
+    const capitauxPropres = joueur.bilan.passifs
+        .filter((p) => p.categorie === "capitaux")
+        .reduce((s, p) => s + p.valeur, 0);
+    const resultatNet = getResultatNet(joueur);
+    const capitauxTotaux = capitauxPropres + resultatNet;
+    if (capitauxTotaux < 0) {
+        return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };
+    }
+    return { enFaillite: false };
+}
+function calculerSIG(joueur) {
+    const cr = joueur.compteResultat;
+    const ca = cr.produits.ventes;
+    const achats = cr.charges.achats;
+    const servExt = cr.charges.servicesExterieurs;
+    // 1. Valeur Ajoutée = CA − Achats − Services extérieurs
+    const valeurAjoutee = ca - achats - servExt;
+    // 2. EBE = VA − Charges de personnel − Impôts & taxes
+    const chargesPerso = cr.charges.chargesPersonnel;
+    const impots = cr.charges.impotsTaxes;
+    const ebe = valeurAjoutee - chargesPerso - impots;
+    // 3. Résultat d'exploitation = EBE − Dotations aux amortissements
+    const dotations = cr.charges.dotationsAmortissements;
+    const resultatExploitation = ebe - dotations;
+    // 4. RCAI = Résultat exploitation + Produits financiers − Charges d'intérêt
+    const prodFin = cr.produits.produitsFinanciers;
+    const chargesInt = cr.charges.chargesInteret;
+    const rcai = resultatExploitation + prodFin - chargesInt;
+    // 5. Résultat exceptionnel = Revenus exceptionnels − Charges exceptionnelles
+    const revExc = cr.produits.revenusExceptionnels;
+    const chargExc = cr.charges.chargesExceptionnelles;
+    const resultatExceptionnel = revExc - chargExc;
+    // 6. Résultat net = RCAI + Résultat exceptionnel (pas d'IS dans le jeu)
+    const resultatNet = rcai + resultatExceptionnel;
+    // Capitaux propres (sans résultat inclus dans passifsBruts)
+    const capitauxPropres = joueur.bilan.passifs
+        .filter((p) => p.categorie === "capitaux")
+        .reduce((s, p) => s + p.valeur, 0);
+    const capitalAvecResultat = capitauxPropres + resultatNet;
+    const totalActif = getTotalActif(joueur);
+    const creances = joueur.bilan.creancesPlus1 + joueur.bilan.creancesPlus2;
+    // Indicateurs de rentabilité
+    const tauxMargeNette = ca > 0 ? (resultatNet / ca) * 100 : 0;
+    const tauxMargeEBE = ca > 0 ? (ebe / ca) * 100 : 0;
+    const roe = capitalAvecResultat > 0 ? (resultatNet / capitalAvecResultat) * 100 : 0;
+    const rentabiliteEconomique = totalActif > 0 ? (resultatExploitation / totalActif) * 100 : 0;
+    // Délai clients en jours (créances × 360 / CA annualisé)
+    const delaiClients = ca > 0 ? (creances * 360) / (ca * 4) : 0;
+    return {
+        chiffreAffaires: ca,
+        achats,
+        servicesExterieurs: servExt,
+        valeurAjoutee,
+        chargesPersonnel: chargesPerso,
+        impotsTaxes: impots,
+        ebe,
+        dotations,
+        resultatExploitation,
+        produitsFinanciers: prodFin,
+        chargesInteret: chargesInt,
+        rcai,
+        revenusExceptionnels: revExc,
+        chargesExceptionnelles: chargExc,
+        resultatExceptionnel,
+        resultatNet,
+        tauxMargeNette,
+        tauxMargeEBE,
+        roe,
+        rentabiliteEconomique,
+        delaiClients,
+    };
+}
 // ─── SCORE FINAL ─────────────────────────────────────────────
 /**
  * Score = (Résultat Net × 3) + (Immobilisations × 2) + Trésorerie + Solvabilité
@@ -159,8 +347,8 @@ function verifierFaillite(joueur) {
     const resultatNet = getResultatNet(joueur);
     const capitauxTotaux = capitauxPropres + resultatNet;
     const dettesTotales = joueur.bilan.dettes + joueur.bilan.dettesFiscales + emprunts;
-    if (decouvert > 5) {
-        return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > 5 maximum)` };
+    if (decouvert > types_1.DECOUVERT_MAX) {
+        return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > ${types_1.DECOUVERT_MAX} maximum)` };
     }
     if (capitauxTotaux < 0) {
         return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur, calculerIndicateurs } from "@jedevienspatron/game-engine";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
-import { calculerIndicateurs } from "@/lib/game-engine/calculators";
 import { QuestionQCM } from "@/lib/game-engine/data/pedagogie";
 
 interface TransitionInfo {

@@ -1,5 +1,5 @@
 "use client";
-import { CarteDecision, CarteClient, CarteEvenement, CarteCommercial } from "@/lib/game-engine/types";
+import { CarteDecision, CarteClient, CarteEvenement, CarteCommercial } from "@jedevienspatron/game-engine";
 
 type AnyCard = CarteDecision | CarteClient | CarteEvenement | CarteCommercial;
 

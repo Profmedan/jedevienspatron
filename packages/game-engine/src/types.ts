@@ -67,10 +67,10 @@ export interface CompteResultat {
 // ─── ENTREPRISE ──────────────────────────────────────────────
 
 export type NomEntreprise =
-  | "Entreprise Orange"
-  | "Entreprise Violette"
-  | "Entreprise Bleue"
-  | "Entreprise Verte";
+  | "Manufacture Belvaux"
+  | "Véloce Transports"
+  | "Azura Commerce"
+  | "Synergia Lab";
 
 export interface EntrepriseTemplate {
   nom: NomEntreprise;
@@ -132,6 +132,7 @@ export interface EffetCarte {
     | "capitaux"
     | "emprunts"
     | "dettes"
+    | "dettesFiscales"
     | "decouvert"
     | "creancesPlus1"
     | "creancesPlus2"
@@ -160,6 +161,8 @@ export interface CarteDecision {
   effetsRecurrents: EffetCarte[];
   /** La carte rapporte-t-elle un client chaque tour ? */
   clientParTour?: "particulier" | "tpe" | "grand_compte";
+  /** Combien de clients générés par tour (défaut : 1) */
+  nbClientsParTour?: number;
   /** Nombre de cartes Décision bonus par tour (carte Berline) */
   carteDecisionBonus?: number;
   /** Catégorie pour l'affichage */
@@ -213,6 +216,8 @@ export interface Joueur {
   elimine: boolean;
   /** Publicité activée ce tour ? */
   publicitéCeTour: boolean;
+  /** Nombre de clients perdus faute de capacité ce trimestre */
+  clientsPerdusCeTour: number;
 }
 
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
@@ -225,17 +230,19 @@ export type EtapeTour =
   | 3 // Paiement des commerciaux (+ quiz pédagogique)
   | 4 // Traitement des cartes Client
   | 5 // Application des effets récurrents des cartes Décision
-  | 6 // Choix d'une nouvelle carte Décision
+  | 6 // 6a Recrutement commercial (optionnel) + 6b Carte Décision (optionnel)
   | 7 // Pioche de la carte Événement
   | 8; // Vérification de l'équilibre + fin de tour
 
 export interface EtatJeu {
   phase: "setup" | "playing" | "gameover";
-  tourActuel: number; // 1 à 4
+  tourActuel: number; // 1 à nbToursMax
   etapeTour: EtapeTour;
   joueurActif: number; // index dans joueurs[]
   joueurs: Joueur[];
   nbJoueurs: number;
+  /** Nombre de trimestres configuré pour cette partie (4, 6 ou 8) */
+  nbToursMax: number;
   /** Cartes Décision disponibles au centre de la table */
   piocheDecision: CarteDecision[];
   /** Cartes Événement restantes dans la pioche */
@@ -288,13 +295,64 @@ export interface IndicateursFinanciers {
 // ─── CONSTANTES ───────────────────────────────────────────────
 
 export const DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 → cessation de paiement
-export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
 export const CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
 export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
+/** Maximum de découvert remboursable par trimestre (progressif) */
+export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
+/** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
+export const INTERET_EMPRUNT_FREQUENCE = 4; // Q1 de chaque année
 export const NB_TOURS_PAR_AN = 4;
-export const NB_TOURS_MAX = 4;
+export const NB_TOURS_MAX = 12; // Valeur par défaut — configurable à 6, 8 ou 12 à l'initialisation
 export const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export const SCORE_MULTIPLICATEUR_IMMO = 2;
+
+// ─── CAPACITÉ LOGISTIQUE ──────────────────────────────────────
+
+/** Capacité de base sans immobilisation (ventes/trimestre) */
+export const CAPACITE_BASE = 4;
+
+/** Bonus de capacité par type d'immobilisation active */
+export const CAPACITE_IMMOBILISATION: Record<string, number> = {
+  // Véhicules
+  "camionnette": 6,        // 8 unités immo → +6 ventes
+  "berline": 0,            // 8 unités immo → +0 ventes (commercial, non logistique)
+  "fourgon-refrigere": 5,  // 6 unités immo → +5 ventes
+  "velo-cargo": 3,         // 3 unités immo → +3 ventes
+
+  // Investissements logistiques
+  "expansion": 10,         // 8 unités immo → +10 ventes (augmentation capacité d'accueil)
+  "entrepot-automatise": 10, // 8 unités immo → +10 ventes (capacité de stockage doublée)
+
+  // Autres (non logistiques)
+  "site-internet": 0,
+  "rse": 0,
+  "recherche-developpement": 0,
+  "berline-repr": 0,
+  "certification-iso": 0,
+  "application-mobile": 0,
+  "assurance-prevoyance": 0,
+  "pret-bancaire": 0,
+  "levee-de-fonds": 0,
+  "publicite": 0,
+  "relance-clients": 0,
+  "formation": 0,
+  "affacturage": 0,
+  "remboursement-anticipe": 0,
+  "credit-bail": 6,        // 6 unités immo en crédit-bail → +6 ventes
+  "crowdfunding": 0,
+  "programme-fidelite": 0,
+  "export-international": 0,
+  "partenariat-commercial": 0,
+  "maintenance-preventive": 0,
+  "mutuelle-collective": 0,
+  "cybersecurite": 0,
+  "erp": 0,
+  "marketplace": 0,
+  "label-qualite": 0,
+  "commercial-junior-dec": 0,
+  "commercial-senior-dec": 0,
+  "directrice-commerciale-dec": 0,
+};
 
 /** Taux d'intérêt annuel sur les emprunts (5%) */
 export const TAUX_INTERET_ANNUEL = 5;
@@ -307,7 +365,7 @@ export const MONTANTS_EMPRUNT = [5, 8, 12, 16, 20] as const;
 export interface ResultatDemandePret {
   accepte: boolean;
   montantAccorde: number;
-  tauxMajore: boolean; // si fragile : taux 8%/an au lieu de 5%/an
-  score: number;       // score bancaire 0-100
-  raison: string;      // explication courte
+  tauxMajore: boolean;
+  score: number;
+  raison: string;
 }

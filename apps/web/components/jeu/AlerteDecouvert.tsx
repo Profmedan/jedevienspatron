@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DECOUVERT_MAX } from "@/lib/game-engine/types";
+import { DECOUVERT_MAX } from "@jedevienspatron/game-engine";
 
 interface AlerteDecouvertProps {
   decouvert: number;

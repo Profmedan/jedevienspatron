@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Joueur } from "@/lib/game-engine/types";
-import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
+import { Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron/game-engine";
 
 interface CompanyIntroProps {
   joueurs: Joueur[];

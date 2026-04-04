@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EtatJeu, Joueur } from "@/lib/game-engine/types";
-import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
+import { EtatJeu, Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron/game-engine";
 
 import { DoubleEntrySalesCard } from "./DoubleEntrySalesCard";
 import { EntryCard, type EntryLine } from "./EntryCard";

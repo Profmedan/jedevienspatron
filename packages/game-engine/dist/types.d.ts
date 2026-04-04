@@ -12,14 +12,16 @@ export interface PostePassif {
 export interface Bilan {
     actifs: PosteActif[];
     passifs: PostePassif[];
-    /** Découvert bancaire (max DECOUVERT_MAX = 5) */
+    /** Découvert bancaire (max DECOUVERT_MAX = 8) */
     decouvert: number;
     /** Créances clients à encaisser dans 1 tour */
     creancesPlus1: number;
     /** Créances clients à encaisser dans 2 tours */
     creancesPlus2: number;
-    /** Dettes fournisseurs D+1 */
+    /** Dettes fournisseurs D+1 (payables au prochain trimestre) */
     dettes: number;
+    /** Dettes fournisseurs D+2 (payables dans 2 trimestres, 40% des achats à crédit) */
+    dettesD2: number;
     /** Dettes fiscales D+1 */
     dettesFiscales: number;
 }
@@ -47,7 +49,7 @@ export interface CompteResultat {
     charges: Charges;
     produits: Produits;
 }
-export type NomEntreprise = "Entreprise Orange" | "Entreprise Violette" | "Entreprise Bleue" | "Entreprise Verte";
+export type NomEntreprise = "Manufacture Belvaux" | "Véloce Transports" | "Azura Commerce" | "Synergia Lab";
 export interface EntrepriseTemplate {
     nom: NomEntreprise;
     /** Couleur thématique */
@@ -90,7 +92,7 @@ export interface CarteClient {
 /** Effet immédiat ou récurrent d'une carte Décision */
 export interface EffetCarte {
     /** Poste impacté (bilan ou CR) */
-    poste: "immobilisations" | "stocks" | "tresorerie" | "capitaux" | "emprunts" | "dettes" | "decouvert" | "creancesPlus1" | "creancesPlus2" | "achats" | "servicesExterieurs" | "impotsTaxes" | "chargesInteret" | "chargesPersonnel" | "chargesExceptionnelles" | "dotationsAmortissements" | "ventes" | "productionStockee" | "produitsFinanciers" | "revenusExceptionnels";
+    poste: "immobilisations" | "stocks" | "tresorerie" | "capitaux" | "emprunts" | "dettes" | "dettesFiscales" | "decouvert" | "creancesPlus1" | "creancesPlus2" | "achats" | "servicesExterieurs" | "impotsTaxes" | "chargesInteret" | "chargesPersonnel" | "chargesExceptionnelles" | "dotationsAmortissements" | "ventes" | "productionStockee" | "produitsFinanciers" | "revenusExceptionnels";
     delta: number;
 }
 export interface CarteDecision {
@@ -104,6 +106,8 @@ export interface CarteDecision {
     effetsRecurrents: EffetCarte[];
     /** La carte rapporte-t-elle un client chaque tour ? */
     clientParTour?: "particulier" | "tpe" | "grand_compte";
+    /** Combien de clients générés par tour (défaut : 1) */
+    nbClientsParTour?: number;
     /** Nombre de cartes Décision bonus par tour (carte Berline) */
     carteDecisionBonus?: number;
     /** Catégorie pour l'affichage */
@@ -144,6 +148,8 @@ export interface Joueur {
     elimine: boolean;
     /** Publicité activée ce tour ? */
     publicitéCeTour: boolean;
+    /** Nombre de clients perdus faute de capacité ce trimestre */
+    clientsPerdusCeTour: number;
 }
 /** Les 9 étapes d'un tour de jeu */
 export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -154,6 +160,8 @@ export interface EtatJeu {
     joueurActif: number;
     joueurs: Joueur[];
     nbJoueurs: number;
+    /** Nombre de trimestres configuré pour cette partie (4, 6 ou 8) */
+    nbToursMax: number;
     /** Cartes Décision disponibles au centre de la table */
     piocheDecision: CarteDecision[];
     /** Cartes Événement restantes dans la pioche */
@@ -196,11 +204,33 @@ export interface IndicateursFinanciers {
     ratioSolvabilite: number;
     equilibre: boolean;
 }
-export declare const DECOUVERT_MAX = 5;
+export declare const DECOUVERT_MAX = 8;
 export declare const CHARGES_FIXES_PAR_TOUR = 2;
 export declare const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
+/** Maximum de découvert remboursable par trimestre (progressif) */
+export declare const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
+/** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
+export declare const INTERET_EMPRUNT_FREQUENCE = 4;
 export declare const NB_TOURS_PAR_AN = 4;
-export declare const NB_TOURS_MAX = 4;
+export declare const NB_TOURS_MAX = 12;
 export declare const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export declare const SCORE_MULTIPLICATEUR_IMMO = 2;
+/** Capacité de base sans immobilisation (ventes/trimestre) */
+export declare const CAPACITE_BASE = 4;
+/** Bonus de capacité par type d'immobilisation active */
+export declare const CAPACITE_IMMOBILISATION: Record<string, number>;
+/** Taux d'intérêt annuel sur les emprunts (5%) */
+export declare const TAUX_INTERET_ANNUEL = 5;
+/** Taux majoré appliqué si situation financière fragile (8%/an) */
+export declare const TAUX_INTERET_MAJORE = 8;
+/** Montants disponibles pour un emprunt bancaire */
+export declare const MONTANTS_EMPRUNT: readonly [5, 8, 12, 16, 20];
+/** Résultat d'une demande de prêt bancaire */
+export interface ResultatDemandePret {
+    accepte: boolean;
+    montantAccorde: number;
+    tauxMajore: boolean;
+    score: number;
+    raison: string;
+}
 //# sourceMappingURL=types.d.ts.map

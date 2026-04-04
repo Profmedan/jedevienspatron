@@ -1,7 +1,6 @@
 "use client";
 
-import { getTotalActif, getTotalPassif } from "@/lib/game-engine/calculators";
-import { CarteDecision, Joueur } from "@/lib/game-engine/types";
+import { getTotalActif, getTotalPassif, CarteDecision, Joueur } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
 

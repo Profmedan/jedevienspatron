@@ -17,12 +17,13 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CARTES_COMMERCIAUX = exports.CARTES_EVENEMENTS = exports.CARTES_CLIENTS = exports.CARTES_DECISION = exports.ENTREPRISES = void 0;
+exports.CARTES_COMMERCIAUX = exports.CARTES_EVENEMENTS = exports.CARTES_CLIENTS = exports.CARTES_DECISION = exports.ENTREPRISE_INDEX = exports.ENTREPRISES = void 0;
 __exportStar(require("./types"), exports);
 __exportStar(require("./calculators"), exports);
 __exportStar(require("./engine"), exports);
 var entreprises_1 = require("./data/entreprises");
 Object.defineProperty(exports, "ENTREPRISES", { enumerable: true, get: function () { return entreprises_1.ENTREPRISES; } });
+Object.defineProperty(exports, "ENTREPRISE_INDEX", { enumerable: true, get: function () { return entreprises_1.ENTREPRISE_INDEX; } });
 var cartes_1 = require("./data/cartes");
 Object.defineProperty(exports, "CARTES_DECISION", { enumerable: true, get: function () { return cartes_1.CARTES_DECISION; } });
 Object.defineProperty(exports, "CARTES_CLIENTS", { enumerable: true, get: function () { return cartes_1.CARTES_CLIENTS; } });

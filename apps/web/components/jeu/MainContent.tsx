@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   CarteDecision,
   Joueur,
-} from "@/lib/game-engine/types";
+} from "@jedevienspatron/game-engine";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 

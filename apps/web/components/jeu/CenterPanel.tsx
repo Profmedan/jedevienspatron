@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur } from "@jedevienspatron/game-engine";
 
 import CompanyEvolution from "./animations/CompanyEvolution";
 import BFRPipeline from "./animations/BFRPipeline";

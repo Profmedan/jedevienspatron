@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Joueur, DECOUVERT_MAX } from "@/lib/game-engine/types";
-import { calculerIndicateurs, calculerSIG } from "@/lib/game-engine/calculators";
+import { Joueur, DECOUVERT_MAX, calculerIndicateurs, calculerSIG } from "@jedevienspatron/game-engine";
 
 interface Props { joueur: Joueur; }
 

@@ -11,6 +11,7 @@ import {
   ResultatDemandePret,
   TAUX_INTERET_ANNUEL,
   TAUX_INTERET_MAJORE,
+  DECOUVERT_MAX,
 } from "./types";
 
 // ─── TOTAUX BILAN ────────────────────────────────────────────
@@ -161,30 +162,36 @@ export function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers {
   };
 }
 
+// ─── SIG SIMPLIFIÉ (5 indicateurs clés) ─────────────────────
+export interface SIGSimplifie {
+  ca: number;
+  marge: number;
+  ebe: number;
+  resultatNet: number;
+  tresorerie: number;
+}
+
+export function calculerSIGSimplifie(joueur: Joueur): SIGSimplifie {
+  const ca = joueur.compteResultat.produits.ventes;
+  const achats = joueur.compteResultat.charges.achats;
+  const marge = ca - achats;
+  const servExt = joueur.compteResultat.charges.servicesExterieurs;
+  const va = marge - servExt;  // Valeur Ajoutée simplifiée
+  const personnel = joueur.compteResultat.charges.chargesPersonnel;
+  const impots = joueur.compteResultat.charges.impotsTaxes;
+  const ebe = va - personnel - impots;
+  const resultatNet = getResultatNet(joueur);
+  const tresorerie = getTresorerie(joueur);
+  return { ca, marge, ebe, resultatNet, tresorerie };
+}
+
 // ─── INTÉRÊTS SUR EMPRUNT ─────────────────────────────────────
-/**
- * Calcule les intérêts trimestriels sur le capital restant dû.
- * Formule : ROUND(empruntsTotal × taux_annuel / 400)
- * Taux standard 5%/an → 1.25%/trimestre
- * Taux majoré 8%/an (situation fragile) → 2%/trimestre
- */
 export function calculerInterets(empruntsTotal: number, majore: boolean = false): number {
   const taux = majore ? TAUX_INTERET_MAJORE : TAUX_INTERET_ANNUEL;
   return Math.round(empruntsTotal * taux / 400);
 }
 
 // ─── SCORING BANCAIRE ─────────────────────────────────────────
-/**
- * Score bancaire sur 100 points — 5 critères :
- * 1. Solvabilité (30 pts)
- * 2. Résultat net (25 pts)
- * 3. Trésorerie disponible (20 pts)
- * 4. Taux d'endettement / actif (15 pts)
- * 5. Montant demandé / actif (10 pts)
- *
- * Accepté si score >= 50
- * Taux majoré (8%/an) si score < 65 mais >= 50
- */
 export function scorerDemandePret(
   joueur: Joueur,
   montantDemande: number
@@ -193,26 +200,22 @@ export function scorerDemandePret(
   let score = 0;
   const details: string[] = [];
 
-  // ── Critère 1 : Solvabilité (30 pts) ──
   const solv = ind.ratioSolvabilite;
   if (solv >= 40) { score += 30; details.push("Solvabilité solide ✓"); }
   else if (solv >= 30) { score += 20; details.push("Solvabilité acceptable"); }
   else if (solv >= 20) { score += 10; details.push("Solvabilité fragile"); }
   else { details.push("Solvabilité insuffisante ✗"); }
 
-  // ── Critère 2 : Résultat net (25 pts) ──
   if (ind.resultatNet > 0) { score += 25; details.push("Résultat bénéficiaire ✓"); }
   else if (ind.resultatNet === 0) { score += 10; details.push("Résultat nul (neutre)"); }
   else { details.push("Résultat déficitaire ✗"); }
 
-  // ── Critère 3 : Trésorerie (20 pts) ──
   const treso = getTresorerie(joueur);
   if (treso >= 5) { score += 20; details.push("Trésorerie confortable ✓"); }
   else if (treso >= 2) { score += 10; details.push("Trésorerie limitée"); }
   else if (treso >= 0) { score += 5; details.push("Trésorerie très faible"); }
   else { details.push("Découvert bancaire ✗"); }
 
-  // ── Critère 4 : Taux d'endettement / Actif total (15 pts) ──
   const emprunts = joueur.bilan.passifs
     .filter((p) => p.categorie === "emprunts")
     .reduce((s, p) => s + p.valeur, 0);
@@ -222,7 +225,6 @@ export function scorerDemandePret(
   else if (tauxEndettement < 70) { score += 5; details.push("Endettement élevé"); }
   else { details.push("Endettement excessif ✗"); }
 
-  // ── Critère 5 : Montant demandé / Actif total (10 pts) ──
   const ratioPret = ind.totalActif > 0 ? (montantDemande / ind.totalActif) * 100 : 100;
   if (ratioPret <= 10) { score += 10; details.push("Montant raisonnable ✓"); }
   else if (ratioPret <= 20) { score += 5; details.push("Montant acceptable"); }
@@ -240,12 +242,122 @@ export function scorerDemandePret(
     raison = `Score ${score}/100 — accordé au taux standard (5%/an). ${details.filter(d => d.includes("✓")).join(", ")}.`;
   }
 
+  return { accepte, montantAccorde: accepte ? montantDemande : 0, tauxMajore, score, raison };
+}
+
+// ─── VÉRIFICATION FAILLITE (PROGRESSIVE) ─────────────────────
+export function verifierFailliteProgressive(joueur: Joueur): { enFaillite: boolean; raison?: string } {
+  const capitauxPropres = joueur.bilan.passifs
+    .filter((p) => p.categorie === "capitaux")
+    .reduce((s, p) => s + p.valeur, 0);
+  const resultatNet = getResultatNet(joueur);
+  const capitauxTotaux = capitauxPropres + resultatNet;
+  if (capitauxTotaux < 0) {
+    return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };
+  }
+  return { enFaillite: false };
+}
+
+// ─── SOLDES INTERMÉDIAIRES DE GESTION (SIG) ──────────────────
+
+export interface SIG {
+  // Cascade de formation du résultat
+  chiffreAffaires: number;
+  achats: number;
+  servicesExterieurs: number;
+  valeurAjoutee: number;
+  chargesPersonnel: number;
+  impotsTaxes: number;
+  ebe: number;
+  dotations: number;
+  resultatExploitation: number;
+  produitsFinanciers: number;
+  chargesInteret: number;
+  rcai: number;
+  revenusExceptionnels: number;
+  chargesExceptionnelles: number;
+  resultatExceptionnel: number;
+  resultatNet: number;
+  // Indicateurs de rentabilité
+  tauxMargeNette: number;       // Résultat net / CA × 100
+  tauxMargeEBE: number;         // EBE / CA × 100
+  roe: number;                  // Résultat net / Capitaux propres × 100
+  rentabiliteEconomique: number; // Résultat exploitation / Total actif × 100
+  // Ratios de gestion (en jours, annualisés ×4 pour les trimestres)
+  delaiClients: number;         // Créances × 360 / (CA annualisé)
+}
+
+export function calculerSIG(joueur: Joueur): SIG {
+  const cr  = joueur.compteResultat;
+  const ca  = cr.produits.ventes;
+  const achats = cr.charges.achats;
+  const servExt = cr.charges.servicesExterieurs;
+
+  // 1. Valeur Ajoutée = CA − Achats − Services extérieurs
+  const valeurAjoutee = ca - achats - servExt;
+
+  // 2. EBE = VA − Charges de personnel − Impôts & taxes
+  const chargesPerso = cr.charges.chargesPersonnel;
+  const impots       = cr.charges.impotsTaxes;
+  const ebe          = valeurAjoutee - chargesPerso - impots;
+
+  // 3. Résultat d'exploitation = EBE − Dotations aux amortissements
+  const dotations           = cr.charges.dotationsAmortissements;
+  const resultatExploitation = ebe - dotations;
+
+  // 4. RCAI = Résultat exploitation + Produits financiers − Charges d'intérêt
+  const prodFin       = cr.produits.produitsFinanciers;
+  const chargesInt    = cr.charges.chargesInteret;
+  const rcai          = resultatExploitation + prodFin - chargesInt;
+
+  // 5. Résultat exceptionnel = Revenus exceptionnels − Charges exceptionnelles
+  const revExc    = cr.produits.revenusExceptionnels;
+  const chargExc  = cr.charges.chargesExceptionnelles;
+  const resultatExceptionnel = revExc - chargExc;
+
+  // 6. Résultat net = RCAI + Résultat exceptionnel (pas d'IS dans le jeu)
+  const resultatNet = rcai + resultatExceptionnel;
+
+  // Capitaux propres (sans résultat inclus dans passifsBruts)
+  const capitauxPropres = joueur.bilan.passifs
+    .filter((p) => p.categorie === "capitaux")
+    .reduce((s, p) => s + p.valeur, 0);
+  const capitalAvecResultat = capitauxPropres + resultatNet;
+
+  const totalActif = getTotalActif(joueur);
+  const creances   = joueur.bilan.creancesPlus1 + joueur.bilan.creancesPlus2;
+
+  // Indicateurs de rentabilité
+  const tauxMargeNette       = ca > 0 ? (resultatNet / ca) * 100 : 0;
+  const tauxMargeEBE         = ca > 0 ? (ebe / ca) * 100 : 0;
+  const roe                  = capitalAvecResultat > 0 ? (resultatNet / capitalAvecResultat) * 100 : 0;
+  const rentabiliteEconomique = totalActif > 0 ? (resultatExploitation / totalActif) * 100 : 0;
+
+  // Délai clients en jours (créances × 360 / CA annualisé)
+  const delaiClients = ca > 0 ? (creances * 360) / (ca * 4) : 0;
+
   return {
-    accepte,
-    montantAccorde: accepte ? montantDemande : 0,
-    tauxMajore,
-    score,
-    raison,
+    chiffreAffaires: ca,
+    achats,
+    servicesExterieurs: servExt,
+    valeurAjoutee,
+    chargesPersonnel: chargesPerso,
+    impotsTaxes: impots,
+    ebe,
+    dotations,
+    resultatExploitation,
+    produitsFinanciers: prodFin,
+    chargesInteret: chargesInt,
+    rcai,
+    revenusExceptionnels: revExc,
+    chargesExceptionnelles: chargExc,
+    resultatExceptionnel,
+    resultatNet,
+    tauxMargeNette,
+    tauxMargeEBE,
+    roe,
+    rentabiliteEconomique,
+    delaiClients,
   };
 }
 
@@ -276,20 +388,29 @@ export interface ResultatVerifFaillite {
 }
 
 export function verifierFaillite(joueur: Joueur): ResultatVerifFaillite {
+  const { decouvert } = joueur.bilan;
   const capitauxPropres = joueur.bilan.passifs
     .filter((p) => p.categorie === "capitaux")
     .reduce((s, p) => s + p.valeur, 0);
+  const emprunts = joueur.bilan.passifs
+    .filter((p) => p.categorie === "emprunts")
+    .reduce((s, p) => s + p.valeur, 0);
   const resultatNet = getResultatNet(joueur);
   const capitauxTotaux = capitauxPropres + resultatNet;
+  const dettesTotales = joueur.bilan.dettes + joueur.bilan.dettesFiscales + emprunts;
 
-  // Faillite absolue : capitaux propres négatifs = insolvabilité irrémédiable
+  if (decouvert > DECOUVERT_MAX) {
+    return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > ${DECOUVERT_MAX} maximum)` };
+  }
   if (capitauxTotaux < 0) {
     return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };
   }
-
-  // Note : le découvert > 5 est traité en amont comme un déclencheur de demande de prêt.
-  // La faillite sur découvert n'intervient que si la banque refuse ET que les capitaux sont
-  // négatifs (condition ci-dessus). Le jeu laisse le joueur tenter un emprunt en urgence.
+  if (dettesTotales > 0 && dettesTotales > capitauxTotaux * 2) {
+    return {
+      enFaillite: true,
+      raison: `Surendettement : dettes (${dettesTotales}) > 2× capitaux (${capitauxTotaux})`,
+    };
+  }
 
   return { enFaillite: false };
 }
