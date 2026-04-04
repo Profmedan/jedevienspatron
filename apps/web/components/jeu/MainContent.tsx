@@ -65,9 +65,9 @@ export function MainContent({
     setActiveTab(tab);
   };
 
-  // Auto-switch to the tab matching the current entry's document type (Bilan or CR)
+  // Auto-switch to the tab matching the current entry’s document type (Bilan or CR)
   // When an entry is applied → show its document so the user sees the impact.
-  // On first load (nothing applied yet) → show the first pending entry's document.
+  // On first load (nothing applied yet) → show the first pending entry’s document.
   const appliedCount = _activeStep?.entries.filter(e => e.applied).length ?? 0;
   useEffect(() => {
     if (!_activeStep) return;
@@ -77,7 +77,7 @@ export function MainContent({
       // Show the document for the entry that was just applied
       poste = appliedEntries[appliedEntries.length - 1].poste;
     } else {
-      // Initial load: show the first pending entry's document
+      // Initial load: show the first pending entry’s document
       const firstPending = _activeStep.entries.find(e => !e.applied);
       poste = firstPending?.poste;
     }

@@ -26,7 +26,7 @@ interface StageConfig {
 const STAGES: Record<number, StageConfig> = {
   1: {
     label: "Démarrage — Petit bureau",
-    ambiance: "L'aventure commence...",
+    ambiance: "L’aventure commence...",
     emoji: "🏠",
     colors: {
       bg: "bg-slate-800",
@@ -36,7 +36,7 @@ const STAGES: Record<number, StageConfig> = {
   },
   2: {
     label: "Croissance — Bureau animé",
-    ambiance: "L'équipe grandit !",
+    ambiance: "L’équipe grandit !",
     emoji: "🏢",
     colors: {
       bg: "bg-slate-700",
@@ -46,7 +46,7 @@ const STAGES: Record<number, StageConfig> = {
   },
   3: {
     label: "Expansion — Open space",
-    ambiance: "L'entreprise prend de l'ampleur.",
+    ambiance: "L’entreprise prend de l’ampleur.",
     emoji: "🏗️",
     colors: {
       bg: "bg-slate-700",

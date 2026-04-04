@@ -9,13 +9,13 @@ interface CompanyIntroProps {
   onStart: () => void;
 }
 
-/** Descriptions pédagogiques par nom d'immobilisation (durée de vie en trimestres) */
+/** Descriptions pédagogiques par nom d’immobilisation (durée de vie en trimestres) */
 const IMMO_DESCRIPTIONS: Record<string, { description: string; duree: number; icon: string }> = {
   "Usine":               { description: "Outil de production industrielle",       duree: 6, icon: "🏭" },
   "Camionnette":         { description: "Véhicule de livraison utilitaire",        duree: 2, icon: "🚐" },
   "Camion":              { description: "Poids lourd de transport logistique",     duree: 6, icon: "🚛" },
   "Machine":             { description: "Équipement de manutention intensif",      duree: 2, icon: "⚙️" },
-  "Showroom":            { description: "Agencement de l'espace commercial",       duree: 5, icon: "🏪" },
+  "Showroom":            { description: "Agencement de l’espace commercial",       duree: 5, icon: "🏪" },
   "Voiture":             { description: "Véhicule de démonstration client",        duree: 3, icon: "🚗" },
   "Brevet":              { description: "Propriété intellectuelle (art. 39 CGI)",  duree: 5, icon: "💡" },
   "Matériel informatique": { description: "Serveurs et postes de travail",         duree: 3, icon: "💻" },
@@ -36,8 +36,8 @@ const C = {
 };
 
 /**
- * Écran pédagogique d'introduction au bilan comptable
- * Explique ACTIF, PASSIF, l'équilibre fondamental et les amortissements
+ * Écran pédagogique d’introduction au bilan comptable
+ * Explique ACTIF, PASSIF, l’équilibre fondamental et les amortissements
  */
 export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const [step, setStep] = useState(0);
@@ -53,7 +53,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const totalImmos  = immos.reduce((s, a) => s + a.valeur, 0);
 
   const steps = [
-    /* ── Étape 0 : D'où vient l'argent ── */
+    /* ── Étape 0 : D’où vient l’argent ── */
     <div key={0} className="space-y-4">
       <h2 className="font-semibold text-white text-base">📥 D&apos;où vient l&apos;argent de départ ?</h2>
       <p className="text-slate-300 text-sm leading-relaxed">

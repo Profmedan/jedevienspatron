@@ -280,7 +280,7 @@ export function EntryPanel({
           value={nextEntry ? nomCompte(nextEntry.poste) : "Terminé"}
           helper={
             nextEntry
-              ? "C'est la prochaine écriture utile à ouvrir."
+              ? "C’est la prochaine écriture utile à ouvrir."
               : "La saisie est terminée, il reste à valider."
           }
           tone={nextEntry ? "neutral" : "emerald"}
@@ -301,7 +301,7 @@ export function EntryPanel({
           helper={
             balanced
               ? "Le bilan reste équilibré en temps réel."
-              : "Le bilan n'est pas encore équilibré."
+              : "Le bilan n’est pas encore équilibré."
           }
           tone={balanced ? "emerald" : allApplied ? "rose" : "neutral"}
         />
@@ -401,7 +401,7 @@ export function EntryPanel({
                 <SectionHeader
                   eyebrow="Saisie guidée"
                   title="Séquence de vente regroupée"
-                  description="Cette vente déclenche plusieurs lignes en même temps. Tu peux la saisir d'un seul geste pour garder la logique de la partie double."
+                  description="Cette vente déclenche plusieurs lignes en même temps. Tu peux la saisir d’un seul geste pour garder la logique de la partie double."
                 />
                 <DoubleEntrySalesCard
                   entries={entries}
@@ -421,8 +421,8 @@ export function EntryPanel({
               <div className="space-y-5">
                 <SectionHeader
                   eyebrow="Saisie guidée"
-                  title="Passe les écritures dans l'ordre"
-                  description="Débits d'abord, crédits ensuite. Chaque ligne ouverte explique ce qu'elle représente avant d'être cochée."
+                  title="Passe les écritures dans l’ordre"
+                  description="Débits d’abord, crédits ensuite. Chaque ligne ouverte explique ce qu’elle représente avant d’être cochée."
                 />
 
                 {debits.length > 0 && (
@@ -515,7 +515,7 @@ export function EntryPanel({
         <SectionHeader
           eyebrow="Validation"
           title="Vérifier avant de continuer"
-          description="Pour confirmer l'étape, toutes les écritures doivent être passées et le bilan doit rester équilibré."
+          description="Pour confirmer l’étape, toutes les écritures doivent être passées et le bilan doit rester équilibré."
         />
 
         <div className="mt-4 grid gap-2 md:grid-cols-2">
@@ -524,7 +524,7 @@ export function EntryPanel({
             value={`${sumDebits} ${partieDoubleOk ? "=" : "≠"} ${sumCredits}`}
             helper={
               partieDoubleOk
-                ? "Les deux côtés de l'écriture se répondent."
+                ? "Les deux côtés de l’écriture se répondent."
                 : "Il reste un écart entre débits et crédits."
             }
             tone={partieDoubleOk ? "emerald" : "amber"}

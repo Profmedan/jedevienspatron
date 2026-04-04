@@ -131,7 +131,7 @@ export function EntryCard({
         type="button"
         onClick={onToggle}
         className="mb-2 flex w-full items-center gap-3 rounded-[24px] border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-left transition-colors hover:bg-emerald-500/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
-        aria-label={`Revoir l'écriture saisie : ${entryName}`}
+        aria-label={`Revoir l’écriture saisie : ${entryName}`}
       >
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/12 text-lg">
           ✅
@@ -244,7 +244,7 @@ export function EntryCard({
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <InfoBlock title="Pourquoi cette ligne existe">{entry.description}</InfoBlock>
         <InfoBlock title="Ce que ça provoque">
-          {contexte ?? "Cette ligne enregistre l'impact comptable immédiat de l'opération."}
+          {contexte ?? "Cette ligne enregistre l’impact comptable immédiat de l’opération."}
         </InfoBlock>
       </div>
 
@@ -268,7 +268,7 @@ export function EntryCard({
           type="button"
           onClick={onApply}
           className={`mt-4 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 ${theme.ring} ${isDebit ? "bg-sky-300" : "bg-amber-300"}`}
-          aria-label={`Saisir l'écriture : ${entryName}`}
+          aria-label={`Saisir l’écriture : ${entryName}`}
         >
           J&apos;ai compris, saisir cette ligne
         </button>

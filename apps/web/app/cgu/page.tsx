@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Conditions Générales d'Utilisation — Je Deviens Patron",
+  title: "Conditions Générales d’Utilisation — Je Deviens Patron",
   description: "CGU du service jedevienspatron.fr",
 };
 

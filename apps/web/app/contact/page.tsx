@@ -3,7 +3,7 @@ import { Mail, MessageSquare } from "lucide-react";
 
 export const metadata = {
   title: "Contact — Je Deviens Patron",
-  description: "Contacter l'équipe de Je Deviens Patron",
+  description: "Contacter l’équipe de Je Deviens Patron",
 };
 
 export default function ContactPage() {

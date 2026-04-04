@@ -353,7 +353,7 @@ export default function Home() {
 
           <div className="grid gap-6 pb-4 pt-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center xl:gap-10">
             <div className="space-y-6 lg:pb-6">
-              <SectionEyebrow>Jeu sérieux · Comptabilité · Gestion d'entreprise</SectionEyebrow>
+              <SectionEyebrow>Jeu sérieux · Comptabilité · Gestion d’entreprise</SectionEyebrow>
 
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-200/75">
@@ -390,7 +390,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                 >
                   <KeyRound className="h-4 w-4" aria-hidden="true" />
-                  J'ai Un Code
+                  J’ai Un Code
                 </a>
               </div>
 
@@ -509,7 +509,7 @@ export default function Home() {
           <div className="space-y-5">
             <SectionEyebrow>Le parcours</SectionEyebrow>
             <h2 className="max-w-md text-3xl font-bold tracking-[-0.03em] text-white text-balance sm:text-4xl [font-family:Georgia,Times,'Times_New_Roman',serif]">
-              Un parcours ludique structuré pour faire comprendre le fonctionnement de l'entreprise, la comptabilité et la prise de décision.
+              Un parcours ludique structuré pour faire comprendre le fonctionnement de l’entreprise, la comptabilité et la prise de décision.
             </h2>
             <p className="max-w-md text-sm leading-7 text-slate-400 sm:text-base">
               Chaque partie suit une progression claire, de l’activité de
@@ -704,7 +704,7 @@ export default function Home() {
             </h2>
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
               Le jeu rend visible et compréhensible les trois notions souvent
-              perçues comme abstraites : l'équilibre du bilan, la partie double
+              perçues comme abstraites : l’équilibre du bilan, la partie double
               et la formation du résultat.
             </p>
           </div>
@@ -733,8 +733,8 @@ export default function Home() {
               <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
                 JEDEVIENSPATRON.fr associe mise en situation, visualisation comptable
                 et exploitation pédagogique dans une expérience facile à présenter,
-                rapide à prendre en main et simple à déployer auprès d'un groupe
-                ou d'une promotion.
+                rapide à prendre en main et simple à déployer auprès d’un groupe
+                ou d’une promotion.
               </p>
             </div>
 

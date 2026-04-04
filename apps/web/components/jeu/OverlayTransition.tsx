@@ -41,7 +41,7 @@ function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
     msgs.push({
       niveau: "rouge",
       message: `⚠️ Votre trésorerie nette est négative (${ind.tresorerieNette}). Risque de rupture.`,
-      consequence: "Vous risquez de ne plus pouvoir payer vos fournisseurs, vos salaires ou vos dettes. Au-delà d'un découvert de 5, c'est la faillite automatique.",
+      consequence: "Vous risquez de ne plus pouvoir payer vos fournisseurs, vos salaires ou vos dettes. Au-delà d’un découvert de 5, c’est la faillite automatique.",
       conseil: "Évitez tout achat à crédit ce trimestre. Privilégiez les clients comptants (Particuliers). Si possible, ne recrutez pas.",
     });
   } else if (ind.tresorerieNette < 5) {
@@ -72,8 +72,8 @@ function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
     msgs.push({
       niveau: "jaune",
       message: `🔶 Votre BFR (${ind.besoinFondsRoulement}) dépasse votre FR.`,
-      consequence: "Votre cycle d'exploitation consomme plus de liquidités que vous n'en avez. Risque de tension sur la trésorerie.",
-      conseil: "Réduisez le délai d'encaissement (moins de clients Grand Compte à C+2) ou augmentez votre fonds de roulement (capitaux, emprunt).",
+      consequence: "Votre cycle d’exploitation consomme plus de liquidités que vous n’en avez. Risque de tension sur la trésorerie.",
+      conseil: "Réduisez le délai d’encaissement (moins de clients Grand Compte à C+2) ou augmentez votre fonds de roulement (capitaux, emprunt).",
     });
   }
 
@@ -82,7 +82,7 @@ function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
     msgs.push({
       niveau: "rouge",
       message: `📉 Votre résultat est déficitaire (${ind.resultatNet}).`,
-      consequence: "Vos charges dépassent vos produits. Si cette tendance se prolonge, vos Capitaux propres vont s'éroder jusqu'à devenir négatifs — insolvabilité.",
+      consequence: "Vos charges dépassent vos produits. Si cette tendance se prolonge, vos Capitaux propres vont s’éroder jusqu’à devenir négatifs — insolvabilité.",
       conseil: "Analysez vos charges : amortissements élevés ? Salaires trop lourds ? Augmentez vos ventes ou réduisez vos coûts fixes.",
     });
   } else if (ind.resultatNet === 0) {
@@ -90,7 +90,7 @@ function analyserSituationFinanciere(joueur: Joueur): AnalysisMessage[] {
       niveau: "jaune",
       message: `⚖️ Votre résultat net est nul.`,
       consequence: "Vous couvrez vos charges mais ne créez pas de valeur. Un imprévu peut faire basculer en perte.",
-      conseil: "Cherchez à augmenter votre chiffre d'affaires : recrutez un commercial ou investissez dans la publicité.",
+      conseil: "Cherchez à augmenter votre chiffre d’affaires : recrutez un commercial ou investissez dans la publicité.",
     });
   } else {
     msgs.push({
@@ -313,7 +313,7 @@ export function OverlayTransition({
           </div>
           <div className="text-xs font-bold uppercase tracking-widest opacity-75 mb-0.5">
             {estClotureFiscale
-              ? `Clôture de l'exercice ${Math.floor(transitionInfo.from / 4)}`
+              ? `Clôture de l’exercice ${Math.floor(transitionInfo.from / 4)}`
               : `Fin du Trimestre ${transitionInfo.from}`}
           </div>
           <h2 className="text-xl font-bold">

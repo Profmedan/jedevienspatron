@@ -101,7 +101,7 @@ const CenterPanel: React.FC<CenterPanelProps> = ({
     }
 
     if (activeFlows && activeFlows.length > 0) {
-      return "Observe le trajet du cash, des créances et des charges avant de passer à l'étape suivante.";
+      return "Observe le trajet du cash, des créances et des charges avant de passer à l’étape suivante.";
     }
 
     return `Cette zone aide à comprendre comment ${joueur.entreprise.nom} transforme les décisions en activité, encaissements et résultat.`;
@@ -162,7 +162,7 @@ const CenterPanel: React.FC<CenterPanelProps> = ({
               <SectionHeader
                 eyebrow="À retenir"
                 title="Le point pédagogique à garder en tête"
-                description="Lis cette phrase comme une règle simple avant de relancer l'action."
+                description="Lis cette phrase comme une règle simple avant de relancer l’action."
               />
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 text-base" aria-hidden="true">
@@ -185,7 +185,7 @@ const CenterPanel: React.FC<CenterPanelProps> = ({
               <SectionHeader
                 eyebrow="Cause & effet"
                 title="Comment la décision produit son impact"
-                description="Le jeu déroule la chaîne complète entre l'action choisie et ses conséquences."
+                description="Le jeu déroule la chaîne complète entre l’action choisie et ses conséquences."
               />
               <CausalChain
                 decision={causalChain.decision}
@@ -207,7 +207,7 @@ const CenterPanel: React.FC<CenterPanelProps> = ({
               <SectionHeader
                 eyebrow="Flux"
                 title="Ce qui bouge dans les comptes"
-                description="Observe le mouvement avant d'interpréter le résultat final."
+                description="Observe le mouvement avant d’interpréter le résultat final."
               />
               <FlowAnimation
                 flows={activeFlows}
@@ -220,8 +220,8 @@ const CenterPanel: React.FC<CenterPanelProps> = ({
         <section className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-4">
           <SectionHeader
             eyebrow="Trajectoire"
-            title="Comment l'entreprise évolue dans le temps"
-            description="Regarde l'effet cumulé des tours sur l'activité, la trésorerie et le résultat."
+            title="Comment l’entreprise évolue dans le temps"
+            description="Regarde l’effet cumulé des tours sur l’activité, la trésorerie et le résultat."
           />
           <CompanyEvolution
             tour={tour}
@@ -237,7 +237,7 @@ const CenterPanel: React.FC<CenterPanelProps> = ({
           <SectionHeader
             eyebrow="Trésorerie"
             title="Quand la vente devient réellement du cash"
-            description="Les créances montrent pourquoi un bon chiffre d'affaires ne se transforme pas tout de suite en trésorerie."
+            description="Les créances montrent pourquoi un bon chiffre d’affaires ne se transforme pas tout de suite en trésorerie."
           />
           <div className="mb-3 grid gap-2 sm:grid-cols-2">
             <div className="rounded-2xl bg-white/[0.04] px-3 py-2.5">

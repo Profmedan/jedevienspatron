@@ -2,11 +2,11 @@
 /**
  * ImpactFlash — Option A du système B+A
  *
- * Overlay centré, non-bloquant, qui apparaît 2 secondes chaque fois qu'une
+ * Overlay centré, non-bloquant, qui apparaît 2 secondes chaque fois qu’une
  * écriture est cochée. Montre de façon unmissable :
  *   - le document comptable concerné (BILAN bleu / COMPTE DE RÉSULTAT ambre)
  *   - le nom du compte
- *   - la valeur avant → après l'étape complète + le delta
+ *   - la valeur avant → après l’étape complète + le delta
  *   - une barre de décompte visuelle (2s)
  *
  * RÉVERSIBILITÉ : supprimer ce fichier + retirer les 3 blocs marqués
@@ -30,7 +30,7 @@ interface Props {
 export function ImpactFlash({ data, onDone }: Props) {
   const [visible, setVisible] = useState(false);
   const [barWidth, setBarWidth] = useState(100);
-  // Clé de stabilité pour retrigguer l'animation si le même poste est flashé deux fois
+  // Clé de stabilité pour retrigguer l’animation si le même poste est flashé deux fois
   const flashKeyRef = useRef(0);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function ImpactFlash({ data, onDone }: Props) {
     setBarWidth(100);
     setVisible(false);
 
-    // Double RAF pour forcer le navigateur à peindre l'état initial avant la transition
+    // Double RAF pour forcer le navigateur à peindre l’état initial avant la transition
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setVisible(true);
@@ -49,7 +49,7 @@ export function ImpactFlash({ data, onDone }: Props) {
 
     const hideTimer = setTimeout(() => {
       setVisible(false);
-      setTimeout(onDone, 350);   // laisse l'animation de sortie se terminer
+      setTimeout(onDone, 350);   // laisse l’animation de sortie se terminer
     }, 2100);
 
     return () => {
@@ -75,7 +75,7 @@ export function ImpactFlash({ data, onDone }: Props) {
   const barColor = bon     ? "bg-emerald-400" : "bg-red-400";
 
   return (
-    /* Zone de positionnement : centrée horizontalement, haute dans l'écran */
+    /* Zone de positionnement : centrée horizontalement, haute dans l’écran */
     <div
       className="fixed inset-0 flex items-start justify-center z-50 pointer-events-none"
       style={{ paddingTop: "18vh" }}

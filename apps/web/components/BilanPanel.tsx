@@ -22,14 +22,14 @@ const TOOLTIPS: Record<string, {
   regleOr: string;
 }> = {
   immobilisations: {
-    definition: "Biens durables achetés par l'entreprise (machines, véhicules, brevets…). Ils se déprécient chaque trimestre = amortissements.",
-    exemple: "Ex : Une usine à 3, une camionnette à 1 = 4 d'immobilisations.",
+    definition: "Biens durables achetés par l’entreprise (machines, véhicules, brevets…). Ils se déprécient chaque trimestre = amortissements.",
+    exemple: "Ex : Une usine à 3, une camionnette à 1 = 4 d’immobilisations.",
     couleur: "#d97706",
     cote: "actif",
-    regleOr: "Quand tu achètes un bien, l'Actif ↑ (nouvelle immo) et le Passif ↑ (emprunt ou trésorerie ↓ côté actif). Quand il s'amortit chaque trimestre, l'Actif ↓ et le Résultat ↓ — les deux côtés bougent ensemble.",
+    regleOr: "Quand tu achètes un bien, l’Actif ↑ (nouvelle immo) et le Passif ↑ (emprunt ou trésorerie ↓ côté actif). Quand il s’amortit chaque trimestre, l’Actif ↓ et le Résultat ↓ — les deux côtés bougent ensemble.",
   },
   stocks: {
-    definition: "Marchandises achetées mais pas encore vendues. Augmentent à l'achat, diminuent à la vente (le coût des marchandises vendues est comptabilisé en charge).",
+    definition: "Marchandises achetées mais pas encore vendues. Augmentent à l’achat, diminuent à la vente (le coût des marchandises vendues est comptabilisé en charge).",
     exemple: "Ex : Tu achètes 4 unités → Stocks = 4. Tu en vends 2 → Stocks = 2, coût des ventes = 2.",
     couleur: "#db2777",
     cote: "actif",
@@ -40,28 +40,28 @@ const TOOLTIPS: Record<string, {
     exemple: "Ex : Trésorerie 8. Tu paies 2 de charges → Trésorerie 6.",
     couleur: "#059669",
     cote: "actif",
-    regleOr: "La trésorerie est le miroir de tous tes flux : chaque rentrée ou sortie d'argent modifie la trésorerie (Actif) et son pendant côté Passif (créance encaissée, dette payée, charge comptabilisée…). Si elle tombe à 0, le découvert prend le relais côté Passif.",
+    regleOr: "La trésorerie est le miroir de tous tes flux : chaque rentrée ou sortie d’argent modifie la trésorerie (Actif) et son pendant côté Passif (créance encaissée, dette payée, charge comptabilisée…). Si elle tombe à 0, le découvert prend le relais côté Passif.",
   },
   creances: {
-    definition: "Argent que vos clients vous doivent mais n'ont pas encore payé. 'Dans 1 trimestre' sera encaissé au tour suivant, 'dans 2 trimestres' dans deux tours.",
+    definition: "Argent que vos clients vous doivent mais n’ont pas encore payé. 'Dans 1 trimestre' sera encaissé au tour suivant, 'dans 2 trimestres' dans deux tours.",
     exemple: "Ex : Vente Grand Compte = +3 Ventes +3 Créances (encaissé dans 2 trimestres).",
     couleur: "#2563eb",
     cote: "actif",
-    regleOr: "Une vente à crédit crée deux mouvements simultanés : Créances ↑ (Actif, promesse de paiement) et Ventes ↑ (Produit = Résultat ↑ = Passif ↑). Quand le client paie enfin : Trésorerie ↑ (Actif) et Créances ↓ (Actif). Le passif ne bouge pas — ce n'était que l'encaissement.",
+    regleOr: "Une vente à crédit crée deux mouvements simultanés : Créances ↑ (Actif, promesse de paiement) et Ventes ↑ (Produit = Résultat ↑ = Passif ↑). Quand le client paie enfin : Trésorerie ↑ (Actif) et Créances ↓ (Actif). Le passif ne bouge pas — ce n’était que l’encaissement.",
   },
   capitaux: {
     definition: "Capitaux propres : argent investi par les propriétaires + résultats accumulés. Augmentent avec les bénéfices, diminuent avec les pertes.",
     exemple: "Ex : Capital 12. Bénéfice de 2 → Capitaux 14 à la clôture.",
     couleur: "#7c3aed",
     cote: "passif",
-    regleOr: "Les capitaux propres sont ce que l'entreprise 'doit' à ses propriétaires. Ils ↑ avec les bénéfices (Résultat positif migre dans les capitaux en fin de période) et ↓ avec les pertes. Si les capitaux propres passent en négatif → l'entreprise doit plus qu'elle ne possède → faillite.",
+    regleOr: "Les capitaux propres sont ce que l’entreprise 'doit' à ses propriétaires. Ils ↑ avec les bénéfices (Résultat positif migre dans les capitaux en fin de période) et ↓ avec les pertes. Si les capitaux propres passent en négatif → l’entreprise doit plus qu’elle ne possède → faillite.",
   },
   emprunts: {
-    definition: "Dettes à long terme envers la banque. Remboursées progressivement (-1 par tour). Génèrent des charges d'intérêt.",
+    definition: "Dettes à long terme envers la banque. Remboursées progressivement (-1 par tour). Génèrent des charges d’intérêt.",
     exemple: "Ex : Emprunt 4, remboursement 1/tour → Tour 1: 3, Tour 2: 2…",
     couleur: "#ea580c",
     cote: "passif",
-    regleOr: "Quand tu empruntes, l'argent arrive en trésorerie (Actif ↑) et la dette s'inscrit au passif (Passif ↑) → bilan équilibré. Chaque remboursement : Trésorerie ↓ (Actif) et Emprunt ↓ (Passif). Les intérêts payés réduisent aussi la trésorerie et augmentent les charges (Résultat ↓).",
+    regleOr: "Quand tu empruntes, l’argent arrive en trésorerie (Actif ↑) et la dette s’inscrit au passif (Passif ↑) → bilan équilibré. Chaque remboursement : Trésorerie ↓ (Actif) et Emprunt ↓ (Passif). Les intérêts payés réduisent aussi la trésorerie et augmentent les charges (Résultat ↓).",
   },
   dettes: {
     definition: "Dettes à court terme : fournisseurs (achats à crédit, payables au tour suivant) ou fiscales (impôts à payer).",
@@ -71,11 +71,11 @@ const TOOLTIPS: Record<string, {
     regleOr: "Acheter à crédit crée simultanément un Actif (Stock ↑) et un Passif (Dette fournisseur ↑) — bilan équilibré. Quand tu règles la facture : Trésorerie ↓ (Actif) et Dette ↓ (Passif) — le bilan reste équilibré.",
   },
   decouvert: {
-    definition: "⚠️ Découvert bancaire : trésorerie négative. Si le découvert dépasse 5, des pénalités s'appliquent. Au-delà, c'est la faillite.",
+    definition: "⚠️ Découvert bancaire : trésorerie négative. Si le découvert dépasse 5, des pénalités s’appliquent. Au-delà, c’est la faillite.",
     exemple: "Ex : Tréso = 0, tu paies 3 → Tréso = 0, Découvert = 3 (dangereux !).",
     couleur: "#dc2626",
     cote: "passif",
-    regleOr: "Le découvert est la trésorerie négative déplacée au passif. L'Actif Trésorerie reste à 0 ; c'est le Passif Découvert qui absorbe la différence — l'équation ACTIF = PASSIF reste vraie, mais c'est un signal d'alarme : la banque finance tes opérations à ta place.",
+    regleOr: "Le découvert est la trésorerie négative déplacée au passif. L’Actif Trésorerie reste à 0 ; c’est le Passif Découvert qui absorbe la différence — l’équation ACTIF = PASSIF reste vraie, mais c’est un signal d’alarme : la banque finance tes opérations à ta place.",
   },
 };
 
@@ -156,7 +156,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
         </div>
       </div>
 
-      {/* ── Panneau règle d'or contextuel ── */}
+      {/* ── Panneau règle d’or contextuel ── */}
       {show && info && (
         <div
           className="mb-2 rounded-xl border p-3 text-xs space-y-2 shadow-lg"
@@ -166,7 +166,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
           <p className="text-gray-200 leading-relaxed">{info.definition}</p>
           <p className="text-gray-500 italic border-t border-white/10 pt-2">{info.exemple}</p>
 
-          {/* Règle d'or */}
+          {/* Règle d’or */}
           <div className="border-t border-white/10 pt-2">
             <p className="text-xs font-black uppercase tracking-widest mb-1.5"
                style={{ color: info.cote === "actif" ? "#60a5fa" : "#fbbf24" }}>
@@ -195,11 +195,11 @@ function SectionHeader({ label, color }: { label: string; color?: string }) {
 
 const TOTAL_REGLE_OR: Record<"actif" | "passif", { message: string; detail: string }> = {
   actif: {
-    message: "Le Total Actif = tout ce que l'entreprise possède ou détient.",
-    detail: "Il est toujours égal au Total Passif : chaque euro de l'entreprise a une origine (Passif) et un emploi (Actif). Si les deux divergent, une écriture est manquante.",
+    message: "Le Total Actif = tout ce que l’entreprise possède ou détient.",
+    detail: "Il est toujours égal au Total Passif : chaque euro de l’entreprise a une origine (Passif) et un emploi (Actif). Si les deux divergent, une écriture est manquante.",
   },
   passif: {
-    message: "Le Total Passif = tout ce que l'entreprise doit (à ses actionnaires ou à ses créanciers).",
+    message: "Le Total Passif = tout ce que l’entreprise doit (à ses actionnaires ou à ses créanciers).",
     detail: "Il est toujours égal au Total Actif : les ressources (Passif) financent exactement les emplois (Actif). Capitaux propres + Dettes = ce que vous possédez.",
   },
 };
@@ -257,7 +257,7 @@ function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; tot
   const emprunts = joueur.bilan.passifs.filter(p => p.categorie === "emprunts").reduce((s, p) => s + p.valeur, 0);
   const stocks = joueur.bilan.actifs.filter(a => a.categorie === "stocks").reduce((s, a) => s + a.valeur, 0);
 
-  // Construire l'analyse
+  // Construire l’analyse
   const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
 
   if (tresoNette < 0) points.push({ niveau: "rouge", texte: `Trésorerie nette négative (${tresoNette}) — risque de faillite si découvert > ${DECOUVERT_MAX}.` });
@@ -267,7 +267,7 @@ function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; tot
   if (emprunts > capitaux) points.push({ niveau: "rouge", texte: `Vos emprunts (${emprunts}) dépassent vos capitaux propres (${capitaux}) — endettement excessif.` });
   else if (emprunts > 0) points.push({ niveau: "jaune", texte: `Emprunts en cours (${emprunts}) — chaque trimestre −1 de remboursement automatique.` });
 
-  if (stocks > 5) points.push({ niveau: "jaune", texte: `Stocks élevés (${stocks}) — immobilisation de trésorerie. Vendez avant d'acheter davantage.` });
+  if (stocks > 5) points.push({ niveau: "jaune", texte: `Stocks élevés (${stocks}) — immobilisation de trésorerie. Vendez avant d’acheter davantage.` });
 
   const colors = {
     rouge: "text-red-600 bg-red-50 border-red-200",
@@ -309,7 +309,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
   const capitaux        = joueur.bilan.passifs.filter((p) => p.categorie === "capitaux");
   const emprunts        = joueur.bilan.passifs.filter((p) => p.categorie === "emprunts");
   // Note: bilan.passifs[] entries for "dettes" sont stales (moteur met à jour bilan.dettes direct)
-  // → on n'utilise plus ce tableau pour l'affichage (suppression du doublon PCG)
+  // → on n’utilise plus ce tableau pour l’affichage (suppression du doublon PCG)
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 overflow-hidden">
@@ -320,7 +320,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         <span className="text-xs text-slate-300 italic">Clique sur ⓘ pour la règle d&apos;or de chaque poste</span>
       </div>
 
-      {/* Alerte déséquilibre uniquement (l'équation est déjà visible dans les totaux des colonnes) */}
+      {/* Alerte déséquilibre uniquement (l’équation est déjà visible dans les totaux des colonnes) */}
       {!equilibre && (
         <div className="mx-4 mt-3 mb-1 text-center text-xs font-bold py-1.5 rounded-lg bg-red-900/50 text-red-300 border border-red-700">
           ⚠️ Déséquilibre : écart {(totalActif - totalPassif).toFixed(1)}

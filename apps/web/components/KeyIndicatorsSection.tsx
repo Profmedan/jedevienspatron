@@ -38,7 +38,7 @@ const INDICATORS: Indicator[] = [
     name: "Résultat Net",
     formula: "Total Produits − Total Charges",
     interpretation:
-      "C'est le bénéfice ou la perte final de votre entreprise. Positif = vous gagnez de l'argent ; négatif = vous en perdez.",
+      "C’est le bénéfice ou la perte final de votre entreprise. Positif = vous gagnez de l’argent ; négatif = vous en perdez.",
     level: "fondamental",
     icon: <TrendingUp size={22} />,
   },
@@ -47,7 +47,7 @@ const INDICATORS: Indicator[] = [
     name: "Trésorerie Nette",
     formula: "Fonds de Roulement − Besoin en Fonds de Roulement",
     interpretation:
-      "L'argent réellement disponible en caisse. Même avec un bon résultat, une mauvaise trésorerie peut étrangler une entreprise.",
+      "L’argent réellement disponible en caisse. Même avec un bon résultat, une mauvaise trésorerie peut étrangler une entreprise.",
     level: "fondamental",
     icon: <Wallet size={22} />,
   },
@@ -56,7 +56,7 @@ const INDICATORS: Indicator[] = [
     name: "Fonds de Roulement",
     formula: "Capitaux permanents − Immobilisations",
     interpretation:
-      "Votre coussin financier pour financer l'exploitation quotidienne. Positif = vous avez des ressources stables au-delà de vos investissements.",
+      "Votre coussin financier pour financer l’exploitation quotidienne. Positif = vous avez des ressources stables au-delà de vos investissements.",
     level: "important",
     icon: <RefreshCw size={22} />,
   },
@@ -74,16 +74,16 @@ const INDICATORS: Indicator[] = [
     name: "Ratio de Solvabilité",
     formula: "(Capitaux propres + Résultat) / Total Passif × 100",
     interpretation:
-      "Votre capacité à rembourser sur le long terme. Supérieur à 50 % indique une entreprise saine. La banque surveille cet indicateur avant d'accorder un prêt.",
+      "Votre capacité à rembourser sur le long terme. Supérieur à 50 % indique une entreprise saine. La banque surveille cet indicateur avant d’accorder un prêt.",
     level: "important",
     icon: <Scale size={22} />,
   },
   {
     id: "caf",
-    name: "Capacité d'Autofinancement",
+    name: "Capacité d’Autofinancement",
     formula: "Résultat Net + Dotations aux amortissements",
     interpretation:
-      "Les liquidités générées par l'activité avant tout remboursement. C'est la mesure de votre autonomie financière réelle.",
+      "Les liquidités générées par l’activité avant tout remboursement. C’est la mesure de votre autonomie financière réelle.",
     level: "avancé",
     icon: <BarChart3 size={22} />,
   },

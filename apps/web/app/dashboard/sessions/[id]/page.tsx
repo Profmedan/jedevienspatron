@@ -154,7 +154,7 @@ export default async function SessionResultsPage({
           </div>
         </div>
 
-        {/* Code d'accès si session encore active */}
+        {/* Code d’accès si session encore active */}
         {typedSession.status !== "finished" && (
           <div className="bg-indigo-950/30 border border-indigo-800 rounded-2xl p-6 flex items-center justify-between gap-6">
             <div>

@@ -43,7 +43,7 @@ export default function HistoriquePage() {
   }, []);
 
   function effacerHistorique() {
-    if (!confirm("Effacer tout l'historique ? Cette action est irréversible.")) return;
+    if (!confirm("Effacer tout l’historique ? Cette action est irréversible.")) return;
     localStorage.removeItem(STORAGE_KEY);
     setParties([]);
   }

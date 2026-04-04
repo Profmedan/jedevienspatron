@@ -136,7 +136,7 @@ function RegisterPageContent() {
         </div>
 
         <div className="bg-gray-900 rounded-2xl shadow-2xl shadow-black/20 p-8">
-          {/* Indicateur d'étape */}
+          {/* Indicateur d’étape */}
           <div className="flex items-center gap-2 mb-6">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 1 ? "bg-indigo-600 text-white" : "bg-gray-700 text-gray-500"}`}>1</div>
             <div className={`flex-1 h-1 rounded-full transition-colors ${step >= 2 ? "bg-indigo-600" : "bg-gray-700"}`} />

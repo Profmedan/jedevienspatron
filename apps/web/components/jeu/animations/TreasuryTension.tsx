@@ -234,7 +234,7 @@ export default function TreasuryTension({
                 transition={{ delay: 0.1 }}
               >
                 📄 <span className="font-semibold text-slate-300">{creancesTotal}</span> de
-                créances en attente d'encaissement
+                créances en attente d’encaissement
               </motion.p>
             )}
             {dettesTotal > 0 && (
@@ -254,7 +254,7 @@ export default function TreasuryTension({
                 transition={{ delay: 0.3 }}
               >
                 ⏳ BFR élevé (<span className="font-semibold text-slate-300">{bfr}</span>) —
-                votre argent est immobilisé dans le cycle d'exploitation
+                votre argent est immobilisé dans le cycle d’exploitation
               </motion.p>
             )}
           </div>

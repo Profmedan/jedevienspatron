@@ -1,4 +1,4 @@
-// JEDEVIENSPATRON — Modal d'explication avant saisie (par étape)
+// JEDEVIENSPATRON — Modal d’explication avant saisie (par étape)
 "use client";
 
 import { useEffect } from "react";
@@ -32,7 +32,7 @@ const ETAPE_CONFIG: Record<number, {
   4: { Icon: Target,      bg: "from-purple-50 to-violet-50",  border: "border-purple-300", badge: "bg-purple-600",  accent: "text-purple-700" },
   // 5 : Effets récurrents cartes Décision (remboursements banque)
   5: { Icon: Landmark,    bg: "from-red-50 to-orange-50",     border: "border-orange-300", badge: "bg-red-600",     accent: "text-red-700"    },
-  // 6 : Choix d'une carte Décision (décision stratégique)
+  // 6 : Choix d’une carte Décision (décision stratégique)
   6: { Icon: Mail,        bg: "from-indigo-50 to-blue-50",    border: "border-indigo-300", badge: "bg-indigo-600",  accent: "text-indigo-700" },
   // 7 : Événement aléatoire (surprise)
   7: { Icon: Dice6,       bg: "from-yellow-50 to-amber-50",   border: "border-yellow-300", badge: "bg-yellow-600",  accent: "text-yellow-700" },

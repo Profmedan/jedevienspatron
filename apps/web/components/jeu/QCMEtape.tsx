@@ -172,7 +172,7 @@ export default function QCMEtape({ etape, tourActuel, onTermine }: Props) {
               onClick={suivante}
               className="w-full py-3.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors text-base"
             >
-              {estDerniere ? "J'ai compris — Étape suivante →" : "Question suivante →"}
+              {estDerniere ? "J’ai compris — Étape suivante →" : "Question suivante →"}
             </button>
           </div>
         )}

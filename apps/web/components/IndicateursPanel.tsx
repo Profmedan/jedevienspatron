@@ -112,20 +112,20 @@ function Gauge({ value, config }: { value: number; config: GaugeConfig }) {
 function getAnalysePersonnalisee(label: string, value: number): string {
   switch (label) {
     case "Taux de marge nette":
-      if (value < -10) return "Ta marge nette est très dégradée. Tes charges fixes (loyer, salaires, amortissements) sont trop lourdes par rapport à ton CA. Priorise l'augmentation du CA via recrutement plutôt que de nouveaux investissements coûteux.";
+      if (value < -10) return "Ta marge nette est très dégradée. Tes charges fixes (loyer, salaires, amortissements) sont trop lourdes par rapport à ton CA. Priorise l’augmentation du CA via recrutement plutôt que de nouveaux investissements coûteux.";
       if (value < 0) return "Tu es en légère perte. Un ou deux clients supplémentaires suffiraient à passer en positif. Recrute un commercial Junior ce trimestre.";
-      if (value < 10) return "Marge légèrement positive. Bien — mais surveille tes amortissements qui grignotent le résultat. N'augmente pas tes charges fixes avant que ta marge soit > 15%.";
-      return "Excellente marge. Tu peux te permettre d'investir dans un actif ou de recruter un profil plus senior.";
+      if (value < 10) return "Marge légèrement positive. Bien — mais surveille tes amortissements qui grignotent le résultat. N’augmente pas tes charges fixes avant que ta marge soit > 15%.";
+      return "Excellente marge. Tu peux te permettre d’investir dans un actif ou de recruter un profil plus senior.";
 
     case "Taux de marge EBE":
       if (value < 0) return "Ton exploitation ne génère pas assez pour couvrir ses charges de fonctionnement. Réduis les services extérieurs si possible.";
-      if (value < 15) return "EBE faible. Attention : si tu ajoutes des amortissements, ton résultat d'exploitation sera négatif.";
+      if (value < 15) return "EBE faible. Attention : si tu ajoutes des amortissements, ton résultat d’exploitation sera négatif.";
       return "Bon EBE. Ton activité génère suffisamment pour financer ses amortissements et ses charges financières.";
 
     case "Rentabilité économique":
       if (value < 0) return "Tes actifs (machines, stocks, créances) ne génèrent pas de valeur. Vends les actifs non productifs ou augmente tes ventes.";
-      if (value < 5) return "Rentabilité faible. Tes actifs travaillent peu. Cherche à optimiser ton stock : n'achète que ce que tu peux vendre dans le trimestre.";
-      return "Bonne rentabilité économique. Continue sur cette lancée et envisage d'investir dans des actifs supplémentaires.";
+      if (value < 5) return "Rentabilité faible. Tes actifs travaillent peu. Cherche à optimiser ton stock : n’achète que ce que tu peux vendre dans le trimestre.";
+      return "Bonne rentabilité économique. Continue sur cette lancée et envisage d’investir dans des actifs supplémentaires.";
 
     case "Ratio de solvabilité":
       if (value < 20) return "Situation risquée : ton endettement est trop élevé. Évite tout nouvel emprunt et cherche à générer des bénéfices pour reconstruire tes capitaux propres.";
@@ -134,13 +134,13 @@ function getAnalysePersonnalisee(label: string, value: number): string {
 
     case "Fonds de Roulement (FR)":
       if (value < 0) return "Danger : tes ressources à long terme ne couvrent pas tes actifs durables. Ta structure financière est déséquilibrée — rembourse tes dettes ou augmente tes capitaux.";
-      if (value < 3) return "FR positif mais faible. Un achat d'immobilisation pourrait le faire passer en négatif. Prudence.";
-      return "FR confortable. Tu as une marge de manœuvre pour financer ton cycle d'exploitation.";
+      if (value < 3) return "FR positif mais faible. Un achat d’immobilisation pourrait le faire passer en négatif. Prudence.";
+      return "FR confortable. Tu as une marge de manœuvre pour financer ton cycle d’exploitation.";
 
     case "Besoin en Fonds de Roulement (BFR)":
       // Note: Pour BFR, on compare avec FR. On retourne ici le contexte général.
-      if (value < 0) return "BFR négatif = ressources d'exploitation disponibles. Excellente maîtrise de ton cycle.";
-      if (value <= 3) return "BFR couvert correctement. Situation normale, continue à surveiller ton cycle d'exploitation.";
+      if (value < 0) return "BFR négatif = ressources d’exploitation disponibles. Excellente maîtrise de ton cycle.";
+      if (value <= 3) return "BFR couvert correctement. Situation normale, continue à surveiller ton cycle d’exploitation.";
       return "Ton BFR est élevé. Cherche à le réduire : accélère le recouvrement clients, négocie des délais fournisseurs plus longs, optimise les stocks.";
 
     case "Trésorerie Nette":
@@ -149,17 +149,17 @@ function getAnalysePersonnalisee(label: string, value: number): string {
       return "Trésorerie saine. Tu peux absorber les imprévus et envisager des investissements.";
 
     case "ROE — Rentabilité financière":
-      if (value < 0) return "ROE négatif : tes actionnaires perdent de l'argent. Améliore d'urgence le résultat net.";
+      if (value < 0) return "ROE négatif : tes actionnaires perdent de l’argent. Améliore d’urgence le résultat net.";
       if (value < 10) return "ROE faible. Les capitaux investis ne génèrent pas assez de rendement. Accélère la croissance ou réduis les capitaux inactifs.";
       return "Bon ROE. Tes actionnaires sont satisfaits du rendement. Peux envisager une nouvelle levée de fonds si besoin.";
 
-    case "Capacité d'autofinancement (CAF)":
+    case "Capacité d’autofinancement (CAF)":
       if (value < 0) return "CAF négative : tu ne dégages pas de trésorerie. Impossible de rembourser des dettes ou investir sans aide. Priorité absolue : redevenir positif.";
-      if (value < 3) return "CAF très faible. À peine suffisant pour l'exploitation. Évite les investissements lourds ce trimestre.";
-      return "CAF solide. Tu peux t'autofinancer et rembourser progressivement tes dettes.";
+      if (value < 3) return "CAF très faible. À peine suffisant pour l’exploitation. Évite les investissements lourds ce trimestre.";
+      return "CAF solide. Tu peux t’autofinancer et rembourser progressivement tes dettes.";
 
     case "Ratio de liquidité":
-      if (value < 0.5) return "Situation CRITIQUE : tu ne peux pas payer tes dettes court terme. Action immédiate : augmente l'actif circulant ou réduis les dettes court terme.";
+      if (value < 0.5) return "Situation CRITIQUE : tu ne peux pas payer tes dettes court terme. Action immédiate : augmente l’actif circulant ou réduis les dettes court terme.";
       if (value < 1) return "Liquidité insuffisante. Risque de ne pas pouvoir payer tes fournisseurs. Accélère les encaissements et repousse les paiements si possible.";
       if (value < 1.5) return "Liquidité correcte. À maintenir. Un imprévu pourrait créer des tensions — garde une réserve de trésorerie.";
       return "Liquidité excellente. Tu as une belle marge de manœuvre court terme.";
@@ -279,39 +279,39 @@ export default function IndicateursPanel({ joueur }: Props) {
               <div className="text-[10px] text-gray-600 mt-0.5">Soldes Intermédiaires de Gestion (SIG) — cliquez sur chaque ligne ⓘ</div>
             </div>
 
-            <SIGRow label="Chiffre d'affaires" value={sig.chiffreAffaires} sign="=" isSubtotal
+            <SIGRow label="Chiffre d’affaires" value={sig.chiffreAffaires} sign="=" isSubtotal
               note="Total des ventes réalisées ce trimestre (hors revenus exceptionnels)." />
-            {sig.achats > 0 && <SIGRow label="− Coût d'achat des marchandises" value={-sig.achats} sign="−"
+            {sig.achats > 0 && <SIGRow label="− Coût d’achat des marchandises" value={-sig.achats} sign="−"
               note="Coût des stocks consommés pour réaliser les ventes (CMV)." />}
             {sig.servicesExterieurs > 0 && <SIGRow label="− Services extérieurs (loyer, charges fixes…)" value={-sig.servicesExterieurs} sign="−"
               note="Consommations externes : loyer, électricité, frais généraux." />}
 
             <SIGRow label="= VALEUR AJOUTÉE" value={sig.valeurAjoutee} isTotal
-              note="Richesse créée par l'entreprise = CA − Achats − Services ext." />
+              note="Richesse créée par l’entreprise = CA − Achats − Services ext." />
 
             {sig.chargesPersonnel > 0 && <SIGRow label="− Charges de personnel (salaires)" value={-sig.chargesPersonnel} sign="−"
               note="Rémunérations des commerciaux et employés." />}
             {sig.impotsTaxes > 0 && <SIGRow label="− Impôts & taxes" value={-sig.impotsTaxes} sign="−" />}
 
-            <SIGRow label="= EXCÉDENT BRUT D'EXPLOITATION (EBE)" value={sig.ebe} isTotal
+            <SIGRow label="= EXCÉDENT BRUT D’EXPLOITATION (EBE)" value={sig.ebe} isTotal
               note="Performance économique pure, avant financement et amortissements. Indicateur clé de la profitabilité opérationnelle." />
 
             {sig.dotations > 0 && <SIGRow label="− Dotations aux amortissements" value={-sig.dotations} sign="−"
               note="Usure progressive des immobilisations. Charge sans sortie de trésorerie." />}
 
-            <SIGRow label="= RÉSULTAT D'EXPLOITATION" value={sig.resultatExploitation} isTotal
-              note="Résultat lié uniquement à l'activité, indépendamment du financement et des éléments exceptionnels." />
+            <SIGRow label="= RÉSULTAT D’EXPLOITATION" value={sig.resultatExploitation} isTotal
+              note="Résultat lié uniquement à l’activité, indépendamment du financement et des éléments exceptionnels." />
 
             {(sig.produitsFinanciers > 0 || sig.chargesInteret > 0) && (
               <>
                 {sig.produitsFinanciers > 0 && <SIGRow label="+ Produits financiers" value={sig.produitsFinanciers} sign="+" />}
-                {sig.chargesInteret > 0 && <SIGRow label="− Charges d'intérêt & agios bancaires" value={-sig.chargesInteret} sign="−"
+                {sig.chargesInteret > 0 && <SIGRow label="− Charges d’intérêt & agios bancaires" value={-sig.chargesInteret} sign="−"
                   note="Intérêts sur emprunts et agios de découvert. Coût du financement externe." />}
               </>
             )}
 
             <SIGRow label="= RÉSULTAT COURANT AVANT IMPÔT (RCAI)" value={sig.rcai} isTotal
-              note="Résultat d'exploitation ± résultat financier. Mesure la performance globale hors éléments exceptionnels." />
+              note="Résultat d’exploitation ± résultat financier. Mesure la performance globale hors éléments exceptionnels." />
 
             {(sig.revenusExceptionnels > 0 || sig.chargesExceptionnelles > 0) && (
               <>
@@ -324,7 +324,7 @@ export default function IndicateursPanel({ joueur }: Props) {
 
             <div className="pt-1">
               <SIGRow label="= RÉSULTAT NET" value={sig.resultatNet} isTotal
-                note="Résultat final de l'entreprise. Positif → bénéfice → s'ajoute aux capitaux à la clôture. Négatif → perte → érode les capitaux propres." />
+                note="Résultat final de l’entreprise. Positif → bénéfice → s’ajoute aux capitaux à la clôture. Négatif → perte → érode les capitaux propres." />
             </div>
 
             {/* Rappel pédagogique */}
@@ -359,7 +359,7 @@ export default function IndicateursPanel({ joueur }: Props) {
                 unit="%"
                 positive={sig.tauxMargeNette >= 5}
                 formule="Résultat net ÷ CA × 100"
-                definition="Part du chiffre d'affaires qui devient du bénéfice net. Mesure l'efficacité globale de l'entreprise à transformer ses ventes en profit."
+                definition="Part du chiffre d’affaires qui devient du bénéfice net. Mesure l’efficacité globale de l’entreprise à transformer ses ventes en profit."
                 interpretation="≥ 10% : excellent. 5–10% : correct. 0–5% : faible. < 0% : perte."
                 objectif="Viser ≥ 5% de marge nette. En-dessous de 0% : urgence."
                 gaugeConfig={{ min: -20, max: 40, unit: "%", zones: [
@@ -390,9 +390,9 @@ export default function IndicateursPanel({ joueur }: Props) {
                 unit="%"
                 positive={sig.roe >= 10}
                 formule="Résultat net ÷ Capitaux propres × 100"
-                definition="Rendement généré pour les actionnaires. Mesure l'efficacité avec laquelle l'entreprise utilise les fonds investis par ses propriétaires."
+                definition="Rendement généré pour les actionnaires. Mesure l’efficacité avec laquelle l’entreprise utilise les fonds investis par ses propriétaires."
                 interpretation="≥ 15% : excellent. 10–15% : bon. 5–10% : acceptable. < 5% : décevant pour les investisseurs."
-                objectif="ROE ≥ 10% — au-dessous, l'investisseur pourrait préférer placer son argent ailleurs."
+                objectif="ROE ≥ 10% — au-dessous, l’investisseur pourrait préférer placer son argent ailleurs."
                 gaugeConfig={{ min: -20, max: 40, unit: "%", zones: [
                   { from: -20, to: 0, color: "#ef4444", label: "Perte" },
                   { from: 0, to: 10, color: "#f59e0b", label: "Faible" },
@@ -405,9 +405,9 @@ export default function IndicateursPanel({ joueur }: Props) {
                 unit="%"
                 positive={sig.rentabiliteEconomique >= 5}
                 formule="Résultat exploitation ÷ Total Actif × 100"
-                definition="Efficacité avec laquelle l'entreprise utilise ses actifs pour générer un résultat d'exploitation. Indépendant du mode de financement."
-                interpretation="≥ 10% : excellent. 5–10% : correct. < 5% : l'actif est mal utilisé."
-                objectif="Rentabilité économique ≥ taux d'emprunt → l'entreprise crée de la valeur via l'effet de levier."
+                definition="Efficacité avec laquelle l’entreprise utilise ses actifs pour générer un résultat d’exploitation. Indépendant du mode de financement."
+                interpretation="≥ 10% : excellent. 5–10% : correct. < 5% : l’actif est mal utilisé."
+                objectif="Rentabilité économique ≥ taux d’emprunt → l’entreprise crée de la valeur via l’effet de levier."
                 gaugeConfig={{ min: -20, max: 30, unit: "%", zones: [
                   { from: -20, to: 0, color: "#ef4444", label: "Négatif" },
                   { from: 0, to: 5, color: "#f59e0b", label: "Faible" },
@@ -417,13 +417,13 @@ export default function IndicateursPanel({ joueur }: Props) {
             </div>
             {/* CAF */}
             <Indicateur
-              label="Capacité d'autofinancement (CAF)"
+              label="Capacité d’autofinancement (CAF)"
               value={ind.capaciteAutofinancement}
               positive={ind.capaciteAutofinancement >= 0}
               formule="Résultat net + Dotations aux amortissements"
-              definition="La CAF mesure la capacité de l'entreprise à générer de la trésorerie par son activité. Les dotations sont réintégrées car ce sont des charges sans sortie de trésorerie."
-              interpretation="Positive → l'entreprise peut s'autofinancer. Négative → elle ne peut pas rembourser ses dettes ni investir sans aide extérieure."
-              objectif="CAF > 0, idéalement ≥ annuité d'emprunt."
+              definition="La CAF mesure la capacité de l’entreprise à générer de la trésorerie par son activité. Les dotations sont réintégrées car ce sont des charges sans sortie de trésorerie."
+              interpretation="Positive → l’entreprise peut s’autofinancer. Négative → elle ne peut pas rembourser ses dettes ni investir sans aide extérieure."
+              objectif="CAF > 0, idéalement ≥ annuité d’emprunt."
               gaugeConfig={{ min: -10, max: 20, zones: [
                 { from: -10, to: 0, color: "#ef4444", label: "Négative" },
                 { from: 0, to: 3, color: "#f59e0b", label: "Faible" },
@@ -445,9 +445,9 @@ export default function IndicateursPanel({ joueur }: Props) {
                 value={ind.fondsDeRoulement}
                 positive={ind.fondsDeRoulement >= 0}
                 formule="(Capitaux propres + Résultat + Emprunts) − Immobilisations"
-                definition="Excédent des ressources stables (long terme) sur les emplois durables. Représente le 'matelas financier' disponible pour financer le cycle d'exploitation."
+                definition="Excédent des ressources stables (long terme) sur les emplois durables. Représente le 'matelas financier' disponible pour financer le cycle d’exploitation."
                 interpretation="FR ≥ 0 : sain, les actifs longs sont entièrement financés par des ressources longues. FR < 0 : les immobilisations sont en partie financées par des dettes courtes — risque !"
-                objectif="FR ≥ 0 est la norme. Plus le FR est élevé, plus l'entreprise est solide."
+                objectif="FR ≥ 0 est la norme. Plus le FR est élevé, plus l’entreprise est solide."
                 gaugeConfig={{ min: -10, max: 20, zones: [
                   { from: -10, to: 0, color: "#ef4444", label: "Dangereux" },
                   { from: 0, to: 5, color: "#f59e0b", label: "Acceptable" },
@@ -459,7 +459,7 @@ export default function IndicateursPanel({ joueur }: Props) {
                 value={ind.besoinFondsRoulement}
                 positive={ind.besoinFondsRoulement <= 0}
                 formule="Stocks + Créances clients − Dettes fournisseurs"
-                definition="Besoin de financement lié au cycle d'exploitation. Représente l'argent 'gelé' entre le paiement des fournisseurs et l'encaissement des clients."
+                definition="Besoin de financement lié au cycle d’exploitation. Représente l’argent 'gelé' entre le paiement des fournisseurs et l’encaissement des clients."
                 interpretation="BFR > 0 : tu dois financer le décalage. BFR < 0 : tes fournisseurs te font plus crédit que tes clients — situation très favorable !"
                 objectif="Minimiser le BFR : réduire les créances clients, négocier des délais fournisseurs, limiter les stocks."
                 gaugeConfig={{ min: -5, max: 15, zones: [
@@ -473,8 +473,8 @@ export default function IndicateursPanel({ joueur }: Props) {
                 value={ind.tresorerieNette}
                 positive={ind.tresorerieNette >= 0}
                 formule="Fonds de Roulement − BFR  (ou Trésorerie − Découvert)"
-                definition="Conséquence de l'équilibre entre FR et BFR. Mesure les liquidités réellement disponibles après avoir financé l'exploitation."
-                interpretation="Positive → l'entreprise peut payer ses échéances. Négative → elle dépend du découvert bancaire."
+                definition="Conséquence de l’équilibre entre FR et BFR. Mesure les liquidités réellement disponibles après avoir financé l’exploitation."
+                interpretation="Positive → l’entreprise peut payer ses échéances. Négative → elle dépend du découvert bancaire."
                 objectif={`Trésorerie nette ≥ 0. Découvert > ${DECOUVERT_MAX} → faillite dans le jeu !`}
                 gaugeConfig={{ min: -8, max: 15, zones: [
                   { from: -8, to: -5, color: "#7f1d1d", label: "⚠️ Faillite" },
@@ -488,7 +488,7 @@ export default function IndicateursPanel({ joueur }: Props) {
                 value={parseFloat(ind.ratioLiquidite.toFixed(2))}
                 positive={ind.ratioLiquidite >= 1}
                 formule="Actif circulant ÷ Dettes court terme"
-                definition="Capacité à rembourser les dettes à court terme avec l'actif circulant (stocks + créances + trésorerie). Mesure la solvabilité immédiate."
+                definition="Capacité à rembourser les dettes à court terme avec l’actif circulant (stocks + créances + trésorerie). Mesure la solvabilité immédiate."
                 interpretation="≥ 2 : très liquide. ≥ 1 : suffisant. < 1 : risque de ne pas pouvoir payer. < 0.5 : situation critique."
                 objectif="Ratio ≥ 1 pour garantir la solvabilité courante."
                 gaugeConfig={{ min: 0, max: 3, zones: [
@@ -516,7 +516,7 @@ export default function IndicateursPanel({ joueur }: Props) {
                 "≥ 40% : très solide, les créanciers ont confiance. " +
                 "30–40% : sain, norme française. " +
                 "20–30% : acceptable mais fragile. " +
-                "< 20% : l'entreprise est trop dépendante de ses créanciers — risque de faillite si les résultats se dégradent."
+                "< 20% : l’entreprise est trop dépendante de ses créanciers — risque de faillite si les résultats se dégradent."
               }
               objectif={
                 "Solvabilité ≥ 30% est la norme en France. Pour améliorer : " +
@@ -571,7 +571,7 @@ export default function IndicateursPanel({ joueur }: Props) {
             />
 
             <div className="bg-blue-950/30 border border-blue-800/40 rounded-xl p-3 text-xs text-blue-200 leading-relaxed">
-              <strong>📌 Note pédagogique :</strong> Dans ce jeu simplifié, il n'y a pas d'achats à crédit ni de
+              <strong>📌 Note pédagogique :</strong> Dans ce jeu simplifié, il n’y a pas d’achats à crédit ni de
               stocks tournants. Le délai fournisseur et la rotation des stocks ne sont donc pas calculables.
               Dans une vraie entreprise : Délai fournisseurs = Dettes × 360 / Achats.
               Rotation stocks = Stocks × 360 / CMV.
@@ -588,8 +588,8 @@ export default function IndicateursPanel({ joueur }: Props) {
                   <div className="text-xs font-bold text-indigo-300 mb-1.5">📊 Résultats</div>
                   {[
                     ["1️⃣", "Valeur Ajoutée (VA)", sig.valeurAjoutee, ""],
-                    ["2️⃣", "Excédent Brut d'Exploitation (EBE)", sig.ebe, ""],
-                    ["3️⃣", "Résultat d'exploitation", sig.resultatExploitation, ""],
+                    ["2️⃣", "Excédent Brut d’Exploitation (EBE)", sig.ebe, ""],
+                    ["3️⃣", "Résultat d’exploitation", sig.resultatExploitation, ""],
                     ["4️⃣", "Résultat net", sig.resultatNet, ""],
                   ].map(([num, label, val, unit]) => (
                     <div key={label as string} className="flex items-center justify-between py-0.5">

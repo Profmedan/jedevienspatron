@@ -18,7 +18,7 @@ interface Props {
 }
 
 /** Badge avant → après affiché à la place de la valeur courante.
- *  Couleur basée sur l'impact financier réel (PCG français) :
+ *  Couleur basée sur l’impact financier réel (PCG français) :
  *  - charges en hausse → rouge (appauvrissement)
  *  - produits en hausse → vert (enrichissement)
  */
@@ -113,12 +113,12 @@ function CRAnalyse({ joueur }: { joueur: Joueur }) {
   const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
 
   if (ca === 0) {
-    points.push({ niveau: "rouge", texte: "Aucune vente enregistrée ce trimestre. Recrutez un commercial dès l'étape 6 pour générer du chiffre d'affaires." });
+    points.push({ niveau: "rouge", texte: "Aucune vente enregistrée ce trimestre. Recrutez un commercial dès l’étape 6 pour générer du chiffre d’affaires." });
   } else {
     const tauxMarge = Math.round((resultat / ca) * 100);
     if (tauxMarge < -20) points.push({ niveau: "rouge", texte: `Taux de marge nette très négatif (${tauxMarge}%). Vos charges sont disproportionnées par rapport à votre CA (${ca}). Priorité : augmenter les ventes.` });
     else if (tauxMarge < 0) points.push({ niveau: "jaune", texte: `Légère perte (marge ${tauxMarge}%). Quelques clients supplémentaires suffiraient à équilibrer. Recrutez un Junior.` });
-    else if (tauxMarge < 15) points.push({ niveau: "jaune", texte: `Marge positive mais faible (${tauxMarge}%). Consolidez avant d'investir davantage.` });
+    else if (tauxMarge < 15) points.push({ niveau: "jaune", texte: `Marge positive mais faible (${tauxMarge}%). Consolidez avant d’investir davantage.` });
     else points.push({ niveau: "vert", texte: `Bonne marge nette (${tauxMarge}%). Vous pouvez investir dans un actif ou recruter un profil plus senior.` });
   }
 
@@ -127,7 +127,7 @@ function CRAnalyse({ joueur }: { joueur: Joueur }) {
   }
 
   if ((cr.charges?.chargesPersonnel ?? 0) > ca * 0.5 && ca > 0) {
-    points.push({ niveau: "rouge", texte: `Masse salariale (${cr.charges?.chargesPersonnel}) > 50% du CA. Vos commerciaux coûtent plus qu'ils ne rapportent ce trimestre. Attendez la montée en puissance.` });
+    points.push({ niveau: "rouge", texte: `Masse salariale (${cr.charges?.chargesPersonnel}) > 50% du CA. Vos commerciaux coûtent plus qu’ils ne rapportent ce trimestre. Attendez la montée en puissance.` });
   }
 
   const colors = {
@@ -202,7 +202,7 @@ export default function CompteResultatPanel({
               recentMod={findMod(recentModifications, "achats")}
             />
             {charges.achats !== 0 && (
-              <NoteEcritureEquilibre texte="CMV = Coût des Marchandises Vendues. Dans notre modèle (inventaire permanent), l'achat de marchandises n'apparaît pas directement en charge : il augmente les Stocks (actif du bilan). C'est seulement lors de la vente que le coût des marchandises livrées est transféré des Stocks vers cette ligne du CR. Ainsi, le CMV reflète uniquement le coût des produits effectivement vendus ce trimestre — pas le coût total des achats." />
+              <NoteEcritureEquilibre texte="CMV = Coût des Marchandises Vendues. Dans notre modèle (inventaire permanent), l’achat de marchandises n’apparaît pas directement en charge : il augmente les Stocks (actif du bilan). C’est seulement lors de la vente que le coût des marchandises livrées est transféré des Stocks vers cette ligne du CR. Ainsi, le CMV reflète uniquement le coût des produits effectivement vendus ce trimestre — pas le coût total des achats." />
             )}
 
             <Row
@@ -220,7 +220,7 @@ export default function CompteResultatPanel({
               recentMod={findMod(recentModifications, "impotsTaxes")}
             />
             <Row
-              label="Charges d'intérêt"
+              label="Charges d’intérêt"
               value={charges.chargesInteret}
               color="#f97316"
               highlighted={highlightedPoste === "chargesInteret"}
@@ -248,7 +248,7 @@ export default function CompteResultatPanel({
               recentMod={findMod(recentModifications, "dotationsAmortissements")}
             />
             {charges.dotationsAmortissements !== 0 && (
-              <NoteEcritureEquilibre texte="L'amortissement réduit ton bénéfice ici (compte de résultat), mais aucun euro ne quitte ta banque — c'est une charge comptable, pas un paiement. Ta trésorerie, elle, est enregistrée dans les comptes de bilan." />
+              <NoteEcritureEquilibre texte="L’amortissement réduit ton bénéfice ici (compte de résultat), mais aucun euro ne quitte ta banque — c’est une charge comptable, pas un paiement. Ta trésorerie, elle, est enregistrée dans les comptes de bilan." />
             )}
 
             <div className="flex justify-between px-2.5 py-2 border-t-2 border-orange-800 mt-2 font-bold bg-orange-900/20 rounded-lg">

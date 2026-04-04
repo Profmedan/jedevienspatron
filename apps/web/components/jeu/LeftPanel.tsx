@@ -110,7 +110,7 @@ export function LeftPanel({
       <div className="space-y-4">
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <div className="space-y-4">
-            {/* ── Titre de l'action en cours — bien visible ── */}
+            {/* ── Titre de l’action en cours — bien visible ── */}
             <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
                 Écriture {activeStep.entries.filter((e) => e.applied).length + 1} / {activeStep.entries.length}
@@ -130,7 +130,7 @@ export function LeftPanel({
                     <span className="text-2xl font-black text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta}u</span>
                   </div>
                 </div>
-                {/* ── Description de l'écriture — lisible ── */}
+                {/* ── Description de l’écriture — lisible ── */}
                 <p className="text-sm leading-relaxed text-slate-200">{firstPending.description}</p>
                 {/* ── Bulle pédagogique ── */}
                 <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
@@ -154,7 +154,7 @@ export function LeftPanel({
                 onClick={onConfirmStep}
                 className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
               >
-                Confirmer l'étape ✓
+                Confirmer l’étape ✓
               </button>
             )}
           </div>
@@ -287,7 +287,7 @@ export function LeftPanel({
               onClick={onLaunchStep}
               className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300"
             >
-              Commencer l'étape
+              Commencer l’étape
             </button>
           )}
         </div>
