@@ -4,7 +4,7 @@
 // Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = void 0;
+exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = void 0;
 // ─── CONSTANTES ───────────────────────────────────────────────
 exports.DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 → cessation de paiement
 exports.CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
@@ -59,11 +59,30 @@ exports.CAPACITE_IMMOBILISATION = {
     "commercial-junior-dec": 0,
     "commercial-senior-dec": 0,
     "directrice-commerciale-dec": 0,
+    "achat-urgence": 0,
+    "revision-generale": 0,
+    "optimisation-lean": 0,
+    "sous-traitance": 0,
+};
+/** Bonus de capacité spécifiques par entreprise (surcharge CAPACITE_IMMOBILISATION) */
+exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = {
+    "camionnette": {
+        "Manufacture Belvaux": 6,
+        "Véloce Transports": 6,
+        "Azura Commerce": 2,
+        "Synergia Lab": 2,
+    },
+    "expansion": {
+        "Manufacture Belvaux": 4,
+        "Véloce Transports": 4,
+        "Azura Commerce": 6,
+        "Synergia Lab": 6,
+    },
 };
 /** Taux d'intérêt annuel sur les emprunts (5%) */
 exports.TAUX_INTERET_ANNUEL = 5;
 /** Taux majoré appliqué si situation financière fragile (8%/an) */
 exports.TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
-exports.MONTANTS_EMPRUNT = [5, 8, 12, 16, 20];
+exports.MONTANTS_EMPRUNT = [5000, 8000, 12000, 16000, 20000];
 //# sourceMappingURL=types.js.map

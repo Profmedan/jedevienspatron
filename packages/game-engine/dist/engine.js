@@ -236,14 +236,14 @@ function appliquerEtape0(etat, joueurIdx) {
     const push = makePush(joueur, modifications);
     // 0. Agios bancaires sur découvert (AVANT remboursement : les intérêts s'ajoutent au découvert)
     if (joueur.bilan.decouvert > 0) {
-        push("chargesInteret", 1, `Agios bancaires : tu paies des intérêts (1) sur ton découvert de ${joueur.bilan.decouvert} — la banque te pénalise pour ta trésorerie négative`);
-        push("decouvert", 1, "Agios ajoutés au découvert bancaire — tu dois rembourser davantage au prochain tour (+1)");
+        push("chargesInteret", 1000, `Agios bancaires : tu paies des intérêts (1 000 €) sur ton découvert de ${joueur.bilan.decouvert} — la banque te pénalise pour ta trésorerie négative`);
+        push("decouvert", 1000, "Agios ajoutés au découvert bancaire — tu dois rembourser davantage au prochain tour (+1 000 €)");
     }
     // 0b. Intérêts annuels sur emprunt (tous les 4 trimestres = 1 fois/an)
     const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
     if (empruntsPoste && empruntsPoste.valeur > 0 && etat.tourActuel % types_1.INTERET_EMPRUNT_FREQUENCE === 1) {
-        // Intérêt simplifié : 5% arrondi à l'unité supérieure (minimum 1)
-        const interetEmprunt = Math.max(1, Math.ceil(empruntsPoste.valeur * types_1.TAUX_INTERET_ANNUEL / 100));
+        // Intérêt simplifié : 5% arrondi à l'unité supérieure (minimum 1000)
+        const interetEmprunt = Math.max(1000, Math.ceil(empruntsPoste.valeur * types_1.TAUX_INTERET_ANNUEL / 100));
         push("chargesInteret", interetEmprunt, `Intérêts annuels sur emprunt de ${empruntsPoste.valeur} : ${types_1.TAUX_INTERET_ANNUEL}% = ${interetEmprunt} — la banque facture ses intérêts une fois par an`);
         push("tresorerie", -interetEmprunt, `Paiement des intérêts d'emprunt : -${interetEmprunt} Trésorerie`);
     }
@@ -733,10 +733,17 @@ function demanderEmprunt(etat, joueurIdx, montant) {
  */
 function calculerCapaciteLogistique(joueur) {
     let capacite = types_1.CAPACITE_BASE;
-    // Parcourir les cartes actives pour identifier les immobilisations logistiques
+    const nomEntreprise = joueur.entreprise.nom;
     for (const carte of joueur.cartesActives) {
-        const bonus = types_1.CAPACITE_IMMOBILISATION[carte.id] ?? 0;
-        capacite += bonus;
+        // Vérifier s'il existe un bonus spécifique à l'entreprise
+        const bonusParEntreprise = types_1.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE[carte.id];
+        if (bonusParEntreprise && bonusParEntreprise[nomEntreprise] !== undefined) {
+            capacite += bonusParEntreprise[nomEntreprise];
+        }
+        else {
+            const bonus = types_1.CAPACITE_IMMOBILISATION[carte.id] ?? 0;
+            capacite += bonus;
+        }
     }
     return capacite;
 }

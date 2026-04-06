@@ -53,21 +53,21 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     actifs: [
       // IMMOBILISATIONS
       // Usine : matériel industriel → vie 8T (≈ 2 ans)
-      { nom: "Usine", valeur: 8 },
+      { nom: "Usine", valeur: 8000 },
       // Camionnette : véhicule utilitaire → vie 8T (≈ 2 ans)
-      { nom: "Camionnette", valeur: 8 },
+      { nom: "Camionnette", valeur: 8000 },
       // Autres : réservé aux investissements via Cartes Décision
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
-      { nom: "Stocks", valeur: 4 },
+      { nom: "Stocks", valeur: 4000 },
       // TRÉSORERIE
-      { nom: "Trésorerie", valeur: 8 },
+      { nom: "Trésorerie", valeur: 8000 },
     ],
     passifs: [
       // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
-      { nom: "Capitaux propres", valeur: 20 },
+      { nom: "Capitaux propres", valeur: 20000 },
       // EMPRUNTS — remboursement -1/trimestre pendant 8 trimestres
-      { nom: "Emprunts", valeur: 8 },
+      { nom: "Emprunts", valeur: 8000 },
       // DETTES FOURNISSEURS
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
@@ -85,20 +85,20 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     actifs: [
       // IMMOBILISATIONS
       // Camion : poids lourd → vie 10T (≈ 2,5 ans)
-      { nom: "Camion", valeur: 10 },
+      { nom: "Camion", valeur: 10000 },
       // Machine : équipement de manutention → vie 6T (≈ 1,5 an)
-      { nom: "Machine", valeur: 6 },
+      { nom: "Machine", valeur: 6000 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
-      { nom: "Stocks", valeur: 4 },
+      { nom: "Stocks", valeur: 4000 },
       // TRÉSORERIE
-      { nom: "Trésorerie", valeur: 8 },
+      { nom: "Trésorerie", valeur: 8000 },
     ],
     passifs: [
       // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
-      { nom: "Capitaux propres", valeur: 20 },
-      { nom: "Emprunts", valeur: 8 },
+      { nom: "Capitaux propres", valeur: 20000 },
+      { nom: "Emprunts", valeur: 8000 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
   },
@@ -114,20 +114,20 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     actifs: [
       // IMMOBILISATIONS
       // Showroom : agencement commercial → vie 8T (≈ 2 ans)
-      { nom: "Showroom", valeur: 8 },
+      { nom: "Showroom", valeur: 8000 },
       // Voiture de démonstration → vie 8T (≈ 2 ans)
-      { nom: "Voiture", valeur: 8 },
+      { nom: "Voiture", valeur: 8000 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
-      { nom: "Stocks", valeur: 4 },
+      { nom: "Stocks", valeur: 4000 },
       // TRÉSORERIE
-      { nom: "Trésorerie", valeur: 8 },
+      { nom: "Trésorerie", valeur: 8000 },
     ],
     passifs: [
       // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
-      { nom: "Capitaux propres", valeur: 20 },
-      { nom: "Emprunts", valeur: 8 },
+      { nom: "Capitaux propres", valeur: 20000 },
+      { nom: "Emprunts", valeur: 8000 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
   },
@@ -146,20 +146,20 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     actifs: [
       // IMMOBILISATIONS
       // Brevet : propriété intellectuelle → vie 8T (≈ 2 ans simplifié)
-      { nom: "Brevet", valeur: 8 },
+      { nom: "Brevet", valeur: 8000 },
       // Matériel informatique → vie 5T (≈ 1,25 an simplifié)
-      { nom: "Matériel informatique", valeur: 5 },
+      { nom: "Matériel informatique", valeur: 5000 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
-      { nom: "Stocks", valeur: 4 },
+      { nom: "Stocks", valeur: 4000 },
       // TRÉSORERIE
-      { nom: "Trésorerie", valeur: 8 },
+      { nom: "Trésorerie", valeur: 8000 },
     ],
     passifs: [
       // CAPITAUX PROPRES — 17 pour équilibrer : Immos 13 + Stocks 4 + Tréso 8 = 25
-      { nom: "Capitaux propres", valeur: 17 },
-      { nom: "Emprunts", valeur: 8 },
+      { nom: "Capitaux propres", valeur: 17000 },
+      { nom: "Emprunts", valeur: 8000 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
   },

@@ -221,12 +221,14 @@ export declare const SCORE_MULTIPLICATEUR_IMMO = 2;
 export declare const CAPACITE_BASE = 4;
 /** Bonus de capacité par type d'immobilisation active */
 export declare const CAPACITE_IMMOBILISATION: Record<string, number>;
+/** Bonus de capacité spécifiques par entreprise (surcharge CAPACITE_IMMOBILISATION) */
+export declare const CAPACITE_IMMOBILISATION_PAR_ENTREPRISE: Record<string, Partial<Record<string, number>>>;
 /** Taux d'intérêt annuel sur les emprunts (5%) */
 export declare const TAUX_INTERET_ANNUEL = 5;
 /** Taux majoré appliqué si situation financière fragile (8%/an) */
 export declare const TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
-export declare const MONTANTS_EMPRUNT: readonly [5, 8, 12, 16, 20];
+export declare const MONTANTS_EMPRUNT: readonly [5000, 8000, 12000, 16000, 20000];
 /** Résultat d'une demande de prêt bancaire */
 export interface ResultatDemandePret {
     accepte: boolean;

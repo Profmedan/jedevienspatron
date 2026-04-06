@@ -211,8 +211,8 @@ export function scorerDemandePret(
   else { details.push("Résultat déficitaire ✗"); }
 
   const treso = getTresorerie(joueur);
-  if (treso >= 5) { score += 20; details.push("Trésorerie confortable ✓"); }
-  else if (treso >= 2) { score += 10; details.push("Trésorerie limitée"); }
+  if (treso >= 5000) { score += 20; details.push("Trésorerie confortable ✓"); }
+  else if (treso >= 2000) { score += 10; details.push("Trésorerie limitée"); }
   else if (treso >= 0) { score += 5; details.push("Trésorerie très faible"); }
   else { details.push("Découvert bancaire ✗"); }
 

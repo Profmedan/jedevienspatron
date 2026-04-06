@@ -187,11 +187,11 @@ function scorerDemandePret(joueur, montantDemande) {
         details.push("Résultat déficitaire ✗");
     }
     const treso = getTresorerie(joueur);
-    if (treso >= 5) {
+    if (treso >= 5000) {
         score += 20;
         details.push("Trésorerie confortable ✓");
     }
-    else if (treso >= 2) {
+    else if (treso >= 2000) {
         score += 10;
         details.push("Trésorerie limitée");
     }
