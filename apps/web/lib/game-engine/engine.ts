@@ -287,32 +287,37 @@ export function appliquerEtape0(
   const modifications: ResultatAction["modifications"] = [];
   const push = makePush(joueur, modifications);
 
-  // 0. Agios bancaires sur découvert (AVANT remboursement : les intérêts s'ajoutent au découvert)
+  // 0. Agios bancaires sur découvert (AVANT remboursement)
+  // Agios = 10% du découvert, arrondi à la centaine supérieure — prélevés sur la trésorerie.
+  // Si la trésorerie est insuffisante, elle tombe en négatif → découvert généré automatiquement.
   if (joueur.bilan.decouvert > 0) {
-    // Agios = 10% du découvert, arrondi au millier supérieur, minimum 1 000 €
-    const agios = Math.max(1000, Math.ceil(joueur.bilan.decouvert * 0.10 / 1000) * 1000);
+    const agios = Math.ceil(joueur.bilan.decouvert * 0.10 / 100) * 100;
     push(
       "chargesInteret",
       agios,
-      `Agios bancaires : 10% de ton découvert de ${joueur.bilan.decouvert} € = ${agios} € d'intérêts — la banque te pénalise pour ta trésorerie négative`
+      `Agios bancaires : 10% de ton découvert de ${joueur.bilan.decouvert} € = ${agios} € — prélevés sur ta trésorerie`
     );
-    push("decouvert", agios, `Agios ajoutés au découvert bancaire (+${agios} €) — tu dois rembourser davantage`);
+    push(
+      "tresorerie",
+      -agios,
+      `Agios bancaires débités de ta trésorerie (-${agios} €) — si elle est insuffisante, tu bascules en découvert`
+    );
   }
 
   // 0b. Intérêts annuels sur emprunt (tous les 4 trimestres = 1 fois/an)
+  // Intérêt = taux × capital, arrondi à la centaine supérieure — sans minimum artificiel.
   const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
   if (empruntsPoste && empruntsPoste.valeur > 0 && etat.tourActuel % INTERET_EMPRUNT_FREQUENCE === 1) {
-    // Intérêt simplifié : 5% arrondi au millier supérieur (minimum 1 000 €)
-    const interetEmprunt = Math.max(1000, Math.ceil(empruntsPoste.valeur * TAUX_INTERET_ANNUEL / 100));
+    const interetEmprunt = Math.ceil(empruntsPoste.valeur * TAUX_INTERET_ANNUEL / 100 / 100) * 100;
     push(
       "chargesInteret",
       interetEmprunt,
-      `Intérêts annuels sur emprunt de ${empruntsPoste.valeur} : ${TAUX_INTERET_ANNUEL}% = ${interetEmprunt} — la banque facture ses intérêts une fois par an`
+      `Intérêts annuels sur emprunt de ${empruntsPoste.valeur} € : ${TAUX_INTERET_ANNUEL}% = ${interetEmprunt} € — la banque facture ses intérêts une fois par an`
     );
     push(
       "tresorerie",
       -interetEmprunt,
-      `Paiement des intérêts d'emprunt : -${interetEmprunt} Trésorerie`
+      `Paiement des intérêts d'emprunt : -${interetEmprunt} € sur ta trésorerie`
     );
   }
 
@@ -974,7 +979,7 @@ export function demanderEmprunt(
   montant: number
 ): { resultat: ResultatDemandePret; modifications: ResultatAction["modifications"] } {
   const joueur = etat.joueurs[joueurIdx];
-  const resultat = scorerDemandePret(joueur, montant);
+  const resultat = scorerDemandePret(joueur, montant, etat.tourActuel);
   const modifications: ResultatAction["modifications"] = [];
 
   if (!resultat.accepte) {

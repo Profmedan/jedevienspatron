@@ -192,13 +192,22 @@ export function calculerInterets(empruntsTotal: number, majore: boolean = false)
 }
 
 // ─── SCORING BANCAIRE ─────────────────────────────────────────
+// tourActuel : passé depuis engine.ts pour la clause de bienveillance (tours 1-2)
 export function scorerDemandePret(
   joueur: Joueur,
-  montantDemande: number
+  montantDemande: number,
+  tourActuel: number = 999
 ): ResultatDemandePret {
   const ind = calculerIndicateurs(joueur);
   let score = 0;
   const details: string[] = [];
+
+  // Clause de bienveillance : bonus +15 pts pour les deux premiers trimestres.
+  // La banque regarde le potentiel de démarrage, pas encore les résultats.
+  if (tourActuel <= 2) {
+    score += 15;
+    details.push("Entreprise en démarrage — bonus bienveillance banque ✓");
+  }
 
   const solv = ind.ratioSolvabilite;
   if (solv >= 40) { score += 30; details.push("Solvabilité solide ✓"); }
