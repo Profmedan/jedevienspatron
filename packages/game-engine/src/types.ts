@@ -81,6 +81,8 @@ export interface EntrepriseTemplate {
   /** Type d'activité affiché */
   type: string;
   specialite: string;
+  /** Effets passifs appliqués automatiquement à chaque tour (spécialité entreprise) */
+  effetsPassifs?: EffetCarte[];
   /** Bilan de départ (Actif = Passif = 16 toujours) */
   actifs: Omit<PosteActif, "categorie">[];
   passifs: Omit<PostePassif, "categorie">[];

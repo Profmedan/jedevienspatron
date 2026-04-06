@@ -5,7 +5,8 @@ import {
   EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
-  appliquerEffetsRecurrents, tirerCartesDecision, acheterCarteDecision,
+  appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
+  tirerCartesDecision, acheterCarteDecision,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
 } from "@jedevienspatron/game-engine";
@@ -355,7 +356,8 @@ export function useGameFlow({
       case 2: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications; break; }
       case 3: {
         const clients = genererClientsParCommerciaux(next.joueurs[idx]);
-        next.joueurs[idx].clientsATrait = [...next.joueurs[idx].clientsATrait, ...clients];
+        const clientsSpecialite = genererClientsSpecialite(next.joueurs[idx]);
+        next.joueurs[idx].clientsATrait = [...next.joueurs[idx].clientsATrait, ...clients, ...clientsSpecialite];
         const r = appliquerPaiementCommerciaux(next, idx);
         if (r.succes) mods = r.modifications;
         break;
@@ -395,7 +397,13 @@ export function useGameFlow({
         }
         break;
       }
-      case 5: { const r = appliquerEffetsRecurrents(next, idx); if (r.succes) mods = r.modifications; break; }
+      case 5: {
+        const r = appliquerEffetsRecurrents(next, idx);
+        if (r.succes) mods = r.modifications;
+        const rSpec = appliquerSpecialiteEntreprise(next, idx);
+        if (rSpec.succes) mods = [...mods, ...rSpec.modifications];
+        break;
+      }
       case 7: {
         if (next.piocheEvenements.length > 0) {
           const carte = next.piocheEvenements[0];

@@ -21,6 +21,24 @@ export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: n
 export declare function appliquerCarteClient(etat: EtatJeu, joueurIdx: number, carteClient: CarteClient): ResultatAction;
 export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
+ * Applique les effets passifs liés à la spécialité de l'entreprise.
+ * Appelé à chaque tour, à l'étape 5, après les effets récurrents des cartes.
+ *
+ * ── Effets par entreprise ──────────────────────────────────────
+ * • Manufacture Belvaux (Production) : +1 productionStockée, +1 stocks
+ * • Véloce Transports (Logistique)   : délai encaissement -1 (géré dans appliquerCarteClient)
+ * • Azura Commerce (Commerce)        : +1 client Particulier automatique (ajouté à clientsATrait)
+ * • Synergia Lab (Innovation)        : +1 produitsFinanciers, +1 trésorerie
+ */
+export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * Génère les clients bonus liés à la spécialité d'entreprise.
+ * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.
+ *
+ * • Azura Commerce : +1 client Particulier automatique par tour
+ */
+export declare function genererClientsSpecialite(joueur: Joueur): CarteClient[];
+/**
  * Retourne les cartes commerciales que le joueur peut encore recruter.
  * Aucun commercial n'est distribué automatiquement — le joueur choisit librement.
  * Disponible tout au long du jeu : les 3 types (Junior, Senior, Directrice) restent

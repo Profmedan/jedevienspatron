@@ -45,6 +45,11 @@ exports.ENTREPRISES = [
         icon: "🏭",
         type: "Production",
         specialite: "⚡ Produit à chaque tour",
+        // Spécialité active : +1 productionStockée, +1 stocks par trimestre
+        effetsPassifs: [
+            { poste: "productionStockee", delta: 1 },
+            { poste: "stocks", delta: 1 },
+        ],
         actifs: [
             // IMMOBILISATIONS
             // Usine : matériel industriel → vie 8T (≈ 2 ans)
@@ -73,6 +78,9 @@ exports.ENTREPRISES = [
         icon: "🚚",
         type: "Logistique",
         specialite: "🚀 Livraison rapide",
+        // Spécialité active : délai d'encaissement réduit de 1 sur tous les clients
+        // (TPE → immédiat, Grand Compte → C+1 au lieu de C+2)
+        // Géré dans appliquerCarteClient() via le nom d'entreprise
         actifs: [
             // IMMOBILISATIONS
             // Camion : poids lourd → vie 10T (≈ 2,5 ans)
@@ -99,6 +107,8 @@ exports.ENTREPRISES = [
         icon: "🏪",
         type: "Commerce",
         specialite: "👥 Attire les particuliers",
+        // Spécialité active : +1 client Particulier automatique par tour
+        // Géré dans appliquerSpecialiteEntreprise() via le nom d'entreprise
         actifs: [
             // IMMOBILISATIONS
             // Showroom : agencement commercial → vie 8T (≈ 2 ans)
@@ -125,6 +135,11 @@ exports.ENTREPRISES = [
         icon: "💡",
         type: "Innovation",
         specialite: "💎 Revenus de licence",
+        // Spécialité active : +1 produitsFinanciers, +1 trésorerie par trimestre
+        effetsPassifs: [
+            { poste: "produitsFinanciers", delta: 1 },
+            { poste: "tresorerie", delta: 1 },
+        ],
         actifs: [
             // IMMOBILISATIONS
             // Brevet : propriété intellectuelle → vie 8T (≈ 2 ans simplifié)

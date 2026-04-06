@@ -636,10 +636,10 @@ exports.CARTES_EVENEMENTS = [
         type: "evenement",
         id: "crise-sanitaire",
         titre: "Crise Sanitaire 😷",
-        description: "Une crise sanitaire touche le monde entier. Vos ventes s'effondrent ce trimestre.",
+        description: "Une crise sanitaire frappe le monde entier. Votre activité est perturbée : coûts de protection, pertes de marchandises, désorganisation.",
         effets: [
-            { poste: "ventes", delta: -2 },
-            { poste: "tresorerie", delta: -2 },
+            { poste: "chargesExceptionnelles", delta: 2 }, // DÉBIT Charges exceptionnelles (coûts de crise)
+            { poste: "tresorerie", delta: -2 }, // CRÉDIT Trésorerie
         ],
         annulableParAssurance: true,
     },
@@ -658,10 +658,10 @@ exports.CARTES_EVENEMENTS = [
         type: "evenement",
         id: "greve",
         titre: "Grève des Employés ✊",
-        description: "Vos employés font grève. La production est à l'arrêt ce trimestre.",
+        description: "Vos employés font grève. La production est à l'arrêt : coûts de remplacement et pertes d'exploitation.",
         effets: [
-            { poste: "ventes", delta: -2 },
-            { poste: "tresorerie", delta: -2 },
+            { poste: "chargesExceptionnelles", delta: 2 }, // DÉBIT Charges exceptionnelles (coûts de grève)
+            { poste: "tresorerie", delta: -2 }, // CRÉDIT Trésorerie
         ],
         annulableParAssurance: true,
     },
@@ -691,10 +691,12 @@ exports.CARTES_EVENEMENTS = [
         type: "evenement",
         id: "subvention-developpement-durable",
         titre: "Développement Durable 🌿",
-        description: "Vous remportez un appel d'offres pour un projet écologique auprès d'une mairie.",
+        description: "Vous remportez un appel d'offres écologique auprès d'une mairie. Contrat lucratif mais la collectivité paie en 2 trimestres — attention au BFR !",
         effets: [
-            { poste: "ventes", delta: 3 },
-            { poste: "tresorerie", delta: 3 },
+            { poste: "ventes", delta: 3 }, // CRÉDIT Ventes (CA reconnu)
+            { poste: "creancesPlus2", delta: 3 }, // DÉBIT Créances C+2 (la mairie paie en 2 trimestres)
+            { poste: "stocks", delta: -3 }, // CRÉDIT Stocks (marchandises livrées)
+            { poste: "achats", delta: 3 }, // DÉBIT CMV (coût des marchandises vendues)
         ],
         annulableParAssurance: false,
     },

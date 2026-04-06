@@ -132,7 +132,7 @@ function appliquerDeltaPoste(
   // Compte de résultat — produits
   if (poste in produits) {
     const old = produits[poste];
-    produits[poste] = old + delta; // Les produits peuvent théoriquement être négatifs (événement)
+    produits[poste] = Math.max(0, old + delta); // Plancher 0 : un produit ne peut pas être négatif
     return { ancienneValeur: old, nouvelleValeur: produits[poste] };
   }
 
@@ -567,10 +567,21 @@ export function appliquerCarteClient(
   push("achats", 1, "Coût de la marchandise vendue (CMV) : +1 Achats");
 
   // 4. Encaissement selon délai
-  if (carteClient.delaiPaiement === 0) {
-    push("tresorerie", montant, `Encaissement immédiat : +${montant} Trésorerie`);
-  } else if (carteClient.delaiPaiement === 1) {
-    push("creancesPlus1", montant, `Créance client TPE enregistrée : +${montant} C+1`);
+  // Spécialité Véloce Transports (Logistique) : livraison rapide → délai réduit de 1
+  const delaiEffectif = joueur.entreprise.nom === "Véloce Transports"
+    ? Math.max(0, carteClient.delaiPaiement - 1) as 0 | 1 | 2
+    : carteClient.delaiPaiement;
+
+  if (delaiEffectif === 0) {
+    const label = carteClient.delaiPaiement > 0 && joueur.entreprise.nom === "Véloce Transports"
+      ? `🚀 Livraison rapide — encaissement accéléré : +${montant} Trésorerie`
+      : `Encaissement immédiat : +${montant} Trésorerie`;
+    push("tresorerie", montant, label);
+  } else if (delaiEffectif === 1) {
+    const label = carteClient.delaiPaiement > 1 && joueur.entreprise.nom === "Véloce Transports"
+      ? `🚀 Livraison rapide — créance accélérée : +${montant} C+1 (au lieu de C+2)`
+      : `Créance client TPE enregistrée : +${montant} C+1`;
+    push("creancesPlus1", montant, label);
   } else {
     push("creancesPlus2", montant, `Créance grand compte enregistrée : +${montant} C+2`);
   }
@@ -607,6 +618,64 @@ export function appliquerEffetsRecurrents(
   }
 
   return { succes: true, modifications };
+}
+
+// ─── ÉTAPE 5bis : Spécialité d'entreprise (effets passifs) ────
+
+/**
+ * Applique les effets passifs liés à la spécialité de l'entreprise.
+ * Appelé à chaque tour, à l'étape 5, après les effets récurrents des cartes.
+ *
+ * ── Effets par entreprise ──────────────────────────────────────
+ * • Manufacture Belvaux (Production) : +1 productionStockée, +1 stocks
+ * • Véloce Transports (Logistique)   : délai encaissement -1 (géré dans appliquerCarteClient)
+ * • Azura Commerce (Commerce)        : +1 client Particulier automatique (ajouté à clientsATrait)
+ * • Synergia Lab (Innovation)        : +1 produitsFinanciers, +1 trésorerie
+ */
+export function appliquerSpecialiteEntreprise(
+  etat: EtatJeu,
+  joueurIdx: number
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  // 1. Effets passifs déclarés dans le template (Orange, Verte)
+  const template = ENTREPRISES.find((e) => e.nom === joueur.entreprise.nom);
+  if (template?.effetsPassifs) {
+    for (const effet of template.effetsPassifs) {
+      const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(
+        joueur,
+        effet.poste,
+        effet.delta
+      );
+      modifications.push({
+        joueurId: joueur.id,
+        poste: effet.poste,
+        ancienneValeur,
+        nouvelleValeur,
+        explication: `${template.specialite} — spécialité ${template.type}`,
+      });
+    }
+  }
+
+  // Note : Véloce Transports (délai -1) est géré directement dans appliquerCarteClient()
+  // Note : Azura Commerce (+1 client) est géré dans genererClientsSpecialite() à l'étape 3
+
+  return { succes: true, modifications };
+}
+
+/**
+ * Génère les clients bonus liés à la spécialité d'entreprise.
+ * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.
+ *
+ * • Azura Commerce : +1 client Particulier automatique par tour
+ */
+export function genererClientsSpecialite(joueur: Joueur): CarteClient[] {
+  if (joueur.entreprise.nom === "Azura Commerce") {
+    const clientParticulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
+    return clientParticulier ? [clientParticulier] : [];
+  }
+  return [];
 }
 
 // ─── ÉTAPE 6 : Recrutement garanti (toujours disponible) ────
