@@ -45,10 +45,10 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     icon: "🏭",
     type: "Production",
     specialite: "⚡ Produit à chaque tour",
-    // Spécialité active : +1 productionStockee, +1 stocks par trimestre
+    // Spécialité active : +1 000 € productionStockee, +1 000 € stocks par trimestre
     effetsPassifs: [
-      { poste: "productionStockee", delta: 1 },
-      { poste: "stocks", delta: 1 },
+      { poste: "productionStockee", delta: 1000 },
+      { poste: "stocks", delta: 1000 },
     ],
     actifs: [
       // IMMOBILISATIONS
@@ -138,10 +138,10 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     icon: "💡",
     type: "Innovation",
     specialite: "💎 Revenus de licence",
-    // Spécialité active : +1 produitsFinanciers, +1 trésorerie par trimestre
+    // Spécialité active : +1 000 € produitsFinanciers, +1 000 € trésorerie par trimestre
     effetsPassifs: [
-      { poste: "produitsFinanciers", delta: 1 },
-      { poste: "tresorerie", delta: 1 },
+      { poste: "produitsFinanciers", delta: 1000 },
+      { poste: "tresorerie", delta: 1000 },
     ],
     actifs: [
       // IMMOBILISATIONS
