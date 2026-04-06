@@ -20,7 +20,7 @@
 // Chaque bien immobilisé perd -1 par trimestre (durée de vie = valeur initiale).
 // Dotation aux amortissements = somme des amortissements de chaque bien.
 // Durées de vie indicatives (en trimestres de jeu) :
-//   • Usine (machine industrielle)       : 8T  ≈ 2 ans
+//   • Entrepôt (machine industrielle)       : 8T  ≈ 2 ans
 //   • Camionnette (véhicule utilitaire)  : 8T  ≈ 2 ans
 //   • Camion (poids lourd)               : 10T ≈ 2,5 ans
 //   • Machine (manutention)              : 6T  ≈ 1,5 an
@@ -52,8 +52,8 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     ],
     actifs: [
       // IMMOBILISATIONS
-      // Usine : matériel industriel → vie 8T (≈ 2 ans)
-      { nom: "Usine", valeur: 8000 },
+      // Entrepôt : matériel industriel → vie 8T (≈ 2 ans)
+      { nom: "Entrepôt", valeur: 8000 },
       // Camionnette : véhicule utilitaire → vie 8T (≈ 2 ans)
       { nom: "Camionnette", valeur: 8000 },
       // Autres : réservé aux investissements via Cartes Décision

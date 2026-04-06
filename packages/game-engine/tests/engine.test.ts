@@ -36,7 +36,7 @@ describe("Création joueur", () => {
   test("Le bilan initial est équilibré (Actif = Passif = 16)", () => {
     const joueur = joueurOrange();
     const { equilibre, totalActif, totalPassif } = verifierEquilibre(joueur);
-    // Actif initial : Usine(3) + Camionnette(1) + Stocks(4) + Tréso(8) = 16
+    // Actif initial : Entrepôt(3) + Camionnette(1) + Stocks(4) + Tréso(8) = 16
     // Passif initial : Capitaux(12) + Emprunts(4) = 16
     // Résultat = 0 → Actif(16) = Passif(16) + Résultat(0) ✓
     expect(totalActif).toBe(16);
@@ -57,7 +57,7 @@ describe("Création joueur", () => {
   test("Chaque entreprise a son bilan propre", () => {
     const orange = creerJoueur(0, "A", "Entreprise Orange");
     const verte = creerJoueur(1, "B", "Entreprise Verte");
-    // Orange a une Usine, Verte a un Brevet — différentes immobilisations
+    // Orange a une Entrepôt, Verte a un Brevet — différentes immobilisations
     expect(orange.bilan.actifs[0].nom).not.toBe(verte.bilan.actifs[0].nom);
     // Mais les deux ont Actif total = 16
     expect(verifierEquilibre(orange).totalActif).toBe(16);
@@ -83,7 +83,7 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
   test("L'amortissement réduit les immobilisations de 1", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
     const joueur = etat.joueurs[0];
-    const immoBefore = getTotalImmobilisations(joueur); // 4 (Usine 3 + Camionnette 1)
+    const immoBefore = getTotalImmobilisations(joueur); // 4 (Entrepôt 3 + Camionnette 1)
 
     appliquerEtape0(etat, 0);
 

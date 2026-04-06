@@ -306,7 +306,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.25 }}
               >
-                {kpi.isPercent ? `${formatAmount(kpi.value)}%` : `${formatAmount(kpi.value)} u`}
+                {kpi.isPercent ? `${formatAmount(kpi.value)}%` : `${formatAmount(kpi.value)} €`}
               </motion.p>
             </div>
           ))}

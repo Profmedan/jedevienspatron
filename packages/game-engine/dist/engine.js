@@ -120,7 +120,7 @@ function appliquerDeltaPoste(joueur, poste, delta) {
     }
     // Bilan — actifs (chercher par catégorie)
     // Cas spécial immobilisations : les investissements (delta > 0) → "Autres Immobilisations"
-    // pour ne pas altérer les biens existants (Usine, Camion, etc.)
+    // pour ne pas altérer les biens existants (Entrepôt, Camion, etc.)
     if (poste === "immobilisations") {
         let targetActif = delta > 0
             ? bilanActifs.find((a) => a.nom === "Autres Immobilisations")

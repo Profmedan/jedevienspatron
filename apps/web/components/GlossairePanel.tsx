@@ -371,7 +371,7 @@ const TERMES: TermeGlossaire[] = [
       <div className="space-y-2 text-xs text-gray-300 leading-relaxed">
         <p>Les <strong className="text-gray-100">immobilisations</strong> sont des actifs dont la durée d’utilisation est supérieure à un exercice. Elles sont amorties progressivement.</p>
         <div className="bg-blue-950/30 border border-blue-700/40 rounded-lg p-2 text-[10px] text-blue-200 space-y-1">
-          <div>🏭 Usine (6 trim.) · 🚛 Camion (6 trim.) · 🏪 Showroom (5 trim.)</div>
+          <div>🏭 Entrepôt (6 trim.) · 🚛 Camion (6 trim.) · 🏪 Showroom (5 trim.)</div>
           <div>💡 Brevet (5 trim.) · 🚗 Voiture (3 trim.) · 💻 Matériel info (3 trim.)</div>
           <div>🚐 Camionnette (2 trim.) · ⚙️ Machine (2 trim.)</div>
         </div>

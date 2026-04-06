@@ -10,7 +10,7 @@ interface CompanyIntroProps {
 
 /** Descriptions pédagogiques par nom d’immobilisation (durée de vie en trimestres) */
 const IMMO_DESCRIPTIONS: Record<string, { description: string; duree: number; icon: string }> = {
-  "Usine":               { description: "Outil de production industrielle",       duree: 6, icon: "🏭" },
+  "Entrepôt":               { description: "Outil de production industrielle",       duree: 6, icon: "🏭" },
   "Camionnette":         { description: "Véhicule de livraison utilitaire",        duree: 2, icon: "🚐" },
   "Camion":              { description: "Poids lourd de transport logistique",     duree: 6, icon: "🚛" },
   "Machine":             { description: "Équipement de manutention intensif",      duree: 2, icon: "⚙️" },
