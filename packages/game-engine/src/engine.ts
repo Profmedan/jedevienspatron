@@ -39,6 +39,9 @@ import {
   scorerDemandePret,
 } from "./calculators";
 
+// ─── COUNTER FOR DETERMINISTIC IDS ──────────────────────────
+let _nextCommercialId = 0;
+
 // ─── CONSTANTES IDs CARTES ──────────────────────────────────
 /** Constantes centralisées pour les IDs de cartes — évite les string literals éparpillés */
 const CARTE_IDS = {
@@ -232,7 +235,7 @@ export function creerJoueur(
     // Commercial Junior par défaut : -1 chargesPersonnel, -1 tresorerie, +2 clients Particuliers/tour
     cartesActives: (() => {
       const comJunior = CARTES_DECISION.find((c) => c.id === CARTE_IDS.COMMERCIAL_JUNIOR);
-      return comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${Date.now()}` }] : [];
+      return comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${_nextCommercialId++}` }] : [];
     })(),
     // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
     // quelques clients avant le début du jeu — le joueur voit immédiatement
@@ -286,18 +289,20 @@ export function appliquerEtape0(
 
   // 0. Agios bancaires sur découvert (AVANT remboursement : les intérêts s'ajoutent au découvert)
   if (joueur.bilan.decouvert > 0) {
+    // Agios = 10% du découvert, arrondi au millier supérieur, minimum 1 000 €
+    const agios = Math.max(1000, Math.ceil(joueur.bilan.decouvert * 0.10 / 1000) * 1000);
     push(
       "chargesInteret",
-      1000,
-      `Agios bancaires : tu paies des intérêts (1 000 €) sur ton découvert de ${joueur.bilan.decouvert} — la banque te pénalise pour ta trésorerie négative`
+      agios,
+      `Agios bancaires : 10% de ton découvert de ${joueur.bilan.decouvert} € = ${agios} € d'intérêts — la banque te pénalise pour ta trésorerie négative`
     );
-    push("decouvert", 1000, "Agios ajoutés au découvert bancaire — tu dois rembourser davantage au prochain tour (+1 000 €)");
+    push("decouvert", agios, `Agios ajoutés au découvert bancaire (+${agios} €) — tu dois rembourser davantage`);
   }
 
   // 0b. Intérêts annuels sur emprunt (tous les 4 trimestres = 1 fois/an)
   const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
   if (empruntsPoste && empruntsPoste.valeur > 0 && etat.tourActuel % INTERET_EMPRUNT_FREQUENCE === 1) {
-    // Intérêt simplifié : 5% arrondi à l'unité supérieure (minimum 1000)
+    // Intérêt simplifié : 5% arrondi au millier supérieur (minimum 1 000 €)
     const interetEmprunt = Math.max(1000, Math.ceil(empruntsPoste.valeur * TAUX_INTERET_ANNUEL / 100));
     push(
       "chargesInteret",
@@ -345,17 +350,24 @@ export function appliquerEtape0(
     push("dettes", -joueur.bilan.dettes, "Dettes fournisseurs soldées");
   }
 
+  // 2b. Avancement dettes fournisseurs D+2 → D+1
+  if (joueur.bilan.dettesD2 > 0) {
+    const montantD2 = joueur.bilan.dettesD2;
+    push("dettes", montantD2, `Dettes D+2 devenues D+1 : ${montantD2} € à payer au prochain trimestre`);
+    push("dettesD2", -montantD2, `Dettes D+2 soldées (transférées en D+1)`);
+  }
+
   // 3. Paiement dettes fiscales D+1
   if (joueur.bilan.dettesFiscales > 0) {
     push("tresorerie", -joueur.bilan.dettesFiscales, "Paiement dettes fiscales");
     push("dettesFiscales", -joueur.bilan.dettesFiscales, "Dettes fiscales soldées");
   }
 
-  // 4. Remboursement emprunt (-1 par tour si emprunts > 0)
+  // 4. Remboursement emprunt (-1 000 € par tour si emprunts > 0)
   const emprunts = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
   if (emprunts && emprunts.valeur >= REMBOURSEMENT_EMPRUNT_PAR_TOUR) {
-    push("tresorerie", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Remboursement annuité emprunt (1 par trimestre)");
-    push("emprunts", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, "Emprunt réduit d'1 unité — remboursement régulier");
+    push("tresorerie", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, `Remboursement annuité emprunt : -${REMBOURSEMENT_EMPRUNT_PAR_TOUR} € par trimestre`);
+    push("emprunts", -REMBOURSEMENT_EMPRUNT_PAR_TOUR, `Emprunt réduit de ${REMBOURSEMENT_EMPRUNT_PAR_TOUR} € — remboursement régulier`);
   }
 
   // 5. Charges fixes obligatoires (+2 Services ext., -2 Trésorerie)
@@ -381,9 +393,9 @@ export function appliquerEtape0(
   if (immoAmortissables.length > 0) {
     const totalAvant = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
 
-    // Appliquer -1 directement à chaque bien (mutation directe pour éviter .find() répété)
+    // Appliquer -1 000 € directement à chaque bien (mutation directe pour éviter .find() répété)
     immoAmortissables.forEach((item) => {
-      item.valeur = Math.max(0, item.valeur - 1);
+      item.valeur = Math.max(0, item.valeur - 1000);
     });
 
     const totalApres = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
@@ -395,14 +407,14 @@ export function appliquerEtape0(
       poste: "immobilisations",
       ancienneValeur: totalAvant,
       nouvelleValeur: totalApres,
-      explication: `Amortissement de ${immoAmortissables.length} bien(s) immobilisé(s) : -1 par bien, valeur nette ${totalAvant} → ${totalApres}`,
+      explication: `Amortissement de ${immoAmortissables.length} bien(s) immobilisé(s) : −1 000 € par bien, valeur nette ${totalAvant} → ${totalApres}`,
     });
 
     // Enregistrer la dotation = total des amortissements (règle de la partie double)
     push(
       "dotationsAmortissements",
       totalDotation,
-      `Dotation aux amortissements : +${totalDotation} (1 par bien, ${immoAmortissables.length} bien(s) amortissable(s))`
+      `Dotation aux amortissements : +${totalDotation} (1 000 € par bien, ${immoAmortissables.length} bien(s) amortissable(s))`
     );
   }
 
@@ -416,6 +428,18 @@ export function appliquerEtape0(
       montantDecouvert,
       `Découvert bancaire automatique — ta trésorerie était négative, la banque couvre le déficit mais tu paies des agios (+${montantDecouvert})`
     );
+  }
+
+  // Vérification immédiate : si le découvert dépasse le maximum → faillite
+  if (joueur.bilan.decouvert > DECOUVERT_MAX) {
+    joueur.elimine = true;
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "decouvert",
+      ancienneValeur: joueur.bilan.decouvert,
+      nouvelleValeur: joueur.bilan.decouvert,
+      explication: `⛔ FAILLITE — Découvert bancaire (${joueur.bilan.decouvert} €) dépasse le maximum autorisé (${DECOUVERT_MAX} €). Cessation de paiement.`,
+    });
   }
 
   return { succes: true, modifications };
@@ -728,7 +752,7 @@ export function acheterCarteDecision(
 
   // Pour les commerciaux, cloner la carte avec un ID unique afin de tracer chaque recrue
   if (carte.categorie === "commercial") {
-    carte = { ...carte, id: `${carte.id}-${Date.now()}` };
+    carte = { ...carte, id: `${carte.id}-${_nextCommercialId++}` };
   }
 
   // Appliquer les effets immédiats
@@ -873,11 +897,16 @@ export function verifierFinTour(
     ecartEquilibre: ecart,
     message: equilibre
       ? "✅ Bilan équilibré ! Vous maîtrisez la partie double."
-      : `⚠️ Bilan déséquilibré de ${Math.abs(ecart).toFixed(0)} unité(s). Vérifiez vos écritures.`,
+      : `⚠️ Bilan déséquilibré de ${Math.abs(ecart).toFixed(0)} €. Vérifiez vos écritures.`,
   };
 }
 
 // ─── FIN D'ANNÉE (après 4 tours) ─────────────────────────────
+//
+// ⚠️ NOTE PÉDAGOGIQUE : le découvert bancaire n'est PAS remis à zéro en clôture annuelle.
+// C'est un choix intentionnel : en comptabilité réelle, un découvert est une dette bancaire
+// qui persiste tant qu'elle n'est pas remboursée. Les étudiants doivent comprendre que
+// le découvert s'accumule d'un exercice à l'autre et génère des agios croissants.
 
 export function cloturerAnnee(etat: EtatJeu): void {
   for (const joueur of etat.joueurs) {

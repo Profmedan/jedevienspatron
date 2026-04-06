@@ -211,8 +211,8 @@ export function scorerDemandePret(
   else { details.push("Résultat déficitaire ✗"); }
 
   const treso = getTresorerie(joueur);
-  if (treso >= 5) { score += 20; details.push("Trésorerie confortable ✓"); }
-  else if (treso >= 2) { score += 10; details.push("Trésorerie limitée"); }
+  if (treso >= 5000) { score += 20; details.push("Trésorerie confortable ✓"); }
+  else if (treso >= 2000) { score += 10; details.push("Trésorerie limitée"); }
   else if (treso >= 0) { score += 5; details.push("Trésorerie très faible"); }
   else { details.push("Découvert bancaire ✗"); }
 
@@ -397,7 +397,7 @@ export function verifierFaillite(joueur: Joueur): ResultatVerifFaillite {
     .reduce((s, p) => s + p.valeur, 0);
   const resultatNet = getResultatNet(joueur);
   const capitauxTotaux = capitauxPropres + resultatNet;
-  const dettesTotales = joueur.bilan.dettes + joueur.bilan.dettesFiscales + emprunts;
+  const dettesTotales = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales + emprunts;
 
   if (decouvert > DECOUVERT_MAX) {
     return { enFaillite: true, raison: `Découvert bancaire excessif (${decouvert} > ${DECOUVERT_MAX} maximum)` };

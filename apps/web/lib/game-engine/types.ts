@@ -81,6 +81,8 @@ export interface EntrepriseTemplate {
   /** Type d'activité affiché */
   type: string;
   specialite: string;
+  /** Effets passifs appliqués automatiquement à chaque tour (spécialité entreprise) */
+  effetsPassifs?: EffetCarte[];
   /** Bilan de départ (Actif = Passif = 16 toujours) */
   actifs: Omit<PosteActif, "categorie">[];
   passifs: Omit<PostePassif, "categorie">[];
@@ -132,6 +134,7 @@ export interface EffetCarte {
     | "capitaux"
     | "emprunts"
     | "dettes"
+    | "dettesD2"
     | "dettesFiscales"
     | "decouvert"
     | "creancesPlus1"
@@ -294,15 +297,16 @@ export interface IndicateursFinanciers {
 
 // ─── CONSTANTES ───────────────────────────────────────────────
 
-export const DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 → cessation de paiement
-export const CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
-export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
+export const DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement
+export const CHARGES_FIXES_PAR_TOUR = 2000; // Services extérieurs +2 000€, Tréso -2 000€
+export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1000;
 /** Maximum de découvert remboursable par trimestre (progressif) */
-export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
+export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2000;
 /** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
 export const INTERET_EMPRUNT_FREQUENCE = 4; // Q1 de chaque année
 export const NB_TOURS_PAR_AN = 4;
-export const NB_TOURS_MAX = 12; // Valeur par défaut — configurable à 6, 8 ou 12 à l'initialisation
+/** @deprecated Utiliser `nbToursMax` de `EtatJeu` — cette constante est gardée pour compatibilité */
+export const NB_TOURS_MAX = 12;
 export const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export const SCORE_MULTIPLICATEUR_IMMO = 2;
 
@@ -352,6 +356,26 @@ export const CAPACITE_IMMOBILISATION: Record<string, number> = {
   "commercial-junior-dec": 0,
   "commercial-senior-dec": 0,
   "directrice-commerciale-dec": 0,
+  "achat-urgence": 0,
+  "revision-generale": 0,
+  "optimisation-lean": 0,
+  "sous-traitance": 0,
+};
+
+/** Bonus de capacité spécifiques par entreprise (surcharge CAPACITE_IMMOBILISATION) */
+export const CAPACITE_IMMOBILISATION_PAR_ENTREPRISE: Record<string, Partial<Record<string, number>>> = {
+  "camionnette": {
+    "Manufacture Belvaux": 6,
+    "Véloce Transports": 6,
+    "Azura Commerce": 2,
+    "Synergia Lab": 2,
+  },
+  "expansion": {
+    "Manufacture Belvaux": 4,
+    "Véloce Transports": 4,
+    "Azura Commerce": 6,
+    "Synergia Lab": 6,
+  },
 };
 
 /** Taux d'intérêt annuel sur les emprunts (5%) */
@@ -359,7 +383,7 @@ export const TAUX_INTERET_ANNUEL = 5;
 /** Taux majoré appliqué si situation financière fragile (8%/an) */
 export const TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
-export const MONTANTS_EMPRUNT = [5, 8, 12, 16, 20] as const;
+export const MONTANTS_EMPRUNT = [5000, 8000, 12000, 16000, 20000] as const;
 
 /** Résultat d'une demande de prêt bancaire */
 export interface ResultatDemandePret {
