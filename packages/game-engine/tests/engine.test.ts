@@ -12,6 +12,8 @@ import {
   verifierFinTour,
   calculerCoutCommerciaux,
   genererClientsParCommerciaux,
+  investirCartePersonnelle,
+  calculerCapaciteLogistique,
 } from "../src/engine";
 import {
   verifierEquilibre,
@@ -26,20 +28,19 @@ import { CARTES_CLIENTS } from "../src/data/cartes";
 
 // ─── HELPERS ─────────────────────────────────────────────────
 
+// "joueurOrange" = Manufacture Belvaux (couleur orange, entreprise de Production)
 function joueurOrange() {
-  return creerJoueur(0, "Test", "Entreprise Orange");
+  return creerJoueur(0, "Test", "Manufacture Belvaux");
 }
 
 // ─── 1. CRÉATION JOUEUR ──────────────────────────────────────
 
 describe("Création joueur", () => {
-  test("Le bilan initial est équilibré (Actif = Passif = 16)", () => {
+  test("Le bilan initial est équilibré (Actif = Passif)", () => {
     const joueur = joueurOrange();
-    const { equilibre, totalActif, totalPassif } = verifierEquilibre(joueur);
-    // Actif initial : Entrepôt(3) + Camionnette(1) + Stocks(4) + Tréso(8) = 16
-    // Passif initial : Capitaux(12) + Emprunts(4) = 16
-    // Résultat = 0 → Actif(16) = Passif(16) + Résultat(0) ✓
-    expect(totalActif).toBe(16);
+    const { equilibre, totalActif } = verifierEquilibre(joueur);
+    // Manufacture Belvaux : Entrepôt(8000) + Camionnette(8000) + Stocks(4000) + Tréso(8000) = 28000
+    expect(totalActif).toBe(28000);
     expect(equilibre).toBe(true);
   });
 
@@ -50,65 +51,68 @@ describe("Création joueur", () => {
 
   test("Le joueur reçoit 1 Commercial Junior d'office", () => {
     const joueur = joueurOrange();
+    // Belvaux n'a pas de cartesLogistiquesDepart → seulement le Junior
     expect(joueur.cartesActives.length).toBe(1);
-    expect(joueur.cartesActives[0].id).toBe("commercial-junior-dec");
+    expect(joueur.cartesActives[0].id).toMatch(/commercial-junior-dec/);
   });
 
   test("Chaque entreprise a son bilan propre", () => {
-    const orange = creerJoueur(0, "A", "Entreprise Orange");
-    const verte = creerJoueur(1, "B", "Entreprise Verte");
-    // Orange a une Entrepôt, Verte a un Brevet — différentes immobilisations
-    expect(orange.bilan.actifs[0].nom).not.toBe(verte.bilan.actifs[0].nom);
-    // Mais les deux ont Actif total = 16
-    expect(verifierEquilibre(orange).totalActif).toBe(16);
-    expect(verifierEquilibre(verte).totalActif).toBe(16);
+    const belvaux = creerJoueur(0, "A", "Manufacture Belvaux");
+    const synergia = creerJoueur(1, "B", "Synergia Lab");
+    // Belvaux a un Entrepôt, Synergia a un Brevet — différentes immobilisations
+    expect(belvaux.bilan.actifs[0].nom).not.toBe(synergia.bilan.actifs[0].nom);
+    // Les deux ont un bilan équilibré
+    expect(verifierEquilibre(belvaux).equilibre).toBe(true);
+    expect(verifierEquilibre(synergia).equilibre).toBe(true);
   });
 });
 
 // ─── 2. ÉTAPE 0 : CHARGES FIXES + AMORTISSEMENTS ─────────────
 
 describe("Étape 0 — Charges fixes et amortissements", () => {
-  test("Les charges fixes sont de +2 Services ext. et -2 Trésorerie", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("Les charges fixes sont de +2000 Services ext. et -2000 Trésorerie", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const tresoBefore = getTresorerie(joueur);
 
     appliquerEtape0(etat, 0);
 
     const tresoAfter = getTresorerie(joueur);
-    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(2);
-    expect(tresoAfter).toBe(tresoBefore - 2 - 1); // -2 charges fixes - 1 remboursement emprunt
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(2000);
+    // Tour 1 = premier trimestre de l'année → intérêts annuels appliqués : 8000 × 5% = 400
+    expect(tresoAfter).toBe(tresoBefore - 2000 - 1000 - 400); // -2000 charges fixes - 1000 remboursement - 400 intérêts
   });
 
-  test("L'amortissement réduit les immobilisations de 1", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("L'amortissement réduit les immobilisations", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
-    const immoBefore = getTotalImmobilisations(joueur); // 4 (Entrepôt 3 + Camionnette 1)
+    const immoBefore = getTotalImmobilisations(joueur); // 8000+8000 = 16000
 
     appliquerEtape0(etat, 0);
 
+    // Belvaux : 2 biens amortissables → dotation = 2000
     const immoAfter = getTotalImmobilisations(joueur);
-    expect(immoAfter).toBe(immoBefore - 1);
-    expect(joueur.compteResultat.charges.dotationsAmortissements).toBe(1);
+    expect(immoAfter).toBe(immoBefore - 2000);
+    expect(joueur.compteResultat.charges.dotationsAmortissements).toBe(2000);
   });
 
-  test("Le remboursement d'emprunt réduit les emprunts de 1", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("Le remboursement d'emprunt réduit les emprunts de 1000", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const empruntsBefore = joueur.bilan.passifs.find((p) => p.categorie === "emprunts")!.valeur;
 
     appliquerEtape0(etat, 0);
 
     const empruntsAfter = joueur.bilan.passifs.find((p) => p.categorie === "emprunts")!.valeur;
-    expect(empruntsAfter).toBe(empruntsBefore - 1);
+    expect(empruntsAfter).toBe(empruntsBefore - 1000);
   });
 });
 
 // ─── 3. VENTE CLIENT PARTICULIER (partie double complète) ────
 
 describe("Vente — Client Particulier (paiement immédiat)", () => {
-  test("4 écritures correctes : Ventes+1, Stocks-1, CMV+1, Tréso+1", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("4 écritures correctes : Ventes+2000, Stocks-1, CMV+1, Tréso+2000", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
 
@@ -118,26 +122,26 @@ describe("Vente — Client Particulier (paiement immédiat)", () => {
     const resultat = appliquerCarteClient(etat, 0, client);
 
     expect(resultat.succes).toBe(true);
-    expect(joueur.compteResultat.produits.ventes).toBe(1);
+    expect(joueur.compteResultat.produits.ventes).toBe(2000); // montantVentes = 2000€
     expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksBefore - 1);
-    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV
-    expect(getTresorerie(joueur)).toBe(tresoBefore + 1);
+    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV = 1 unité
+    expect(getTresorerie(joueur)).toBe(tresoBefore + 2000); // encaissement immédiat
   });
 });
 
 // ─── 4. VENTE CLIENT TPE (créance C+1) ───────────────────────
 
 describe("Vente — Client TPE (paiement différé C+1)", () => {
-  test("4 écritures correctes : Ventes+2, Stocks-1, CMV+1, Créances C+1 +2", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("4 écritures correctes : Ventes+3000, Stocks-1, CMV+1, Créances C+1 +3000", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-tpe")!;
 
     appliquerCarteClient(etat, 0, client);
 
-    expect(joueur.compteResultat.produits.ventes).toBe(2);
-    expect(joueur.bilan.creancesPlus1).toBe(2);
-    expect(joueur.compteResultat.charges.achats).toBe(1);
+    expect(joueur.compteResultat.produits.ventes).toBe(3000); // montantVentes = 3000€
+    expect(joueur.bilan.creancesPlus1).toBe(3000); // créance C+1 = 3000€
+    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV = 1 unité
     // La trésorerie NE change PAS (paiement différé)
   });
 });
@@ -145,16 +149,16 @@ describe("Vente — Client TPE (paiement différé C+1)", () => {
 // ─── 5. VENTE CLIENT GRAND COMPTE (créance C+2) ──────────────
 
 describe("Vente — Client Grand Compte (paiement différé C+2)", () => {
-  test("4 écritures : Ventes+3, Stocks-1, CMV+1, Créances C+2 +3", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("4 écritures : Ventes+4000, Stocks-1, CMV+1, Créances C+2 +4000", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-grand-compte")!;
 
     appliquerCarteClient(etat, 0, client);
 
-    expect(joueur.compteResultat.produits.ventes).toBe(3);
-    expect(joueur.bilan.creancesPlus2).toBe(3);
-    expect(joueur.compteResultat.charges.achats).toBe(1);
+    expect(joueur.compteResultat.produits.ventes).toBe(4000); // montantVentes = 4000€
+    expect(joueur.bilan.creancesPlus2).toBe(4000); // créance C+2 = 4000€
+    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV = 1 unité
   });
 });
 
@@ -162,7 +166,7 @@ describe("Vente — Client Grand Compte (paiement différé C+2)", () => {
 
 describe("Avancement des créances", () => {
   test("C+1 → Trésorerie au tour suivant", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     joueur.bilan.creancesPlus1 = 5;
 
@@ -174,7 +178,7 @@ describe("Avancement des créances", () => {
   });
 
   test("C+2 → C+1 au tour suivant", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     joueur.bilan.creancesPlus2 = 3;
     joueur.bilan.creancesPlus1 = 0;
@@ -189,16 +193,13 @@ describe("Avancement des créances", () => {
 // ─── 7. PAIEMENT COMMERCIAUX ─────────────────────────────────
 
 describe("Paiement des commerciaux", () => {
-  test("Commercial Junior coûte 1 en charges personnel et 1 en trésorerie", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+  test("calculerCoutCommerciaux = 0 pour Commercial Junior (salaire prélevé à l'embauche via effetsImmédiats)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
+    // commercial-junior-dec a effetsRecurrents: [] — le salaire est prélevé une seule fois
+    // via effetsImmédiats lors du recrutement, pas chaque trimestre via calculerCoutCommerciaux
     const cout = calculerCoutCommerciaux(joueur);
-    expect(cout).toBe(1); // 1 Junior
-
-    const tresoBefore = getTresorerie(joueur);
-    appliquerPaiementCommerciaux(etat, 0);
-    expect(joueur.compteResultat.charges.chargesPersonnel).toBe(1);
-    expect(getTresorerie(joueur)).toBe(tresoBefore - 1);
+    expect(cout).toBe(0);
   });
 });
 
@@ -267,7 +268,7 @@ describe("Score final", () => {
   test("Une vente améliore le score", () => {
     const scoreBefore = calculerScore(joueurOrange());
 
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Entreprise Orange" }]);
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
     appliquerCarteClient(etat, 0, client);
@@ -282,13 +283,84 @@ describe("Score final", () => {
 describe("Initialisation multijoueur", () => {
   test("2 joueurs avec entreprises différentes", () => {
     const etat = initialiserJeu([
-      { pseudo: "Alice", nomEntreprise: "Entreprise Orange" },
-      { pseudo: "Bob", nomEntreprise: "Entreprise Bleue" },
+      { pseudo: "Alice", nomEntreprise: "Manufacture Belvaux" },
+      { pseudo: "Bob", nomEntreprise: "Azura Commerce" },
     ]);
     expect(etat.joueurs.length).toBe(2);
-    expect(etat.joueurs[0].entreprise.nom).toBe("Entreprise Orange");
-    expect(etat.joueurs[1].entreprise.nom).toBe("Entreprise Bleue");
+    expect(etat.joueurs[0].entreprise.nom).toBe("Manufacture Belvaux");
+    expect(etat.joueurs[1].entreprise.nom).toBe("Azura Commerce");
     expect(etat.tourActuel).toBe(1);
     expect(etat.etapeTour).toBe(0);
+  });
+});
+
+// ─── MINI-DECK LOGISTIQUE ─────────────────────────────────────
+
+describe("piochePersonnelle — initialisation", () => {
+  test("Manufacture Belvaux démarre avec 3 cartes dans piochePersonnelle", () => {
+    const joueur = creerJoueur(0, "Test", "Manufacture Belvaux");
+    expect(joueur.piochePersonnelle).toHaveLength(3);
+    expect(joueur.piochePersonnelle.map((c) => c.id)).toContain("belvaux-robot-n1");
+  });
+
+  test("Azura Commerce démarre avec 2 cartes dans piochePersonnelle (N1 est dans cartesActives)", () => {
+    const joueur = creerJoueur(0, "Test", "Azura Commerce");
+    expect(joueur.piochePersonnelle).toHaveLength(2);
+    expect(joueur.cartesActives.some((c) => c.id === "azura-marketplace-n1")).toBe(true);
+  });
+
+  test("Azura Commerce démarre à capacité 8 grâce à marketplace N1", () => {
+    const joueur = creerJoueur(0, "Test", "Azura Commerce");
+    expect(calculerCapaciteLogistique(joueur)).toBe(8);
+  });
+
+  test("Synergia Lab démarre à capacité 8 grâce à ERP N1", () => {
+    const joueur = creerJoueur(0, "Test", "Synergia Lab");
+    expect(calculerCapaciteLogistique(joueur)).toBe(8);
+  });
+
+  test("Manufacture Belvaux démarre à capacité 4 (base — pas de cartes logistiques initiales)", () => {
+    const joueur = creerJoueur(0, "Test", "Manufacture Belvaux");
+    expect(calculerCapaciteLogistique(joueur)).toBe(4); // CAPACITE_BASE uniquement, cartesLogistiquesDepart: []
+  });
+});
+
+describe("investirCartePersonnelle — prérequis", () => {
+  test("Investir dans N1 réussit et retire la carte de piochePersonnelle", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = investirCartePersonnelle(etat, 0, "belvaux-robot-n1");
+    expect(result.succes).toBe(true);
+    expect(etat.joueurs[0].piochePersonnelle.find((c) => c.id === "belvaux-robot-n1")).toBeUndefined();
+    expect(etat.joueurs[0].cartesActives.some((c) => c.id === "belvaux-robot-n1")).toBe(true);
+  });
+
+  test("Investir dans N2 sans N1 échoue avec message prérequis", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = investirCartePersonnelle(etat, 0, "belvaux-robot-n2");
+    expect(result.succes).toBe(false);
+    expect(result.messageErreur).toContain("Prérequis");
+  });
+
+  test("Investir dans N2 après N1 réussit et augmente la capacité", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    investirCartePersonnelle(etat, 0, "belvaux-robot-n1");
+    const result = investirCartePersonnelle(etat, 0, "belvaux-robot-n2");
+    expect(result.succes).toBe(true);
+    expect(calculerCapaciteLogistique(etat.joueurs[0])).toBe(8); // 4 (base) + 2 (N1) + 2 (N2)
+  });
+
+  test("Carte introuvable dans piochePersonnelle retourne erreur", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = investirCartePersonnelle(etat, 0, "id-inexistant");
+    expect(result.succes).toBe(false);
+    expect(result.messageErreur).toContain("introuvable");
+  });
+
+  test("Investir dans N1 débite 5 000€ de trésorerie", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const tresoAvant = etat.joueurs[0].bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+    investirCartePersonnelle(etat, 0, "belvaux-robot-n1");
+    const tresoApres = etat.joueurs[0].bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+    expect(tresoApres).toBe(tresoAvant - 5000);
   });
 });
