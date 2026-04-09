@@ -36,7 +36,14 @@
 // Capitaux propres ajustés pour équilibrer chaque bilan (20 ou 17)
 // ============================================================
 
-import { EntrepriseTemplate, EffetCarte } from "@/lib/game-engine/types";
+import { EntrepriseTemplate, EffetCarte, CarteDecision } from "../types";
+import { CARTES_LOGISTIQUES } from "./cartes";
+
+function carte(id: string): CarteDecision {
+  const c = CARTES_LOGISTIQUES.find((c) => c.id === id);
+  if (!c) throw new Error(`[entreprises.ts] Carte logistique introuvable : "${id}"`);
+  return c;
+}
 
 export const ENTREPRISES: EntrepriseTemplate[] = [
   {
@@ -45,7 +52,7 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     icon: "🏭",
     type: "Production",
     specialite: "⚡ Produit à chaque tour",
-    // Spécialité active : +1 000 € productionStockee, +1 000 € stocks par trimestre
+    // Spécialité active : +1 000 € productionStockée, +1 000 € stocks par trimestre
     effetsPassifs: [
       { poste: "productionStockee", delta: 1000 },
       { poste: "stocks", delta: 1000 },
@@ -70,6 +77,12 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Emprunts", valeur: 8000 },
       // DETTES FOURNISSEURS
       { nom: "Dettes fournisseurs", valeur: 0 },
+    ],
+    cartesLogistiquesDepart: [],
+    cartesLogistiquesDisponibles: [
+      carte("belvaux-robot-n1"),
+      carte("belvaux-robot-n2"),
+      carte("belvaux-entrepot"),
     ],
   },
 
@@ -101,6 +114,12 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Emprunts", valeur: 8000 },
       { nom: "Dettes fournisseurs", valeur: 0 },
     ],
+    cartesLogistiquesDepart: [],
+    cartesLogistiquesDisponibles: [
+      carte("veloce-vehicule-n2"),
+      carte("veloce-dispatch-n1"),
+      carte("veloce-dispatch-n2"),
+    ],
   },
 
   {
@@ -129,6 +148,13 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Capitaux propres", valeur: 20000 },
       { nom: "Emprunts", valeur: 8000 },
       { nom: "Dettes fournisseurs", valeur: 0 },
+    ],
+    cartesLogistiquesDepart: [
+      carte("azura-marketplace-n1"),  // actif dès T1 — capacité 4→8
+    ],
+    cartesLogistiquesDisponibles: [
+      carte("azura-marketplace-n2"),
+      carte("azura-soustraitance"),
     ],
   },
 
@@ -161,6 +187,13 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Capitaux propres", valeur: 17000 },
       { nom: "Emprunts", valeur: 8000 },
       { nom: "Dettes fournisseurs", valeur: 0 },
+    ],
+    cartesLogistiquesDepart: [
+      carte("synergia-erp-n1"),  // actif dès T1 — capacité 4→8
+    ],
+    cartesLogistiquesDisponibles: [
+      carte("synergia-erp-n2"),
+      carte("synergia-partenariat"),
     ],
   },
 ];
