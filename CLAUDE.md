@@ -133,6 +133,34 @@ git commit -m "type: description"
 
 ---
 
+## Superpowers Skills
+
+### Déclencheurs automatiques
+
+| Situation | Skill à invoquer |
+|---|---|
+| Nouvelle fonctionnalité / mécanique de jeu | `brainstorming` en premier |
+| Bug / comportement inattendu | `systematic-debugging` en premier |
+| Tâche non triviale (> 2 fichiers modifiés) | `writing-plans` avant le code |
+| Avant d'affirmer "c'est corrigé" / "c'est fait" | `verification-before-completion` |
+| Exécuter un plan existant | `executing-plans` |
+
+### Cohabitation avec le workflow existant
+
+Les skills s'intercalent sans remplacer les règles actuelles :
+
+```
+1. Lire tasks/lessons.md                          ← inchangé
+2. [brainstorming ou writing-plans si applicable] ← superpowers
+3. Planifier dans tasks/todo.md                   ← inchangé
+4. Implémenter
+5. [verification-before-completion]               ← superpowers
+6. npx tsc --noEmit                               ← inchangé
+7. Mettre à jour todo.md + lessons.md             ← inchangé
+```
+
+---
+
 ## Supabase — tables principales
 
 - `profiles` : utilisateurs (organization_id, display_name, org_name, org_type)
