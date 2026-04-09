@@ -137,6 +137,7 @@ export function LeftPanel({
                 </div>
                 <button
                   onClick={() => onApplyEntry(firstPending.id)}
+                  aria-label={`Appliquer l'écriture comptable : ${firstPending.id}`}
                   className="w-full rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
                 >
                   Appliquer cette écriture
@@ -151,6 +152,7 @@ export function LeftPanel({
             {allApplied && (
               <button
                 onClick={onConfirmStep}
+                aria-label="Confirmer l’étape et passer à la suivante"
                 className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
               >
                 Confirmer l’étape ✓
@@ -249,12 +251,14 @@ export function LeftPanel({
                 <div className="flex gap-2">
                   <button
                     onClick={onSkipAchat}
+                    aria-label="Passer l'étape d'achat de marchandises"
                     className="flex-1 rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/[0.08]"
                   >
                     Passer
                   </button>
                   <button
                     onClick={onLaunchAchat}
+                    aria-label="Lancer l'achat de marchandises"
                     className="flex-1 rounded-lg bg-cyan-400 px-2 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-300"
                   >
                     Lancer

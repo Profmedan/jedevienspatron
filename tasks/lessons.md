@@ -204,6 +204,18 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 **Pattern** : helper `lib/rate-limit.ts` → `checkRateLimit(routeKey, ip)` retourne `boolean`. IP extraite de `x-forwarded-for` (header injecté par Vercel).
 **Fail open** : si Supabase indisponible, on laisse passer (ne jamais bloquer les utilisateurs légitimes à cause d'une erreur de rate limit).
 
+### L25i — CSRF : vérifier l'origin dans le middleware, pas dans chaque route
+**Approche** : centraliser la protection CSRF dans `middleware.ts` pour les routes POST sensibles. Un seul endroit à maintenir, appliqué avant même que la route s'exécute.
+**Localhost** : toujours autoriser `localhost` et `127.0.0.1` pour le dev local. Sans ça, `npm run dev` est bloqué.
+**Fail safe** : si `origin` est absent (ex: requête serveur-à-serveur), on laisse passer — seules les requêtes avec un origin non autorisé sont bloquées.
+
+### L25j — Open redirect : tronquer query string et fragment, valider le chemin
+**Erreur** : `redirectTo.startsWith("/")` insuffisant — `?redirectTo=/dashboard?next=https://evil.com` passait la validation.
+**Fix** : `split("?")[0].split("#")[0]` pour ne garder que le chemin, puis regex `/^\/[a-zA-Z0-9/_\-.]*$/` pour valider les caractères.
+
+### L25k — Accessibilité : aria-live="assertive" pour les erreurs d'achat
+**Règle** : `aria-live="polite"` attend une pause pour annoncer. Pour les erreurs critiques (paiement, quota), utiliser `aria-live="assertive"` pour une annonce immédiate aux lecteurs d'écran.
+
 ### L25g — Operator precedence : || vs Math.max
 **Erreur** : `dettes + joueur.bilan.decouvert || 1` — le `||` opère sur le résultat de l'addition, pas sur `decouvert` seul. Si la somme vaut 0, on obtient 1 (correct), mais si `decouvert` est NaN, `NaN || 1 = 1` masque le bug.
 **Fix** : toujours utiliser `Math.max(1, expr)` pour les diviseurs qui ne doivent pas être 0.

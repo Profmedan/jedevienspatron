@@ -88,7 +88,7 @@ export default function PacksCheckoutClient({
         <div
           className="rounded-2xl border border-rose-400/30 bg-rose-400/10 px-5 py-4 text-sm text-rose-50"
           role="alert"
-          aria-live="polite"
+          aria-live="assertive"
         >
           {error}
         </div>
