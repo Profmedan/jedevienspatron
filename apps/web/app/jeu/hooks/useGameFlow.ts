@@ -6,7 +6,7 @@ import {
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
-  tirerCartesDecision, acheterCarteDecision,
+  tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
 } from "@jedevienspatron/game-engine";
@@ -167,6 +167,7 @@ interface UseGameFlowReturn {
   skipAchat: () => void;
   launchDecision: () => void;
   skipDecision: () => void;
+  handleInvestirPersonnel: (carteId: string) => void;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────
@@ -600,6 +601,18 @@ export function useGameFlow({
     setActiveStep(buildActiveStep(etat, mods, next, 6));
   }
 
+  function handleInvestirPersonnel(carteId: string) {
+    if (!etat) return;
+    const next = cloneEtat(etat);
+    const result = investirCartePersonnelle(next, next.joueurActif, carteId);
+    if (!result.succes) {
+      setDecisionError(result.messageErreur ?? "Erreur investissement logistique");
+      return;
+    }
+    setDecisionError(null);
+    setActiveStep(buildActiveStep(etat, result.modifications, next, 6));
+  }
+
   function skipDecision() {
     if (!etat) return;
     if (etat.etapeTour === 6 && subEtape6 === "recrutement") {
@@ -657,5 +670,6 @@ export function useGameFlow({
     skipAchat,
     launchDecision,
     skipDecision,
+    handleInvestirPersonnel,
   };
 }

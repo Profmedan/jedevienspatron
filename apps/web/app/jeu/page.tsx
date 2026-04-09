@@ -323,6 +323,7 @@ export default function JeuPage() {
             modalEtapeEnAttente={flow.modalEtapeEnAttente}
             onCloseModal={() => flow.setModalEtapeEnAttente(null)}
             onDemanderEmprunt={() => { flow.setReponseEmprunt(null); flow.setShowDemandeEmprunt(true); }}
+            onInvestirPersonnel={flow.handleInvestirPersonnel}
           />
         </div>
 
