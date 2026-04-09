@@ -171,3 +171,39 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 - Pierre utilise `/jeu`, pas `/jeu-v2`
 - **Toujours appliquer les correctifs sur les DEUX fichiers**
 - Vérifier dans quel fichier le joueur est redirigé pour éviter de corriger le mauvais
+
+## L25 — 2026-04-09 : Code review — erreurs détectées et corrigées
+
+### L25a — Routes API publiques : valider TOUTES les entrées
+**Erreur** : `/api/sessions/results` n'avait aucune validation des entrées (pseudo, scoreTotal, etatFinal). N'importe qui pouvait envoyer des données arbitraires.
+**Règle** : chaque route API publique doit valider : types, longueurs max, format attendu. Utiliser une fonction de validation ou zod. Maximum payload size aussi (etatFinal < 100KB).
+
+### L25b — Opérations atomiques obligatoires pour les compteurs partagés
+**Erreur** : bypass codes utilisaient un pattern check-puis-update (SELECT → UPDATE) non atomique. Race condition possible sur les codes à usage limité.
+**Règle** : tout compteur partagé (crédits, quotas, use_count) doit utiliser une fonction PL/pgSQL avec UPDATE ... WHERE condition atomique. Pattern validé : `consume_session_credit` et maintenant `validate_bypass_code`.
+
+### L25c — Ne pas exposer error.message au client
+**Erreur** : `creditsError.message` et `error.message` (Supabase) exposés directement dans les réponses JSON.
+**Règle** : toujours logger l'erreur côté serveur (`console.error`), retourner un message générique au client.
+
+### L25d — Vérifier les env vars avant utilisation
+**Erreur** : `process.env.STRIPE_WEBHOOK_SECRET!` avec assertion `!` sans vérification d'existence.
+**Règle** : toujours vérifier la présence de la variable AVANT utilisation. Retourner 500 avec message générique si manquante.
+
+### L25e — @types/react doit matcher la version runtime
+**Erreur** : `@types/react@^19` installé alors que le runtime est React 18.3.1.
+**Règle** : aligner les versions @types sur la version runtime. Mismatch = risque de types fantômes (API React 19 acceptée par TS mais crash au runtime).
+
+### L25f — calculerInterets ÷400 = taux trimestriel (intentionnel ?)
+**Observation** : `empruntsTotal * taux / 400` avec `TAUX_INTERET_ANNUEL = 5`. Le /400 = /100/4 donne le taux trimestriel (1.25%). Fonction exportée mais non appelée (dead code).
+**Règle** : les fonctions dead code exportées doivent être documentées ou supprimées. Ajouter un commentaire `/** @deprecated Non utilisée — taux trimestriel */` si conservée.
+
+### L25h — Rate limiting sans dépendance externe : utiliser Supabase
+**Approche** : table `rate_limits` + fonction PL/pgSQL `check_rate_limit(key, window_secs, max_hits)` atomique (INSERT ... ON CONFLICT DO UPDATE). Backing store dans Supabase déjà présent.
+**Avantages** : zéro dépendance ajoutée, fonctionne sur toutes les instances Vercel (stateless safe), purge automatique des entrées expirées dans la même transaction.
+**Pattern** : helper `lib/rate-limit.ts` → `checkRateLimit(routeKey, ip)` retourne `boolean`. IP extraite de `x-forwarded-for` (header injecté par Vercel).
+**Fail open** : si Supabase indisponible, on laisse passer (ne jamais bloquer les utilisateurs légitimes à cause d'une erreur de rate limit).
+
+### L25g — Operator precedence : || vs Math.max
+**Erreur** : `dettes + joueur.bilan.decouvert || 1` — le `||` opère sur le résultat de l'addition, pas sur `decouvert` seul. Si la somme vaut 0, on obtient 1 (correct), mais si `decouvert` est NaN, `NaN || 1 = 1` masque le bug.
+**Fix** : toujours utiliser `Math.max(1, expr)` pour les diviseurs qui ne doivent pas être 0.

@@ -137,7 +137,7 @@ export function calculerIndicateurs(joueur: Joueur): IndicateursFinanciers {
 
   // Liquidité = Actif circulant / Dettes court terme
   const actifCirculant = stocks + creances + tresorerie;
-  const dettesCourtTerme = dettes + joueur.bilan.decouvert || 1;
+  const dettesCourtTerme = Math.max(1, dettes + joueur.bilan.decouvert);
   const ratioLiquidite = actifCirculant / dettesCourtTerme;
 
   // Solvabilité = (Capitaux propres + Résultat) / Total Passif × 100

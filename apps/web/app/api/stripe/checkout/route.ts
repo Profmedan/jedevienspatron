@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       .from("packs")
       .select("*")
       .eq("id", pack_id)
+      .eq("actif", true)
       .single();
 
     if (packError || !pack) {

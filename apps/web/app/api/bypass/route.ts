@@ -10,9 +10,20 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    // ─── Rate limiting : 10 tentatives par minute par IP ──────
+    const ip = getClientIp(req);
+    const allowed = await checkRateLimit("bypass", ip);
+    if (!allowed) {
+      return NextResponse.json(
+        { valid: false, reason: "trop_de_requetes" },
+        { status: 429 }
+      );
+    }
+
     const { code } = await req.json();
     if (!code || typeof code !== "string") {
       return NextResponse.json({ valid: false, reason: "code_manquant" }, { status: 400 });
@@ -25,35 +36,38 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Récupérer le code depuis Supabase
-    const { data, error } = await supabase
-      .from("bypass_codes")
-      .select("code, max_uses, use_count")
-      .eq("code", trimmed)
-      .single();
+    // Validation atomique via fonction PL/pgSQL (évite les race conditions)
+    const { data: isValid, error } = await supabase.rpc("validate_bypass_code", {
+      p_code: trimmed,
+    });
 
-    if (error || !data) {
-      return NextResponse.json({ valid: false, reason: "code_inconnu" });
+    if (error) {
+      console.error("Erreur validation bypass code:", error);
+      // Vérifier si le code existe pour donner une raison précise
+      const { data: codeExists } = await supabase
+        .from("bypass_codes")
+        .select("code")
+        .eq("code", trimmed)
+        .single();
+
+      if (!codeExists) {
+        return NextResponse.json({ valid: false, reason: "code_inconnu" });
+      }
+      return NextResponse.json({ valid: false, reason: "erreur_serveur" }, { status: 500 });
     }
 
-    // Vérifier la limite d'utilisations
-    const illimite = data.max_uses === -1;
-    const quotaDisponible = illimite || data.use_count < data.max_uses;
+    if (!isValid) {
+      // Le code existe mais quota épuisé (ou code inconnu pour la RPC)
+      // Distinguer les deux cas
+      const { data: codeData } = await supabase
+        .from("bypass_codes")
+        .select("code, max_uses, use_count")
+        .eq("code", trimmed)
+        .single();
 
-    if (!quotaDisponible) {
-      return NextResponse.json({ valid: false, reason: "quota_epuise" });
-    }
-
-    // Incrémenter le compteur atomiquement
-    const { error: updateError } = await supabase
-      .from("bypass_codes")
-      .update({ use_count: data.use_count + 1 })
-      .eq("code", trimmed)
-      // Garde-fou : s'assurer que le compteur n'a pas été dépassé entre-temps
-      .lt("use_count", illimite ? 999999999 : data.max_uses);
-
-    if (updateError) {
-      // Race condition : quota dépassé entre la lecture et l'écriture
+      if (!codeData) {
+        return NextResponse.json({ valid: false, reason: "code_inconnu" });
+      }
       return NextResponse.json({ valid: false, reason: "quota_epuise" });
     }
 

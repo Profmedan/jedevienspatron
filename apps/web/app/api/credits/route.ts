@@ -42,7 +42,7 @@ export async function GET() {
       // PGRST116 = pas de ligne trouvée (c'est normal si pas de crédits)
       console.error("Erreur récupération crédits:", creditsError);
       return NextResponse.json(
-        { error: creditsError.message },
+        { error: "Erreur lors de la récupération des crédits" },
         { status: 500 }
       );
     }

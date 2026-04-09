@@ -19,10 +19,18 @@ export async function POST(request: NextRequest) {
     // Vérifie la signature Stripe
     let event: Stripe.Event;
     try {
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret) {
+        console.error("STRIPE_WEBHOOK_SECRET non configuré");
+        return NextResponse.json(
+          { error: "Configuration serveur incomplète" },
+          { status: 500 }
+        );
+      }
       event = getStripe().webhooks.constructEvent(
         body,
         signature,
-        process.env.STRIPE_WEBHOOK_SECRET!
+        webhookSecret
       );
     } catch (err) {
       console.error("Erreur vérification signature Stripe:", err);
