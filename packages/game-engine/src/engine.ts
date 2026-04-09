@@ -235,7 +235,8 @@ export function creerJoueur(
     // Commercial Junior par défaut : -1 chargesPersonnel, -1 tresorerie, +2 clients Particuliers/tour
     cartesActives: (() => {
       const comJunior = CARTES_DECISION.find((c) => c.id === CARTE_IDS.COMMERCIAL_JUNIOR);
-      return comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${_nextCommercialId++}` }] : [];
+      const base = comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${_nextCommercialId++}` }] : [];
+      return [...base, ...(template.cartesLogistiquesDepart ?? [])];
     })(),
     // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
     // quelques clients avant le début du jeu — le joueur voit immédiatement
@@ -247,6 +248,7 @@ export function creerJoueur(
     elimine: false,
     publicitéCeTour: false,
     clientsPerdusCeTour: 0,
+    piochePersonnelle: template.cartesLogistiquesDisponibles ?? [],
   };
 }
 
@@ -814,6 +816,66 @@ export function acheterCarteDecision(
   if (carte.id === CARTE_IDS.LEVEE_DE_FONDS) {
     joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== CARTE_IDS.LEVEE_DE_FONDS);
   }
+
+  return { succes: true, modifications };
+}
+
+// ─── INVESTISSEMENT MINI-DECK LOGISTIQUE ─────────────────────
+
+/**
+ * Investit dans une carte du mini-deck logistique personnel du joueur.
+ * Vérifie le prérequis, retire la carte de piochePersonnelle, applique les effets immédiats.
+ */
+export function investirCartePersonnelle(
+  etat: EtatJeu,
+  joueurIdx: number,
+  carteId: string
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const carteIdx = joueur.piochePersonnelle.findIndex((c) => c.id === carteId);
+
+  if (carteIdx === -1) {
+    return {
+      succes: false,
+      messageErreur: `Carte "${carteId}" introuvable dans votre mini-deck.`,
+      modifications: [],
+    };
+  }
+
+  const carte = joueur.piochePersonnelle[carteIdx];
+
+  // Vérification du prérequis
+  if (carte.prerequis && !joueur.cartesActives.some((c) => c.id === carte.prerequis)) {
+    const carteRequise = joueur.piochePersonnelle.find((c) => c.id === carte.prerequis);
+    const nomRequis = carteRequise?.titre ?? carte.prerequis;
+    return {
+      succes: false,
+      messageErreur: `Prérequis non atteint : investissez d'abord dans "${nomRequis}".`,
+      modifications: [],
+    };
+  }
+
+  const modifications: ResultatAction["modifications"] = [];
+
+  // Appliquer les effets immédiats
+  for (const effet of carte.effetsImmédiats) {
+    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(
+      joueur,
+      effet.poste,
+      effet.delta
+    );
+    modifications.push({
+      joueurId: joueur.id,
+      poste: effet.poste,
+      ancienneValeur,
+      nouvelleValeur,
+      explication: `${carte.titre} — investissement logistique`,
+    });
+  }
+
+  // Retirer de piochePersonnelle, ajouter à cartesActives
+  joueur.piochePersonnelle = joueur.piochePersonnelle.filter((_, i) => i !== carteIdx);
+  joueur.cartesActives.push(carte);
 
   return { succes: true, modifications };
 }
