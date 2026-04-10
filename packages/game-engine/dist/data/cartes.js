@@ -4,7 +4,7 @@
 // Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CARTES_EVENEMENTS = exports.CARTES_DECISION = exports.CARTES_CLIENTS = exports.CARTES_COMMERCIAUX = void 0;
+exports.CARTES_LOGISTIQUES = exports.CARTES_EVENEMENTS = exports.CARTES_DECISION = exports.CARTES_CLIENTS = exports.CARTES_COMMERCIAUX = void 0;
 // ─── CARTES COMMERCIAUX ─────────────────────────────────────
 exports.CARTES_COMMERCIAUX = [
     {
@@ -802,6 +802,169 @@ exports.CARTES_EVENEMENTS = [
             { poste: "tresorerie", delta: -3000 }, // CRÉDIT Trésorerie
         ],
         annulableParAssurance: true,
+    },
+];
+// ── MINI-DECK LOGISTIQUE PAR ENTREPRISE ────────────────────────
+// Ces cartes ne font PAS partie de la pioche globale.
+// Elles sont assignées via EntrepriseTemplate.cartesLogistiquesDisponibles.
+exports.CARTES_LOGISTIQUES = [
+    // ── Manufacture Belvaux (Production) ───────────────────────
+    {
+        type: "decision",
+        id: "belvaux-robot-n1",
+        titre: "Robot de manutention",
+        description: "Automatisez la préparation des commandes — +2 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Manufacture Belvaux",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "belvaux-robot-n2",
+        titre: "Robot de manutention N2",
+        description: "Doublez la ligne robotisée — +2 ventes/trim supplémentaires. Investissement : Immos +5 000 €, Tréso −5 000 €. Nécessite : Robot de manutention. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Manufacture Belvaux",
+        prerequis: "belvaux-robot-n1",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "belvaux-entrepot",
+        titre: "Entrepôt automatisé",
+        description: "Optimisez le stockage et l'expédition — +2 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Manufacture Belvaux",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    // ── Véloce Transports (Logistique) ─────────────────────────
+    {
+        type: "decision",
+        id: "veloce-vehicule-n2",
+        titre: "2ème véhicule",
+        description: "Ajoutez un second véhicule à la flotte — +2 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "vehicule",
+        entrepriseExclusive: "Véloce Transports",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "veloce-dispatch-n1",
+        titre: "Plateforme dispatch",
+        description: "Centralisez la gestion des tournées — +2 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Véloce Transports",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "veloce-dispatch-n2",
+        titre: "Plateforme dispatch N2",
+        description: "Étendez la plateforme à la gestion multi-dépôts — +2 ventes/trim supplémentaires. Investissement : Immos +5 000 €, Tréso −5 000 €. Nécessite : Plateforme dispatch. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Véloce Transports",
+        prerequis: "veloce-dispatch-n1",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    // ── Azura Commerce (Commerce) ───────────────────────────────
+    {
+        type: "decision",
+        id: "azura-marketplace-n1",
+        titre: "Marketplace (incluse)",
+        description: "Plateforme e-commerce de base — +4 ventes/trim. Investissement initial inclus dans le capital de départ.",
+        categorie: "investissement",
+        entrepriseExclusive: "Azura Commerce",
+        effetsImmédiats: [],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "azura-marketplace-n2",
+        titre: "Marketplace N2",
+        description: "Ouvrez de nouveaux canaux de vente en ligne — +4 ventes/trim supplémentaires. Investissement : Immos +5 000 €, Tréso −5 000 €. Nécessite : Marketplace. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Azura Commerce",
+        prerequis: "azura-marketplace-n1",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "azura-soustraitance",
+        titre: "Sous-traitance livraison",
+        description: "Externalisez la logistique à un prestataire — +4 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Azura Commerce",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    // ── Synergia Lab (Innovation) ───────────────────────────────
+    {
+        type: "decision",
+        id: "synergia-erp-n1",
+        titre: "ERP logistique (inclus)",
+        description: "Module de gestion des flux de base — +4 ventes/trim. Investissement initial inclus dans le capital de départ.",
+        categorie: "investissement",
+        entrepriseExclusive: "Synergia Lab",
+        effetsImmédiats: [],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "synergia-erp-n2",
+        titre: "ERP logistique N2",
+        description: "Activez les modules avancés (prévisions, automatisation) — +4 ventes/trim supplémentaires. Investissement : Immos +5 000 €, Tréso −5 000 €. Nécessite : ERP logistique. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Synergia Lab",
+        prerequis: "synergia-erp-n1",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
+    },
+    {
+        type: "decision",
+        id: "synergia-partenariat",
+        titre: "Partenariat logistique",
+        description: "Nouez un accord avec un opérateur externe — +4 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+        categorie: "investissement",
+        entrepriseExclusive: "Synergia Lab",
+        effetsImmédiats: [
+            { poste: "immobilisations", delta: 5000 },
+            { poste: "tresorerie", delta: -5000 },
+        ],
+        effetsRecurrents: [],
     },
 ];
 //# sourceMappingURL=cartes.js.map

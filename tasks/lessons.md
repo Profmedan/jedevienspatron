@@ -219,3 +219,12 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 ### L25g — Operator precedence : || vs Math.max
 **Erreur** : `dettes + joueur.bilan.decouvert || 1` — le `||` opère sur le résultat de l'addition, pas sur `decouvert` seul. Si la somme vaut 0, on obtient 1 (correct), mais si `decouvert` est NaN, `NaN || 1 = 1` masque le bug.
 **Fix** : toujours utiliser `Math.max(1, expr)` pour les diviseurs qui ne doivent pas être 0.
+
+## L26 — 2026-04-10 : Unités silencieuses — stocks 1 € vs stocks 1 000 €
+**Erreur** : `appliquerAchatMarchandises` et `appliquerCarteClient` travaillaient en unités à 1 € (ex: `push("stocks", quantite)` où quantite=2 → 2 € de stock), alors que le bilan initial (`Belvaux stocks 4 000 €`) et les cartes décision (`+5000`, `+2000` sur stocks) utilisaient déjà l'euro comme unité. Résultat : 1 achat de 2 unités coûtait 2 € au joueur mais ajoutait 2 € (= 0,002 unité "carte") au bilan. Incohérence silencieuse — aucun test ne l'attrapait car les 4 tests de vente vérifiaient `Stocks-1`/`CMV+1` en cohérence interne.
+**Fix** : constante `PRIX_UNITAIRE_MARCHANDISE = 1000` dans `types.ts`, multiplier par elle dans les deux fonctions, mettre à jour les 4 tests.
+**Règle** : quand une même constante (ici le stock) est manipulée dans plusieurs fichiers, **toujours vérifier l'unité** en comparant les valeurs réelles. Si un bilan initial a 4 000 et qu'un achat ajoute 2, il y a un bug silencieux. Chercher aussi tous les `push("stocks", ...)` et s'assurer que les nombres sont du même ordre de grandeur (milliers ou unités, pas un mélange).
+
+## L27 — 2026-04-10 : Doubler les tests sur les tests "cohérence interne"
+**Observation** : les 4 tests de vente vérifiaient que `Stocks -1` et `CMV +1` → ça passait parce que c'était interne à une seule fonction. Aucun test ne faisait `achat puis vente` pour vérifier que les unités matchaient entre fonctions.
+**Règle** : pour chaque domaine (stock, trésorerie, capitaux), ajouter au moins un test d'intégration qui enchaîne deux fonctions et vérifie que les unités sont cohérentes.

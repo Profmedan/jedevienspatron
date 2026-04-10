@@ -19,6 +19,7 @@ exports.genererClientsSpecialite = genererClientsSpecialite;
 exports.obtenirCarteRecrutement = obtenirCarteRecrutement;
 exports.tirerCartesDecision = tirerCartesDecision;
 exports.acheterCarteDecision = acheterCarteDecision;
+exports.investirCartePersonnelle = investirCartePersonnelle;
 exports.appliquerCarteEvenement = appliquerCarteEvenement;
 exports.verifierFinTour = verifierFinTour;
 exports.cloturerAnnee = cloturerAnnee;
@@ -197,7 +198,8 @@ function creerJoueur(id, pseudo, nomEntreprise) {
         // Commercial Junior par défaut : -1 chargesPersonnel, -1 tresorerie, +2 clients Particuliers/tour
         cartesActives: (() => {
             const comJunior = cartes_1.CARTES_DECISION.find((c) => c.id === CARTE_IDS.COMMERCIAL_JUNIOR);
-            return comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${_nextCommercialId++}` }] : [];
+            const base = comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${_nextCommercialId++}` }] : [];
+            return [...base, ...(template.cartesLogistiquesDepart ?? [])];
         })(),
         // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
         // quelques clients avant le début du jeu — le joueur voit immédiatement
@@ -209,6 +211,7 @@ function creerJoueur(id, pseudo, nomEntreprise) {
         elimine: false,
         publicitéCeTour: false,
         clientsPerdusCeTour: 0,
+        piochePersonnelle: template.cartesLogistiquesDisponibles ?? [],
     };
 }
 function initialiserJeu(joueursDefs, nbToursMax = 12 // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
@@ -236,20 +239,21 @@ function appliquerEtape0(etat, joueurIdx) {
     const joueur = etat.joueurs[joueurIdx];
     const modifications = [];
     const push = makePush(joueur, modifications);
-    // 0. Agios bancaires sur découvert (AVANT remboursement : les intérêts s'ajoutent au découvert)
+    // 0. Agios bancaires sur découvert (AVANT remboursement)
+    // Agios = 10% du découvert, arrondi à la centaine supérieure — prélevés sur la trésorerie.
+    // Si la trésorerie est insuffisante, elle tombe en négatif → découvert généré automatiquement.
     if (joueur.bilan.decouvert > 0) {
-        // Agios = 10% du découvert, arrondi au millier supérieur, minimum 1 000 €
-        const agios = Math.max(1000, Math.ceil(joueur.bilan.decouvert * 0.10 / 1000) * 1000);
-        push("chargesInteret", agios, `Agios bancaires : 10% de ton découvert de ${joueur.bilan.decouvert} € = ${agios} € d'intérêts — la banque te pénalise pour ta trésorerie négative`);
-        push("decouvert", agios, `Agios ajoutés au découvert bancaire (+${agios} €) — tu dois rembourser davantage`);
+        const agios = Math.ceil(joueur.bilan.decouvert * 0.10 / 100) * 100;
+        push("chargesInteret", agios, `Agios bancaires : 10% de ton découvert de ${joueur.bilan.decouvert} € = ${agios} € — prélevés sur ta trésorerie`);
+        push("tresorerie", -agios, `Agios bancaires débités de ta trésorerie (-${agios} €) — si elle est insuffisante, tu bascules en découvert`);
     }
     // 0b. Intérêts annuels sur emprunt (tous les 4 trimestres = 1 fois/an)
+    // Intérêt = taux × capital, arrondi à la centaine supérieure — sans minimum artificiel.
     const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
     if (empruntsPoste && empruntsPoste.valeur > 0 && etat.tourActuel % types_1.INTERET_EMPRUNT_FREQUENCE === 1) {
-        // Intérêt simplifié : 5% arrondi au millier supérieur (minimum 1 000 €)
-        const interetEmprunt = Math.max(1000, Math.ceil(empruntsPoste.valeur * types_1.TAUX_INTERET_ANNUEL / 100));
-        push("chargesInteret", interetEmprunt, `Intérêts annuels sur emprunt de ${empruntsPoste.valeur} : ${types_1.TAUX_INTERET_ANNUEL}% = ${interetEmprunt} — la banque facture ses intérêts une fois par an`);
-        push("tresorerie", -interetEmprunt, `Paiement des intérêts d'emprunt : -${interetEmprunt} Trésorerie`);
+        const interetEmprunt = Math.ceil(empruntsPoste.valeur * types_1.TAUX_INTERET_ANNUEL / 100 / 100) * 100;
+        push("chargesInteret", interetEmprunt, `Intérêts annuels sur emprunt de ${empruntsPoste.valeur} € : ${types_1.TAUX_INTERET_ANNUEL}% = ${interetEmprunt} € — la banque facture ses intérêts une fois par an`);
+        push("tresorerie", -interetEmprunt, `Paiement des intérêts d'emprunt : -${interetEmprunt} € sur ta trésorerie`);
     }
     // 1. Remboursement découvert PROGRESSIF (max REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR par trimestre)
     if (joueur.bilan.decouvert > 0) {
@@ -348,14 +352,16 @@ function appliquerAchatMarchandises(etat, joueurIdx, quantite, modePaiement) {
     if (quantite <= 0)
         return { succes: true, modifications };
     const push = makePush(joueur, modifications);
-    // Stocks +quantite
-    push("stocks", quantite, `Achat de ${quantite} unité(s) de marchandises`);
-    // Paiement
+    // 1 unité physique de marchandise = PRIX_UNITAIRE_MARCHANDISE (1 000 €) de valeur comptable
+    const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE;
+    // DÉBIT 37 Stocks de marchandises (Actif +)
+    push("stocks", montant, `Achat de ${quantite} unité(s) de marchandises (${montant} €)`);
+    // CRÉDIT : trésorerie (comptant) ou dettes fournisseurs (à crédit)
     if (modePaiement === "tresorerie") {
-        push("tresorerie", -quantite, "Paiement immédiat des achats");
+        push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
     }
     else {
-        push("dettes", quantite, "Achat à crédit : dette fournisseur D+1");
+        push("dettes", montant, `Achat à crédit : dette fournisseur +${montant} €`);
     }
     return { succes: true, modifications };
 }
@@ -437,7 +443,7 @@ function appliquerCarteClient(etat, joueurIdx, carteClient) {
     const modifications = [];
     const push = makePush(joueur, modifications);
     const stocks = (0, calculators_1.getTotalStocks)(joueur);
-    if (stocks < 1) {
+    if (stocks < types_1.PRIX_UNITAIRE_MARCHANDISE) {
         return {
             succes: false,
             messageErreur: "Stock insuffisant ! Vous devez acheter des marchandises (étape 1) avant de vendre.",
@@ -447,10 +453,10 @@ function appliquerCarteClient(etat, joueurIdx, carteClient) {
     const montant = carteClient.montantVentes;
     // 1. Produit : Ventes
     push("ventes", montant, `Vente enregistrée : +${montant} Ventes`);
-    // 2. Actif : Stocks diminuent
-    push("stocks", -1, "Sortie de stock : -1 marchandise livrée");
+    // 2. Actif : Stocks diminuent d'1 unité = PRIX_UNITAIRE_MARCHANDISE (1 000 €)
+    push("stocks", -types_1.PRIX_UNITAIRE_MARCHANDISE, `Sortie de stock : −${types_1.PRIX_UNITAIRE_MARCHANDISE} € (1 marchandise livrée)`);
     // 3. Charge : CMV (coût de la marchandise vendue)
-    push("achats", 1, "Coût de la marchandise vendue (CMV) : +1 Achats");
+    push("achats", types_1.PRIX_UNITAIRE_MARCHANDISE, `Coût de la marchandise vendue (CMV) : +${types_1.PRIX_UNITAIRE_MARCHANDISE} €`);
     // 4. Encaissement selon délai
     // Spécialité Véloce Transports (Logistique) : livraison rapide → délai réduit de 1
     const delaiEffectif = joueur.entreprise.nom === "Véloce Transports"
@@ -622,6 +628,49 @@ function acheterCarteDecision(etat, joueurIdx, carte) {
     }
     return { succes: true, modifications };
 }
+// ─── INVESTISSEMENT MINI-DECK LOGISTIQUE ─────────────────────
+/**
+ * Investit dans une carte du mini-deck logistique personnel du joueur.
+ * Vérifie le prérequis, retire la carte de piochePersonnelle, applique les effets immédiats.
+ */
+function investirCartePersonnelle(etat, joueurIdx, carteId) {
+    const joueur = etat.joueurs[joueurIdx];
+    const carteIdx = joueur.piochePersonnelle.findIndex((c) => c.id === carteId);
+    if (carteIdx === -1) {
+        return {
+            succes: false,
+            messageErreur: `Carte "${carteId}" introuvable dans votre mini-deck.`,
+            modifications: [],
+        };
+    }
+    const carte = joueur.piochePersonnelle[carteIdx];
+    // Vérification du prérequis
+    if (carte.prerequis && !joueur.cartesActives.some((c) => c.id === carte.prerequis)) {
+        const carteRequise = joueur.piochePersonnelle.find((c) => c.id === carte.prerequis);
+        const nomRequis = carteRequise?.titre ?? carte.prerequis;
+        return {
+            succes: false,
+            messageErreur: `Prérequis non atteint : investissez d'abord dans "${nomRequis}".`,
+            modifications: [],
+        };
+    }
+    const modifications = [];
+    // Appliquer les effets immédiats
+    for (const effet of carte.effetsImmédiats) {
+        const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, effet.poste, effet.delta);
+        modifications.push({
+            joueurId: joueur.id,
+            poste: effet.poste,
+            ancienneValeur,
+            nouvelleValeur,
+            explication: `${carte.titre} — investissement logistique`,
+        });
+    }
+    // Retirer de piochePersonnelle, ajouter à cartesActives
+    joueur.piochePersonnelle = joueur.piochePersonnelle.filter((_, i) => i !== carteIdx);
+    joueur.cartesActives.push(carte);
+    return { succes: true, modifications };
+}
 // ─── ÉTAPE 7 : Carte Événement ───────────────────────────────
 function appliquerCarteEvenement(etat, joueurIdx, carte) {
     const joueur = etat.joueurs[joueurIdx];
@@ -657,14 +706,14 @@ function verifierFinTour(etat, joueurIdx) {
     const { enFaillite, raison } = (0, calculators_1.verifierFaillite)(joueur);
     const score = (0, calculators_1.calculerScore)(joueur);
     // Découvert > DECOUVERT_MAX → pénalité d'intérêts bancaires
-    // (enregistrée en Charges d'intérêt, prélevée sur la trésorerie du prochain tour via le découvert)
+    // Écriture en partie double :
+    //   DÉBIT  661 Charges d'intérêts    → réduit le Résultat net (PASSIF−)
+    //   CRÉDIT 5191 Découvert bancaire   → augmente le découvert  (PASSIF+)
+    // Les deux effets se compensent : l'équilibre ACTIF = PASSIF + RÉSULTAT est préservé.
     if (joueur.bilan.decouvert > types_1.DECOUVERT_MAX) {
         const pénalité = joueur.bilan.decouvert - types_1.DECOUVERT_MAX;
-        // CORRECTION BUG : la pénalité s'enregistre en Charges d'intérêt (CR)
-        // et augmente le découvert (le joueur devra rembourser encore plus au prochain tour)
-        // Note : c'est intentionnellement pénalisé pour pousser à résorber le découvert
-        appliquerDeltaPoste(joueur, "chargesInteret", pénalité);
-        // Pas de nouveau delta sur le découvert ici — il sera recalculé à l'étape 0 du prochain tour
+        appliquerDeltaPoste(joueur, "chargesInteret", pénalité); // DÉBIT charges
+        appliquerDeltaPoste(joueur, "decouvert", pénalité); // CRÉDIT découvert (contrepartie)
     }
     if (enFaillite) {
         joueur.elimine = true;
@@ -738,7 +787,7 @@ function avancerEtape(etat) {
  */
 function demanderEmprunt(etat, joueurIdx, montant) {
     const joueur = etat.joueurs[joueurIdx];
-    const resultat = (0, calculators_1.scorerDemandePret)(joueur, montant);
+    const resultat = (0, calculators_1.scorerDemandePret)(joueur, montant, etat.tourActuel);
     const modifications = [];
     if (!resultat.accepte) {
         return { resultat, modifications };

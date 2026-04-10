@@ -309,7 +309,10 @@ export interface IndicateursFinanciers {
 
 export const DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement
 export const CHARGES_FIXES_PAR_TOUR = 2000; // Services extérieurs +2 000€, Tréso -2 000€
-export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1000;
+/** Prix unitaire d'une marchandise : 1 unité physique = 1 000 € de valeur comptable (achat & CMV) */
+export const PRIX_UNITAIRE_MARCHANDISE = 1000;
+/** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
+export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */
 export const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2000;
 /** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */

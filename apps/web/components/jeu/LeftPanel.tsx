@@ -222,16 +222,48 @@ export function LeftPanel({
             {etapeTour === 1 && (
               <div className="space-y-2">
                 <div>
-                  <label htmlFor="qty" className="block text-xs font-semibold text-white mb-1">Quantité</label>
-                  <input
-                    id="qty"
-                    type="number"
-                    min="0"
-                    max="10000"
-                    value={achatQte}
-                    onChange={(e) => setAchatQte(parseInt(e.target.value) || 0)}
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400/20"
-                  />
+                  <label htmlFor="qty" className="block text-xs font-semibold text-white mb-1">
+                    Quantité <span className="text-slate-400 font-normal">(1 unité = 1 000 €)</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Retirer une unité"
+                      onClick={() => setAchatQte(Math.max(0, achatQte - 1))}
+                      disabled={achatQte <= 0}
+                      className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 text-lg font-bold text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      −
+                    </button>
+                    <input
+                      id="qty"
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={achatQte}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value) || 0;
+                        setAchatQte(Math.max(0, Math.min(10, v)));
+                      }}
+                      aria-label="Quantité de marchandises à acheter"
+                      className="w-14 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400/20"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Ajouter une unité"
+                      onClick={() => setAchatQte(Math.min(10, achatQte + 1))}
+                      disabled={achatQte >= 10}
+                      className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 text-lg font-bold text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p
+                    className="mt-2 text-xs font-semibold text-cyan-200"
+                    aria-live="polite"
+                  >
+                    Coût total : {(achatQte * 1000).toLocaleString("fr-FR")} €
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-white mb-1">Mode</p>

@@ -38,6 +38,13 @@
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ENTREPRISE_INDEX = exports.ENTREPRISES = void 0;
+const cartes_1 = require("./cartes");
+function carte(id) {
+    const c = cartes_1.CARTES_LOGISTIQUES.find((c) => c.id === id);
+    if (!c)
+        throw new Error(`[entreprises.ts] Carte logistique introuvable : "${id}"`);
+    return c;
+}
 exports.ENTREPRISES = [
     {
         nom: "Manufacture Belvaux",
@@ -45,10 +52,10 @@ exports.ENTREPRISES = [
         icon: "🏭",
         type: "Production",
         specialite: "⚡ Produit à chaque tour",
-        // Spécialité active : +1 productionStockée, +1 stocks par trimestre
+        // Spécialité active : +1 000 € productionStockée, +1 000 € stocks par trimestre
         effetsPassifs: [
-            { poste: "productionStockee", delta: 1 },
-            { poste: "stocks", delta: 1 },
+            { poste: "productionStockee", delta: 1000 },
+            { poste: "stocks", delta: 1000 },
         ],
         actifs: [
             // IMMOBILISATIONS
@@ -70,6 +77,12 @@ exports.ENTREPRISES = [
             { nom: "Emprunts", valeur: 8000 },
             // DETTES FOURNISSEURS
             { nom: "Dettes fournisseurs", valeur: 0 },
+        ],
+        cartesLogistiquesDepart: [],
+        cartesLogistiquesDisponibles: [
+            carte("belvaux-robot-n1"),
+            carte("belvaux-robot-n2"),
+            carte("belvaux-entrepot"),
         ],
     },
     {
@@ -100,6 +113,12 @@ exports.ENTREPRISES = [
             { nom: "Emprunts", valeur: 8000 },
             { nom: "Dettes fournisseurs", valeur: 0 },
         ],
+        cartesLogistiquesDepart: [],
+        cartesLogistiquesDisponibles: [
+            carte("veloce-vehicule-n2"),
+            carte("veloce-dispatch-n1"),
+            carte("veloce-dispatch-n2"),
+        ],
     },
     {
         nom: "Azura Commerce",
@@ -128,6 +147,13 @@ exports.ENTREPRISES = [
             { nom: "Emprunts", valeur: 8000 },
             { nom: "Dettes fournisseurs", valeur: 0 },
         ],
+        cartesLogistiquesDepart: [
+            carte("azura-marketplace-n1"), // actif dès T1 — capacité 4→8
+        ],
+        cartesLogistiquesDisponibles: [
+            carte("azura-marketplace-n2"),
+            carte("azura-soustraitance"),
+        ],
     },
     {
         nom: "Synergia Lab",
@@ -135,10 +161,10 @@ exports.ENTREPRISES = [
         icon: "💡",
         type: "Innovation",
         specialite: "💎 Revenus de licence",
-        // Spécialité active : +1 produitsFinanciers, +1 trésorerie par trimestre
+        // Spécialité active : +1 000 € produitsFinanciers, +1 000 € trésorerie par trimestre
         effetsPassifs: [
-            { poste: "produitsFinanciers", delta: 1 },
-            { poste: "tresorerie", delta: 1 },
+            { poste: "produitsFinanciers", delta: 1000 },
+            { poste: "tresorerie", delta: 1000 },
         ],
         actifs: [
             // IMMOBILISATIONS
@@ -158,6 +184,13 @@ exports.ENTREPRISES = [
             { nom: "Capitaux propres", valeur: 17000 },
             { nom: "Emprunts", valeur: 8000 },
             { nom: "Dettes fournisseurs", valeur: 0 },
+        ],
+        cartesLogistiquesDepart: [
+            carte("synergia-erp-n1"), // actif dès T1 — capacité 4→8
+        ],
+        cartesLogistiquesDisponibles: [
+            carte("synergia-erp-n2"),
+            carte("synergia-partenariat"),
         ],
     },
 ];

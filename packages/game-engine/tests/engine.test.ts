@@ -80,7 +80,7 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
     const tresoAfter = getTresorerie(joueur);
     expect(joueur.compteResultat.charges.servicesExterieurs).toBe(2000);
     // Tour 1 = premier trimestre de l'année → intérêts annuels appliqués : 8000 × 5% = 400
-    expect(tresoAfter).toBe(tresoBefore - 2000 - 1000 - 400); // -2000 charges fixes - 1000 remboursement - 400 intérêts
+    expect(tresoAfter).toBe(tresoBefore - 2000 - 500 - 400); // -2000 charges fixes - 500 remboursement - 400 intérêts
   });
 
   test("L'amortissement réduit les immobilisations", () => {
@@ -96,7 +96,7 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
     expect(joueur.compteResultat.charges.dotationsAmortissements).toBe(2000);
   });
 
-  test("Le remboursement d'emprunt réduit les emprunts de 1000", () => {
+  test("Le remboursement d'emprunt réduit les emprunts de 500", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const empruntsBefore = joueur.bilan.passifs.find((p) => p.categorie === "emprunts")!.valeur;
@@ -104,14 +104,14 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
     appliquerEtape0(etat, 0);
 
     const empruntsAfter = joueur.bilan.passifs.find((p) => p.categorie === "emprunts")!.valeur;
-    expect(empruntsAfter).toBe(empruntsBefore - 1000);
+    expect(empruntsAfter).toBe(empruntsBefore - 500);
   });
 });
 
 // ─── 3. VENTE CLIENT PARTICULIER (partie double complète) ────
 
 describe("Vente — Client Particulier (paiement immédiat)", () => {
-  test("4 écritures correctes : Ventes+2000, Stocks-1, CMV+1, Tréso+2000", () => {
+  test("4 écritures correctes : Ventes+2000, Stocks−1000, CMV+1000, Tréso+2000", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
@@ -123,8 +123,8 @@ describe("Vente — Client Particulier (paiement immédiat)", () => {
 
     expect(resultat.succes).toBe(true);
     expect(joueur.compteResultat.produits.ventes).toBe(2000); // montantVentes = 2000€
-    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksBefore - 1);
-    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV = 1 unité
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksBefore - 1000);
+    expect(joueur.compteResultat.charges.achats).toBe(1000); // CMV = 1 unité × 1000 €
     expect(getTresorerie(joueur)).toBe(tresoBefore + 2000); // encaissement immédiat
   });
 });
@@ -132,7 +132,7 @@ describe("Vente — Client Particulier (paiement immédiat)", () => {
 // ─── 4. VENTE CLIENT TPE (créance C+1) ───────────────────────
 
 describe("Vente — Client TPE (paiement différé C+1)", () => {
-  test("4 écritures correctes : Ventes+3000, Stocks-1, CMV+1, Créances C+1 +3000", () => {
+  test("4 écritures correctes : Ventes+3000, Stocks−1000, CMV+1000, Créances C+1 +3000", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-tpe")!;
@@ -141,7 +141,7 @@ describe("Vente — Client TPE (paiement différé C+1)", () => {
 
     expect(joueur.compteResultat.produits.ventes).toBe(3000); // montantVentes = 3000€
     expect(joueur.bilan.creancesPlus1).toBe(3000); // créance C+1 = 3000€
-    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV = 1 unité
+    expect(joueur.compteResultat.charges.achats).toBe(1000); // CMV = 1 unité × 1000 €
     // La trésorerie NE change PAS (paiement différé)
   });
 });
@@ -149,7 +149,7 @@ describe("Vente — Client TPE (paiement différé C+1)", () => {
 // ─── 5. VENTE CLIENT GRAND COMPTE (créance C+2) ──────────────
 
 describe("Vente — Client Grand Compte (paiement différé C+2)", () => {
-  test("4 écritures : Ventes+4000, Stocks-1, CMV+1, Créances C+2 +4000", () => {
+  test("4 écritures : Ventes+4000, Stocks−1000, CMV+1000, Créances C+2 +4000", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-grand-compte")!;
@@ -158,7 +158,7 @@ describe("Vente — Client Grand Compte (paiement différé C+2)", () => {
 
     expect(joueur.compteResultat.produits.ventes).toBe(4000); // montantVentes = 4000€
     expect(joueur.bilan.creancesPlus2).toBe(4000); // créance C+2 = 4000€
-    expect(joueur.compteResultat.charges.achats).toBe(1); // CMV = 1 unité
+    expect(joueur.compteResultat.charges.achats).toBe(1000); // CMV = 1 unité × 1000 €
   });
 });
 

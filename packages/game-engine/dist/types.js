@@ -4,11 +4,14 @@
 // Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = void 0;
+exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = void 0;
 // ─── CONSTANTES ───────────────────────────────────────────────
 exports.DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement
 exports.CHARGES_FIXES_PAR_TOUR = 2000; // Services extérieurs +2 000€, Tréso -2 000€
-exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1000;
+/** Prix unitaire d'une marchandise : 1 unité physique = 1 000 € de valeur comptable (achat & CMV) */
+exports.PRIX_UNITAIRE_MARCHANDISE = 1000;
+/** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
+exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */
 exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2000;
 /** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
@@ -64,6 +67,22 @@ exports.CAPACITE_IMMOBILISATION = {
     "revision-generale": 0,
     "optimisation-lean": 0,
     "sous-traitance": 0,
+    // Mini-deck Manufacture Belvaux (Production)
+    "belvaux-robot-n1": 2,
+    "belvaux-robot-n2": 2,
+    "belvaux-entrepot": 2,
+    // Mini-deck Véloce Transports (Logistique)
+    "veloce-vehicule-n2": 2,
+    "veloce-dispatch-n1": 2,
+    "veloce-dispatch-n2": 2,
+    // Mini-deck Azura Commerce (Commerce)
+    "azura-marketplace-n1": 4,
+    "azura-marketplace-n2": 4,
+    "azura-soustraitance": 4,
+    // Mini-deck Synergia Lab (Innovation)
+    "synergia-erp-n1": 4,
+    "synergia-erp-n2": 4,
+    "synergia-partenariat": 4,
 };
 /** Bonus de capacité spécifiques par entreprise (surcharge CAPACITE_IMMOBILISATION) */
 exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = {

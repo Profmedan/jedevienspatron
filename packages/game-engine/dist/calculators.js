@@ -116,7 +116,7 @@ function calculerIndicateurs(joueur) {
     const capaciteAutofinancement = resultatNet + dotations;
     // Liquidité = Actif circulant / Dettes court terme
     const actifCirculant = stocks + creances + tresorerie;
-    const dettesCourtTerme = dettes + joueur.bilan.decouvert || 1;
+    const dettesCourtTerme = Math.max(1, dettes + joueur.bilan.decouvert);
     const ratioLiquidite = actifCirculant / dettesCourtTerme;
     // Solvabilité = (Capitaux propres + Résultat) / Total Passif × 100
     const ratioSolvabilite = totalPassif > 0
@@ -155,10 +155,17 @@ function calculerInterets(empruntsTotal, majore = false) {
     return Math.round(empruntsTotal * taux / 400);
 }
 // ─── SCORING BANCAIRE ─────────────────────────────────────────
-function scorerDemandePret(joueur, montantDemande) {
+// tourActuel : passé depuis engine.ts pour la clause de bienveillance (tours 1-2)
+function scorerDemandePret(joueur, montantDemande, tourActuel = 999) {
     const ind = calculerIndicateurs(joueur);
     let score = 0;
     const details = [];
+    // Clause de bienveillance : bonus +15 pts pour les deux premiers trimestres.
+    // La banque regarde le potentiel de démarrage, pas encore les résultats.
+    if (tourActuel <= 2) {
+        score += 15;
+        details.push("Entreprise en démarrage — bonus bienveillance banque ✓");
+    }
     const solv = ind.ratioSolvabilite;
     if (solv >= 40) {
         score += 30;

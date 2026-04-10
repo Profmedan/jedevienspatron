@@ -52,6 +52,11 @@ export declare function obtenirCarteRecrutement(_etat: EtatJeu, _joueurIdx: numb
  */
 export declare function tirerCartesDecision(etat: EtatJeu, nb?: number): CarteDecision[];
 export declare function acheterCarteDecision(etat: EtatJeu, joueurIdx: number, carte: CarteDecision): ResultatAction;
+/**
+ * Investit dans une carte du mini-deck logistique personnel du joueur.
+ * Vérifie le prérequis, retire la carte de piochePersonnelle, applique les effets immédiats.
+ */
+export declare function investirCartePersonnelle(etat: EtatJeu, joueurIdx: number, carteId: string): ResultatAction;
 export declare function appliquerCarteEvenement(etat: EtatJeu, joueurIdx: number, carte: CarteEvenement): ResultatAction;
 export interface ResultatFinTour {
     equilibre: boolean;

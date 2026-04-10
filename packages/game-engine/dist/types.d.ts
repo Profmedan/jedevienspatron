@@ -64,6 +64,10 @@ export interface EntrepriseTemplate {
     /** Bilan de départ (Actif = Passif = 16 toujours) */
     actifs: Omit<PosteActif, "categorie">[];
     passifs: Omit<PostePassif, "categorie">[];
+    /** Cartes logistiques actives dès T1 (ajoutées à cartesActives à l'initialisation) */
+    cartesLogistiquesDepart?: CarteDecision[];
+    /** Mini-deck logistique personnel — peuple piochePersonnelle à l'initialisation */
+    cartesLogistiquesDisponibles?: CarteDecision[];
 }
 export type TypeCarte = "commercial" | "client" | "decision" | "evenement";
 export type DelaiPaiement = 0 | 1 | 2;
@@ -114,6 +118,10 @@ export interface CarteDecision {
     carteDecisionBonus?: number;
     /** Catégorie pour l'affichage */
     categorie: "commercial" | "vehicule" | "investissement" | "financement" | "tactique" | "service" | "protection";
+    /** ID de la carte qui doit être dans cartesActives avant d'investir dans celle-ci */
+    prerequis?: string;
+    /** Si défini, cette carte n'est proposée qu'à cette entreprise */
+    entrepriseExclusive?: NomEntreprise;
 }
 export interface CarteEvenement {
     type: "evenement";
@@ -152,6 +160,8 @@ export interface Joueur {
     publicitéCeTour: boolean;
     /** Nombre de clients perdus faute de capacité ce trimestre */
     clientsPerdusCeTour: number;
+    /** Mini-deck logistique personnel — cartes disponibles à l'investissement */
+    piochePersonnelle: CarteDecision[];
 }
 /** Les 9 étapes d'un tour de jeu */
 export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -208,7 +218,10 @@ export interface IndicateursFinanciers {
 }
 export declare const DECOUVERT_MAX = 8000;
 export declare const CHARGES_FIXES_PAR_TOUR = 2000;
-export declare const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1000;
+/** Prix unitaire d'une marchandise : 1 unité physique = 1 000 € de valeur comptable (achat & CMV) */
+export declare const PRIX_UNITAIRE_MARCHANDISE = 1000;
+/** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
+export declare const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */
 export declare const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2000;
 /** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */

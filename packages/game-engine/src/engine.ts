@@ -18,6 +18,7 @@ import {
   EffetCarte,
   DECOUVERT_MAX,
   CHARGES_FIXES_PAR_TOUR,
+  PRIX_UNITAIRE_MARCHANDISE,
   REMBOURSEMENT_EMPRUNT_PAR_TOUR,
   REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR,
   INTERET_EMPRUNT_FREQUENCE,
@@ -466,14 +467,17 @@ export function appliquerAchatMarchandises(
   if (quantite <= 0) return { succes: true, modifications };
   const push = makePush(joueur, modifications);
 
-  // Stocks +quantite
-  push("stocks", quantite, `Achat de ${quantite} unité(s) de marchandises`);
+  // 1 unité physique de marchandise = PRIX_UNITAIRE_MARCHANDISE (1 000 €) de valeur comptable
+  const montant = quantite * PRIX_UNITAIRE_MARCHANDISE;
 
-  // Paiement
+  // DÉBIT 37 Stocks de marchandises (Actif +)
+  push("stocks", montant, `Achat de ${quantite} unité(s) de marchandises (${montant} €)`);
+
+  // CRÉDIT : trésorerie (comptant) ou dettes fournisseurs (à crédit)
   if (modePaiement === "tresorerie") {
-    push("tresorerie", -quantite, "Paiement immédiat des achats");
+    push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
   } else {
-    push("dettes", quantite, "Achat à crédit : dette fournisseur D+1");
+    push("dettes", montant, `Achat à crédit : dette fournisseur +${montant} €`);
   }
 
   return { succes: true, modifications };
@@ -578,7 +582,7 @@ export function appliquerCarteClient(
   const push = makePush(joueur, modifications);
 
   const stocks = getTotalStocks(joueur);
-  if (stocks < 1) {
+  if (stocks < PRIX_UNITAIRE_MARCHANDISE) {
     return {
       succes: false,
       messageErreur:
@@ -592,11 +596,11 @@ export function appliquerCarteClient(
   // 1. Produit : Ventes
   push("ventes", montant, `Vente enregistrée : +${montant} Ventes`);
 
-  // 2. Actif : Stocks diminuent
-  push("stocks", -1, "Sortie de stock : -1 marchandise livrée");
+  // 2. Actif : Stocks diminuent d'1 unité = PRIX_UNITAIRE_MARCHANDISE (1 000 €)
+  push("stocks", -PRIX_UNITAIRE_MARCHANDISE, `Sortie de stock : −${PRIX_UNITAIRE_MARCHANDISE} € (1 marchandise livrée)`);
 
   // 3. Charge : CMV (coût de la marchandise vendue)
-  push("achats", 1, "Coût de la marchandise vendue (CMV) : +1 Achats");
+  push("achats", PRIX_UNITAIRE_MARCHANDISE, `Coût de la marchandise vendue (CMV) : +${PRIX_UNITAIRE_MARCHANDISE} €`);
 
   // 4. Encaissement selon délai
   // Spécialité Véloce Transports (Logistique) : livraison rapide → délai réduit de 1
