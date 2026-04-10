@@ -942,14 +942,11 @@ export function verifierFinTour(
   const score = calculerScore(joueur);
 
   // Découvert > DECOUVERT_MAX → pénalité d'intérêts bancaires
-  // (enregistrée en Charges d'intérêt, prélevée sur la trésorerie du prochain tour via le découvert)
+  // Double écriture comptable : DÉBIT Charges d'intérêt / CRÉDIT Découvert bancaire
   if (joueur.bilan.decouvert > DECOUVERT_MAX) {
     const pénalité = joueur.bilan.decouvert - DECOUVERT_MAX;
-    // CORRECTION BUG : la pénalité s'enregistre en Charges d'intérêt (CR)
-    // et augmente le découvert (le joueur devra rembourser encore plus au prochain tour)
-    // Note : c'est intentionnellement pénalisé pour pousser à résorber le découvert
-    appliquerDeltaPoste(joueur, "chargesInteret", pénalité);
-    // Pas de nouveau delta sur le découvert ici — il sera recalculé à l'étape 0 du prochain tour
+    appliquerDeltaPoste(joueur, "chargesInteret", pénalité); // DÉBIT charges d'intérêts
+    appliquerDeltaPoste(joueur, "decouvert", pénalité);      // CRÉDIT découvert (contrepartie)
   }
 
   if (enFaillite) {

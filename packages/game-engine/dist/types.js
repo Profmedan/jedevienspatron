@@ -6,15 +6,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = void 0;
 // ─── CONSTANTES ───────────────────────────────────────────────
-exports.DECOUVERT_MAX = 8; // Seuil de faillite : découvert bancaire > 8 → cessation de paiement
-exports.CHARGES_FIXES_PAR_TOUR = 2; // Services extérieurs +2, Tréso -2
-exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
+exports.DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement
+exports.CHARGES_FIXES_PAR_TOUR = 2000; // Services extérieurs +2 000€, Tréso -2 000€
+exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1000;
 /** Maximum de découvert remboursable par trimestre (progressif) */
-exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
+exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2000;
 /** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
 exports.INTERET_EMPRUNT_FREQUENCE = 4; // Q1 de chaque année
 exports.NB_TOURS_PAR_AN = 4;
-exports.NB_TOURS_MAX = 12; // Valeur par défaut — configurable à 6, 8 ou 12 à l'initialisation
+/** @deprecated Utiliser `nbToursMax` de `EtatJeu` — cette constante est gardée pour compatibilité */
+exports.NB_TOURS_MAX = 12;
 exports.SCORE_MULTIPLICATEUR_RESULTAT = 3;
 exports.SCORE_MULTIPLICATEUR_IMMO = 2;
 // ─── CAPACITÉ LOGISTIQUE ──────────────────────────────────────

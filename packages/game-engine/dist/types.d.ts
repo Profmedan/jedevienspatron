@@ -94,7 +94,7 @@ export interface CarteClient {
 /** Effet immédiat ou récurrent d'une carte Décision */
 export interface EffetCarte {
     /** Poste impacté (bilan ou CR) */
-    poste: "immobilisations" | "stocks" | "tresorerie" | "capitaux" | "emprunts" | "dettes" | "dettesFiscales" | "decouvert" | "creancesPlus1" | "creancesPlus2" | "achats" | "servicesExterieurs" | "impotsTaxes" | "chargesInteret" | "chargesPersonnel" | "chargesExceptionnelles" | "dotationsAmortissements" | "ventes" | "productionStockee" | "produitsFinanciers" | "revenusExceptionnels";
+    poste: "immobilisations" | "stocks" | "tresorerie" | "capitaux" | "emprunts" | "dettes" | "dettesD2" | "dettesFiscales" | "decouvert" | "creancesPlus1" | "creancesPlus2" | "achats" | "servicesExterieurs" | "impotsTaxes" | "chargesInteret" | "chargesPersonnel" | "chargesExceptionnelles" | "dotationsAmortissements" | "ventes" | "productionStockee" | "produitsFinanciers" | "revenusExceptionnels";
     delta: number;
 }
 export interface CarteDecision {
@@ -206,14 +206,15 @@ export interface IndicateursFinanciers {
     ratioSolvabilite: number;
     equilibre: boolean;
 }
-export declare const DECOUVERT_MAX = 8;
-export declare const CHARGES_FIXES_PAR_TOUR = 2;
-export declare const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1;
+export declare const DECOUVERT_MAX = 8000;
+export declare const CHARGES_FIXES_PAR_TOUR = 2000;
+export declare const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 1000;
 /** Maximum de découvert remboursable par trimestre (progressif) */
-export declare const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2;
+export declare const REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = 2000;
 /** Fréquence des intérêts d'emprunt : tous les NB_TOURS_PAR_AN tours (= annuel) */
 export declare const INTERET_EMPRUNT_FREQUENCE = 4;
 export declare const NB_TOURS_PAR_AN = 4;
+/** @deprecated Utiliser `nbToursMax` de `EtatJeu` — cette constante est gardée pour compatibilité */
 export declare const NB_TOURS_MAX = 12;
 export declare const SCORE_MULTIPLICATEUR_RESULTAT = 3;
 export declare const SCORE_MULTIPLICATEUR_IMMO = 2;
