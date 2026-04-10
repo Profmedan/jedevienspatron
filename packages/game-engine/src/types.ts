@@ -86,6 +86,10 @@ export interface EntrepriseTemplate {
   /** Bilan de départ (Actif = Passif = 16 toujours) */
   actifs: Omit<PosteActif, "categorie">[];
   passifs: Omit<PostePassif, "categorie">[];
+  /** Cartes logistiques actives dès T1 (ajoutées à cartesActives à l'initialisation) */
+  cartesLogistiquesDepart?: CarteDecision[];
+  /** Mini-deck logistique personnel — peuple piochePersonnelle à l'initialisation */
+  cartesLogistiquesDisponibles?: CarteDecision[];
 }
 
 // ─── CARTES ──────────────────────────────────────────────────
@@ -177,6 +181,10 @@ export interface CarteDecision {
     | "tactique"
     | "service"
     | "protection";
+  /** ID de la carte qui doit être dans cartesActives avant d'investir dans celle-ci */
+  prerequis?: string;
+  /** Si défini, cette carte n'est proposée qu'à cette entreprise */
+  entrepriseExclusive?: NomEntreprise;
 }
 
 export interface CarteEvenement {
@@ -221,6 +229,8 @@ export interface Joueur {
   publicitéCeTour: boolean;
   /** Nombre de clients perdus faute de capacité ce trimestre */
   clientsPerdusCeTour: number;
+  /** Mini-deck logistique personnel — cartes disponibles à l'investissement */
+  piochePersonnelle: CarteDecision[];
 }
 
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
@@ -360,6 +370,26 @@ export const CAPACITE_IMMOBILISATION: Record<string, number> = {
   "revision-generale": 0,
   "optimisation-lean": 0,
   "sous-traitance": 0,
+
+  // Mini-deck Manufacture Belvaux (Production)
+  "belvaux-robot-n1": 2,
+  "belvaux-robot-n2": 2,
+  "belvaux-entrepot": 2,
+
+  // Mini-deck Véloce Transports (Logistique)
+  "veloce-vehicule-n2": 2,
+  "veloce-dispatch-n1": 2,
+  "veloce-dispatch-n2": 2,
+
+  // Mini-deck Azura Commerce (Commerce)
+  "azura-marketplace-n1": 4,
+  "azura-marketplace-n2": 4,
+  "azura-soustraitance": 4,
+
+  // Mini-deck Synergia Lab (Innovation)
+  "synergia-erp-n1": 4,
+  "synergia-erp-n2": 4,
+  "synergia-partenariat": 4,
 };
 
 /** Bonus de capacité spécifiques par entreprise (surcharge CAPACITE_IMMOBILISATION) */

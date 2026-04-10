@@ -3,6 +3,7 @@
 import { getTotalActif, getTotalPassif, CarteDecision, Joueur } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
+import { MiniDeckPanel } from "./MiniDeckPanel";
 
 const STEP_NAMES = [
   "Charges fixes",
@@ -57,6 +58,7 @@ interface LeftPanelProps {
   modalEtapeEnAttente?: number | null;
   onCloseModal?: () => void;
   onDemanderEmprunt?: () => void;
+  onInvestirPersonnel?: (carteId: string) => void;
 }
 
 const STEP_HELP = [
@@ -93,6 +95,7 @@ export function LeftPanel({
   onLaunchDecision,
   onLaunchStep,
   onDemanderEmprunt,
+  onInvestirPersonnel,
   subEtape6,
 }: LeftPanelProps) {
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
@@ -197,6 +200,13 @@ export function LeftPanel({
 
   return (
     <div className="space-y-4">
+      {/* Alerte capacité logistique insuffisante */}
+      {joueur.clientsPerdusCeTour > 0 && (
+        <div className="rounded-lg border border-red-500/40 bg-red-900/30 px-3 py-2 text-sm text-red-200">
+          ⚠️ Capacité insuffisante — {joueur.clientsPerdusCeTour} client(s) perdu(s) ce trimestre
+        </div>
+      )}
+
       <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
         <div className="space-y-4">
           <div>
@@ -280,6 +290,14 @@ export function LeftPanel({
                   <div className="rounded-lg bg-cyan-500/10 border border-cyan-400/20 p-2">
                     <p className="text-xs text-cyan-100">👉 Choisis une carte dans le panneau central</p>
                   </div>
+                )}
+                {/* Mini-deck logistique personnel — visible à l'étape 6b */}
+                {subEtape6 === "investissement" && (
+                  <MiniDeckPanel
+                    joueur={joueur}
+                    onInvestir={(carteId) => onInvestirPersonnel?.(carteId)}
+                    disabled={false}
+                  />
                 )}
               </div>
             )}
