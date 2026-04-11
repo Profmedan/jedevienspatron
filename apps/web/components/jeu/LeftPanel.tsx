@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { getTotalActif, getTotalPassif, CarteDecision, Joueur } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
@@ -100,6 +101,8 @@ export function LeftPanel({
   onLicencierCommercial,
   subEtape6,
 }: LeftPanelProps) {
+  const [pendingConfirm, setPendingConfirm] = useState(false);
+
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
   const hasCommerciaux = joueur.cartesActives.some((c) => c.categorie === "commercial");
   const stepHelp =
@@ -114,10 +117,107 @@ export function LeftPanel({
 
   if (activeStep) {
     const firstPending = activeStep.entries.find((e) => !e.applied);
-    const allApplied = !firstPending;
+    const allApplied   = !firstPending;
+
+    // ── Données pour la modale de confirmation ────────────────────────────────
+    const isDecisionStep    = etapeTour === 6;
+    const isFirstEntry      = isDecisionStep && activeStep.entries.every((e) => !e.applied);
+    const tresorerieActuelle = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")?.valeur ?? 0;
+    const deltasTresorerie  = activeStep.entries
+      .filter((e) => e.poste.toLowerCase().includes("tresorerie"))
+      .reduce((sum, e) => sum + e.delta, 0);
+    const tresorerieFuture  = tresorerieActuelle + deltasTresorerie;
 
     return (
       <div className="space-y-4">
+
+        {/* ── MODALE DE CONFIRMATION (carte Décision) ── */}
+        {pendingConfirm && firstPending && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-slate-900 rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full p-5 space-y-4">
+
+              {/* En-tête */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-300">
+                  Confirmer la décision
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-white leading-snug">
+                  {activeStep.titre}
+                </h3>
+              </div>
+
+              {/* Résumé de la transaction */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1">
+                  Écritures comptables
+                </p>
+                {activeStep.entries.map((e) => (
+                  <div key={e.id} className="flex justify-between items-center text-sm">
+                    <span className="text-slate-300">{nomCompte(e.poste)}</span>
+                    <span className={`font-bold tabular-nums ${e.delta >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+                      {e.delta > 0 ? "+" : ""}{e.delta.toLocaleString("fr-FR")} u
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Trésorerie avant / après */}
+              <div className={`rounded-xl border px-3 py-3 space-y-1.5 ${
+                tresorerieFuture < 0 ? "border-red-400/40 bg-red-900/20" : "border-white/10 bg-white/[0.03]"
+              }`}>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Trésorerie actuelle</span>
+                  <span className="font-semibold text-white tabular-nums">
+                    {tresorerieActuelle.toLocaleString("fr-FR")} €
+                  </span>
+                </div>
+                {deltasTresorerie !== 0 && (
+                  <>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Impact de la décision</span>
+                      <span className={`font-semibold tabular-nums ${deltasTresorerie < 0 ? "text-red-300" : "text-emerald-300"}`}>
+                        {deltasTresorerie > 0 ? "+" : ""}{deltasTresorerie.toLocaleString("fr-FR")} €
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs pt-1.5 border-t border-white/10">
+                      <span className="font-medium text-slate-300">Trésorerie après</span>
+                      <span className={`font-bold tabular-nums ${tresorerieFuture < 0 ? "text-red-400" : "text-emerald-300"}`}>
+                        {tresorerieFuture.toLocaleString("fr-FR")} €
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Avertissement découvert */}
+              {tresorerieFuture < 0 && (
+                <div className="rounded-lg border border-red-400/30 bg-red-900/20 px-3 py-2 text-xs text-red-300 leading-relaxed">
+                  ⚠️ Cette décision mettrait votre trésorerie en négatif ({tresorerieFuture.toLocaleString("fr-FR")} €). Vérifiez votre capacité de financement.
+                </div>
+              )}
+
+              {/* Boutons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingConfirm(false)}
+                  className="flex-1 cursor-pointer py-3 border border-white/10 rounded-xl text-slate-400 text-sm hover:bg-white/5 transition-colors font-medium"
+                >
+                  ← Annuler
+                </button>
+                <button
+                  onClick={() => {
+                    setPendingConfirm(false);
+                    onApplyEntry(firstPending.id);
+                  }}
+                  className="flex-1 cursor-pointer bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold py-3 rounded-xl text-sm transition-colors"
+                >
+                  Confirmer ✓
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <div className="space-y-4">
             {/* ── Titre de l’action en cours — bien visible ── */}
@@ -147,11 +247,17 @@ export function LeftPanel({
                   <p className="text-xs leading-relaxed text-sky-100">💡 {activeStep.principe}</p>
                 </div>
                 <button
-                  onClick={() => onApplyEntry(firstPending.id)}
+                  onClick={() => {
+                    if (isFirstEntry) {
+                      setPendingConfirm(true);
+                    } else {
+                      onApplyEntry(firstPending.id);
+                    }
+                  }}
                   aria-label={`Appliquer l'écriture comptable : ${firstPending.id}`}
-                  className="w-full rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
+                  className="w-full cursor-pointer rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
                 >
-                  Appliquer cette écriture
+                  {isFirstEntry ? "Vérifier et confirmer →" : "Appliquer cette écriture"}
                 </button>
               </div>
             ) : (
