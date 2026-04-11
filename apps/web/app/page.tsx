@@ -124,12 +124,12 @@ const ENTRY_OPTIONS: Array<{
 const PRINCIPLES = [
   {
     title: "Actif = Passif",
-    text: "L’équilibre du bilan se voit à chaque étape, sans laisser l’apprenant seul face à une règle abstraite.",
+    text: "L’équilibre du bilan se voit à chaque étape, sans laisser le joueur ou l’apprenant seul face à une règle abstraite.",
     icon: Scale,
   },
   {
     title: "Partie Double",
-    text: "Chaque opération produit deux effets complémentaires, visibles immédiatement dans les bons postes.",
+    text: "Chaque opération produit deux effets complémentaires, visibles immédiatement dans les postes du bilan et du compte de résultat.",
     icon: RefreshCw,
   },
   {
@@ -482,10 +482,9 @@ export default function Home() {
                 Un même outil, deux promesses tenues
               </p>
               <p className="mt-3 text-sm leading-7 text-slate-300">
-                Donner envie d’entrer dans le jeu côté apprenant, en se challengeant
-                ou challengeant les autres joueurs pour obtenir le meilleur score,
-                le meilleur résultat comptable ou financier tout en offrant un cadre
-                rassurant pour un responsable pédagogique ou un établissement.
+                Donner envie de jouer — en solo ou en compétition — pour obtenir
+                le meilleur score et le meilleur résultat financier, tout en offrant
+                un cadre structuré et crédible pour un formateur ou un établissement.
               </p>
             </div>
           </div>
