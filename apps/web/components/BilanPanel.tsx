@@ -242,7 +242,11 @@ function ColumnTotal({ label, value, variant }: { label: string; value: number; 
 }
 
 function findMod(mods: RecentMod[] | undefined, poste: string): RecentMod | undefined {
-  return mods?.find((m) => m.poste === poste);
+  // Retourne le DERNIER mod pour ce poste : quand tresorerie est modifiée
+  // plusieurs fois dans la même étape (intérêts, puis remboursement, puis charges),
+  // le badge reflète l'opération la plus récente appliquée.
+  const matches = mods?.filter((m) => m.poste === poste);
+  return matches && matches.length > 0 ? matches[matches.length - 1] : undefined;
 }
 
 function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; totalActif: number; totalPassif: number }) {
@@ -336,17 +340,35 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
           <SectionHeader label="Investissements durables" color={TOOLTIPS.immobilisations.couleur} />
           {(() => {
             const totalImmMod = findMod(recentModifications, "immobilisations");
-            const nItems = immobilisations.length;
             return immobilisations.map((a) => {
               let perItemMod: typeof totalImmMod;
-              if (totalImmMod && nItems > 0) {
+              if (totalImmMod) {
                 const totalDelta = totalImmMod.nouvelleValeur - totalImmMod.ancienneValeur;
-                const perItemDelta = Math.round(totalDelta / nItems);
-                perItemMod = {
-                  poste: "immobilisations",
-                  ancienneValeur: a.valeur - perItemDelta,
-                  nouvelleValeur: a.valeur,
-                };
+                if (totalDelta < 0) {
+                  // ── Amortissement (CRÉDIT Immobilisations) ──────────────────
+                  // Le moteur applique exactement −1 000 € par bien (taux PCG fixe).
+                  // On n'affiche le badge QUE sur les biens dont la valeur est > 0 :
+                  //  • valeur > 0  → bien encore actif, amortissement de 1 000 € ✓
+                  //  • valeur = 0  → bien déjà entièrement amorti (ou jamais utilisé)
+                  //    → PAS de badge, pour éviter d'afficher un delta fictif
+                  if (a.valeur > 0) {
+                    perItemMod = {
+                      poste: "immobilisations",
+                      ancienneValeur: a.valeur + 1000, // avant = après + taux fixe
+                      nouvelleValeur: a.valeur,
+                    };
+                  }
+                } else if (totalDelta > 0) {
+                  // ── Investissement (DÉBIT Immobilisations) ──────────────────
+                  // Le delta va toujours dans "Autres Immobilisations" (cf. applyDeltaToJoueur)
+                  if (a.nom === "Autres Immobilisations") {
+                    perItemMod = {
+                      poste: "immobilisations",
+                      ancienneValeur: a.valeur - totalDelta,
+                      nouvelleValeur: a.valeur,
+                    };
+                  }
+                }
               }
               return (
                 <TooltipPoste

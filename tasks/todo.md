@@ -1,4 +1,41 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-10
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-11
+
+---
+
+## Tâche 10 : Déséquilibre bilan + badges avant/après — 2026-04-11
+
+### Contexte
+Pierre signale deux bugs UX dans l'affichage progressif des écritures comptables :
+1. **Déséquilibre intermédiaire** : entre l'écriture "trésorerie −500" et "emprunts −500" du remboursement, le bilan affiche "⚠️ Déséquilibre : écart −500" car les deux demi-écritures d'une transaction sont appliquées séparément.
+2. **Badges avant/après manquants ou erronés** : le badge "7600 → 7100" n'apparaît pas toujours (absent pour achat et décisions, ou montre le premier mouvement au lieu du dernier quand un poste est modifié plusieurs fois).
+
+### Corrections
+
+#### 10.1 — Atomicité comptable (`applyEntry` dans useGameFlow.ts)
+- [x] Importer `getTotalActif`, `getTotalPassif` depuis `@jedevienspatron/game-engine`
+- [x] Modifier `applyEntry` : après avoir marqué l'écriture cliquée, auto-appliquer les suivantes jusqu'à ce que `getTotalActif === getTotalPassif` (bilan équilibré)
+- [x] Le moteur étant correct, le bilan est toujours équilibré en état final → toute transaction multi-ligne converge en ≤ N itérations
+
+#### 10.2 — Badges précis (`effectiveRecentMods` dans useGameFlow.ts)
+- [x] Filtrer `recentModifications` par INDEX (pas par poste) : `recentModifications.filter((_, i) => activeStep.entries[i]?.applied === true)`
+- [x] Garantit que le badge reflète l'écriture EXACTE la plus récente (ex : "7600→7100" pour le remboursement, pas "8000→7600" pour les intérêts)
+
+#### 10.3 — `findMod` retourne le dernier match (`BilanPanel.tsx`)
+- [x] Changer `mods?.find(...)` → `.filter(...).at(-1)` pour retourner le DERNIER mod d'un poste
+- [x] Couvre le cas où tresorerie est modifiée 3 fois dans l'étape 0
+
+#### 10.4 — Badges absents pour achat et décisions
+- [x] Ajouter `setRecentModifications(modsFiltrees.map(...))` dans `launchAchat`
+- [x] Ajouter `setRecentModifications(modsFiltrees.map(...))` dans `launchDecision`
+- [x] Ajouter `setRecentModifications(modsFiltrees.map(...))` dans `handleInvestirPersonnel`
+
+#### 10.5 — Badge immobilisations (BilanPanel.tsx)
+- [x] Supprimer la division `totalDelta / nItems` (donne -667 sur des items à 0)
+- [x] Amortissement (totalDelta < 0) : badge UNIQUEMENT sur items avec `a.valeur > 0`, taux fixe −1 000 €/bien
+- [x] Investissement (totalDelta > 0) : badge UNIQUEMENT sur "Autres Immobilisations"
+
+#### 10.6 — Validation
+- [x] `npx tsc --noEmit` dans `apps/web` → 0 erreur (vérifié après chaque groupe de corrections)
 
 ---
 

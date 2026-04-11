@@ -228,3 +228,20 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 ## L27 — 2026-04-10 : Doubler les tests sur les tests "cohérence interne"
 **Observation** : les 4 tests de vente vérifiaient que `Stocks -1` et `CMV +1` → ça passait parce que c'était interne à une seule fonction. Aucun test ne faisait `achat puis vente` pour vérifier que les unités matchaient entre fonctions.
 **Règle** : pour chaque domaine (stock, trésorerie, capitaux), ajouter au moins un test d'intégration qui enchaîne deux fonctions et vérifie que les unités sont cohérentes.
+
+## L28 — 2026-04-11 : Atomicité comptable dans l'affichage progressif des écritures
+**Erreur** : `applyEntry` marquait une seule écriture à la fois. Quand la transaction "remboursement" avait deux entrées (trésorerie −500 PUIS emprunts −500), appliquer la première créait un déséquilibre visible de −500 entre les deux clics.
+**Cause profonde** : en partie double, une transaction est toujours composée de ≥2 écritures. Afficher un état intermédiaire entre deux écritures d'une même transaction crée un bilan non-équilibré, ce qui est pédagogiquement trompeur.
+**Fix** : après avoir marqué l'écriture cliquée, auto-appliquer les suivantes en boucle jusqu'à ce que `getTotalActif === getTotalPassif`. Condition d'arrêt : équilibre atteint OU plus d'entrée en attente. Comme le moteur est correct, la convergence est garantie en ≤ N itérations.
+**Règle** : dans un affichage pédagogique progressif de la partie double, ne jamais laisser l'apprenant voir un état non-équilibré. Grouper atomiquement toutes les écritures d'une même transaction.
+
+## L29 — 2026-04-11 : Badges "avant → après" — filtrage par index, pas par poste
+**Erreur** : `effectiveRecentMods` filtrait `recentModifications` par poste (Set of applied postes). Quand tresorerie est modifiée 3 fois dans la même étape (intérêts, remboursement, charges), `findMod(..., "tresorerie")` retournait le PREMIER mod (8000→7600) même après avoir appliqué le remboursement (7600→7100).
+**Fix** : (1) filtrer `recentModifications` par INDEX (`recentModifications[i]` ↔ `activeStep.entries[i]` — même filtre, même ordre), (2) changer `findMod` pour retourner le DERNIER match, (3) ajouter `setRecentModifications` dans `launchAchat`, `launchDecision`, `handleInvestirPersonnel`.
+**Règle** : quand on construit une liste de mods et une liste d'entries à partir du même filtre dans le même ordre, utiliser le filtrage par INDEX (pas par valeur de champ) pour conserver la correspondance 1:1 dans l'affichage progressif.
+
+## L30 — 2026-04-11 : Badge amortissement par bien — ne jamais diviser totalDelta / nItems
+**Erreur** : BilanPanel calculait `perItemDelta = Math.round(totalDelta / nItems)` pour afficher le badge "avant → après" par bien immobilisé. Avec 3 items (Entrepôt, Camionnette, Autres Immobilisations) et un totalDelta de -2 000 €, le calcul donnait -667 appliqué à "Autres Immobilisations" (valeur 0), affichant un delta fictif sur un bien jamais amorti.
+**Cause** : la division égale suppose que tous les items ont la même variation, ce qui est faux quand certains sont à 0.
+**Fix** : utiliser le taux fixe PCG de 1 000 €/bien. Pour l'amortissement (totalDelta < 0), n'afficher le badge QUE sur les biens avec `a.valeur > 0`. Pour un investissement (totalDelta > 0), n'afficher le badge QUE sur "Autres Immobilisations".
+**Règle** : quand un delta total est distribué selon une règle non-uniforme (ici : ignorer les biens à 0), ne jamais diviser égalementparmi tous les items. Utiliser la règle de distribution effective (taux fixe, cible unique, etc.).
