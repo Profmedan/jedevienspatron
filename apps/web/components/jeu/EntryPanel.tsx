@@ -530,12 +530,19 @@ export function EntryPanel({
           />
           <StatCard
             label="Bilan"
-            value={`${totalActif} ${balanced ? "=" : "≠"} ${totalPassif}`}
+            value={
+              canContinue
+                ? `${totalActif} = ${totalPassif}`
+                : !allApplied
+                  // Saisie en cours : l'écart intermédiaire est normal en partie double
+                  ? "⏳ Saisie en cours…"
+                  : `${totalActif} ≠ ${totalPassif}`
+            }
             helper={
               canContinue
                 ? "Tout est prêt : tu peux confirmer."
                 : !allApplied
-                  ? `Encore ${pendingCount} écriture${pendingCount > 1 ? "s" : ""} à saisir.`
+                  ? `Passe encore ${pendingCount} écriture${pendingCount > 1 ? "s" : ""} — le bilan se rééquilibrera à la fin.`
                   : "Le bilan doit être rééquilibré avant de poursuivre."
             }
             tone={canContinue ? "emerald" : !allApplied ? "neutral" : "rose"}

@@ -9,7 +9,6 @@ import {
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
-  getTotalActif, getTotalPassif,
 } from "@jedevienspatron/game-engine";
 import {
   type PlayerSetup, type ActiveStep,
@@ -309,42 +308,14 @@ export function useGameFlow({
   }
 
   // ─ Appliquer une écriture (côté UI) ─────────────────────────────────────
-  // Principe : en comptabilité en partie double, chaque transaction groupe
-  // plusieurs écritures qui doivent ensemble équilibrer Actif = Passif + Résultat.
-  // Si après avoir appliqué l'écriture cliquée le bilan n'est pas équilibré,
-  // on applique automatiquement les suivantes jusqu'à l'équilibre.
-  // Cela évite un "Déséquilibre" visible entre deux demi-écritures d'une même transaction.
+  // Une seule écriture à la fois : l'apprenant voit l'impact de chaque ligne
+  // sur le Bilan OU le Compte de Résultat avant de passer à la suivante.
+  // Le bilan peut être temporairement déséquilibré entre deux lignes d'une même
+  // transaction — c'est affiché comme "Saisie en cours…" (pas une erreur).
   function applyEntry(entryId: string) {
-    if (!etat) return;
-    const joueurIdx = etat.joueurActif;
-    setActiveStep(prev => {
-      if (!prev) return null;
-
-      // 1. Marquer l'écriture cliquée comme appliquée
-      let entries = prev.entries.map(e => e.id === entryId ? { ...e, applied: true } : e);
-
-      // 2. Auto-appliquer les suivantes si le bilan est déséquilibré
-      let iterations = 0;
-      while (iterations < entries.length) {
-        // Calculer le joueur affichage avec les entrées appliquées
-        const cloned = cloneEtat(prev.baseEtat);
-        const j = cloned.joueurs[joueurIdx];
-        for (const e of entries.filter(e => e.applied)) {
-          applyDeltaToJoueur(j, e.poste, e.delta);
-        }
-        const actif   = getTotalActif(j);
-        const passif  = getTotalPassif(j);
-        if (Math.abs(actif - passif) < 0.01) break; // équilibré → arrêt
-
-        // Pas encore équilibré : appliquer la prochaine entrée en attente
-        const nextPending = entries.find(e => !e.applied);
-        if (!nextPending) break; // plus d'entrée → arrêt (ne devrait pas arriver)
-        entries = entries.map(e => e.id === nextPending.id ? { ...e, applied: true } : e);
-        iterations++;
-      }
-
-      return { ...prev, entries };
-    });
+    setActiveStep(prev =>
+      prev ? { ...prev, entries: prev.entries.map(e => e.id === entryId ? { ...e, applied: true } : e) } : null
+    );
   }
 
   // ─ Valider l'étape (toutes écritures cochées + bilan équilibré) ──────────
