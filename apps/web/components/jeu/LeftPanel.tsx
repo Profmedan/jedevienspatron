@@ -67,7 +67,7 @@ const STEP_HELP = [
   "Vos créances clients avancent et sont encaissées.",
   "Salaires versés. Nouveaux clients générés.",
   "Clients en attente traités → ventes générées.",
-  "Effets de vos cartes Décision appliqués.",
+  "Effets de vos cartes de décision à appliquer.",
   "Sélection de carte de recrutement ou investissement",
   "Une carte Événement sera piochée.",
   "Vérification du bilan. Fin du trimestre.",
@@ -115,7 +115,7 @@ export function LeftPanel({
             {/* ── Titre de l’action en cours — bien visible ── */}
             <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
-                Écriture {activeStep.entries.filter((e) => e.applied).length + 1} / {activeStep.entries.length}
+                Écriture {Math.min(activeStep.entries.filter((e) => e.applied).length + 1, activeStep.entries.length)} / {activeStep.entries.length}
               </p>
               <h3 className="mt-1 text-lg font-bold text-white leading-snug">{activeStep.titre}</h3>
             </div>
