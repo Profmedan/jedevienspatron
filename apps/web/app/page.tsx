@@ -423,8 +423,9 @@ export default function Home() {
                 </div>
 
                 <motion.div
-                  animate={shouldReduceMotion ? {} : { y: [0, -8, 0] }}
-                  transition={shouldReduceMotion ? undefined : { duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                  initial={shouldReduceMotion ? {} : { opacity: 0, y: 16 }}
+                  animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+                  transition={shouldReduceMotion ? undefined : { duration: 0.6, ease: "easeOut" }}
                   className="relative min-h-[280px] overflow-hidden rounded-xl border border-white/10 bg-slate-950/55 sm:min-h-[360px]"
                 >
                   <Image
@@ -458,6 +459,34 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section Problème ── */}
+      <section className="px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-rose-400/15 bg-rose-400/5 p-5 space-y-2">
+              <p className="text-2xl">😶</p>
+              <h3 className="text-sm font-semibold text-rose-200">La comptabilité reste abstraite</h3>
+              <p className="text-sm leading-6 text-slate-400">Bilans, charges, produits, amortissements… les notions s'apprennent mais ne se mémorisent pas sans les vivre.</p>
+            </div>
+            <div className="rounded-2xl border border-amber-400/15 bg-amber-400/5 p-5 space-y-2">
+              <p className="text-2xl">📖</p>
+              <h3 className="text-sm font-semibold text-amber-200">Les formations traditionnelles ne suffisent pas</h3>
+              <p className="text-sm leading-6 text-slate-400">Les cours magistraux et les exercices sur papier ne montrent pas les conséquences réelles d'une décision de gestion.</p>
+            </div>
+            <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-5 space-y-2">
+              <p className="text-2xl">🔗</p>
+              <h3 className="text-sm font-semibold text-cyan-200">Le lien décision → résultat est invisible</h3>
+              <p className="text-sm leading-6 text-slate-400">Acheter à crédit, recruter un commercial, rembourser un emprunt — personne ne voit comment chaque choix modifie le bilan en temps réel.</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 text-center">
+            <p className="text-base leading-7 text-slate-300">
+              <span className="font-semibold text-white">JE DEVIENS PATRON</span> rend ces mécanismes visibles, concrets et mémorables — trimestre après trimestre.
+            </p>
           </div>
         </div>
       </section>
