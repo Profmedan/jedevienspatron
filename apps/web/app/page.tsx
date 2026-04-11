@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 const HERO_POINTS = [
-  "Chaque décision produit immédiatement un effet financier qui déclenche une conséquence financière.",
+  "Chaque décision produit immédiatement un effet comptable visible : trésorerie, résultat, bilan — tout se lit en temps réel.",
   "Les explications permettent une séance vivante sans sacrifier la rigueur comptable.",
   "Le formateur (optionnel) dispose d’un format clair, crédible et simple à déployer.",
 ];
@@ -53,7 +53,7 @@ const LEARNING_PILLARS = [
   },
   {
     title: "Comprendre",
-    text: "Le jeu, le score final et le débriefing transforment l’action en raisonnement durable. Les principes comptables sont respectés. Les rendez-vous avec le comptable ne sont plus un charabia technique : chaque notion comptable est expliquée et mise en évidence en fonction des flux financiers.",
+    text: "Le jeu, le score final et le débriefing transforment l’action en raisonnement durable. Les principes comptables sont respectés, et chaque notion est expliquée au fil des flux réels — les échanges avec un comptable ou un expert-comptable deviennent enfin compréhensibles.",
     icon: BookOpen,
   },
 ];
@@ -472,8 +472,8 @@ export default function Home() {
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
               JEDEVIENSPATRON.fr relie les décisions de gestion, les effets
               comptables et la lecture des résultats dans un même parcours.
-              L’apprenant voit enfin la logique, et l’équipe pédagogique
-              (optionnelle) garde un format exploitable avant, pendant et après
+              Le joueur voit enfin la logique, et le formateur
+              (optionnel) garde un format exploitable avant, pendant et après
               la séance grâce aux nombreux indicateurs financiers disponibles.
             </p>
 
@@ -513,7 +513,7 @@ export default function Home() {
             </h2>
             <p className="max-w-md text-sm leading-7 text-slate-400 sm:text-base">
               Chaque partie suit une progression claire, de l’activité de
-              l’entreprise jusqu’à l’analyse des résultats. Les apprenants
+              l’entreprise jusqu’à l’analyse des résultats. Joueurs et apprenants
               peuvent jouer en autonomie ou dans le cadre d’une animation
               encadrée. À chaque étape, ils agissent, observent les conséquences
               de leurs choix et relient directement les décisions prises aux
@@ -563,7 +563,7 @@ export default function Home() {
             <p className="text-sm leading-7 text-slate-400 sm:text-base">
               Apprenant, joueur autonome ou formateur : chacun trouve immédiatement
               la bonne porte d’entrée pour rejoindre une session, découvrir
-              l’expérience ou piloter une promotion.
+              l’expérience ou piloter un groupe.
             </p>
           </div>
 
