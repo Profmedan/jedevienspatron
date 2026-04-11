@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Joueur, DECOUVERT_MAX, calculerIndicateurs, calculerSIG } from "@jedevienspatron/game-engine";
 
 interface Props { joueur: Joueur; }
@@ -179,13 +179,35 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
   formule?: string; definition?: string; interpretation?: string; objectif?: string;
   gaugeConfig?: GaugeConfig;
 }) {
-  const [open, setOpen] = useState(false);
-  const analyseTexte = getAnalysePersonnalisee(label, value);
+  const [open, setOpen]           = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const triggerRef                = useRef<HTMLDivElement>(null);
+  const analyseTexte              = getAnalysePersonnalisee(label, value);
+
+  // Ferme le tooltip si l'utilisateur scrolle (position fixe ne suit pas le scroll)
+  useEffect(() => {
+    if (!open) return;
+    const handleScroll = () => setOpen(false);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [open]);
+
+  function handleToggle() {
+    if (!open && triggerRef.current) {
+      const rect        = triggerRef.current.getBoundingClientRect();
+      const tooltipW    = 288; // w-72
+      const marginRight = 8;
+      const left        = Math.min(rect.left, window.innerWidth - tooltipW - marginRight);
+      setTooltipPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+    }
+    setOpen(s => !s);
+  }
 
   return (
-    <div className="relative z-0">
-      <div className={`bg-gray-800 rounded-xl p-3 border border-gray-600 cursor-pointer hover:border-cyan-400/40 hover:bg-gray-700/80 transition-all ${open ? "ring-2 ring-cyan-500/50" : ""}`}
-        onClick={() => setOpen(s => !s)}>
+    <div className="relative">
+      <div ref={triggerRef}
+        className={`bg-gray-800 rounded-xl p-3 border border-gray-600 cursor-pointer hover:border-cyan-400/40 hover:bg-gray-700/80 transition-all ${open ? "ring-2 ring-cyan-500/50" : ""}`}
+        onClick={handleToggle}>
         <div className="flex items-start justify-between gap-1">
           <div className="text-xs text-gray-400 leading-tight flex-1">{label}</div>
           <span className="text-xs text-cyan-400">ⓘ</span>
@@ -197,12 +219,14 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
         </div>
       </div>
       {open && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-gray-900/95 border border-gray-700 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-96 overflow-y-auto"
-          style={{ minWidth: "280px" }}>
+        <div
+          className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-[70vh] overflow-y-auto"
+          style={{ position: "fixed", top: tooltipPos.top, left: tooltipPos.left, zIndex: 9999, minWidth: "280px" }}
+        >
           <div className="flex items-start justify-between gap-2">
             <div className="font-bold text-cyan-300 text-sm">{label}</div>
             <button onClick={e => { e.stopPropagation(); setOpen(false); }}
-              className="text-gray-500 hover:text-gray-300 text-lg leading-none">×</button>
+              className="text-gray-500 hover:text-gray-300 text-lg leading-none shrink-0">×</button>
           </div>
           {formule && (
             <div className="bg-blue-950/40 border border-blue-800/40 rounded-lg p-2 font-mono text-blue-200 text-xs">= {formule}</div>
