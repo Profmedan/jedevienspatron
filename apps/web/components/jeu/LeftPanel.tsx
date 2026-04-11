@@ -59,6 +59,7 @@ interface LeftPanelProps {
   onCloseModal?: () => void;
   onDemanderEmprunt?: () => void;
   onInvestirPersonnel?: (carteId: string) => void;
+  onLicencierCommercial?: (carteId: string) => void;
 }
 
 const STEP_HELP = [
@@ -66,7 +67,7 @@ const STEP_HELP = [
   "Achat de stocks (optionnel)",
   "Vos créances clients avancent et sont encaissées.",
   "Salaires versés. Nouveaux clients générés.",
-  "Clients en attente traités → ventes générées.",
+  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.",
   "Effets de vos cartes de décision à appliquer.",
   "Sélection de carte de recrutement ou investissement",
   "Une carte Événement sera piochée.",
@@ -96,6 +97,7 @@ export function LeftPanel({
   onLaunchStep,
   onDemanderEmprunt,
   onInvestirPersonnel,
+  onLicencierCommercial,
   subEtape6,
 }: LeftPanelProps) {
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
@@ -336,6 +338,36 @@ export function LeftPanel({
                     onInvestir={(carteId) => onInvestirPersonnel?.(carteId)}
                     disabled={false}
                   />
+                )}
+                {/* Licenciement — visible à l'étape 6a si des commerciaux sont actifs */}
+                {subEtape6 === "recrutement" && joueur.cartesActives.some(c => c.categorie === "commercial") && (
+                  <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-2 space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-300">
+                      📤 Licencier un commercial
+                    </p>
+                    <p className="text-[10px] text-rose-200/70">
+                      Indemnité = 1 trimestre de salaire (charges exceptionnelles)
+                    </p>
+                    {joueur.cartesActives
+                      .filter(c => c.categorie === "commercial")
+                      .map(c => {
+                        const salaire = c.effetsImmédiats
+                          .filter(e => e.poste === "tresorerie")
+                          .reduce((s, e) => s + Math.abs(e.delta), 0);
+                        return (
+                          <div key={c.id} className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-slate-200">{c.titre}</span>
+                            <button
+                              onClick={() => onLicencierCommercial?.(c.id)}
+                              className="rounded px-2 py-0.5 text-[10px] font-semibold bg-rose-600/80 hover:bg-rose-500 text-white"
+                              title={`Indemnité : ${salaire} €`}
+                            >
+                              Licencier −{salaire} €
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
                 )}
               </div>
             )}
