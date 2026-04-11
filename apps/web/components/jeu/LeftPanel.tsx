@@ -99,7 +99,13 @@ export function LeftPanel({
   subEtape6,
 }: LeftPanelProps) {
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
-  const stepHelp = STEP_HELP[etapeTour] || "";
+  const hasCommerciaux = joueur.cartesActives.some((c) => c.categorie === "commercial");
+  const stepHelp =
+    etapeTour === 3
+      ? hasCommerciaux
+        ? "Les salaires de vos commerciaux seront versés et de nouveaux clients seront générés."
+        : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape 6 pour générer de nouveaux clients."
+      : STEP_HELP[etapeTour] || "";
   const totalActif = getTotalActif(joueur);
   const totalPassif = getTotalPassif(joueur);
   const balanced = Math.abs(totalActif - totalPassif) < 0.01;
