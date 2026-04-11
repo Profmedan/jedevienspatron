@@ -32,7 +32,7 @@ const HERO_POINTS = [
 
 const SUPPORT_NUMBERS = [
   { value: "4", label: "univers métier" },
-  { value: "8", label: "décisions / trimestre" },
+  { value: "9", label: "étapes / trimestre" },
   { value: "1h45", label: "de jeu max" },
   { value: "100%", label: "guidé pas à pas" },
 ];
@@ -66,8 +66,8 @@ const JOURNEY_STEPS = [
   },
   {
     index: "02",
-    title: "Faites agir les apprenants",
-    text: "Charges, achats, créances, ventes, événements et arbitrages stratégiques rythment la séance trimestre après trimestre.",
+    title: "Faites agir joueurs et apprenants",
+    text: "Charges, achats, créances, ventes, événements et arbitrages stratégiques rythment chaque trimestre — en solo comme en groupe.",
   },
   {
     index: "03",
@@ -526,7 +526,7 @@ export default function Home() {
                   <Users className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-white">Pensé pour les apprenants, crédible pour les formateurs</h3>
+                  <h3 className="text-lg font-bold text-white">Pensé pour les joueurs individuels ou pour des apprenants, crédible pour les formateurs</h3>
                   <p className="text-sm leading-6 text-slate-400">
                     Utilisable en autonomie ou en animation pédagogique, le jeu
                     s’adapte aussi bien à l’entraînement individuel qu’aux

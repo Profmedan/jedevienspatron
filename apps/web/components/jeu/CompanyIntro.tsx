@@ -85,7 +85,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-sm text-white">{emprunts.nom}</div>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  Financement bancaire — remboursement de −1 par trimestre pendant {emprunts.valeur} trimestres
+                  Financement bancaire — remboursement de −500 € par trimestre
                 </div>
               </div>
               <span className="font-bold text-base shrink-0" style={{ color: C.emprunts }}>
@@ -252,7 +252,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
               onClick={onStart}
               className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
             >
-              🚀 C&apos;est parti — Commencer !
+              🚀 Commencer
             </button>
           )}
         </div>
