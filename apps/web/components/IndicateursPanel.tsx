@@ -182,19 +182,7 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
   const [open, setOpen]             = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const triggerRef                  = useRef<HTMLDivElement>(null);
-  const tooltipRef                  = useRef<HTMLDivElement>(null);
   const analyseTexte                = getAnalysePersonnalisee(label, value);
-
-  // Ferme le tooltip si l'utilisateur scrolle la PAGE (pas le contenu du tooltip lui-même)
-  useEffect(() => {
-    if (!open) return;
-    const handleScroll = (e: Event) => {
-      if (tooltipRef.current?.contains(e.target as Node)) return; // scroll interne → on garde
-      setOpen(false);
-    };
-    window.addEventListener("scroll", handleScroll, true);
-    return () => window.removeEventListener("scroll", handleScroll, true);
-  }, [open]);
 
   function handleToggle() {
     if (!open && triggerRef.current) {
@@ -223,12 +211,18 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
         </div>
       </div>
       {open && (
-        <div
-          ref={tooltipRef}
-          className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-[70vh] overflow-y-auto"
-          style={{ position: "fixed", top: tooltipPos.top, left: tooltipPos.left, zIndex: 9999, minWidth: "280px" }}
-          onClick={e => e.stopPropagation()}
-        >
+        <>
+          {/* Backdrop invisible — clic extérieur ferme le tooltip */}
+          <div
+            className="fixed inset-0"
+            style={{ zIndex: 9998 }}
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-[70vh] overflow-y-auto"
+            style={{ position: "fixed", top: tooltipPos.top, left: tooltipPos.left, zIndex: 9999, minWidth: "280px" }}
+            onClick={e => e.stopPropagation()}
+          >
           <div className="flex items-start justify-between gap-2">
             <div className="font-bold text-cyan-300 text-sm">{label}</div>
             <button onClick={e => { e.stopPropagation(); setOpen(false); }}
@@ -257,7 +251,8 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
               <p className="text-gray-300 leading-relaxed break-words">{objectif}</p>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
