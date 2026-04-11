@@ -16,7 +16,7 @@ interface SetupScreenProps {
 
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [nbJoueurs, setNbJoueurs] = useState(1);
-  const [nbTours, setNbTours] = useState(12);
+  const [nbTours, setNbTours] = useState(8);
 
   const defaults: PlayerSetup[] = [
     { pseudo: "", entreprise: "Manufacture Belvaux" },
@@ -117,7 +117,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                     key={count}
                     type="button"
                     onClick={() => setNbJoueurs(count)}
-                    className={`inline-flex h-12 min-w-12 items-center justify-center rounded-2xl px-4 text-base font-bold transition-all ${
+                    className={`inline-flex h-12 min-w-12 cursor-pointer items-center justify-center rounded-2xl px-4 text-base font-bold transition-all ${
                       nbJoueurs === count
                         ? "bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30"
                         : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
@@ -198,17 +198,18 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                 Durée de la partie
               </p>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  { tours: 6, label: "~1h30", note: "Découverte rapide" },
-                  { tours: 8, label: "~2h", note: "Format équilibré" },
-                  { tours: 12, label: "~3h", note: "Parcours complet" },
+                  { tours: 6,  label: "~1h",    note: "Découverte rapide" },
+                  { tours: 8,  label: "~1h15",  note: "Format équilibré" },
+                  { tours: 10, label: "~1h30",  note: "Parcours approfondi" },
+                  { tours: 12, label: "~1h45",  note: "Parcours complet" },
                 ].map((option) => (
                   <button
                     key={option.tours}
                     type="button"
                     onClick={() => setNbTours(option.tours)}
-                    className={`rounded-[1.5rem] border px-4 py-4 text-left transition-all ${
+                    className={`cursor-pointer rounded-[1.5rem] border px-4 py-4 text-left transition-all ${
                       nbTours === option.tours
                         ? "border-cyan-300 bg-cyan-400/10 text-white"
                         : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Download, Upload, Lightbulb, Layers, Package, Wallet,
+} from "lucide-react";
 import { Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron/game-engine";
 
 interface CompanyIntroProps {
@@ -8,35 +11,37 @@ interface CompanyIntroProps {
   onStart: () => void;
 }
 
-/** Descriptions pédagogiques par nom d’immobilisation (durée de vie en trimestres) */
+/** Descriptions pédagogiques par nom d'immobilisation (durée de vie en trimestres) */
 const IMMO_DESCRIPTIONS: Record<string, { description: string; duree: number; icon: string }> = {
   "Entrepôt":               { description: "Outil de production industrielle",       duree: 6, icon: "🏭" },
-  "Camionnette":         { description: "Véhicule de livraison utilitaire",        duree: 2, icon: "🚐" },
-  "Camion":              { description: "Poids lourd de transport logistique",     duree: 6, icon: "🚛" },
-  "Machine":             { description: "Équipement de manutention intensif",      duree: 2, icon: "⚙️" },
-  "Showroom":            { description: "Agencement de l’espace commercial",       duree: 5, icon: "🏪" },
-  "Voiture":             { description: "Véhicule de démonstration client",        duree: 3, icon: "🚗" },
-  "Brevet":              { description: "Propriété intellectuelle (art. 39 CGI)",  duree: 5, icon: "💡" },
-  "Matériel informatique": { description: "Serveurs et postes de travail",         duree: 3, icon: "💻" },
+  "Camionnette":            { description: "Véhicule de livraison utilitaire",        duree: 2, icon: "🚐" },
+  "Camion":                 { description: "Poids lourd de transport logistique",     duree: 6, icon: "🚛" },
+  "Machine":                { description: "Équipement de manutention intensif",      duree: 2, icon: "⚙️" },
+  "Showroom":               { description: "Agencement de l'espace commercial",       duree: 5, icon: "🏪" },
+  "Voiture":                { description: "Véhicule de démonstration client",        duree: 3, icon: "🚗" },
+  "Brevet":                 { description: "Propriété intellectuelle (art. 39 CGI)",  duree: 5, icon: "💡" },
+  "Matériel informatique":  { description: "Serveurs et postes de travail",           duree: 3, icon: "💻" },
   "Autres Immobilisations": { description: "Investissements futurs via Cartes Décision", duree: 0, icon: "📦" },
 };
 
 // ── Couleurs sémantiques (palette officielle) ──────────────────────────────
 const C = {
-  capitaux:       "#f2ce5c",  // Jaune
-  emprunts:       "#f2aebf",  // Rose
-  immos:          "#dfa66a",  // Orange brun
-  stocks:         "#d992b4",  // Rose violet
-  tresorerie:     "#8ecf8e",  // Vert
-  creances:       "#7fb1de",  // Bleu
-  dettes:         "#f59f6d",  // Orange
-  charges:        "#e66b6b",  // Rouge
-  produits:       "#5cb88a",  // Vert émeraude
+  capitaux:   "#f2ce5c",  // Jaune
+  emprunts:   "#f2aebf",  // Rose
+  immos:      "#dfa66a",  // Orange brun
+  stocks:     "#d992b4",  // Rose violet
+  tresorerie: "#8ecf8e",  // Vert
+  creances:   "#7fb1de",  // Bleu
 };
 
+/** Formate un nombre en euros avec séparateur de milliers (ex. 20 000 €) */
+function fmt(n: number): string {
+  return n.toLocaleString("fr-FR") + " €";
+}
+
 /**
- * Écran pédagogique d’introduction au bilan comptable
- * Explique ACTIF, PASSIF, l’équilibre fondamental et les amortissements
+ * Écran pédagogique d'introduction au bilan comptable
+ * Explique ACTIF, PASSIF, l'équilibre fondamental et les amortissements
  */
 export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const [step, setStep] = useState(0);
@@ -52,9 +57,12 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const totalImmos  = immos.reduce((s, a) => s + a.valeur, 0);
 
   const steps = [
-    /* ── Étape 0 : D’où vient l’argent ── */
+    /* ── Étape 0 : D'où vient l'argent ── */
     <div key={0} className="space-y-4">
-      <h2 className="font-semibold text-white text-base">📥 D&apos;où vient l&apos;argent de départ ?</h2>
+      <h2 className="flex items-center gap-2 font-semibold text-white text-base">
+        <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
+        D&apos;où vient l&apos;argent de départ ?
+      </h2>
       <p className="text-slate-300 text-sm leading-relaxed">
         Toute entreprise naît grâce à des <strong className="text-white">RESSOURCES</strong> : l&apos;argent
         investi par les propriétaires (<em>capitaux propres</em>) et/ou des emprunts
@@ -63,8 +71,9 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
       {/* Bloc PASSIF */}
       <div className="rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-4 space-y-3">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: C.emprunts }}>
-          📥 Ressources (Passif) — Qui finance ?
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: C.emprunts }}>
+          <Download className="h-3 w-3" aria-hidden="true" />
+          Ressources (Passif) — Qui finance ?
         </div>
         <div className="space-y-2">
           {capitaux && (
@@ -76,7 +85,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                 </div>
               </div>
               <span className="font-bold text-base shrink-0" style={{ color: C.capitaux }}>
-                {capitaux.valeur}
+                {fmt(capitaux.valeur)}
               </span>
             </div>
           )}
@@ -89,14 +98,14 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                 </div>
               </div>
               <span className="font-bold text-base shrink-0" style={{ color: C.emprunts }}>
-                {emprunts.valeur}
+                {fmt(emprunts.valeur)}
               </span>
             </div>
           )}
           <div className="flex justify-between items-center gap-3 rounded-xl border border-white/10 px-3 py-2.5 font-semibold mt-2"
                style={{ backgroundColor: "rgba(242,174,191,0.08)", color: C.emprunts }}>
             <span className="text-sm">TOTAL RESSOURCES (Passif)</span>
-            <span className="text-base">{totalPassif}</span>
+            <span className="text-base">{fmt(totalPassif)}</span>
           </div>
         </div>
       </div>
@@ -104,15 +113,22 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
       {/* Note pédagogique */}
       <div className="rounded-xl border border-white/10 px-4 py-3 text-xs text-slate-300 leading-relaxed space-y-1"
            style={{ backgroundColor: "rgba(242,206,92,0.06)" }}>
-        <div className="font-semibold" style={{ color: C.capitaux }}>💡 Pourquoi emprunter ?</div>
-        <p>Les emprunts ont permis d&apos;acheter les équipements productifs ({totalImmos} d&apos;immobilisations). Sans ces outils, pas de production ni de ventes possibles !</p>
+        <div className="flex items-center gap-1.5 font-semibold" style={{ color: C.capitaux }}>
+          <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
+          Pourquoi emprunter ?
+        </div>
+        <p>
+          Les emprunts ont permis d&apos;acheter les équipements productifs ({fmt(totalImmos)} d&apos;immobilisations).
+          Sans ces outils, pas de production ni de ventes possibles !
+        </p>
       </div>
     </div>,
 
     /* ── Étape 1 : Comment cet argent est utilisé ── */
     <div key={1} className="space-y-4">
-      <h2 className="font-semibold text-white text-base">
-        📤 Comment cet argent a-t-il été utilisé ?
+      <h2 className="flex items-center gap-2 font-semibold text-white text-base">
+        <Upload className="h-4 w-4 shrink-0" aria-hidden="true" />
+        Comment cet argent a-t-il été utilisé ?
       </h2>
       <p className="text-slate-300 text-sm leading-relaxed">
         Avec ces ressources, l&apos;entreprise a acheté des <strong className="text-white">EMPLOIS</strong> :
@@ -122,16 +138,18 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
       {/* Bloc ACTIF */}
       <div className="rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-4 space-y-3">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: C.creances }}>
-          📤 Emplois (Actif) — À quoi sert l&apos;argent ?
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: C.creances }}>
+          <Upload className="h-3 w-3" aria-hidden="true" />
+          Emplois (Actif) — À quoi sert l&apos;argent ?
         </div>
         <div className="space-y-2">
 
           {/* Immobilisations */}
           {immos.length > 0 && (
             <>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mt-1 mb-1">
-                🏗️ Immobilisations (biens durables)
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mt-1 mb-1">
+                <Layers className="h-3 w-3" aria-hidden="true" />
+                Immobilisations (biens durables)
               </div>
               {immos.map((a) => {
                 const info = IMMO_DESCRIPTIONS[a.nom];
@@ -150,7 +168,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                         )}
                       </div>
                     </div>
-                    <span className="font-bold text-base shrink-0" style={{ color: C.immos }}>{a.valeur}</span>
+                    <span className="font-bold text-base shrink-0" style={{ color: C.immos }}>{fmt(a.valeur)}</span>
                   </div>
                 );
               })}
@@ -160,8 +178,9 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {/* Stocks */}
           {stocks.length > 0 && (
             <>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mt-2 mb-1">
-                📦 Stocks (marchandises)
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mt-2 mb-1">
+                <Package className="h-3 w-3" aria-hidden="true" />
+                Stocks (marchandises)
               </div>
               {stocks.map((a) => (
                 <div key={a.nom} className="flex justify-between items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
@@ -169,7 +188,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
                     <div className="font-semibold text-sm text-white">📦 {a.nom}</div>
                     <div className="text-xs text-slate-400 mt-0.5">Marchandises prêtes à être vendues ou transformées</div>
                   </div>
-                  <span className="font-bold text-base shrink-0" style={{ color: C.stocks }}>{a.valeur}</span>
+                  <span className="font-bold text-base shrink-0" style={{ color: C.stocks }}>{fmt(a.valeur)}</span>
                 </div>
               ))}
             </>
@@ -178,15 +197,16 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {/* Trésorerie */}
           {tresorerie && (
             <>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mt-2 mb-1">
-                💰 Trésorerie
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mt-2 mb-1">
+                <Wallet className="h-3 w-3" aria-hidden="true" />
+                Trésorerie
               </div>
               <div className="flex justify-between items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-sm text-white">💰 {tresorerie.nom}</div>
                   <div className="text-xs text-slate-400 mt-0.5">Liquidités disponibles pour payer les charges</div>
                 </div>
-                <span className="font-bold text-base shrink-0" style={{ color: C.tresorerie }}>{tresorerie.valeur}</span>
+                <span className="font-bold text-base shrink-0" style={{ color: C.tresorerie }}>{fmt(tresorerie.valeur)}</span>
               </div>
             </>
           )}
@@ -194,7 +214,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           <div className="flex justify-between items-center gap-3 rounded-xl border border-white/10 px-3 py-2.5 font-semibold mt-2"
                style={{ backgroundColor: "rgba(127,177,222,0.08)", color: C.creances }}>
             <span className="text-sm">TOTAL EMPLOIS (Actif)</span>
-            <span className="text-base">{totalActif}</span>
+            <span className="text-base">{fmt(totalActif)}</span>
           </div>
         </div>
       </div>
@@ -207,12 +227,22 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
       <div className="rounded-[28px] border border-white/10 bg-slate-950/80 shadow-2xl max-w-lg w-full overflow-hidden">
 
         {/* En-tête entreprise */}
-        <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-4 flex items-center gap-3">
-          <span className="text-3xl">{j.entreprise.icon}</span>
-          <div>
-            <div className="font-semibold">{j.pseudo} — {j.entreprise.nom}</div>
-            <div className="text-sm text-emerald-100">⚡ {j.entreprise.specialite}</div>
+        <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{j.entreprise.icon}</span>
+            <div>
+              <div className="font-semibold">{j.pseudo} — {j.entreprise.nom}</div>
+              <div className="text-sm text-emerald-100">⚡ {j.entreprise.specialite}</div>
+            </div>
           </div>
+          {/* Bouton Passer — visible dès l'étape 0 */}
+          <button
+            onClick={onStart}
+            className="cursor-pointer shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-white/20"
+            aria-label="Passer l'introduction et démarrer directement"
+          >
+            Passer →
+          </button>
         </div>
 
         {/* Indicateur de progression */}
@@ -235,7 +265,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {step > 0 && (
             <button
               onClick={() => setStep((s) => s - 1)}
-              className="flex-1 py-3 border border-white/10 rounded-xl text-slate-400 text-sm hover:bg-white/5 transition-colors font-medium"
+              className="flex-1 cursor-pointer py-3 border border-white/10 rounded-xl text-slate-400 text-sm hover:bg-white/5 transition-colors font-medium"
             >
               ← Précédent
             </button>
@@ -243,14 +273,14 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {step < steps.length - 1 ? (
             <button
               onClick={() => setStep((s) => s + 1)}
-              className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+              className="flex-1 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
             >
               Suivant →
             </button>
           ) : (
             <button
               onClick={onStart}
-              className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+              className="flex-1 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
             >
               🚀 Commencer
             </button>
