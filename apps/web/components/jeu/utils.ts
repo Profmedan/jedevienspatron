@@ -53,10 +53,10 @@ export function getDocumentType(poste: string): "Bilan" | "CR" {
 
 export function getSens(poste: string, delta: number): SensEcriture {
   const p = poste.toLowerCase();
-  const isActif = ACTIF_KEYS.some((k) => p.includes(k));
-  const isCharge = CHARGES_KEYS.some((k) => p.includes(k));
-  const isPassif = PASSIF_KEYS.some((k) => p.includes(k));
-  const isProduit = PRODUITS_KEYS.some((k) => p.includes(k));
+  const isActif = ACTIF_KEYS.some((k) => p.includes(k.toLowerCase()));
+  const isCharge = CHARGES_KEYS.some((k) => p.includes(k.toLowerCase()));
+  const isPassif = PASSIF_KEYS.some((k) => p.includes(k.toLowerCase()));
+  const isProduit = PRODUITS_KEYS.some((k) => p.includes(k.toLowerCase()));
 
   if ((isActif || isCharge) && delta >= 0) return "debit";
   if ((isActif || isCharge) && delta < 0) return "credit";

@@ -6,7 +6,7 @@ import {
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
-  tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle,
+  tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
 } from "@jedevienspatron/game-engine";
@@ -65,9 +65,9 @@ const ETAPE_INFO: Record<number, { icone: string; titre: string; description: st
   },
   5: {
     icone: "🔄", titre: "Effets récurrents des cartes Décision",
-    description: "Certaines de tes cartes Décision actives ont des effets qui se répètent chaque trimestre (abonnements, maintenance…).",
-    principe: "Certaines cartes actives produisent des effets chaque trimestre : un abonnement coûte de la trésorerie, un investissement peut rapporter des revenus. Vérifie que tes revenus couvrent tes charges récurrentes.",
-    conseil: "Chaque carte active a un coût récurrent. Si tes charges dépassent tes revenus, ta trésorerie fond chaque trimestre.",
+    description: "Effets récurrents de tes cartes actives : spécialité d'entreprise (ex. production stockée), abonnements, maintenance, intérêts…",
+    principe: "Chaque trimestre, tes cartes actives déclenchent automatiquement leurs effets. La production stockée (cpt 713) enregistre la valeur des marchandises que tu fabriques et mets en stock : c'est un produit qui augmente ton résultat, et un actif (stocks) qui augmente ton bilan. Une charge récurrente (abonnement, maintenance) fait l'inverse.",
+    conseil: "La production stockée n'est pas de la trésorerie : tu 'gagnes' sur le papier mais l'argent n'arrive que quand tu vends. Surveille le décalage entre résultat et trésorerie.",
   },
   6: {
     icone: "🎯", titre: "Choix d'une carte Décision",
@@ -168,6 +168,7 @@ interface UseGameFlowReturn {
   launchDecision: () => void;
   skipDecision: () => void;
   handleInvestirPersonnel: (carteId: string) => void;
+  handleLicencierCommercial: (carteId: string) => void;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────
@@ -633,6 +634,26 @@ export function useGameFlow({
     setActiveStep(buildActiveStep(etat, result.modifications, next, 6));
   }
 
+  function handleLicencierCommercial(carteId: string) {
+    if (!etat) return;
+    const next = cloneEtat(etat);
+    const result = licencierCommercial(next, next.joueurActif, carteId);
+    if (!result.succes) {
+      setDecisionError(result.messageErreur ?? "Impossible de licencier ce commercial.");
+      return;
+    }
+    setDecisionError(null);
+    const modsFiltrés = result.modifications.filter((m: { nouvelleValeur: number; ancienneValeur: number }) => m.nouvelleValeur !== m.ancienneValeur);
+    setRecentModifications(modsFiltrés.map((m: { poste: string; ancienneValeur: number; nouvelleValeur: number }) => ({
+      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
+    })));
+    setActiveStep(buildActiveStep(etat, result.modifications, next, 6, {
+      titre: "Licenciement",
+      icone: "📤",
+      description: "Vous licenciez un commercial. L'indemnité légale est versée immédiatement. Ce commercial ne génèrera plus de clients ni de salaires à partir du prochain trimestre.",
+    }));
+  }
+
   function skipDecision() {
     if (!etat) return;
     if (etat.etapeTour === 6 && subEtape6 === "recrutement") {
@@ -691,5 +712,6 @@ export function useGameFlow({
     launchDecision,
     skipDecision,
     handleInvestirPersonnel,
+    handleLicencierCommercial,
   };
 }
