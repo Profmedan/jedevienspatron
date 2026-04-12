@@ -446,9 +446,9 @@ export function InvestissementPanel({
           onClick={onTerminer}
           disabled={disabled}
           className="shrink-0 cursor-pointer rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label="Terminer l'étape investissement et passer à la suivante"
+          aria-label="Passer l'étape investissement et continuer"
         >
-          Terminer →
+          Passer →
         </button>
       </div>
 
@@ -459,43 +459,9 @@ export function InvestissementPanel({
             Aucune opportunité d&apos;investissement ce trimestre.
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Cliquez sur &laquo; Terminer &raquo; pour passer à l&apos;étape
-            suivante.
+            Cliquez sur &laquo; Passer &raquo; pour continuer.
           </p>
         </div>
-      )}
-
-      {/* ── Section : Vente d'occasion (cession d'immobilisation) ── */}
-      {onVendreImmobilisation && immosCessibles.length > 0 && (
-        <section
-          className="rounded-xl border border-orange-400/30 bg-orange-500/5 p-3"
-          aria-labelledby="groupe-cession"
-        >
-          <header className="mb-2 flex items-center gap-2">
-            <Tag className="h-4 w-4 text-orange-300" />
-            <h3
-              id="groupe-cession"
-              className="text-xs font-semibold uppercase tracking-wider text-orange-300"
-            >
-              Vente d&apos;occasion
-            </h3>
-            <span className="text-[10px] text-slate-500">
-              Céder un bien existant — encaissement immédiat + plus/moins-value au CR
-            </span>
-          </header>
-
-          <div className="space-y-2">
-            {immosCessibles.map((immo) => (
-              <CarteCession
-                key={immo.nom}
-                nom={immo.nom}
-                vnc={immo.valeur}
-                disabled={disabled}
-                onVendre={(prix) => onVendreImmobilisation(immo.nom, prix)}
-              />
-            ))}
-          </div>
-        </section>
       )}
 
       {/* ── Sections par catégorie ─────────────────────────── */}
@@ -540,6 +506,52 @@ export function InvestissementPanel({
           </section>
         );
       })}
+
+      {/* ── Section : Vente d'occasion — en dernier (action défensive) ── */}
+      {onVendreImmobilisation && immosCessibles.length > 0 && (
+        <section
+          className="rounded-xl border border-orange-400/30 bg-orange-500/5 p-3"
+          aria-labelledby="groupe-cession"
+        >
+          <header className="mb-2 flex items-center gap-2">
+            <Tag className="h-4 w-4 text-orange-300" />
+            <h3
+              id="groupe-cession"
+              className="text-xs font-semibold uppercase tracking-wider text-orange-300"
+            >
+              Vente d&apos;occasion
+            </h3>
+            <span className="text-[10px] text-slate-500">
+              Céder un bien existant — encaissement immédiat + plus/moins-value au CR
+            </span>
+          </header>
+
+          <div className="space-y-2">
+            {immosCessibles.map((immo) => (
+              <CarteCession
+                key={immo.nom}
+                nom={immo.nom}
+                vnc={immo.valeur}
+                disabled={disabled}
+                onVendre={(prix) => onVendreImmobilisation(immo.nom, prix)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Bouton Passer — visible en bas pour ne pas rater l'option ── */}
+      <div className="flex justify-center pt-1 pb-2">
+        <button
+          type="button"
+          onClick={onTerminer}
+          disabled={disabled}
+          className="cursor-pointer rounded-xl border border-white/20 bg-white/[0.06] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Passer l'étape investissement et continuer"
+        >
+          Passer cette étape →
+        </button>
+      </div>
     </div>
   );
 }
