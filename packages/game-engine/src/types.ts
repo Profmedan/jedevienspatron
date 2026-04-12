@@ -281,6 +281,12 @@ export interface ResultatAction {
     ancienneValeur: number;
     nouvelleValeur: number;
     explication: string;
+    /** Identifiant de regroupement pour les ventes (ex: "vente-0", "vente-1") */
+    saleGroupId?: string;
+    /** Label du client pour l'affichage narratif (ex: "Client Particulier") */
+    saleClientLabel?: string;
+    /** Numéro d'acte narratif dans le groupe (1=encaissement, 2=ventes, 3=stocks, 4=CMV) */
+    saleActIndex?: number;
   }>;
 }
 

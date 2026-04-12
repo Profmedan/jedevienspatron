@@ -98,12 +98,16 @@ function creerCompteResultatVierge(): CompteResultat {
   };
 }
 
-/** Crée une closure push(poste, delta, explication) pour tracker les modifications */
+/** Crée une closure push(poste, delta, explication, extras?) pour tracker les modifications */
 function makePush(
   joueur: Joueur,
   modifications: ResultatAction["modifications"]
 ) {
-  return (poste: EffetCarte["poste"], delta: number, explication: string) => {
+  return (poste: EffetCarte["poste"], delta: number, explication: string, extras?: {
+    saleGroupId?: string;
+    saleClientLabel?: string;
+    saleActIndex?: number;
+  }) => {
     const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
     modifications.push({
       joueurId: joueur.id,
@@ -111,6 +115,7 @@ function makePush(
       ancienneValeur,
       nouvelleValeur,
       explication,
+      ...extras,
     });
   };
 }
@@ -564,18 +569,21 @@ export function appliquerPaiementCommerciaux(
 
 // ─── ÉTAPE 4 : Traitement carte Client ───────────────────────
 /**
- * Comptabilisation en 4 écritures (partie double complète) :
- * 1. Ventes +X (Produit)
- * 2. Stocks -1 (Actif)
- * 3. CMV/Achats +1 (Charge)
- * 4a. Trésorerie +X (si client particulier, paiement immédiat)
- * 4b. Créances C+1 +X (si client TPE)
- * 4c. Créances C+2 +X (si client grand compte)
+ * Comptabilisation en 4 écritures (partie double complète).
+ * Ordre narratif optimisé pour la pédagogie :
+ *   Acte 1 — Encaissement (Trésorerie/Créances) : le plus tangible
+ *   Acte 2 — Chiffre d'affaires (Ventes)         : la contrepartie produit
+ *   Acte 3 — Livraison (Stocks −1 unité)          : la sortie physique
+ *   Acte 4 — Coût de revient (Achats/CMV)         : la contrepartie charge
+ *
+ * Chaque modification porte un saleGroupId + saleClientLabel + saleActIndex
+ * pour permettre à l'UI de regrouper et narrer les ventes.
  */
 export function appliquerCarteClient(
   etat: EtatJeu,
   joueurIdx: number,
-  carteClient: CarteClient
+  carteClient: CarteClient,
+  saleGroupIndex?: number
 ): ResultatAction {
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
@@ -592,35 +600,37 @@ export function appliquerCarteClient(
   }
 
   const montant = carteClient.montantVentes;
+  const groupId = `vente-${saleGroupIndex ?? 0}`;
+  const clientLabel = carteClient.titre;
 
-  // 1. Produit : Ventes
-  push("ventes", montant, `Vente enregistrée : +${montant} Ventes`);
-
-  // 2. Actif : Stocks diminuent d'1 unité = PRIX_UNITAIRE_MARCHANDISE (1 000 €)
-  push("stocks", -PRIX_UNITAIRE_MARCHANDISE, `Sortie de stock : −${PRIX_UNITAIRE_MARCHANDISE} € (1 marchandise livrée)`);
-
-  // 3. Charge : CMV (coût de la marchandise vendue)
-  push("achats", PRIX_UNITAIRE_MARCHANDISE, `Coût de la marchandise vendue (CMV) : +${PRIX_UNITAIRE_MARCHANDISE} €`);
-
-  // 4. Encaissement selon délai
   // Spécialité Véloce Transports (Logistique) : livraison rapide → délai réduit de 1
   const delaiEffectif = joueur.entreprise.nom === "Véloce Transports"
     ? Math.max(0, carteClient.delaiPaiement - 1) as 0 | 1 | 2
     : carteClient.delaiPaiement;
 
+  // ACTE 1 — Encaissement selon délai (le plus tangible)
   if (delaiEffectif === 0) {
     const label = carteClient.delaiPaiement > 0 && joueur.entreprise.nom === "Véloce Transports"
-      ? `🚀 Livraison rapide — encaissement accéléré : +${montant} Trésorerie`
-      : `Encaissement immédiat : +${montant} Trésorerie`;
-    push("tresorerie", montant, label);
+      ? `🚀 Livraison rapide — encaissement accéléré : +${montant} € en caisse`
+      : `Le client paie comptant : +${montant} € en caisse`;
+    push("tresorerie", montant, label, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
   } else if (delaiEffectif === 1) {
     const label = carteClient.delaiPaiement > 1 && joueur.entreprise.nom === "Véloce Transports"
-      ? `🚀 Livraison rapide — créance accélérée : +${montant} C+1 (au lieu de C+2)`
-      : `Créance client TPE enregistrée : +${montant} C+1`;
-    push("creancesPlus1", montant, label);
+      ? `🚀 Livraison rapide — créance accélérée : +${montant} € (C+1 au lieu de C+2)`
+      : `Le client paiera dans 1 trimestre : +${montant} € en créance C+1`;
+    push("creancesPlus1", montant, label, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
   } else {
-    push("creancesPlus2", montant, `Créance grand compte enregistrée : +${montant} C+2`);
+    push("creancesPlus2", montant, `Le client paiera dans 2 trimestres : +${montant} € en créance C+2`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
   }
+
+  // ACTE 2 — Chiffre d'affaires (Ventes)
+  push("ventes", montant, `Vente enregistrée au chiffre d'affaires : +${montant} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 2 });
+
+  // ACTE 3 — Sortie du stock (livraison de la marchandise)
+  push("stocks", -PRIX_UNITAIRE_MARCHANDISE, `Marchandise livrée au client : −${PRIX_UNITAIRE_MARCHANDISE} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+
+  // ACTE 4 — Coût de la marchandise vendue (CMV)
+  push("achats", PRIX_UNITAIRE_MARCHANDISE, `Coût de la marchandise vendue (CMV) enregistré en charges : +${PRIX_UNITAIRE_MARCHANDISE} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
 
   return { succes: true, modifications };
 }

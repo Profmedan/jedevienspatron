@@ -19,6 +19,12 @@ export interface EntryLine {
   description: string;
   applied: boolean;
   sens: SensEcriture;
+  /** Identifiant de regroupement vente (ex: "vente-0") */
+  saleGroupId?: string;
+  /** Label du client (ex: "Client Particulier") */
+  saleClientLabel?: string;
+  /** Numéro d'acte narratif (1=encaissement, 2=ventes, 3=stocks, 4=CMV) */
+  saleActIndex?: number;
 }
 
 interface EntryCardProps {

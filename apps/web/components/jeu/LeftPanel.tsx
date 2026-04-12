@@ -64,6 +64,8 @@ interface LeftPanelProps {
   /** @deprecated Volet 1 Tâche 11 : le mini-deck logistique est affiché dans InvestissementPanel (MainContent). Ce prop n'est plus utilisé par LeftPanel mais reste dans l'interface pour compatibilité du call site. */
   onInvestirPersonnel?: (carteId: string) => void;
   onLicencierCommercial?: (carteId: string) => void;
+  /** Applique atomiquement toutes les écritures d'un groupe de vente */
+  onApplySaleGroup?: (saleGroupId: string) => void;
 }
 
 const STEP_HELP = [
@@ -102,6 +104,7 @@ export function LeftPanel({
   onDemanderEmprunt,
   // onInvestirPersonnel retiré du destructuring : plus utilisé dans ce composant (voir interface)
   onLicencierCommercial,
+  onApplySaleGroup,
   subEtape6,
 }: LeftPanelProps) {
   const [pendingConfirm, setPendingConfirm] = useState(false);
@@ -223,61 +226,155 @@ export function LeftPanel({
 
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <div className="space-y-4">
-            {/* ── Titre de l’action en cours — bien visible ── */}
-            <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
-                Écriture {Math.min(activeStep.entries.filter((e) => e.applied).length + 1, activeStep.entries.length)} / {activeStep.entries.length}
-              </p>
-              <h3 className="mt-1 text-lg font-bold text-white leading-snug">{activeStep.titre}</h3>
-            </div>
+            {(() => {
+              // ── MODE VENTES GROUPÉES (step 4 avec saleGroupId) ──
+              const hasSaleGroups = etapeTour === 4 && activeStep.entries.some(e => e.saleGroupId);
+              if (hasSaleGroups && onApplySaleGroup) {
+                // Regrouper par saleGroupId
+                const groupIds = [...new Set(activeStep.entries.filter(e => e.saleGroupId).map(e => e.saleGroupId!))];
+                const groupsApplied = groupIds.filter(gid => activeStep.entries.filter(e => e.saleGroupId === gid).every(e => e.applied));
+                const currentGroupId = groupIds.find(gid => !activeStep.entries.filter(e => e.saleGroupId === gid).every(e => e.applied));
+                const currentGroupEntries = currentGroupId ? activeStep.entries.filter(e => e.saleGroupId === currentGroupId) : [];
+                const clientLabel = currentGroupEntries[0]?.saleClientLabel ?? "Client";
+                const ventesEntry = currentGroupEntries.find(e => e.poste === "ventes");
+                const montant = ventesEntry?.delta ?? 0;
+                const allGroupsApplied = groupsApplied.length === groupIds.length;
 
-            {firstPending ? (
-              <div className="space-y-3 rounded-xl border border-cyan-400/15 bg-white/[0.04] p-3">
-                {/* ── Compte + montant — gros et clair ── */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-cyan-200 mb-1">
-                    {nomCompte(firstPending.poste)}
-                  </p>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-sm font-semibold text-slate-200">{firstPending.sens === "debit" ? "DÉBIT" : "CRÉDIT"}</span>
-                    <span className="text-2xl font-black text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta.toLocaleString("fr-FR")} €</span>
+                return (
+                  <>
+                    {/* Titre : VENTE 1/3 */}
+                    <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
+                        Vente {Math.min(groupsApplied.length + 1, groupIds.length)} / {groupIds.length}
+                      </p>
+                      <h3 className="mt-1 text-lg font-bold text-white leading-snug">{activeStep.titre}</h3>
+                    </div>
+
+                    {/* Progression */}
+                    <div className="flex gap-1.5">
+                      {groupIds.map((gid, i) => (
+                        <div
+                          key={gid}
+                          className={`h-1.5 flex-1 rounded-full transition-all ${
+                            groupsApplied.includes(gid) ? "bg-emerald-400" : gid === currentGroupId ? "bg-cyan-400" : "bg-slate-700"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {currentGroupId && !allGroupsApplied ? (
+                      <div className="space-y-3 rounded-xl border border-cyan-400/15 bg-white/[0.04] p-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🤝</span>
+                          <div>
+                            <p className="text-xs font-bold text-cyan-200">{clientLabel}</p>
+                            <p className="text-lg font-black text-white">{montant > 0 ? "+" : ""}{montant.toLocaleString("fr-FR")} € de CA</p>
+                          </div>
+                        </div>
+
+                        {/* Mini-résumé des 4 actes */}
+                        <div className="space-y-1.5">
+                          {[...currentGroupEntries].sort((a, b) => (a.saleActIndex ?? 0) - (b.saleActIndex ?? 0)).map(entry => (
+                            <div key={entry.id} className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs ${
+                              entry.sens === "debit" ? "bg-sky-500/[0.08]" : "bg-amber-500/[0.08]"
+                            }`}>
+                              <span className="text-slate-300">{nomCompte(entry.poste)}</span>
+                              <span className={`font-semibold tabular-nums ${entry.sens === "debit" ? "text-sky-200" : "text-amber-200"}`}>
+                                {entry.delta > 0 ? "+" : ""}{entry.delta.toLocaleString("fr-FR")} €
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                          <p className="text-xs leading-relaxed text-sky-100">
+                            💡 Les 4 écritures de cette vente seront enregistrées ensemble — le bilan reste toujours équilibré.
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => onApplySaleGroup(currentGroupId)}
+                          className="w-full cursor-pointer rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
+                        >
+                          Enregistrer cette vente ✓
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-3">
+                        <p className="text-sm font-medium text-emerald-100">✅ Toutes les ventes enregistrées.</p>
+                      </div>
+                    )}
+
+                    {allGroupsApplied && (
+                      <button
+                        onClick={onConfirmStep}
+                        aria-label="Confirmer l’étape et passer à la suivante"
+                        className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+                      >
+                        Confirmer l&apos;étape ✓
+                      </button>
+                    )}
+                  </>
+                );
+              }
+
+              // ── MODE CLASSIQUE (toutes les autres étapes) ──
+              return (
+                <>
+                  <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
+                      Écriture {Math.min(activeStep.entries.filter((e) => e.applied).length + 1, activeStep.entries.length)} / {activeStep.entries.length}
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold text-white leading-snug">{activeStep.titre}</h3>
                   </div>
-                </div>
-                {/* ── Description de l’écriture — lisible ── */}
-                <p className="text-sm leading-relaxed text-slate-200">{firstPending.description}</p>
-                {/* ── Bulle pédagogique ── */}
-                <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
-                  <p className="text-xs leading-relaxed text-sky-100">💡 {activeStep.principe}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    if (isFirstEntry) {
-                      setPendingConfirm(true);
-                    } else {
-                      onApplyEntry(firstPending.id);
-                    }
-                  }}
-                  aria-label={`Appliquer l'écriture comptable : ${firstPending.id}`}
-                  className="w-full cursor-pointer rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
-                >
-                  {isFirstEntry ? "Vérifier et confirmer →" : "Appliquer cette écriture"}
-                </button>
-              </div>
-            ) : (
-              <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-3">
-                <p className="text-sm font-medium text-emerald-100">✅ Toutes les écritures saisies.</p>
-              </div>
-            )}
 
-            {allApplied && (
-              <button
-                onClick={onConfirmStep}
-                aria-label="Confirmer l’étape et passer à la suivante"
-                className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
-              >
-                Confirmer l’étape ✓
-              </button>
-            )}
+                  {firstPending ? (
+                    <div className="space-y-3 rounded-xl border border-cyan-400/15 bg-white/[0.04] p-3">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-cyan-200 mb-1">
+                          {nomCompte(firstPending.poste)}
+                        </p>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm font-semibold text-slate-200">{firstPending.sens === "debit" ? "DÉBIT" : "CRÉDIT"}</span>
+                          <span className="text-2xl font-black text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta.toLocaleString("fr-FR")} €</span>
+                        </div>
+                      </div>
+                      <p className="text-sm leading-relaxed text-slate-200">{firstPending.description}</p>
+                      <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                        <p className="text-xs leading-relaxed text-sky-100">💡 {activeStep.principe}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (isFirstEntry) {
+                            setPendingConfirm(true);
+                          } else {
+                            onApplyEntry(firstPending.id);
+                          }
+                        }}
+                        aria-label={`Appliquer l’écriture comptable : ${firstPending.id}`}
+                        className="w-full cursor-pointer rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
+                      >
+                        {isFirstEntry ? "Vérifier et confirmer →" : "Appliquer cette écriture"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-3">
+                      <p className="text-sm font-medium text-emerald-100">✅ Toutes les écritures saisies.</p>
+                    </div>
+                  )}
+
+                  {allApplied && (
+                    <button
+                      onClick={onConfirmStep}
+                      aria-label="Confirmer l’étape et passer à la suivante"
+                      className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+                    >
+                      Confirmer l&apos;étape ✓
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </section>
 

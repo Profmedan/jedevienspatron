@@ -6,6 +6,7 @@ import { EtatJeu, Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron
 
 import { DoubleEntrySalesCard } from "./DoubleEntrySalesCard";
 import { EntryCard, type EntryLine } from "./EntryCard";
+import { SaleGroupCard } from "./SaleGroupCard";
 import { getDocumentType, getPosteValue, nomCompte } from "./utils";
 
 export interface ActiveStep {
@@ -25,6 +26,7 @@ interface EntryPanelProps {
   baseJoueur?: Joueur;
   onApply: (id: string) => void;
   onApplyEntry?: (poste: string) => void;
+  onApplySaleGroup?: (saleGroupId: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
   tourActuel?: number;
@@ -129,6 +131,7 @@ export function EntryPanel({
   baseJoueur,
   onApply,
   onApplyEntry,
+  onApplySaleGroup,
   onConfirm,
   onCancel,
   tourActuel = 0,
@@ -208,8 +211,18 @@ export function EntryPanel({
   const nextEntry = pendingEntries[0];
 
   const isSalesStep = etapeTour === 4;
+
+  // Nouveau : détection des groupes de vente narratifs (saleGroupId)
+  const hasSaleGroupEntries = useMemo(() => entries.some(e => e.saleGroupId), [entries]);
+  const saleGroupIds = useMemo(() => {
+    if (!hasSaleGroupEntries) return [];
+    return [...new Set(entries.filter(e => e.saleGroupId).map(e => e.saleGroupId!))];
+  }, [entries, hasSaleGroupEntries]);
+
   const displayAsSalesGroup = useMemo(() => {
     if (!isSalesStep) return false;
+    // Priorité aux groupes narratifs
+    if (hasSaleGroupEntries) return false; // On utilise le nouveau rendu SaleGroupCard à la place
 
     const hasVentes = entries.some((entry) => entry.poste === "ventes");
     const hasStocks = entries.some((entry) => entry.poste === "stocks");
@@ -222,7 +235,7 @@ export function EntryPanel({
     );
 
     return hasVentes && hasStocks && hasAchats && hasCashOrCreance;
-  }, [entries, isSalesStep]);
+  }, [entries, isSalesStep, hasSaleGroupEntries]);
 
   function handleApply(entryId: string, poste: string) {
     onApply(entryId);
@@ -395,7 +408,56 @@ export function EntryPanel({
       <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
         {entries.length > 0 ? (
           <>
-            {displayAsSalesGroup ? (
+            {/* ── NOUVEAU : Rendu par groupes de vente narratifs ── */}
+            {hasSaleGroupEntries && saleGroupIds.length > 0 && onApplySaleGroup ? (
+              <div className="space-y-4">
+                <SectionHeader
+                  eyebrow="Saisie guidée"
+                  title={`${saleGroupIds.length} vente${saleGroupIds.length > 1 ? "s" : ""} à enregistrer`}
+                  description="Chaque vente est une opération complète à 4 écritures. Lis le récit, comprends les 4 actes, puis valide en un clic."
+                />
+                {saleGroupIds.map((gid, idx) => {
+                  const groupEntries = entries.filter(e => e.saleGroupId === gid);
+                  const clientLabel = groupEntries[0]?.saleClientLabel ?? "Client";
+                  const allAppliedInGroup = groupEntries.every(e => e.applied);
+                  // Le premier groupe non-appliqué est le groupe actif
+                  const firstUnappliedGroup = saleGroupIds.find(g => !entries.filter(e => e.saleGroupId === g).every(e => e.applied));
+                  const isActiveGroup = gid === firstUnappliedGroup;
+                  return (
+                    <SaleGroupCard
+                      key={gid}
+                      entries={groupEntries}
+                      clientLabel={clientLabel}
+                      saleGroupId={gid}
+                      saleIndex={idx + 1}
+                      totalSales={saleGroupIds.length}
+                      onApplyGroup={(groupId) => {
+                        onApplySaleGroup(groupId);
+                        // Also trigger per-entry effects for highlighting
+                        groupEntries.forEach(e => onApplyEntry?.(e.poste));
+                      }}
+                      isApplied={allAppliedInGroup}
+                      isActive={isActiveGroup}
+                      tourActuel={tourActuel}
+                    />
+                  );
+                })}
+
+                {/* Entries sans saleGroupId (ex: message clients perdus) */}
+                {entries.filter(e => !e.saleGroupId).map((entry, index) => (
+                  <EntryCard
+                    key={entry.id}
+                    entry={entry}
+                    operationTitre={activeStep.titre}
+                    isExpanded={activeEntryId === entry.id}
+                    onToggle={() => setActiveEntryId(activeEntryId === entry.id ? null : entry.id)}
+                    onApply={() => handleApply(entry.id, entry.poste)}
+                    index={index}
+                    tourActuel={tourActuel}
+                  />
+                ))}
+              </div>
+            ) : displayAsSalesGroup ? (
               <div className="space-y-4">
                 <SectionHeader
                   eyebrow="Saisie guidée"

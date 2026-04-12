@@ -1,4 +1,58 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-11
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-12
+
+---
+
+## Tâche 12 : Refonte UX "Traitement des ventes" — 2026-04-12
+
+### Contexte
+Pierre signale que la séquence de 4 écritures par vente (Ventes, Stocks, Achats/CMV, Trésorerie) est confuse pour l'apprenant. 6 problèmes identifiés :
+1. Déséquilibre temporaire affiché (⚠️) entre les écritures d'une même transaction
+2. Ordre contre-intuitif (commence par le plus abstrait : Ventes au lieu du plus concret : Trésorerie)
+3. Aucun lien narratif entre les 4 écritures d'une même vente
+4. 12 écritures séquentielles (3 clients × 4) = surcharge cognitive
+5. Terminologie Débit/Crédit brute sans explication accessible
+6. Bulle pédagogique (💡) générique identique pour les 12 écritures
+
+### Solution : "L'histoire d'une vente" — regroupée, narrée, progressive
+
+Chaque vente = 1 carte narrative avec 4 actes, un récit adapté au client, et un seul bouton de validation.
+
+### Plan d'implémentation (5 volets)
+
+#### Volet 1 — Engine : réordonner les écritures + metadata
+- [x] `engine.ts` : réordonner les 4 push() dans `appliquerCarteClient` (Trésorerie→Ventes→Stocks→CMV)
+- [x] Ajouter `saleGroupId`, `saleClientLabel`, `saleActIndex` aux modifications
+- [x] Synchroniser les 2 fichiers engine.ts (L20)
+- [x] Rebuild `packages/game-engine`
+
+#### Volet 2 — useGameFlow : regrouper les entries par vente
+- [x] Taguer chaque lot de 4 modifications avec `saleGroupId` dans case 4
+- [x] Propager `saleGroupId`, `saleClientLabel`, `saleActIndex` dans EntryLine
+- [x] `applySaleGroup()` pour application atomique des 4 écritures
+
+#### Volet 3 — Nouveau composant SaleGroupCard.tsx
+- [x] Carte narrative par vente avec 4 actes numérotés
+- [x] Récit adapté au client (Particulier/TPE/Grand Compte)
+- [x] Micro-explication Débit/Crédit en langage clair
+- [x] Vérification d'équilibre intégrée (Σ Débits = Σ Crédits)
+- [x] Marge brute affichée (Ventes − CMV)
+- [x] Un seul bouton "Enregistrer cette vente"
+
+#### Volet 4 — LeftPanel : VENTE 1/3 au lieu d'ÉCRITURE 1/12
+- [x] Compteur de ventes au lieu de compteur d'écritures
+- [x] Résumé narratif de la vente en cours
+- [x] Application atomique des 4 écritures (pas de déséquilibre intermédiaire)
+
+#### Volet 5 — EntryPanel : utiliser SaleGroupCard en step 4
+- [x] Remplacer les EntryCard individuelles par SaleGroupCard
+- [x] Conserver EntryCard comme fallback pour entries sans saleGroupId
+
+#### Volet 6 — Câblage + Vérification
+- [x] `onApplySaleGroup` câblé : page.tsx → LeftPanel (+ EntryPanel prêt)
+- [x] `npx tsc --noEmit` → 0 erreur ✅
+- [x] `npm test` → 39/39 verts ✅
+- [ ] Test visuel : aucun ⚠️ Déséquilibre pendant le step 4 (à tester par Pierre)
+- [ ] Narrative cohérente pour les 3 types de clients (à vérifier visuellement)
 
 ---
 

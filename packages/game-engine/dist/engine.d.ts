@@ -19,15 +19,17 @@ export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: n
  */
 export declare function licencierCommercial(etat: EtatJeu, joueurIdx: number, carteId: string): ResultatAction;
 /**
- * Comptabilisation en 4 écritures (partie double complète) :
- * 1. Ventes +X (Produit)
- * 2. Stocks -1 (Actif)
- * 3. CMV/Achats +1 (Charge)
- * 4a. Trésorerie +X (si client particulier, paiement immédiat)
- * 4b. Créances C+1 +X (si client TPE)
- * 4c. Créances C+2 +X (si client grand compte)
+ * Comptabilisation en 4 écritures (partie double complète).
+ * Ordre narratif optimisé pour la pédagogie :
+ *   Acte 1 — Encaissement (Trésorerie/Créances) : le plus tangible
+ *   Acte 2 — Chiffre d'affaires (Ventes)         : la contrepartie produit
+ *   Acte 3 — Livraison (Stocks −1 unité)          : la sortie physique
+ *   Acte 4 — Coût de revient (Achats/CMV)         : la contrepartie charge
+ *
+ * Chaque modification porte un saleGroupId + saleClientLabel + saleActIndex
+ * pour permettre à l'UI de regrouper et narrer les ventes.
  */
-export declare function appliquerCarteClient(etat: EtatJeu, joueurIdx: number, carteClient: CarteClient): ResultatAction;
+export declare function appliquerCarteClient(etat: EtatJeu, joueurIdx: number, carteClient: CarteClient, saleGroupIndex?: number): ResultatAction;
 export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Applique les effets passifs liés à la spécialité de l'entreprise.

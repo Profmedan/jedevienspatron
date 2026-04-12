@@ -158,6 +158,7 @@ interface UseGameFlowReturn {
   // ─ Actions ─
   handleStart: (players: PlayerSetup[], nbTours?: number) => Promise<void>;
   applyEntry: (entryId: string) => void;
+  applySaleGroup: (saleGroupId: string) => void;
   confirmActiveStep: () => void;
   launchStep: () => void;
   handleApplyEntry: (poste: string) => void;
@@ -309,7 +310,7 @@ export function useGameFlow({
   // ─ Construire l'étape active à partir des modifications du moteur ─────────
   function buildActiveStep(
     baseEtat: EtatJeu,
-    mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string }>,
+    mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string; saleGroupId?: string; saleClientLabel?: string; saleActIndex?: number }>,
     previewEtat: EtatJeu,
     etape: number,
     override?: { titre?: string; icone?: string; description?: string },
@@ -324,6 +325,9 @@ export function useGameFlow({
         description: m.explication,
         applied: false,
         sens: getSens(m.poste, m.nouvelleValeur - m.ancienneValeur) as "debit" | "credit",
+        saleGroupId: m.saleGroupId,
+        saleClientLabel: m.saleClientLabel,
+        saleActIndex: m.saleActIndex,
       }));
     return {
       titre:       override?.titre       ?? info.titre,
@@ -346,6 +350,20 @@ export function useGameFlow({
     setActiveStep(prev =>
       prev ? { ...prev, entries: prev.entries.map(e => e.id === entryId ? { ...e, applied: true } : e) } : null
     );
+  }
+
+  // ─ Appliquer un groupe de vente ATOMIQUEMENT (toutes les écritures d'un saleGroupId) ─
+  // Empêche le déséquilibre temporaire entre les écritures d'une même vente.
+  function applySaleGroup(saleGroupId: string) {
+    setActiveStep(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        entries: prev.entries.map(e =>
+          e.saleGroupId === saleGroupId ? { ...e, applied: true } : e
+        ),
+      };
+    });
   }
 
   // ─ Valider l'étape (toutes écritures cochées + bilan équilibré) ──────────
@@ -431,8 +449,8 @@ export function useGameFlow({
         const clientsTraites = clientsAtrait.slice(0, capacite);
         const clientsPerdus = clientsAtrait.slice(capacite);
 
-        for (const c of clientsTraites) {
-          const r = appliquerCarteClient(next, idx, c);
+        for (let si = 0; si < clientsTraites.length; si++) {
+          const r = appliquerCarteClient(next, idx, clientsTraites[si], si);
           if (r.succes) mods = [...mods, ...r.modifications];
         }
 
@@ -775,6 +793,7 @@ export function useGameFlow({
     cartesRecrutement,
     handleStart,
     applyEntry,
+    applySaleGroup,
     confirmActiveStep,
     launchStep,
     handleApplyEntry,

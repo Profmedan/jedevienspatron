@@ -325,6 +325,7 @@ export default function JeuPage() {
             onDemanderEmprunt={() => { flow.setReponseEmprunt(null); flow.setShowDemandeEmprunt(true); }}
             onInvestirPersonnel={flow.handleInvestirPersonnel}
             onLicencierCommercial={flow.handleLicencierCommercial}
+            onApplySaleGroup={flow.applySaleGroup}
           />
         </div>
 
