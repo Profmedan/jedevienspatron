@@ -52,6 +52,29 @@ const REVENU_PAR_CLIENT: Record<string, { ventes: number; marge: number; label: 
   grand_compte:{ ventes: 4000, marge: 3000, label: "Grand Compte",delai: "C+2" },
 };
 
+// ── Bénéfices qualitatifs par carte (quand pas de métrique financière directe) ──
+const BENEFICE_QUALITATIF: Partial<Record<string, string>> = {
+  "assurance-prevoyance":      "Annule incendie, grève, litige et contrôle fiscal",
+  "mutuelle-collective":       "Fidélise l'équipe et réduit le risque de grève",
+  "cybersecurite":             "Annule pertes de données et risques de piratage",
+  "maintenance-preventive":    "Annule pannes machines + réduit les amortissements",
+  "affacturage":               "Convertit toutes vos créances en trésorerie immédiate",
+  "relance-clients":           "Avance d'un trimestre le paiement de toutes vos créances",
+  "optimisation-lean":         "Réduit le coût des marchandises vendues de 1 000 €/trim",
+  "sous-traitance-production": "Ajoute 2 unités produites chaque trimestre",
+  "achat-urgence":             "Déblocage immédiat de 5 000 € de stocks",
+  "remboursement-anticipe":    "Solde l'emprunt et supprime les intérêts récurrents",
+  "revision-generale":         "Prolonge la durée de vie des immobilisations",
+};
+
+// ── Label des charges récurrentes selon la catégorie de carte ──
+function labelCharges(categorie: CarteDecision["categorie"]): string {
+  if (categorie === "commercial") return "Salaire";
+  if (categorie === "financement") return "Intérêts";
+  if (categorie === "protection") return "Cotisation";
+  return "Entretien";
+}
+
 // ── Analyse des bénéfices récurrents d'une carte ────────────
 interface BeneficeAnalyse {
   /** Clients générés par trimestre */
@@ -68,6 +91,10 @@ interface BeneficeAnalyse {
   cartesBonus: number;
   /** Description des revenus spéciaux (ex: "CIR") */
   labelRevenusSpeciaux: string | null;
+  /** Bénéfice qualitatif pour les cartes sans métrique financière directe */
+  beneficeQualitatif: string | null;
+  /** Bénéfice de financement : apport en capitaux propres */
+  apportCapitaux: number;
 }
 
 function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
@@ -124,6 +151,14 @@ function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
   // 6. Cartes bonus
   const cartesBonus = carte.carteDecisionBonus ?? 0;
 
+  // 7. Bénéfice qualitatif (protection, service, tactique sans clients)
+  const beneficeQualitatif = BENEFICE_QUALITATIF[carte.id] ?? null;
+
+  // 8. Apport en capitaux propres (financement : levée de fonds, crowdfunding)
+  const apportCapitaux = carte.effetsImmédiats
+    .filter((e) => e.poste === "capitaux" && e.delta > 0)
+    .reduce((sum, e) => sum + e.delta, 0);
+
   return {
     clients,
     chargesRecurrentesTrim,
@@ -132,6 +167,8 @@ function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
     paybackTrimestres,
     cartesBonus,
     labelRevenusSpeciaux,
+    beneficeQualitatif,
+    apportCapitaux,
   };
 }
 
@@ -465,7 +502,13 @@ function CarteInvestissement({
 
   // Analyse des bénéfices
   const benefice = analyserBenefice(carte);
-  const hasBenefice = benefice.clients || benefice.cartesBonus > 0 || benefice.revenusSpeciauxTrim > 0;
+  const hasBenefice =
+    benefice.clients !== null ||
+    benefice.cartesBonus > 0 ||
+    benefice.revenusSpeciauxTrim > 0 ||
+    benefice.beneficeQualitatif !== null ||
+    benefice.chargesRecurrentesTrim < 0 ||
+    benefice.apportCapitaux > 0;
 
   // Handler : on route selon la source
   function handleInvestir() {
@@ -555,11 +598,27 @@ function CarteInvestissement({
           </span>
         )}
 
+        {/* Apport capitaux propres (levée de fonds, crowdfunding) */}
+        {benefice.apportCapitaux > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-300">
+            <TrendingUp className="h-3 w-3 shrink-0" />
+            Capitaux propres : +{fmt(benefice.apportCapitaux)}
+          </span>
+        )}
+
+        {/* Bénéfice qualitatif (protection, service, tactique) */}
+        {benefice.beneficeQualitatif && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-300">
+            <Zap className="h-3 w-3 shrink-0" />
+            {benefice.beneficeQualitatif}
+          </span>
+        )}
+
         {/* Charges récurrentes */}
         {benefice.chargesRecurrentesTrim < 0 && (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300">
             <Repeat className="h-3 w-3 shrink-0" />
-            {carte.categorie === "commercial" ? "Salaire" : "Entretien"} : {fmt(Math.abs(benefice.chargesRecurrentesTrim))}/trim
+            {labelCharges(carte.categorie)} : {fmt(Math.abs(benefice.chargesRecurrentesTrim))}/trim
           </span>
         )}
 
