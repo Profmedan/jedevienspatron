@@ -44,7 +44,8 @@ interface AccentTheme {
 }
 
 function formatSigned(delta: number): string {
-  return delta > 0 ? `+${delta}` : `${delta}`;
+  const abs = Math.abs(delta).toLocaleString("fr-FR");
+  return delta > 0 ? `+${abs} €` : `−${abs} €`;
 }
 
 function InfoBlock({

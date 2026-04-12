@@ -4,7 +4,9 @@ import { useState } from "react";
 import { getTotalActif, getTotalPassif, CarteDecision, Joueur } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
-import { MiniDeckPanel } from "./MiniDeckPanel";
+// NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel à l'étape 6b.
+// Les cartes du mini-deck logistique sont désormais fusionnées dans
+// `InvestissementPanel`, affiché dans le panneau central (MainContent).
 
 const STEP_NAMES = [
   "Charges fixes",
@@ -59,6 +61,7 @@ interface LeftPanelProps {
   modalEtapeEnAttente?: number | null;
   onCloseModal?: () => void;
   onDemanderEmprunt?: () => void;
+  /** @deprecated Volet 1 Tâche 11 : le mini-deck logistique est affiché dans InvestissementPanel (MainContent). Ce prop n'est plus utilisé par LeftPanel mais reste dans l'interface pour compatibilité du call site. */
   onInvestirPersonnel?: (carteId: string) => void;
   onLicencierCommercial?: (carteId: string) => void;
 }
@@ -97,7 +100,7 @@ export function LeftPanel({
   onLaunchDecision,
   onLaunchStep,
   onDemanderEmprunt,
-  onInvestirPersonnel,
+  // onInvestirPersonnel retiré du destructuring : plus utilisé dans ce composant (voir interface)
   onLicencierCommercial,
   subEtape6,
 }: LeftPanelProps) {
@@ -155,7 +158,7 @@ export function LeftPanel({
                   <div key={e.id} className="flex justify-between items-center text-sm">
                     <span className="text-slate-300">{nomCompte(e.poste)}</span>
                     <span className={`font-bold tabular-nums ${e.delta >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-                      {e.delta > 0 ? "+" : ""}{e.delta.toLocaleString("fr-FR")} u
+                      {e.delta > 0 ? "+" : ""}{e.delta.toLocaleString("fr-FR")} €
                     </span>
                   </div>
                 ))}
@@ -237,7 +240,7 @@ export function LeftPanel({
                   </p>
                   <div className="flex items-baseline justify-between">
                     <span className="text-sm font-semibold text-slate-200">{firstPending.sens === "debit" ? "DÉBIT" : "CRÉDIT"}</span>
-                    <span className="text-2xl font-black text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta}u</span>
+                    <span className="text-2xl font-black text-white">{firstPending.delta > 0 ? "+" : ""}{firstPending.delta.toLocaleString("fr-FR")} €</span>
                   </div>
                 </div>
                 {/* ── Description de l’écriture — lisible ── */}
@@ -437,14 +440,7 @@ export function LeftPanel({
                     <p className="text-xs text-cyan-100">👉 Choisis une carte dans le panneau central</p>
                   </div>
                 )}
-                {/* Mini-deck logistique personnel — visible à l'étape 6b */}
-                {subEtape6 === "investissement" && (
-                  <MiniDeckPanel
-                    joueur={joueur}
-                    onInvestir={(carteId) => onInvestirPersonnel?.(carteId)}
-                    disabled={false}
-                  />
-                )}
+                {/* Mini-deck logistique déplacé vers InvestissementPanel (MainContent) à l'étape 6b */}
                 {/* Licenciement — visible à l'étape 6a si des commerciaux sont actifs */}
                 {subEtape6 === "recrutement" && joueur.cartesActives.some(c => c.categorie === "commercial") && (
                   <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-2 space-y-1">

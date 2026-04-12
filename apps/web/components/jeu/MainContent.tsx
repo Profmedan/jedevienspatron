@@ -171,7 +171,7 @@ export function MainContent({
                     <div className="mt-1 flex flex-wrap gap-1">
                       {carte.effetsImmédiats.map((e, i) => (
                         <span key={i} className="text-[10px] rounded bg-slate-800 px-1.5 py-0.5 text-slate-300">
-                          {e.poste}: {e.delta > 0 ? "+" : ""}{e.delta}
+                          {e.poste}: {e.delta > 0 ? "+" : ""}{e.delta.toLocaleString("fr-FR")} €
                         </span>
                       ))}
                     </div>

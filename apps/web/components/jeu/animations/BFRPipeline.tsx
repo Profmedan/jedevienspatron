@@ -36,7 +36,7 @@ const AnimatedNumber: React.FC<{ value: number; isHighlight?: boolean }> = ({
 }) => {
   const motionValue = useMotionValue(0);
   const rounded = useTransform(motionValue, (latest) =>
-    Math.round(latest).toLocaleString("fr-FR")
+    Math.round(latest).toLocaleString("fr-FR") + " €"
   );
 
   useEffect(() => {

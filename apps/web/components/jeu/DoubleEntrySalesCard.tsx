@@ -127,7 +127,7 @@ export function DoubleEntrySalesCard({
                           bon ? "text-emerald-300" : "text-rose-300"
                         }`}
                       >
-                        +{entry.delta}
+                        +{entry.delta.toLocaleString("fr-FR")} €
                       </span>
                     </div>
                   </div>
@@ -165,7 +165,7 @@ export function DoubleEntrySalesCard({
                           bon ? "text-emerald-300" : "text-rose-300"
                         }`}
                       >
-                        +{entry.delta}
+                        +{entry.delta.toLocaleString("fr-FR")} €
                       </span>
                     </div>
                   </div>

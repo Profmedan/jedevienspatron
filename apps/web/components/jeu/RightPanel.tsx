@@ -371,7 +371,7 @@ function ProgressBar({
         />
       </div>
       <span className="w-12 text-right text-gray-400">
-        {isPercent ? `${formatAmount(value)}%` : formatAmount(value)}
+        {isPercent ? `${formatAmount(value)}%` : `${formatAmount(value)} €`}
       </span>
     </div>
   );

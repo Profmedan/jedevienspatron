@@ -349,16 +349,16 @@ export function EntryPanel({
                 </div>
 
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  <StatCard label="Avant" value={`${row.avant}`} helper="Valeur de départ." />
+                  <StatCard label="Avant" value={`${row.avant.toLocaleString("fr-FR")} €`} helper="Valeur de départ." />
                   <StatCard
                     label="Après"
-                    value={`${row.actuel}`}
+                    value={`${row.actuel.toLocaleString("fr-FR")} €`}
                     helper="Valeur après saisie."
                     tone={row.delta > 0 ? "emerald" : row.delta < 0 ? "rose" : "neutral"}
                   />
                   <StatCard
                     label="Écart"
-                    value={row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
+                    value={row.delta > 0 ? `+${row.delta.toLocaleString("fr-FR")} €` : `${row.delta.toLocaleString("fr-FR")} €`}
                     helper="Variation visible."
                     tone={
                       row.delta === 0
