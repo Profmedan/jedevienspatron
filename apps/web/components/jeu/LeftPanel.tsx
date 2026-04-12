@@ -230,29 +230,54 @@ export function LeftPanel({
               // ── MODE VENTES GROUPÉES (step 4 avec saleGroupId) ──
               const hasSaleGroups = etapeTour === 4 && activeStep.entries.some(e => e.saleGroupId);
               if (hasSaleGroups && onApplySaleGroup) {
-                // Regrouper par saleGroupId
+                // Constantes d’affichage pédagogique
+                const DISPLAY_POS: Record<number, number> = { 2: 1, 1: 2, 3: 3, 4: 4 };
+                const DOC_LABEL: Record<number, { doc: string; cat: string }> = {
+                  2: { doc: "Compte de Résultat", cat: "Produits" },
+                  1: { doc: "Bilan",              cat: "Actif" },
+                  3: { doc: "Bilan",              cat: "Actif" },
+                  4: { doc: "Compte de Résultat", cat: "Charges" },
+                };
+
+                // Regrouper par saleGroupId (ordre stable)
                 const groupIds = [...new Set(activeStep.entries.filter(e => e.saleGroupId).map(e => e.saleGroupId!))];
                 const groupsApplied = groupIds.filter(gid => activeStep.entries.filter(e => e.saleGroupId === gid).every(e => e.applied));
                 const currentGroupId = groupIds.find(gid => !activeStep.entries.filter(e => e.saleGroupId === gid).every(e => e.applied));
-                const currentGroupEntries = currentGroupId ? activeStep.entries.filter(e => e.saleGroupId === currentGroupId) : [];
-                const clientLabel = currentGroupEntries[0]?.saleClientLabel ?? "Client";
-                const ventesEntry = currentGroupEntries.find(e => e.poste === "ventes");
-                const montant = ventesEntry?.delta ?? 0;
                 const allGroupsApplied = groupsApplied.length === groupIds.length;
+
+                // Numérotation des doublons : si plusieurs clients du même label,
+                // chacun reçoit un suffixe "(1/2)", "(2/2)" etc.
+                const labelCount: Record<string, number> = {};
+                const labelIndex: Record<string, number> = {};
+                groupIds.forEach(gid => {
+                  const label = activeStep.entries.find(e => e.saleGroupId === gid)?.saleClientLabel ?? "Client";
+                  labelCount[label] = (labelCount[label] ?? 0) + 1;
+                });
+                const clientDisplayLabel = (gid: string): string => {
+                  const raw = activeStep.entries.find(e => e.saleGroupId === gid)?.saleClientLabel ?? "Client";
+                  if ((labelCount[raw] ?? 1) <= 1) return raw;
+                  labelIndex[raw] = (labelIndex[raw] ?? 0) + 1;
+                  return `${raw} (${labelIndex[raw]}/${labelCount[raw]})`;
+                };
+                // Pré-calculer les labels dans l’ordre des groupIds
+                const groupLabels: Record<string, string> = {};
+                groupIds.forEach(gid => { groupLabels[gid] = clientDisplayLabel(gid); });
 
                 return (
                   <>
-                    {/* Titre : VENTE 1/3 */}
+                    {/* En-tête : titre de l’étape */}
                     <div className="rounded-xl bg-gradient-to-r from-cyan-900/40 to-slate-800/40 border border-cyan-400/20 px-3 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
-                        Vente {Math.min(groupsApplied.length + 1, groupIds.length)} / {groupIds.length}
+                        {allGroupsApplied
+                          ? `${groupIds.length} / ${groupIds.length} ventes enregistrées`
+                          : `Vente ${groupsApplied.length + 1} / ${groupIds.length}`}
                       </p>
                       <h3 className="mt-1 text-lg font-bold text-white leading-snug">{activeStep.titre}</h3>
                     </div>
 
                     {/* Progression */}
                     <div className="flex gap-1.5">
-                      {groupIds.map((gid, i) => (
+                      {groupIds.map((gid) => (
                         <div
                           key={gid}
                           className={`h-1.5 flex-1 rounded-full transition-all ${
@@ -262,57 +287,121 @@ export function LeftPanel({
                       ))}
                     </div>
 
-                    {currentGroupId && !allGroupsApplied ? (
-                      <div className="space-y-3 rounded-xl border border-cyan-400/15 bg-white/[0.04] p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">🤝</span>
-                          <div>
-                            <p className="text-xs font-bold text-cyan-200">{clientLabel}</p>
-                            <p className="text-lg font-black text-white">{montant > 0 ? "+" : ""}{montant.toLocaleString("fr-FR")} € de CA</p>
-                          </div>
-                        </div>
+                    {/* Liste de toutes les ventes avec statut */}
+                    <div className="space-y-2">
+                      {groupIds.map((gid, idx) => {
+                        const isApplied = groupsApplied.includes(gid);
+                        const isCurrent = gid === currentGroupId;
+                        const groupEntries = activeStep.entries.filter(e => e.saleGroupId === gid);
+                        const ventesEntry = groupEntries.find(e => e.poste === "ventes");
+                        const montant = ventesEntry?.delta ?? 0;
+                        const label = groupLabels[gid];
 
-                        {/* Mini-résumé des 4 actes */}
-                        <div className="space-y-1.5">
-                          {[...currentGroupEntries].sort((a, b) => (a.saleActIndex ?? 0) - (b.saleActIndex ?? 0)).map(entry => (
-                            <div key={entry.id} className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs ${
-                              entry.sens === "debit" ? "bg-sky-500/[0.08]" : "bg-amber-500/[0.08]"
-                            }`}>
-                              <span className="text-slate-300">{nomCompte(entry.poste)}</span>
-                              <span className={`font-semibold tabular-nums ${entry.sens === "debit" ? "text-sky-200" : "text-amber-200"}`}>
-                                {entry.delta > 0 ? "+" : ""}{entry.delta.toLocaleString("fr-FR")} €
-                              </span>
+                        // ── Vente déjà traitée ─────────────────────────
+                        if (isApplied) {
+                          return (
+                            <div key={gid} className="flex items-center gap-2.5 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-2">
+                              <span className="text-base shrink-0">✅</span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-emerald-200">
+                                  Vente {idx + 1} — {label}
+                                </p>
+                                <p className="text-[10px] text-emerald-300/70">
+                                  +{montant.toLocaleString("fr-FR")} € de CA · traitée
+                                </p>
+                              </div>
                             </div>
-                          ))}
-                        </div>
+                          );
+                        }
 
-                        <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
-                          <p className="text-xs leading-relaxed text-sky-100">
-                            💡 Les 4 écritures de cette vente seront enregistrées ensemble — le bilan reste toujours équilibré.
-                          </p>
-                        </div>
+                        // ── Vente en attente (pas encore la courante) ──
+                        if (!isCurrent) {
+                          return (
+                            <div key={gid} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 opacity-60">
+                              <span className="text-base shrink-0">○</span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-slate-400">
+                                  Vente {idx + 1} — {label}
+                                </p>
+                                <p className="text-[10px] text-slate-500">
+                                  +{montant.toLocaleString("fr-FR")} € de CA · à venir
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
 
-                        <button
-                          onClick={() => onApplySaleGroup(currentGroupId)}
-                          className="w-full cursor-pointer rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
-                        >
-                          Enregistrer cette vente ✓
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-3">
-                        <p className="text-sm font-medium text-emerald-100">✅ Toutes les ventes enregistrées.</p>
-                      </div>
-                    )}
+                        // ── Vente en cours (expandée) ──────────────────
+                        return (
+                          <div key={gid} className="space-y-3 rounded-xl border border-cyan-400/20 bg-white/[0.04] p-3">
+                            {/* Client + montant */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl shrink-0">🤝</span>
+                              <div>
+                                <p className="text-xs font-bold text-cyan-200">{label}</p>
+                                <p className="text-base font-black text-white">+{montant.toLocaleString("fr-FR")} € de CA</p>
+                              </div>
+                            </div>
 
+                            {/* 4 écritures — ordre pédagogique */}
+                            <div className="space-y-1.5">
+                              {[...groupEntries]
+                                .sort((a, b) => (DISPLAY_POS[a.saleActIndex ?? 0] ?? 99) - (DISPLAY_POS[b.saleActIndex ?? 0] ?? 99))
+                                .map(entry => {
+                                  const docMeta = DOC_LABEL[entry.saleActIndex ?? 0];
+                                  return (
+                                    <div key={entry.id} className={`rounded-lg px-2.5 py-1.5 text-xs ${
+                                      entry.sens === "debit" ? "bg-sky-500/[0.08]" : "bg-amber-500/[0.08]"
+                                    }`}>
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-slate-200">{nomCompte(entry.poste)}</span>
+                                        <span className={`font-semibold tabular-nums ${entry.sens === "debit" ? "text-sky-200" : "text-amber-200"}`}>
+                                          {entry.delta > 0 ? "+" : ""}{entry.delta.toLocaleString("fr-FR")} €
+                                        </span>
+                                      </div>
+                                      {docMeta && (
+                                        <p className={`mt-0.5 text-[10px] ${
+                                          docMeta.doc === "Compte de Résultat" ? "text-violet-400" : "text-cyan-400"
+                                        }`}>
+                                          {docMeta.doc} · {docMeta.cat}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+
+                            <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                              <p className="text-xs leading-relaxed text-sky-100">
+                                💡 Les 4 écritures de cette vente seront enregistrées ensemble — le bilan reste toujours équilibré.
+                              </p>
+                            </div>
+
+                            <button
+                              onClick={() => onApplySaleGroup(gid)}
+                              className="w-full cursor-pointer rounded-xl bg-cyan-400 px-3 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-300"
+                            >
+                              Enregistrer cette vente ✓
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Toutes les ventes enregistrées */}
                     {allGroupsApplied && (
-                      <button
-                        onClick={onConfirmStep}
-                        aria-label="Confirmer l’étape et passer à la suivante"
-                        className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
-                      >
-                        Confirmer l&apos;étape ✓
-                      </button>
+                      <>
+                        <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-3">
+                          <p className="text-sm font-medium text-emerald-100">✅ Toutes les ventes enregistrées.</p>
+                        </div>
+                        <button
+                          onClick={onConfirmStep}
+                          aria-label="Confirmer l’étape et passer à la suivante"
+                          className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-300"
+                        >
+                          Confirmer l&apos;étape ✓
+                        </button>
+                      </>
                     )}
                   </>
                 );

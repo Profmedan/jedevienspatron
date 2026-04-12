@@ -89,9 +89,17 @@ function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
   }
 
   // 2. Charges récurrentes (sorties trésorerie)
-  const chargesRecurrentesTrim = carte.effetsRecurrents
-    .filter((e) => e.poste === "tresorerie" && e.delta < 0)
-    .reduce((sum, e) => sum + e.delta, 0);
+  // Pour les cartes commerciaux : le salaire est dans effetsImmédiats (embauche)
+  // et est re-appliqué chaque tour via CarteCommercial.coutTresorerie — même montant.
+  // On utilise donc effetsImmédiats.chargesPersonnel comme proxy du salaire récurrent.
+  const chargesRecurrentesTrim =
+    carte.categorie === "commercial"
+      ? -carte.effetsImmédiats
+          .filter((e) => e.poste === "chargesPersonnel")
+          .reduce((sum, e) => sum + Math.abs(e.delta), 0)
+      : carte.effetsRecurrents
+          .filter((e) => e.poste === "tresorerie" && e.delta < 0)
+          .reduce((sum, e) => sum + e.delta, 0);
 
   // 3. Revenus spéciaux récurrents (CIR = revenusExceptionnels sur trésorerie positive)
   const revenusSpeciauxTrim = carte.effetsRecurrents
@@ -551,7 +559,7 @@ function CarteInvestissement({
         {benefice.chargesRecurrentesTrim < 0 && (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300">
             <Repeat className="h-3 w-3 shrink-0" />
-            Entretien : {fmt(Math.abs(benefice.chargesRecurrentesTrim))}/trim
+            {carte.categorie === "commercial" ? "Salaire" : "Entretien"} : {fmt(Math.abs(benefice.chargesRecurrentesTrim))}/trim
           </span>
         )}
 
