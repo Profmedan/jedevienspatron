@@ -2,6 +2,29 @@
 
 ---
 
+## Tâche 13 : Afficher les bénéfices des cartes d'investissement — 2026-04-12
+
+### Contexte
+À l'étape 7/9 (investissement), le joueur voit le coût de chaque carte mais aucun bénéfice.
+Il ne peut pas faire un choix éclairé. Les données existent dans le moteur (clientParTour,
+effetsRecurrents, carteDecisionBonus) mais ne sont pas rendues.
+
+### Solution : affichage inline des bénéfices (recommandation UX)
+Approche "expanded inline" — le joueur voit coût ET bénéfice d'un coup d'œil sans clic supplémentaire.
+
+### Implémentation
+- [x] Fonction `analyserBenefice(carte)` : calcule clients, charges récurrentes, CIR, résultat net, payback
+- [x] Bloc vert : clients générés/trim + montant ventes
+- [x] Bloc amber : charges d'entretien récurrentes
+- [x] Bloc cyan : revenus spéciaux (CIR)
+- [x] Bloc violet : cartes décision bonus (Berline)
+- [x] Ligne de synthèse : résultat net/trim + payback en trimestres + délai paiement
+- [x] `npx tsc --noEmit` → 0 erreur ✅
+- [x] `npm test` → 39/39 verts ✅
+- [ ] Test visuel par Pierre
+
+---
+
 ## Tâche 12 : Refonte UX "Traitement des ventes" — 2026-04-12
 
 ### Contexte

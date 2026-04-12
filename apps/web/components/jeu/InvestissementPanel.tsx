@@ -25,6 +25,10 @@ import {
   Tag,
   Plus,
   Minus,
+  TrendingUp,
+  Users,
+  Repeat,
+  Zap,
 } from "lucide-react";
 
 // ── Format monétaire français ───────────────────────────────
@@ -39,6 +43,88 @@ function impactTresorerieImmediat(carte: CarteDecision): number {
   return carte.effetsImmédiats
     .filter((e) => e.poste === "tresorerie")
     .reduce((sum, e) => sum + e.delta, 0);
+}
+
+// ── Revenus par type de client (marge brute = ventes − CMV) ─
+const REVENU_PAR_CLIENT: Record<string, { ventes: number; marge: number; label: string; delai: string }> = {
+  particulier: { ventes: 2000, marge: 1000, label: "Particulier", delai: "comptant" },
+  tpe:         { ventes: 3000, marge: 2000, label: "TPE",         delai: "C+1" },
+  grand_compte:{ ventes: 4000, marge: 3000, label: "Grand Compte",delai: "C+2" },
+};
+
+// ── Analyse des bénéfices récurrents d'une carte ────────────
+interface BeneficeAnalyse {
+  /** Clients générés par trimestre */
+  clients: { type: string; label: string; nb: number; ventesParTrim: number; margeParTrim: number; delai: string } | null;
+  /** Charges récurrentes nettes sur trésorerie par trimestre */
+  chargesRecurrentesTrim: number;
+  /** Revenus récurrents spéciaux (CIR, etc.) par trimestre */
+  revenusSpeciauxTrim: number;
+  /** Résultat net récurrent par trimestre (marge clients − charges + revenus spéciaux) */
+  resultatNetTrim: number;
+  /** Nombre de trimestres pour rembourser le coût initial */
+  paybackTrimestres: number | null;
+  /** Cartes décision bonus par tour */
+  cartesBonus: number;
+  /** Description des revenus spéciaux (ex: "CIR") */
+  labelRevenusSpeciaux: string | null;
+}
+
+function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
+  // 1. Clients générés
+  let clients: BeneficeAnalyse["clients"] = null;
+  if (carte.clientParTour) {
+    const info = REVENU_PAR_CLIENT[carte.clientParTour];
+    if (info) {
+      const nb = carte.nbClientsParTour ?? 1;
+      clients = {
+        type: carte.clientParTour,
+        label: info.label,
+        nb,
+        ventesParTrim: info.ventes * nb,
+        margeParTrim: info.marge * nb,
+        delai: info.delai,
+      };
+    }
+  }
+
+  // 2. Charges récurrentes (sorties trésorerie)
+  const chargesRecurrentesTrim = carte.effetsRecurrents
+    .filter((e) => e.poste === "tresorerie" && e.delta < 0)
+    .reduce((sum, e) => sum + e.delta, 0);
+
+  // 3. Revenus spéciaux récurrents (CIR = revenusExceptionnels sur trésorerie positive)
+  const revenusSpeciauxTrim = carte.effetsRecurrents
+    .filter((e) => e.poste === "tresorerie" && e.delta > 0)
+    .reduce((sum, e) => sum + e.delta, 0);
+
+  // Détecter le label du revenu spécial
+  const hasCIR = carte.effetsRecurrents.some((e) => e.poste === "revenusExceptionnels" && e.delta > 0);
+  const labelRevenusSpeciaux = hasCIR ? "Crédit Impôt Recherche" : revenusSpeciauxTrim > 0 ? "Bonus récurrent" : null;
+
+  // 4. Résultat net par trimestre
+  const margeClients = clients?.margeParTrim ?? 0;
+  const resultatNetTrim = margeClients + chargesRecurrentesTrim + revenusSpeciauxTrim;
+
+  // 5. Payback
+  const coutInitial = Math.abs(impactTresorerieImmediat(carte));
+  let paybackTrimestres: number | null = null;
+  if (coutInitial > 0 && resultatNetTrim > 0) {
+    paybackTrimestres = Math.round((coutInitial / resultatNetTrim) * 10) / 10;
+  }
+
+  // 6. Cartes bonus
+  const cartesBonus = carte.carteDecisionBonus ?? 0;
+
+  return {
+    clients,
+    chargesRecurrentesTrim,
+    revenusSpeciauxTrim,
+    resultatNetTrim,
+    paybackTrimestres,
+    cartesBonus,
+    labelRevenusSpeciaux,
+  };
 }
 
 // ── Trésorerie actuelle du joueur ───────────────────────────
@@ -369,6 +455,10 @@ function CarteInvestissement({
   // Conditions d'activation
   const peutInvestir = !disabled && prerequisOk && !tresorerieInsuffisante;
 
+  // Analyse des bénéfices
+  const benefice = analyserBenefice(carte);
+  const hasBenefice = benefice.clients || benefice.cartesBonus > 0 || benefice.revenusSpeciauxTrim > 0;
+
   // Handler : on route selon la source
   function handleInvestir() {
     if (source === "personnel") {
@@ -386,9 +476,9 @@ function CarteInvestissement({
           : "border-white/10 bg-white/[0.02] opacity-60"
       }`}
     >
+      {/* Ligne 1 : titre + badge + bouton */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* Ligne 1 : titre + badge source */}
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-semibold text-white">
               {carte.titre}
@@ -400,37 +490,10 @@ function CarteInvestissement({
             )}
           </div>
 
-          {/* Ligne 2 : description synthétique */}
+          {/* Description synthétique */}
           <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">
             {descCourte}
           </p>
-
-          {/* Ligne 3 : coût / apport trésorerie */}
-          {impactTreso !== 0 && (
-            <p
-              className={`mt-1 text-[11px] font-medium ${
-                impactTreso < 0 ? "text-rose-300" : "text-emerald-300"
-              }`}
-            >
-              {impactTreso < 0
-                ? `Coût immédiat : ${fmt(Math.abs(impactTreso))}`
-                : `Apport immédiat : +${fmt(impactTreso)}`}
-            </p>
-          )}
-
-          {/* Ligne 4 : messages de blocage */}
-          {!prerequisOk && carte.prerequis && (
-            <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
-              <Lock className="h-3 w-3" />
-              Nécessite d&apos;abord : {carte.prerequis}
-            </p>
-          )}
-          {prerequisOk && tresorerieInsuffisante && (
-            <p className="mt-1 flex items-center gap-1 text-[10px] text-rose-400">
-              <AlertTriangle className="h-3 w-3" />
-              Trésorerie insuffisante ({fmt(tresorerie)} disponible)
-            </p>
-          )}
         </div>
 
         {/* Bouton investir */}
@@ -448,6 +511,97 @@ function CarteInvestissement({
           Investir
         </button>
       </div>
+
+      {/* ── Bloc financier : coût + bénéfice côte à côte ────── */}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+        {/* Coût immédiat */}
+        {impactTreso !== 0 && (
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+              impactTreso < 0 ? "text-rose-300" : "text-emerald-300"
+            }`}
+          >
+            <Zap className="h-3 w-3 shrink-0" />
+            {impactTreso < 0
+              ? `Coût : ${fmt(Math.abs(impactTreso))}`
+              : `Apport : +${fmt(impactTreso)}`}
+          </span>
+        )}
+
+        {/* Clients générés */}
+        {benefice.clients && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-300">
+            <Users className="h-3 w-3 shrink-0" />
+            +{benefice.clients.nb} {benefice.clients.label}/trim
+            <span className="text-emerald-400/60">
+              (+{fmt(benefice.clients.ventesParTrim)} ventes)
+            </span>
+          </span>
+        )}
+
+        {/* Cartes bonus */}
+        {benefice.cartesBonus > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-violet-300">
+            <Plus className="h-3 w-3 shrink-0" />
+            +{benefice.cartesBonus} carte{benefice.cartesBonus > 1 ? "s" : ""} décision/trim
+          </span>
+        )}
+
+        {/* Charges récurrentes */}
+        {benefice.chargesRecurrentesTrim < 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300">
+            <Repeat className="h-3 w-3 shrink-0" />
+            Entretien : {fmt(Math.abs(benefice.chargesRecurrentesTrim))}/trim
+          </span>
+        )}
+
+        {/* Revenus spéciaux (CIR, etc.) */}
+        {benefice.revenusSpeciauxTrim > 0 && benefice.labelRevenusSpeciaux && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300">
+            <TrendingUp className="h-3 w-3 shrink-0" />
+            {benefice.labelRevenusSpeciaux} : +{fmt(benefice.revenusSpeciauxTrim)}/trim
+          </span>
+        )}
+      </div>
+
+      {/* ── Ligne de synthèse : résultat net + payback ──────── */}
+      {hasBenefice && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-white/[0.03] px-2 py-1">
+          {benefice.resultatNetTrim !== 0 && (
+            <span
+              className={`text-[11px] font-semibold ${
+                benefice.resultatNetTrim > 0 ? "text-emerald-300" : "text-rose-300"
+              }`}
+            >
+              Résultat net : {benefice.resultatNetTrim > 0 ? "+" : ""}{fmt(benefice.resultatNetTrim)}/trim
+            </span>
+          )}
+          {benefice.paybackTrimestres !== null && (
+            <span className="text-[11px] font-medium text-cyan-300">
+              Payback : {benefice.paybackTrimestres} trim.
+            </span>
+          )}
+          {benefice.clients && benefice.clients.delai !== "comptant" && (
+            <span className="text-[10px] text-slate-500">
+              Paiement {benefice.clients.delai}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Messages de blocage ─────────────────────────────── */}
+      {!prerequisOk && carte.prerequis && (
+        <p className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-500">
+          <Lock className="h-3 w-3" />
+          Nécessite d&apos;abord : {carte.prerequis}
+        </p>
+      )}
+      {prerequisOk && tresorerieInsuffisante && (
+        <p className="mt-1.5 flex items-center gap-1 text-[10px] text-rose-400">
+          <AlertTriangle className="h-3 w-3" />
+          Trésorerie insuffisante ({fmt(tresorerie)} disponible)
+        </p>
+      )}
     </div>
   );
 }
