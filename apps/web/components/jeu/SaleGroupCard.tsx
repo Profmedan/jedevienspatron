@@ -5,30 +5,58 @@ import { motion } from "framer-motion";
 import type { EntryLine } from "./EntryCard";
 import { nomCompte } from "./utils";
 
-// ─── Labels narratifs par acte ──────────────────────────────────────────────
+// ─── Ordre d'affichage pédagogique des actes ────────────────────────────────
+// Pierre : commencer par Ventes (CR Produits), puis Tréso/Créances (Bilan),
+// puis Stocks (Bilan), puis Achats/CMV (CR Charges).
+// saleActIndex moteur : 1=Tréso, 2=Ventes, 3=Stocks, 4=Achats.
+// On remplace le tri par saleActIndex par ce mapping d'affichage.
+const DISPLAY_POSITION: Record<number, number> = { 2: 1, 1: 2, 3: 3, 4: 4 };
 
-const ACT_LABELS: Record<number, { titre: string; icone: string; explicationDebit: string; explicationCredit: string }> = {
-  1: {
-    titre: "L'argent rentre",
-    icone: "💰",
-    explicationDebit: "Votre caisse augmente ↑",
-    explicationCredit: "Votre créance augmente ↑",
-  },
+// ─── Métadonnées par acte (indexé par saleActIndex moteur) ──────────────────
+
+interface ActMeta {
+  titre: string;
+  icone: string;
+  documentLabel: string;    // ← nouveau : nom du document comptable
+  documentSublabel: string; // ← nouveau : catégorie dans le document
+  explicationDebit: string;
+  explicationCredit: string;
+}
+
+const ACT_LABELS: Record<number, ActMeta> = {
+  // Acte moteur 2 → affiché en 1er
   2: {
     titre: "Le revenu est enregistré",
     icone: "📊",
+    documentLabel: "Compte de Résultat",
+    documentSublabel: "Produits",
     explicationDebit: "",
     explicationCredit: "Le chiffre d'affaires augmente ↑",
   },
+  // Acte moteur 1 → affiché en 2e
+  1: {
+    titre: "L'argent rentre",
+    icone: "💰",
+    documentLabel: "Bilan",
+    documentSublabel: "Actif",
+    explicationDebit: "Votre caisse augmente ↑",
+    explicationCredit: "Votre créance augmente ↑",
+  },
+  // Acte moteur 3 → affiché en 3e
   3: {
     titre: "La marchandise sort",
     icone: "📦",
+    documentLabel: "Bilan",
+    documentSublabel: "Actif",
     explicationDebit: "",
     explicationCredit: "Votre stock diminue ↓",
   },
+  // Acte moteur 4 → affiché en 4e
   4: {
     titre: "Le coût est enregistré",
     icone: "📋",
+    documentLabel: "Compte de Résultat",
+    documentSublabel: "Charges",
     explicationDebit: "Les charges augmentent ↑",
     explicationCredit: "",
   },
@@ -120,8 +148,10 @@ export function SaleGroupCard({
 
   const narrative = getClientNarrative(clientLabel, montantVente, delaiInfo);
 
-  // Sorted by acte index
-  const sortedEntries = [...entries].sort((a, b) => (a.saleActIndex ?? 0) - (b.saleActIndex ?? 0));
+  // Tri d'affichage pédagogique : Ventes → Tréso/Créances → Stocks → Achats
+  const sortedEntries = [...entries].sort(
+    (a, b) => (DISPLAY_POSITION[a.saleActIndex ?? 0] ?? 99) - (DISPLAY_POSITION[b.saleActIndex ?? 0] ?? 99)
+  );
 
   if (isApplied && !isActive) {
     // Collapsed applied card
@@ -183,7 +213,7 @@ export function SaleGroupCard({
       {/* 4 actes */}
       <div className="px-4 py-4 space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-          Ce qui se passe — 4 écritures en partie double
+          Les 4 écritures — Compte de Résultat &amp; Bilan
         </p>
 
         {sortedEntries.map((entry) => {
@@ -210,13 +240,22 @@ export function SaleGroupCard({
                       Acte {entry.saleActIndex} — {actInfo?.titre ?? "Écriture"}
                     </p>
                   </div>
-                  <div className="mt-1.5 flex items-center gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] ${
                       isDebit ? "bg-sky-500/15 text-sky-200" : "bg-amber-500/15 text-amber-200"
                     }`}>
                       {isDebit ? "Débit" : "Crédit"}
                     </span>
-                    <span className="text-xs font-medium text-slate-400">{nomCompte(entry.poste)}</span>
+                    <span className="text-xs font-medium text-slate-300">{nomCompte(entry.poste)}</span>
+                    {actInfo && (
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold tracking-wide ${
+                        actInfo.documentLabel === "Compte de Résultat"
+                          ? "bg-violet-500/15 text-violet-300"
+                          : "bg-cyan-500/15 text-cyan-300"
+                      }`}>
+                        {actInfo.documentLabel} · {actInfo.documentSublabel}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">{entry.description}</p>
                   {explication && (
