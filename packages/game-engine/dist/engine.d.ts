@@ -10,6 +10,15 @@ export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: nu
 export declare function calculerCoutCommerciaux(joueur: Joueur): number;
 export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
+ * Licencie un commercial actif :
+ *  - Indemnité = 1 trimestre de salaire → Charges exceptionnelles + Trésorerie
+ *  - Retire le commercial de cartesActives (arrêt des salaires et des clients)
+ *
+ * Pédagogie : l'indemnité passe en Charges exceptionnelles (cpt 671),
+ * pas en Charges de personnel (641) — distinction importante en comptabilité française.
+ */
+export declare function licencierCommercial(etat: EtatJeu, joueurIdx: number, carteId: string): ResultatAction;
+/**
  * Comptabilisation en 4 écritures (partie double complète) :
  * 1. Ventes +X (Produit)
  * 2. Stocks -1 (Actif)
@@ -57,6 +66,22 @@ export declare function acheterCarteDecision(etat: EtatJeu, joueurIdx: number, c
  * Vérifie le prérequis, retire la carte de piochePersonnelle, applique les effets immédiats.
  */
 export declare function investirCartePersonnelle(etat: EtatJeu, joueurIdx: number, carteId: string): ResultatAction;
+/**
+ * Vend une immobilisation nommée du bilan du joueur (cession d'occasion).
+ * Calcule la plus ou moins-value comptable et l'enregistre au compte de résultat.
+ *
+ * Règles comptables (PCG simplifié) :
+ *  - Le bien "Autres Immobilisations" est un poste agrégé non vendable individuellement.
+ *  - VNC = valeur nette comptable = valeur actuelle au bilan
+ *    (les amortissements la décrémentent directement à chaque tour).
+ *  - Vente autorisée même si VNC = 0 (bien totalement amorti).
+ *  - Plus-value (prixCession > VNC) → +revenusExceptionnels (produit exceptionnel).
+ *  - Moins-value (prixCession < VNC) → +chargesExceptionnelles (charge exceptionnelle).
+ *  - Le bien est retiré définitivement du bilan après cession.
+ *
+ * @param prixCession Prix de vente accepté par l'apprenant (proposé par défaut à 80% VNC).
+ */
+export declare function vendreImmobilisation(etat: EtatJeu, joueurIdx: number, nomImmo: string, prixCession: number): ResultatAction;
 export declare function appliquerCarteEvenement(etat: EtatJeu, joueurIdx: number, carte: CarteEvenement): ResultatAction;
 export interface ResultatFinTour {
     equilibre: boolean;

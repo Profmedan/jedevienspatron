@@ -12,6 +12,7 @@ exports.appliquerAchatMarchandises = appliquerAchatMarchandises;
 exports.appliquerAvancementCreances = appliquerAvancementCreances;
 exports.calculerCoutCommerciaux = calculerCoutCommerciaux;
 exports.appliquerPaiementCommerciaux = appliquerPaiementCommerciaux;
+exports.licencierCommercial = licencierCommercial;
 exports.appliquerCarteClient = appliquerCarteClient;
 exports.appliquerEffetsRecurrents = appliquerEffetsRecurrents;
 exports.appliquerSpecialiteEntreprise = appliquerSpecialiteEntreprise;
@@ -20,6 +21,7 @@ exports.obtenirCarteRecrutement = obtenirCarteRecrutement;
 exports.tirerCartesDecision = tirerCartesDecision;
 exports.acheterCarteDecision = acheterCarteDecision;
 exports.investirCartePersonnelle = investirCartePersonnelle;
+exports.vendreImmobilisation = vendreImmobilisation;
 exports.appliquerCarteEvenement = appliquerCarteEvenement;
 exports.verifierFinTour = verifierFinTour;
 exports.cloturerAnnee = cloturerAnnee;
@@ -428,6 +430,41 @@ function appliquerPaiementCommerciaux(etat, joueurIdx) {
     push("tresorerie", -cout, `Paiement salaires : -${cout} trésorerie`);
     return { succes: true, modifications };
 }
+// ─── LICENCIEMENT D'UN COMMERCIAL ─────────────────────────────
+/**
+ * Licencie un commercial actif :
+ *  - Indemnité = 1 trimestre de salaire → Charges exceptionnelles + Trésorerie
+ *  - Retire le commercial de cartesActives (arrêt des salaires et des clients)
+ *
+ * Pédagogie : l'indemnité passe en Charges exceptionnelles (cpt 671),
+ * pas en Charges de personnel (641) — distinction importante en comptabilité française.
+ */
+function licencierCommercial(etat, joueurIdx, carteId) {
+    const joueur = etat.joueurs[joueurIdx];
+    const commercial = joueur.cartesActives.find((c) => c.id === carteId && c.categorie === "commercial");
+    if (!commercial) {
+        return { succes: false, messageErreur: "Commercial introuvable.", modifications: [] };
+    }
+    // Indemnité = absolu du premier effet trésorerie dans effetsImmédiats (= 1 trimestre de salaire)
+    const indemniteBrut = commercial.effetsImmédiats
+        .filter((e) => e.poste === "tresorerie")
+        .reduce((s, e) => s + Math.abs(e.delta), 0);
+    // Si la carte ne stocke pas d'effetsImmédiats (cartes clonées sans coût), fallback sur effetsRecurrents
+    const indemnite = indemniteBrut > 0
+        ? indemniteBrut
+        : commercial.effetsRecurrents
+            .filter((e) => e.poste === "chargesPersonnel")
+            .reduce((s, e) => s + Math.abs(e.delta), 0);
+    const modifications = [];
+    const push = makePush(joueur, modifications);
+    if (indemnite > 0) {
+        push("chargesExceptionnelles", indemnite, `Indemnité de licenciement — ${commercial.titre} : +${indemnite} charges exceptionnelles`);
+        push("tresorerie", -indemnite, `Indemnité de licenciement — ${commercial.titre} : -${indemnite} trésorerie`);
+    }
+    // Retrait du commercial de cartesActives
+    joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== carteId);
+    return { succes: true, modifications };
+}
 // ─── ÉTAPE 4 : Traitement carte Client ───────────────────────
 /**
  * Comptabilisation en 4 écritures (partie double complète) :
@@ -669,6 +706,98 @@ function investirCartePersonnelle(etat, joueurIdx, carteId) {
     // Retirer de piochePersonnelle, ajouter à cartesActives
     joueur.piochePersonnelle = joueur.piochePersonnelle.filter((_, i) => i !== carteIdx);
     joueur.cartesActives.push(carte);
+    return { succes: true, modifications };
+}
+// ─── VENTE D'IMMOBILISATION (CESSION D'OCCASION) ─────────────
+/**
+ * Vend une immobilisation nommée du bilan du joueur (cession d'occasion).
+ * Calcule la plus ou moins-value comptable et l'enregistre au compte de résultat.
+ *
+ * Règles comptables (PCG simplifié) :
+ *  - Le bien "Autres Immobilisations" est un poste agrégé non vendable individuellement.
+ *  - VNC = valeur nette comptable = valeur actuelle au bilan
+ *    (les amortissements la décrémentent directement à chaque tour).
+ *  - Vente autorisée même si VNC = 0 (bien totalement amorti).
+ *  - Plus-value (prixCession > VNC) → +revenusExceptionnels (produit exceptionnel).
+ *  - Moins-value (prixCession < VNC) → +chargesExceptionnelles (charge exceptionnelle).
+ *  - Le bien est retiré définitivement du bilan après cession.
+ *
+ * @param prixCession Prix de vente accepté par l'apprenant (proposé par défaut à 80% VNC).
+ */
+function vendreImmobilisation(etat, joueurIdx, nomImmo, prixCession) {
+    const joueur = etat.joueurs[joueurIdx];
+    if (nomImmo === "Autres Immobilisations") {
+        return {
+            succes: false,
+            messageErreur: `"Autres Immobilisations" est un poste agrégé et ne peut pas être vendu individuellement.`,
+            modifications: [],
+        };
+    }
+    if (prixCession < 0 || !Number.isFinite(prixCession)) {
+        return {
+            succes: false,
+            messageErreur: `Le prix de cession doit être un nombre positif ou nul.`,
+            modifications: [],
+        };
+    }
+    const idx = joueur.bilan.actifs.findIndex((a) => a.nom === nomImmo && a.categorie === "immobilisations");
+    if (idx === -1) {
+        return {
+            succes: false,
+            messageErreur: `Immobilisation "${nomImmo}" introuvable au bilan.`,
+            modifications: [],
+        };
+    }
+    const actif = joueur.bilan.actifs[idx];
+    const vnc = actif.valeur;
+    const plusValue = prixCession - vnc;
+    const modifications = [];
+    // 1. Encaissement du prix de cession en trésorerie (DÉBIT 512 Banque)
+    const tresoActif = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie");
+    if (tresoActif) {
+        const old = tresoActif.valeur;
+        tresoActif.valeur = old + prixCession;
+        modifications.push({
+            joueurId: joueur.id,
+            poste: "tresorerie",
+            ancienneValeur: old,
+            nouvelleValeur: tresoActif.valeur,
+            explication: `Cession ${nomImmo} : encaissement ${prixCession} €`,
+        });
+    }
+    // 2. Sortie du bien du bilan (CRÉDIT 21x Immobilisations — VNC effacée)
+    modifications.push({
+        joueurId: joueur.id,
+        poste: "immobilisations",
+        ancienneValeur: vnc,
+        nouvelleValeur: 0,
+        explication: `Cession ${nomImmo} : sortie du bilan, VNC ${vnc} € effacée`,
+    });
+    joueur.bilan.actifs.splice(idx, 1);
+    // 3. Plus ou moins-value comptable au compte de résultat
+    if (plusValue > 0) {
+        const old = joueur.compteResultat.produits.revenusExceptionnels;
+        joueur.compteResultat.produits.revenusExceptionnels = old + plusValue;
+        modifications.push({
+            joueurId: joueur.id,
+            poste: "revenusExceptionnels",
+            ancienneValeur: old,
+            nouvelleValeur: joueur.compteResultat.produits.revenusExceptionnels,
+            explication: `Plus-value de cession ${nomImmo} : +${plusValue} € (prix ${prixCession} − VNC ${vnc})`,
+        });
+    }
+    else if (plusValue < 0) {
+        const moinsValue = Math.abs(plusValue);
+        const old = joueur.compteResultat.charges.chargesExceptionnelles;
+        joueur.compteResultat.charges.chargesExceptionnelles = old + moinsValue;
+        modifications.push({
+            joueurId: joueur.id,
+            poste: "chargesExceptionnelles",
+            ancienneValeur: old,
+            nouvelleValeur: joueur.compteResultat.charges.chargesExceptionnelles,
+            explication: `Moins-value de cession ${nomImmo} : +${moinsValue} € en charges exceptionnelles (prix ${prixCession} < VNC ${vnc})`,
+        });
+    }
     return { succes: true, modifications };
 }
 // ─── ÉTAPE 7 : Carte Événement ───────────────────────────────

@@ -884,6 +884,115 @@ export function investirCartePersonnelle(
   return { succes: true, modifications };
 }
 
+// ─── VENTE D'IMMOBILISATION (CESSION D'OCCASION) ─────────────
+
+/**
+ * Vend une immobilisation nommée du bilan du joueur (cession d'occasion).
+ * Calcule la plus ou moins-value comptable et l'enregistre au compte de résultat.
+ *
+ * Règles comptables (PCG simplifié) :
+ *  - Le bien "Autres Immobilisations" est un poste agrégé non vendable individuellement.
+ *  - VNC = valeur nette comptable = valeur actuelle au bilan
+ *    (les amortissements la décrémentent directement à chaque tour).
+ *  - Vente autorisée même si VNC = 0 (bien totalement amorti).
+ *  - Plus-value (prixCession > VNC) → +revenusExceptionnels (produit exceptionnel).
+ *  - Moins-value (prixCession < VNC) → +chargesExceptionnelles (charge exceptionnelle).
+ *  - Le bien est retiré définitivement du bilan après cession.
+ *
+ * @param prixCession Prix de vente accepté par l'apprenant (proposé par défaut à 80% VNC).
+ */
+export function vendreImmobilisation(
+  etat: EtatJeu,
+  joueurIdx: number,
+  nomImmo: string,
+  prixCession: number
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+
+  if (nomImmo === "Autres Immobilisations") {
+    return {
+      succes: false,
+      messageErreur: `"Autres Immobilisations" est un poste agrégé et ne peut pas être vendu individuellement.`,
+      modifications: [],
+    };
+  }
+
+  if (prixCession < 0 || !Number.isFinite(prixCession)) {
+    return {
+      succes: false,
+      messageErreur: `Le prix de cession doit être un nombre positif ou nul.`,
+      modifications: [],
+    };
+  }
+
+  const idx = joueur.bilan.actifs.findIndex(
+    (a) => a.nom === nomImmo && a.categorie === "immobilisations"
+  );
+  if (idx === -1) {
+    return {
+      succes: false,
+      messageErreur: `Immobilisation "${nomImmo}" introuvable au bilan.`,
+      modifications: [],
+    };
+  }
+
+  const actif = joueur.bilan.actifs[idx];
+  const vnc = actif.valeur;
+  const plusValue = prixCession - vnc;
+
+  const modifications: ResultatAction["modifications"] = [];
+
+  // 1. Encaissement du prix de cession en trésorerie (DÉBIT 512 Banque)
+  const tresoActif = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie");
+  if (tresoActif) {
+    const old = tresoActif.valeur;
+    tresoActif.valeur = old + prixCession;
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "tresorerie",
+      ancienneValeur: old,
+      nouvelleValeur: tresoActif.valeur,
+      explication: `Cession ${nomImmo} : encaissement ${prixCession} €`,
+    });
+  }
+
+  // 2. Sortie du bien du bilan (CRÉDIT 21x Immobilisations — VNC effacée)
+  modifications.push({
+    joueurId: joueur.id,
+    poste: "immobilisations",
+    ancienneValeur: vnc,
+    nouvelleValeur: 0,
+    explication: `Cession ${nomImmo} : sortie du bilan, VNC ${vnc} € effacée`,
+  });
+  joueur.bilan.actifs.splice(idx, 1);
+
+  // 3. Plus ou moins-value comptable au compte de résultat
+  if (plusValue > 0) {
+    const old = joueur.compteResultat.produits.revenusExceptionnels;
+    joueur.compteResultat.produits.revenusExceptionnels = old + plusValue;
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "revenusExceptionnels",
+      ancienneValeur: old,
+      nouvelleValeur: joueur.compteResultat.produits.revenusExceptionnels,
+      explication: `Plus-value de cession ${nomImmo} : +${plusValue} € (prix ${prixCession} − VNC ${vnc})`,
+    });
+  } else if (plusValue < 0) {
+    const moinsValue = Math.abs(plusValue);
+    const old = joueur.compteResultat.charges.chargesExceptionnelles;
+    joueur.compteResultat.charges.chargesExceptionnelles = old + moinsValue;
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "chargesExceptionnelles",
+      ancienneValeur: old,
+      nouvelleValeur: joueur.compteResultat.charges.chargesExceptionnelles,
+      explication: `Moins-value de cession ${nomImmo} : +${moinsValue} € en charges exceptionnelles (prix ${prixCession} < VNC ${vnc})`,
+    });
+  }
+
+  return { succes: true, modifications };
+}
+
 // ─── ÉTAPE 7 : Carte Événement ───────────────────────────────
 
 export function appliquerCarteEvenement(

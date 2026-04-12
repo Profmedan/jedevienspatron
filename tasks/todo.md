@@ -2,6 +2,220 @@
 
 ---
 
+## Tâche 11 : Refonte étape 6b Investissement — 2026-04-11
+
+### Contexte (source : messages de Pierre)
+Pierre n'aime pas l'UX actuelle de l'étape 6b :
+1. Deux fenêtres séparées (MiniDeckPanel logistique à gauche + cartes globales dans MainContent) → confusion
+2. Un seul investissement possible par tour → pas de prise de risque
+3. Pas de possibilité de vendre des immobilisations d'occasion → manque un concept comptable important (plus/moins-value de cession)
+
+Choix validés par Pierre :
+- **Option 1** : panneau unifié avec catégories visibles
+- **Plusieurs investissements par tour** autorisés (si trésorerie le permet)
+- **Vente d'immobilisation d'occasion** à ajouter
+
+### État actuel du moteur (exploration effectuée)
+
+#### A. Deux flux parallèles de cartes à l'étape 6b
+| Source | Provenance | API moteur | UI actuelle |
+|---|---|---|---|
+| `cartesDisponibles` | `tirerCartesDecision(etat, 4)` = 4 cartes globales piochées | `acheterCarteDecision` | `MainContent.tsx` (liste scrollable dans panneau central) |
+| `piochePersonnelle` | mini-deck logistique de l'entreprise (`cartesLogistiquesDisponibles`) | `investirCartePersonnelle` | `MiniDeckPanel.tsx` (panneau séparé) |
+
+Chaque flux produit un `activeStep` avec entries → l'apprenant clique "Appliquer" écriture par écriture → `confirmActiveStep()` marque l'étape finie.
+
+#### B. Structure des immobilisations (découverte clé)
+- Chaque ligne `PosteActif` d'immobilisation stocke `valeur` = **valeur nette comptable courante** (VNC), pas la valeur brute.
+- L'amortissement (`appliquerEtape0`) décrémente directement `item.valeur -= 1000` jusqu'à 0, et enregistre la dotation agrégée sur le CR.
+- **Pas de suivi gross value / cumul amortissements** — c'est une simplification pédagogique volontaire.
+- Les investissements via Cartes Décision vont TOUS dans la ligne agrégée "Autres Immobilisations" (moteur `appliquerEffet` ligne 154-164 de `engine.ts`).
+
+**Conséquence pour la cession** : on peut calculer plus/moins-value directement via `prixCession − a.valeur` (VNC courante). Simple.
+**Limite** : "Autres Immobilisations" est un fourre-tout → on ne peut pas vendre séparément un "Site Internet" acheté via Carte Décision, sauf à refactorer en lignes nommées (plus invasif).
+
+#### C. Blocage "un seul investissement par tour" (découverte clé)
+Dans `useGameFlow.ts` :
+- `launchDecision()` (ligne 587) et `handleInvestirPersonnel()` (ligne 621) construisent un `activeStep` avec les entries de UNE carte.
+- Une fois l'étape validée via `confirmActiveStep()` (ligne 323), `setSubEtape6("recrutement")` et `avancerEtape(next)` → passe à l'étape 7.
+- Il n'y a aucun "retour au choix" après une validation.
+
+---
+
+### Plan d'implémentation (3 volets, dépendances progressives)
+
+#### Volet 1 — Panneau unifié catégorisé (UX pure, sans impact moteur)
+
+**Objectif** : fusionner `MiniDeckPanel` + liste globale de `MainContent` en un seul composant catégorisé, affiché dans le panneau central pendant l'étape 6b.
+
+Nouveau composant `apps/web/components/jeu/InvestissementPanel.tsx` :
+- Reçoit `{ joueur, cartesDisponibles, onInvestirPersonnel, onInvestirGlobal, disabled }`
+- Construit une liste unifiée avec **catégories** :
+  - 🏭 **Logistique & capacité** (piochePersonnelle, ou `categorie: "investissement"` qui augmente capacité, ex. Entrepôt, Robot)
+  - 🚗 **Véhicules** (`categorie: "vehicule"`)
+  - 🌐 **Visibilité & commerce** (`categorie: "commercial"`, `"service"`)
+  - 💡 **Innovation / R&D** (cartes investissement avec `clientParTour: "tpe"` ou R&D)
+  - 💰 **Financement** (`categorie: "financement"`)
+  - 🛡️ **Protection / Tactique** (`categorie: "protection"`, `"tactique"`)
+- Chaque carte affiche : titre, description courte, coût trésorerie visible (somme des deltas négatifs sur `tresorerie`), badge "Prérequis manquant" si applicable, bouton "Investir"
+- Prop `disabled` pour griser quand trésorerie insuffisante ou activeStep en cours
+- Remplace l'actuel bloc inline `{etapeTour === 6 && !_activeStep && (...)}` dans `MainContent.tsx` (lignes 142-198)
+- Supprime l'appel à `MiniDeckPanel` dans `LeftPanel.tsx` (ou le conditionne pour n'afficher qu'en dehors de l'étape 6, en lecture seule)
+
+**Fichiers touchés** :
+- ➕ `apps/web/components/jeu/InvestissementPanel.tsx` (nouveau)
+- ✏️ `apps/web/components/jeu/MainContent.tsx` (remplace bloc carte)
+- ✏️ `apps/web/components/jeu/LeftPanel.tsx` (retire MiniDeckPanel de l'étape 6b)
+- ✏️ `apps/web/app/jeu/page.tsx` (ou composant parent) pour câbler les props si nécessaire
+
+**Non-goal** : ne touche pas au moteur ni à `useGameFlow` dans ce volet.
+
+---
+
+#### Volet 2 — Plusieurs investissements par tour
+
+**Objectif** : à la fin d'un `confirmActiveStep()` pendant la sous-étape 6b, revenir au choix de cartes au lieu d'avancer à l'étape 7.
+
+**Changements dans `useGameFlow.ts`** :
+- `confirmActiveStep()` : après avoir persisté les écritures (`setEtat({ ...next })`), si on est en `etapeTour === 6 && subEtape6 === "investissement"` → NE PAS appeler `avancerEtape(next)`. Au lieu : reset `activeStep` / `selectedDecision` / `recentModifications` mais rester sur 6b.
+- La carte globale utilisée est déjà retirée via `acheterCarteDecision` → `next.cartesAchetees.push(...)` (à vérifier dans moteur) ou via `tirerCartesDecision` aléatoire à chaque re-render.
+- Les cartes logistiques utilisées sont retirées de `piochePersonnelle` par `investirCartePersonnelle` (ligne 928 engine.ts) → OK.
+
+**Problème identifié** : `cartesDisponibles` est recalculé à chaque render via `tirerCartesDecision(cloneEtat(etat), 4)` (ligne 231 useGameFlow.ts). Comme c'est aléatoire (?), il faut mémoïser la pioche au début de l'étape 6b pour que la liste reste stable entre les investissements. **À vérifier** : `tirerCartesDecision` est-il déterministe ou aléatoire ? Si aléatoire, ajouter un `useMemo` stabilisé sur `etat.tourActuel + etat.joueurActif + subEtape6`.
+
+**Nouveau bouton "Terminer les investissements"** dans `InvestissementPanel` :
+- Déclenche `skipDecision()` (qui avance à l'étape 7 proprement)
+- Permet de sortir quand le joueur a fini
+
+**Garde-fou trésorerie** :
+- Avant de cliquer "Investir" sur une carte, afficher le coût et griser si `trésorerie + deltaCumulé < coût`.
+- Le modal de confirmation existant (Tâche 10.7 récente) reste actif pour chaque carte.
+
+**Fichiers touchés** :
+- ✏️ `apps/web/app/jeu/hooks/useGameFlow.ts` (confirmActiveStep + mémoïsation cartesDisponibles)
+- ✏️ `apps/web/components/jeu/InvestissementPanel.tsx` (bouton "Terminer")
+
+---
+
+#### Volet 3 — Vente d'immobilisation d'occasion (plus/moins-value de cession)
+
+**Objectif pédagogique** : enseigner le schéma comptable de la cession d'immobilisation.
+
+**Règle PCG (simplifiée via VNC directe)** :
+```
+Débit  Trésorerie              = prix de cession (saisi)
+Crédit Immobilisations         = VNC courante (a.valeur)
+Si prix > VNC : Crédit Revenus exceptionnels = prix − VNC  (plus-value)
+Si prix < VNC : Débit Charges exceptionnelles = VNC − prix (moins-value)
+```
+
+**Moteur — nouvelle fonction `vendreImmobilisation`** dans `engine.ts` :
+```ts
+export function vendreImmobilisation(
+  etat: EtatJeu,
+  joueurIdx: number,
+  nomImmo: string,
+  prixCession: number
+): ResultatAction
+```
+- Trouver l'actif par `nom` dans `bilan.actifs` catégorie immobilisations
+- Vérifier `a.valeur > 0` (pas de vente d'un bien déjà totalement amorti — à discuter, voir question ci-dessous)
+- Modifications générées :
+  1. Trésorerie +prixCession
+  2. Immo `a.nom` : −a.valeur (passe à 0)
+  3. Si plus-value : `revenusExceptionnels +diff`
+  4. Si moins-value : `chargesExceptionnelles +diff`
+- Retirer la ligne d'actif si elle est vide ? **Ou** la laisser à 0 pour traçabilité ? → À trancher.
+
+**Exports types** : vérifier que `revenusExceptionnels` et `chargesExceptionnelles` existent déjà comme `poste` valides dans `EffetCarte` (j'ai vu `chargesExceptionnelles` et `revenusExceptionnels` dans la liste des postes types.ts — à reconfirmer).
+
+**UI — nouvelle section "Vendre un bien" dans `InvestissementPanel`** :
+- Liste les immobilisations du joueur avec `valeur > 0` ET qui sont des biens nommés (pas "Autres Immobilisations" tant qu'on ne refactore pas — voir question 3)
+- Pour chaque bien : nom, VNC, champ "Prix de vente" (stepper par pas de 500€ par exemple, min 0, max 3×VNC)
+- Bouton "Vendre" → crée un `activeStep` (comme pour un investissement) → passe par le modal de confirmation + écritures à appliquer une par une
+- Aperçu plus/moins-value en temps réel sous le stepper
+
+**Nouvelle fonction `handleVendreImmobilisation(nomImmo, prix)`** dans `useGameFlow.ts` :
+- Symétrique de `handleInvestirPersonnel`
+- Appelle `vendreImmobilisation` moteur, construit `activeStep` avec titre "Cession d'immobilisation"
+
+**Tests unitaires** dans `packages/game-engine/src/__tests__/` (s'il y en a) :
+- Test plus-value : prix 5000, VNC 3000 → Tréso +5000, Immo −3000, RevExc +2000 ✓
+- Test moins-value : prix 2000, VNC 3000 → Tréso +2000, Immo −3000, ChgExc +1000 ✓
+- Test cession à la VNC : pas de plus ni moins-value
+
+**Fichiers touchés** :
+- ✏️ `packages/game-engine/src/engine.ts` (+ nouvelle fonction `vendreImmobilisation`)
+- ✏️ `packages/game-engine/src/index.ts` (export)
+- ✏️ `apps/web/lib/game-engine/engine.ts` (duplicat — vérifier s'il existe toujours)
+- ✏️ `apps/web/app/jeu/hooks/useGameFlow.ts` (handleVendreImmobilisation + export)
+- ✏️ `apps/web/components/jeu/InvestissementPanel.tsx` (section vente)
+- ➕ `packages/game-engine/src/__tests__/cession.test.ts` (nouveau)
+
+---
+
+### Décisions validées par Pierre (2026-04-11)
+
+1. **Catégories** ✅ proposition retenue : 🏭 Logistique & capacité / 🚗 Véhicules / 🌐 Visibilité & commerce / 💡 Innovation / 💰 Financement / 🛡️ Protection & Tactique
+2. **Vente biens totalement amortis (VNC = 0)** ✅ autorisée — prix de cession = produit exceptionnel pur, concept pédagogique intéressant
+3. **Vente "Autres Immobilisations"** ✅ option (a) — la ligne agrégée n'est PAS vendable (uniquement les biens nommés dès le départ : Entrepôt, Camionnette, etc.)
+4. **Prix de cession** ✅ proposition automatique = **80 % de la VNC**, modifiable par l'apprenant via stepper
+5. **Limite investissements par tour** ✅ aucune — seul garde-fou = trésorerie
+
+### Ordre d'implémentation proposé
+
+1. D'abord volet 1 (panneau unifié) — pur refactor UI, impact zéro sur le moteur, validable immédiatement
+2. Puis volet 2 (plusieurs investissements) — modification de `confirmActiveStep` + mémoïsation pioche
+3. Enfin volet 3 (cession) — le plus gros, nécessite moteur + tests + UI
+
+### Validation (`verification-before-completion`)
+
+Après chaque volet :
+- [x] `npx tsc --noEmit` dans `apps/web` → 0 erreur (Volet 1, 2 et 3)
+- [x] `npm test` dans `packages/game-engine` → 39/39 verts (32 existants + 7 nouveaux pour `vendreImmobilisation`)
+- [ ] Test manuel du flux complet (tour entier en solo, 1 joueur, 6 trimestres) — à valider par Pierre
+- [ ] Capture de l'écran étape 6b pour Pierre — à valider par Pierre
+
+### Review finale Tâche 11 — 2026-04-11
+
+**Volet 1 ✅ (panneau unifié)**
+- Nouveau composant `apps/web/components/jeu/InvestissementPanel.tsx` qui fusionne `piochePersonnelle` (mini-deck logistique, badge "Mini-deck") et `cartesDisponibles` (cartes globales) en 5 sections catégorisées : Logistique & Innovation (Factory/amber), Véhicules (Truck/sky), Commerce & Services (Globe/emerald), Financement (Coins/violet), Protection & Tactique (Shield/rose).
+- `MiniDeckPanel` retiré de `LeftPanel.tsx` pendant l'étape 6b.
+- `MainContent.tsx` rend `InvestissementPanel` à `etapeTour === 6 && subEtape6 === "investissement"`.
+
+**Volet 2 ✅ (multi-investissements)**
+- `useGameFlow.ts` :
+  - Nouveau state `pioche6b: CarteDecision[] | null` mémoïse la pioche tirée à l'entrée en 6b et la reset à la sortie (`useEffect`).
+  - `cartesDisponibles` lit `pioche6b ?? []` en 6b, garde le calcul live ailleurs.
+  - `launchDecision` accepte un `carteArg?: CarteDecision` optionnel pour synchronicité (passé en click handler).
+  - `confirmActiveStep` ajoute un branch dédié `etapeTour === 6 && subEtape6 === "investissement"` qui retourne au panneau au lieu d'avancer à l'étape 7.
+  - Après chaque investissement validé : retrait manuel de la carte de `pioche6b`.
+- Sortie de l'étape 6b uniquement via le bouton "Terminer →" du panneau (`onSkipDecision`).
+
+**Volet 3 ✅ (cession d'occasion)**
+- Moteur (`packages/game-engine/src/engine.ts` + duplicat `apps/web/lib/game-engine/engine.ts`) :
+  - Nouvelle fonction `vendreImmobilisation(etat, joueurIdx, nomImmo, prixCession)` qui :
+    1. Refuse "Autres Immobilisations" et les noms inconnus / prix négatif
+    2. Lit la VNC = `actif.valeur` (le moteur amortit directement la VNC, pas de gross/cumul)
+    3. Crédite la trésorerie (mutation directe pour cibler le bon actif)
+    4. Splice le bien hors du tableau `bilan.actifs`
+    5. Logge plus-value sur `revenusExceptionnels` ou moins-value sur `chargesExceptionnelles`
+- 7 tests unitaires ajoutés dans `packages/game-engine/tests/engine.test.ts` couvrant : plus-value, moins-value, cession à la VNC, refus "Autres Immobilisations", refus introuvable, refus prix négatif, vente bien totalement amorti (VNC=0).
+- UI : sous-composant `CarteCession` dans `InvestissementPanel.tsx` avec stepper (pas de 500 €), prix par défaut = 80% VNC arrondi, aperçu plus/moins-value en temps réel, bouton orange "Vendre". Section "Vente d'occasion" (icône Tag, accent orange) listée avant les sections d'investissement.
+- Handler `handleVendreImmobilisation` dans `useGameFlow.ts` symétrique à `handleInvestirPersonnel`, propage l'`activeStep` au système de validation comptable progressive avec un override titre/icône/description spécifique cession.
+- Câblage `page.tsx → MainContent → InvestissementPanel` via la nouvelle prop `onVendreImmobilisation`.
+
+**Leçons capturées dans tasks/lessons.md**
+- L31 : rebuild obligatoire de `packages/game-engine` après ajout d'export — sinon `apps/web` voit `dist/` désynchronisé (TS2305 + cascades TS7006).
+- L32 : pioche aléatoire d'un panneau persistant doit vivre en `useState`, pas en calcul de render.
+- L33 : `confirmActiveStep` ne doit pas avancer l'étape quand l'étape autorise plusieurs actions consécutives.
+- L34 : pour cibler un bien nommé du bilan, manipuler directement `joueur.bilan.actifs` au lieu de passer par `appliquerDeltaPoste` qui route les deltas par catégorie.
+
+**À faire par Pierre (validation manuelle)**
+- Lancer une partie solo, atteindre l'étape 6b et : (a) investir dans 2 cartes successives, (b) vendre une Camionnette à 6 400 € (80% VNC = +0), (c) vérifier que la cession apparaît au CR en revenus/charges exceptionnels, (d) cliquer "Terminer →".
+
+---
+
 ## Tâche 10 : Déséquilibre bilan + badges avant/après — 2026-04-11
 
 ### Contexte

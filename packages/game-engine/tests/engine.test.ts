@@ -14,6 +14,7 @@ import {
   genererClientsParCommerciaux,
   investirCartePersonnelle,
   calculerCapaciteLogistique,
+  vendreImmobilisation,
 } from "../src/engine";
 import {
   verifierEquilibre,
@@ -362,5 +363,88 @@ describe("investirCartePersonnelle — prérequis", () => {
     investirCartePersonnelle(etat, 0, "belvaux-robot-n1");
     const tresoApres = etat.joueurs[0].bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
     expect(tresoApres).toBe(tresoAvant - 5000);
+  });
+});
+
+// ─── 11. VENTE D'IMMOBILISATION (CESSION D'OCCASION) ─────────
+
+describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", () => {
+  test("Plus-value : prix de cession > VNC → +revenusExceptionnels", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // Belvaux : Camionnette VNC = 8 000 €
+    const result = vendreImmobilisation(etat, 0, "Camionnette", 10000);
+    expect(result.succes).toBe(true);
+
+    const joueur = etat.joueurs[0];
+    // Trésorerie : 8 000 + 10 000 = 18 000
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(18000);
+    // Camionnette retirée du bilan
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
+    // Plus-value de 2 000 € en revenus exceptionnels
+    expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(2000);
+    expect(joueur.compteResultat.charges.chargesExceptionnelles).toBe(0);
+  });
+
+  test("Moins-value : prix de cession < VNC → +chargesExceptionnelles", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // Belvaux : Entrepôt VNC = 8 000 €
+    const result = vendreImmobilisation(etat, 0, "Entrepôt", 5000);
+    expect(result.succes).toBe(true);
+
+    const joueur = etat.joueurs[0];
+    // Trésorerie : 8 000 + 5 000 = 13 000
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(13000);
+    // Entrepôt retiré
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Entrepôt")).toBeUndefined();
+    // Moins-value de 3 000 € en charges exceptionnelles
+    expect(joueur.compteResultat.charges.chargesExceptionnelles).toBe(3000);
+    expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(0);
+  });
+
+  test("Cession à la VNC exacte : aucune plus ni moins-value", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = vendreImmobilisation(etat, 0, "Camionnette", 8000);
+    expect(result.succes).toBe(true);
+
+    const joueur = etat.joueurs[0];
+    expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(0);
+    expect(joueur.compteResultat.charges.chargesExceptionnelles).toBe(0);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
+  });
+
+  test("Refuse la vente de \"Autres Immobilisations\" (poste agrégé)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = vendreImmobilisation(etat, 0, "Autres Immobilisations", 1000);
+    expect(result.succes).toBe(false);
+    expect(result.messageErreur).toContain("agrégé");
+  });
+
+  test("Refuse une immobilisation introuvable", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = vendreImmobilisation(etat, 0, "Yacht de luxe", 50000);
+    expect(result.succes).toBe(false);
+    expect(result.messageErreur).toContain("introuvable");
+  });
+
+  test("Refuse un prix de cession négatif", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const result = vendreImmobilisation(etat, 0, "Camionnette", -1000);
+    expect(result.succes).toBe(false);
+    expect(result.messageErreur).toContain("positif");
+  });
+
+  test("Vente d'un bien totalement amorti (VNC = 0) → tout est plus-value", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    // Forcer la VNC à zéro (simulation amortissement total)
+    const camionnette = joueur.bilan.actifs.find((a) => a.nom === "Camionnette")!;
+    camionnette.valeur = 0;
+    const tresoAvant = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+
+    const result = vendreImmobilisation(etat, 0, "Camionnette", 1500);
+    expect(result.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant + 1500);
+    expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(1500);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
   });
 });

@@ -12,6 +12,7 @@ import CompteResultatPanel from "@/components/CompteResultatPanel";
 
 import { type ActiveStep } from "./EntryPanel";
 import { getDocumentType } from "./utils";
+import { InvestissementPanel } from "./InvestissementPanel";
 
 type TabType = "bilan" | "cr" | "indicateurs" | "glossaire" | "vue-ensemble" | "impact";
 
@@ -36,7 +37,11 @@ interface MainContentProps {
   subEtape6?: "recrutement" | "investissement";
   modeRapide?: boolean;
   onSkipDecision?: () => void;
-  onLaunchDecision?: () => void;
+  onLaunchDecision?: (carte?: CarteDecision) => void;
+  /** Callback pour les cartes du mini-deck logistique (piochePersonnelle). */
+  onInvestirPersonnel?: (carteId: string) => void;
+  /** Callback pour vendre une immobilisation d'occasion (Tâche 11 Volet 3). */
+  onVendreImmobilisation?: (nomImmo: string, prixCession: number) => void;
 }
 
 export function MainContent({
@@ -57,6 +62,8 @@ export function MainContent({
   modeRapide: _modeRapide,
   onSkipDecision,
   onLaunchDecision,
+  onInvestirPersonnel,
+  onVendreImmobilisation,
 }: MainContentProps) {
   const [activeTab, setLocalActiveTab] = useState<TabType>(initialTab === "bilan" || initialTab === "cr" ? initialTab : "bilan");
 
@@ -138,17 +145,17 @@ export function MainContent({
         )}
       </div>
 
-      {/* Step 6 card selection — shown in center panel */}
-      {etapeTour === 6 && !_activeStep && (
+      {/* ─── Étape 6a — Sélection recrutement (flux classique) ─────────── */}
+      {etapeTour === 6 && subEtape6 === "recrutement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-              {subEtape6 === "recrutement" ? "6a — Recrutement" : "6b — Investissement"}
+              6a — Recrutement
             </p>
 
             {/* Card list */}
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {(subEtape6 === "recrutement" ? cartesRecrutement : cartesDisponibles).map((carte) => (
+              {cartesRecrutement.map((carte) => (
                 <button
                   key={carte.id}
                   onClick={() => setSelectedDecision(selectedDecision?.id === carte.id ? null : carte)}
@@ -171,8 +178,8 @@ export function MainContent({
                   )}
                 </button>
               ))}
-              {(subEtape6 === "recrutement" ? cartesRecrutement : cartesDisponibles).length === 0 && (
-                <p className="text-xs text-slate-500 italic">Aucune carte disponible</p>
+              {cartesRecrutement.length === 0 && (
+                <p className="text-xs text-slate-500 italic">Aucun candidat disponible</p>
               )}
             </div>
 
@@ -186,7 +193,7 @@ export function MainContent({
               </button>
               {selectedDecision && onLaunchDecision && (
                 <button
-                  onClick={onLaunchDecision}
+                  onClick={() => onLaunchDecision()}
                   className="flex-1 rounded-lg bg-cyan-400 px-2 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-300"
                 >
                   Exécuter
@@ -194,6 +201,21 @@ export function MainContent({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ─── Étape 6b — Investissement (panneau unifié catégorisé) ─────── */}
+      {etapeTour === 6 && subEtape6 === "investissement" && !_activeStep && (
+        <div className="flex-shrink-0 border-b border-white/10 px-4 py-3 max-h-[65vh] overflow-y-auto">
+          <InvestissementPanel
+            joueur={displayJoueur}
+            cartesDisponibles={cartesDisponibles}
+            onInvestirPersonnel={(carteId) => onInvestirPersonnel?.(carteId)}
+            onInvestirGlobal={(carte) => onLaunchDecision?.(carte)}
+            onVendreImmobilisation={(nomImmo, prix) => onVendreImmobilisation?.(nomImmo, prix)}
+            onTerminer={() => onSkipDecision?.()}
+            disabled={false}
+          />
         </div>
       )}
 

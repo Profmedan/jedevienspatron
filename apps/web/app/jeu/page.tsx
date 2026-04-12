@@ -324,6 +324,7 @@ export default function JeuPage() {
             onCloseModal={() => flow.setModalEtapeEnAttente(null)}
             onDemanderEmprunt={() => { flow.setReponseEmprunt(null); flow.setShowDemandeEmprunt(true); }}
             onInvestirPersonnel={flow.handleInvestirPersonnel}
+            onLicencierCommercial={flow.handleLicencierCommercial}
           />
         </div>
 
@@ -347,6 +348,8 @@ export default function JeuPage() {
             modeRapide={ui.modeRapide}
             onSkipDecision={flow.skipDecision}
             onLaunchDecision={flow.launchDecision}
+            onInvestirPersonnel={flow.handleInvestirPersonnel}
+            onVendreImmobilisation={flow.handleVendreImmobilisation}
           />
         </div>
 

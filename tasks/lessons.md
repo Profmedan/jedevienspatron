@@ -245,3 +245,32 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 **Cause** : la division égale suppose que tous les items ont la même variation, ce qui est faux quand certains sont à 0.
 **Fix** : utiliser le taux fixe PCG de 1 000 €/bien. Pour l'amortissement (totalDelta < 0), n'afficher le badge QUE sur les biens avec `a.valeur > 0`. Pour un investissement (totalDelta > 0), n'afficher le badge QUE sur "Autres Immobilisations".
 **Règle** : quand un delta total est distribué selon une règle non-uniforme (ici : ignorer les biens à 0), ne jamais diviser égalementparmi tous les items. Utiliser la règle de distribution effective (taux fixe, cible unique, etc.).
+
+## L31 — 2026-04-11 : Rebuild du package game-engine après ajout d'export
+**Erreur** : après avoir ajouté `vendreImmobilisation` dans `packages/game-engine/src/engine.ts` et l'avoir importée dans `apps/web/app/jeu/hooks/useGameFlow.ts`, `npx tsc --noEmit` côté web a renvoyé `TS2305 Module '@jedevienspatron/game-engine' has no exported member 'vendreImmobilisation'` + des erreurs en cascade `TS7006 Parameter implicitly has any type` (parce que `ResultatAction` devenait `any`).
+**Cause** : `apps/web` consomme le package via son `dist/` (`"main": "dist/index.js"`, `"types": "dist/index.d.ts"`), pas via les sources. Ajouter une fonction au `src/` ne suffit pas — il faut rebuild.
+**Fix** : `cd packages/game-engine && npm run build` pour régénérer `dist/`. Les erreurs disparaissent.
+**Règle** : à chaque ajout/modification d'un export dans `packages/game-engine/src/`, **toujours** lancer `npm run build` dans le package avant de valider tsc côté `apps/web`. Les erreurs `TS2305` + `TS7006` en cascade après un ajout d'export = signal certain qu'il faut rebuild.
+
+## L32 — 2026-04-11 : Pioche de l'étape 6b doit être stable entre clics (pas re-rendue)
+**Erreur** : `cartesDisponibles` était calculé à chaque render via `tirerCartesDecision(cloneEtat(etat), 4)`. À l'étape 6b "investissement", chaque setState (validation d'une carte) déclenchait un re-render → 4 nouvelles cartes piochées au hasard → l'apprenant voyait disparaître ses choix entre deux investissements.
+**Cause** : `tirerCartesDecision` est non-pure côté affichage (random), et React n'avait aucune raison de mémoriser le résultat sans `useState` ou `useMemo` stable sur une dépendance immuable.
+**Fix** : ajouter `pioche6b: CarteDecision[] | null` en `useState`. `useEffect` initialise la pioche quand on entre en 6b et la reset à `null` quand on en sort. Quand on investit une carte, retirer manuellement la carte du state via `setPioche6b(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null)`. `cartesDisponibles` lit `pioche6b ?? []` en 6b et garde le calcul live ailleurs.
+**Règle** : tout tirage aléatoire ou dérivation non-pure servant à un panneau persistant doit être stabilisé en state, pas calculé inline en render. Critère de détection : si l'utilisateur peut interagir plusieurs fois avec le panneau et que les options doivent rester identiques entre les interactions, alors c'est du state.
+
+## L33 — 2026-04-11 : Étape multi-actions — confirmActiveStep doit revenir au panneau, pas avancer
+**Erreur** : avant la Tâche 11 Volet 2, `confirmActiveStep` appelait toujours `avancerEtape(next)` à la fin d'une écriture comptable validée. Pour 6b investissement, cela enchaînait directement à l'étape 7 après la première carte → impossible d'investir plusieurs fois dans le même trimestre.
+**Fix** : ajouter un branch explicite `if (etapeAvantAvancement === 6 && subEtape6 === "investissement")` qui fait `setEtat({ ...next })` + `setActiveStep(null)` mais SANS appeler `avancerEtape`. Le passage à l'étape 7 se fait uniquement via le bouton "Terminer →" qui appelle `skipDecision()`.
+**Règle** : quand une étape autorise plusieurs actions consécutives, `confirmActiveStep` doit retourner au panneau de sélection, pas avancer. Le passage à l'étape suivante doit être un acte explicite de l'utilisateur (bouton "Terminer").
+
+## L34 — 2026-04-11 : Cession d'immobilisation — ne pas utiliser appliquerDeltaPoste pour cibler un bien nommé
+**Contexte** : implémentation de `vendreImmobilisation` (Volet 3 Tâche 11). Tentation initiale : utiliser `appliquerDeltaPoste(joueur, "immobilisations", -vnc)` pour décrémenter le bien.
+**Problème** : `appliquerDeltaPoste` route les deltas négatifs sur le PREMIER actif catégorie "immobilisations" trouvé (souvent "Entrepôt"), pas sur le bien nommé qu'on veut vendre. De plus, vendre = retirer définitivement le bien, pas le ramener à 0.
+**Fix** : manipulation directe de `joueur.bilan.actifs` :
+1. `findIndex` par `nom` ET `categorie === "immobilisations"`
+2. Lire la VNC = `actif.valeur`
+3. Encaisser via mutation directe de l'actif tresorerie (logger une modification poste "tresorerie")
+4. Logger une modification poste "immobilisations" avec ancienneValeur=VNC et nouvelleValeur=0
+5. `joueur.bilan.actifs.splice(idx, 1)` pour retirer le bien
+6. Plus/moins-value au CR via mutation directe de `compteResultat.produits.revenusExceptionnels` ou `compteResultat.charges.chargesExceptionnelles`
+**Règle** : `appliquerDeltaPoste` est utile pour les effets génériques de cartes. Pour toute opération qui cible un bien nommé du bilan (cession, transfert, échange), manipuler directement le tableau `joueur.bilan.actifs` et logger des modifications avec le poste générique le plus proche (`immobilisations`, `tresorerie`).

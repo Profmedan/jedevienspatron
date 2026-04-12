@@ -6,7 +6,7 @@ import {
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
-  tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial,
+  tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
 } from "@jedevienspatron/game-engine";
@@ -165,9 +165,10 @@ interface UseGameFlowReturn {
   handleDemanderEmprunt: () => void;
   launchAchat: () => void;
   skipAchat: () => void;
-  launchDecision: () => void;
+  launchDecision: (carteArg?: CarteDecision) => void;
   skipDecision: () => void;
   handleInvestirPersonnel: (carteId: string) => void;
+  handleVendreImmobilisation: (nomImmo: string, prixCession: number) => void;
   handleLicencierCommercial: (carteId: string) => void;
 }
 
@@ -197,6 +198,13 @@ export function useGameFlow({
 
   // Sous-étape 6 : recrutement commercial (6a) puis carte décision/investissement (6b)
   const [subEtape6, setSubEtape6] = useState<"recrutement" | "investissement">("recrutement");
+
+  // ── Pioche d'investissement stable du tour (Tâche 11 Volet 2) ──────────────
+  // À l'étape 6b, on tire une fois 4 cartes globales et on les conserve pendant
+  // tout le séjour sur cette sous-étape, pour permettre plusieurs investissements
+  // successifs sans que la pioche ne change à chaque render. Les cartes investies
+  // sont retirées explicitement dans `launchDecision`. Reset à null à la sortie.
+  const [pioche6b, setPioche6b] = useState<CarteDecision[] | null>(null);
 
   // ─ Pédagogie : modal d'explication + QCM fin de trimestre ──────────────────
   const [etapesPedagoVues, setEtapesPedagoVues] = useState<Set<number>>(new Set());
@@ -228,8 +236,29 @@ export function useGameFlow({
   }, [activeStep, recentModifications]);
 
   // ── Cartes disponibles (computed) ───────────────────────────────────────
-  const cartesDisponibles = etat ? tirerCartesDecision(cloneEtat(etat), 4) : [];
+  // Étape 6b : on utilise `pioche6b` (stabilisée par useEffect ci-dessous) afin
+  // que la liste reste constante entre deux investissements et que les cartes
+  // déjà achetées disparaissent proprement. Hors étape 6b : tirage classique.
+  const cartesDisponibles: CarteDecision[] = etat
+    ? (etat.etapeTour === 6 && subEtape6 === "investissement"
+        ? (pioche6b ?? [])
+        : tirerCartesDecision(cloneEtat(etat), 4))
+    : [];
   const cartesRecrutement = etat ? obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif) : [];
+
+  // ── Initialisation et reset de la pioche stable de l'étape 6b ────────────
+  // Init : à l'entrée dans 6b (et seulement si pioche6b === null), tirer 4 cartes.
+  // Reset : à la sortie de 6b (changement d'étape ou de sous-étape ou de tour).
+  useEffect(() => {
+    if (!etat) return;
+    const enInvestissement = etat.etapeTour === 6 && subEtape6 === "investissement";
+    if (enInvestissement && pioche6b === null) {
+      setPioche6b(tirerCartesDecision(cloneEtat(etat), 4));
+    } else if (!enInvestissement && pioche6b !== null) {
+      setPioche6b(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etat?.etapeTour, etat?.tourActuel, etat?.joueurActif, subEtape6]);
 
   // ─ Joueur affiché (avec écritures partiellement appliquées si étape active) ─
   function getDisplayJoueur() {
@@ -334,6 +363,21 @@ export function useGameFlow({
       setRecentModifications([]);
       setSelectedDecision(null);
       setShowCartes(false);
+      return;
+    }
+
+    // Sous-étape 6b (investissement) — Tâche 11 Volet 2 :
+    // Après une carte investie et validée, on REVIENT au panneau unifié pour
+    // permettre d'enchaîner d'autres investissements dans le même trimestre.
+    // Le passage à l'étape 7 se fera explicitement via le bouton "Terminer →"
+    // qui appelle `skipDecision()`.
+    if (etapeAvantAvancement === 6 && subEtape6 === "investissement") {
+      setEtat({ ...next });
+      setActiveStep(null);
+      setRecentModifications([]);
+      setSelectedDecision(null);
+      setShowCartes(false);
+      setDecisionError(null);
       return;
     }
 
@@ -584,10 +628,15 @@ export function useGameFlow({
   }
 
   // ─ Cartes Décision ────────────────────────────────────────────────────────
-  function launchDecision() {
-    if (!etat || !selectedDecision) return;
+  // Accepte une carte optionnelle en paramètre — permet à `InvestissementPanel`
+  // de déclencher l'achat directement (sans passer par setState asynchrone).
+  // Si aucune carte n'est fournie, on utilise `selectedDecision` (ancien flux).
+  function launchDecision(carteArg?: CarteDecision) {
+    if (!etat) return;
+    const carteUsed = carteArg ?? selectedDecision;
+    if (!carteUsed) return;
     const next = cloneEtat(etat);
-    const r = acheterCarteDecision(next, next.joueurActif, selectedDecision);
+    const r = acheterCarteDecision(next, next.joueurActif, carteUsed);
     if (!r.succes) {
       setDecisionError(r.messageErreur ?? "Impossible d'activer cette carte");
       return;
@@ -595,10 +644,10 @@ export function useGameFlow({
     setDecisionError(null);
     let mods = r.modifications;
 
-    if (mods.length === 0 && selectedDecision.effetsRecurrents.length > 0) {
+    if (mods.length === 0 && carteUsed.effetsRecurrents.length > 0) {
       const joueur = next.joueurs[next.joueurActif];
       const syntheticMods: typeof mods = [];
-      for (const effet of selectedDecision.effetsRecurrents) {
+      for (const effet of carteUsed.effetsRecurrents) {
         const ancienneValeur = getPosteValue(joueur, effet.poste);
         applyDeltaToJoueur(joueur, effet.poste, effet.delta);
         syntheticMods.push({
@@ -606,7 +655,7 @@ export function useGameFlow({
           poste: effet.poste,
           ancienneValeur,
           nouvelleValeur: ancienneValeur + effet.delta,
-          explication: `${selectedDecision.titre} — 1ʳᵉ activation (effet récurrent chaque trimestre)`,
+          explication: `${carteUsed.titre} — 1ʳᵉ activation (effet récurrent chaque trimestre)`,
         });
       }
       mods = syntheticMods;
@@ -616,6 +665,9 @@ export function useGameFlow({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
     setActiveStep(buildActiveStep(etat, mods, next, 6));
+    // Tâche 11 Volet 2 : retirer la carte achetée de la pioche stable du tour
+    // pour qu'elle ne réapparaisse pas dans `cartesDisponibles` après confirmation.
+    setPioche6b(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null);
   }
 
   function handleInvestirPersonnel(carteId: string) {
@@ -632,6 +684,27 @@ export function useGameFlow({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
     setActiveStep(buildActiveStep(etat, result.modifications, next, 6));
+  }
+
+  // Tâche 11 Volet 3 — vente d'une immobilisation d'occasion (cession)
+  function handleVendreImmobilisation(nomImmo: string, prixCession: number) {
+    if (!etat) return;
+    const next = cloneEtat(etat);
+    const result = vendreImmobilisation(next, next.joueurActif, nomImmo, prixCession);
+    if (!result.succes) {
+      setDecisionError(result.messageErreur ?? "Impossible de vendre cette immobilisation.");
+      return;
+    }
+    setDecisionError(null);
+    const modsFiltres = result.modifications.filter(m => m.nouvelleValeur !== m.ancienneValeur);
+    setRecentModifications(modsFiltres.map(m => ({
+      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
+    })));
+    setActiveStep(buildActiveStep(etat, result.modifications, next, 6, {
+      titre: `Cession d'occasion — ${nomImmo}`,
+      icone: "💸",
+      description: `Vous vendez "${nomImmo}" sur le marché de l'occasion. Le prix de cession est encaissé en trésorerie, le bien sort du bilan à sa VNC, et l'écart est enregistré au CR (plus ou moins-value exceptionnelle).`,
+    }));
   }
 
   function handleLicencierCommercial(carteId: string) {
@@ -712,6 +785,7 @@ export function useGameFlow({
     launchDecision,
     skipDecision,
     handleInvestirPersonnel,
+    handleVendreImmobilisation,
     handleLicencierCommercial,
   };
 }
