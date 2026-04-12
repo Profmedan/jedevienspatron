@@ -52,19 +52,54 @@ const REVENU_PAR_CLIENT: Record<string, { ventes: number; marge: number; label: 
   grand_compte:{ ventes: 4000, marge: 3000, label: "Grand Compte",delai: "C+2" },
 };
 
+// ── Bonus capacité de production par carte (miroir de CAPACITE_IMMOBILISATION moteur) ──
+// Ces valeurs indiquent combien de ventes supplémentaires par trimestre la carte débloque.
+const BONUS_CAPACITE: Partial<Record<string, number>> = {
+  // Véhicules globaux
+  "camionnette":          6,   // (Manufacture/Véloce: +6 ; Azura/Synergia: +2)
+  "fourgon-refrigere":    5,
+  "velo-cargo":           3,
+  "credit-bail":          6,
+  // Investissements logistiques globaux
+  "expansion":            10,  // (Manufacture/Véloce: +4 ; Azura/Synergia: +6)
+  "entrepot-automatise":  10,
+  // Mini-deck Manufacture Belvaux
+  "belvaux-robot-n1":     2,
+  "belvaux-robot-n2":     2,
+  "belvaux-entrepot":     2,
+  // Mini-deck Véloce Transports
+  "veloce-vehicule-n2":   2,
+  "veloce-dispatch-n1":   2,
+  "veloce-dispatch-n2":   2,
+  // Mini-deck Azura Commerce
+  "azura-marketplace-n1": 4,
+  "azura-marketplace-n2": 4,
+  "azura-soustraitance":  4,
+  // Mini-deck Synergia Lab
+  "synergia-erp-n1":      4,
+  "synergia-erp-n2":      4,
+  "synergia-partenariat": 4,
+};
+
 // ── Bénéfices qualitatifs par carte (quand pas de métrique financière directe) ──
 const BENEFICE_QUALITATIF: Partial<Record<string, string>> = {
-  "assurance-prevoyance":      "Annule incendie, grève, litige et contrôle fiscal",
-  "mutuelle-collective":       "Fidélise l'équipe et réduit le risque de grève",
-  "cybersecurite":             "Annule pertes de données et risques de piratage",
-  "maintenance-preventive":    "Annule pannes machines + réduit les amortissements",
-  "affacturage":               "Convertit toutes vos créances en trésorerie immédiate",
-  "relance-clients":           "Avance d'un trimestre le paiement de toutes vos créances",
-  "optimisation-lean":         "Réduit le coût des marchandises vendues de 1 000 €/trim",
-  "sous-traitance-production": "Ajoute 2 unités produites chaque trimestre",
-  "achat-urgence":             "Déblocage immédiat de 5 000 € de stocks",
-  "remboursement-anticipe":    "Solde l'emprunt et supprime les intérêts récurrents",
-  "revision-generale":         "Prolonge la durée de vie des immobilisations",
+  // Protection
+  "assurance-prevoyance":   "Annule incendie, grève, litige et contrôle fiscal",
+  "mutuelle-collective":    "Fidélise l'équipe et réduit le risque de grève",
+  "cybersecurite":          "Annule pertes de données et risques de piratage",
+  "maintenance-preventive": "Annule pannes machines + réduit les amortissements de 1 000 €/trim",
+  // Service
+  "affacturage":            "Convertit toutes vos créances en trésorerie immédiate",
+  "relance-clients":        "Avance d'un trimestre le paiement de toutes vos créances",
+  // Optimisation coûts
+  "optimisation-lean":      "Réduit le coût des marchandises vendues de 1 000 €/trim",
+  "sous-traitance":         "Ajoute 2 000 € de stocks produits chaque trimestre",
+  // Tactique ponctuelle
+  "achat-urgence":          "Déblocage immédiat de 5 000 € de stocks",
+  "remboursement-anticipe": "Solde l'emprunt et supprime les intérêts récurrents",
+  "revision-generale":      "Prolonge la durée de vie des immobilisations",
+  // Formation : client grand compte immédiat (one-shot, pas récurrent)
+  "formation":              "Décroche immédiatement 1 client Grand Compte ce trimestre",
 };
 
 // ── Label des charges récurrentes selon la catégorie de carte ──
@@ -95,6 +130,12 @@ interface BeneficeAnalyse {
   beneficeQualitatif: string | null;
   /** Bénéfice de financement : apport en capitaux propres */
   apportCapitaux: number;
+  /** Bonus de capacité de production (nb de ventes supplémentaires débloquées) */
+  bonusCapacite: number;
+  /** Payback estimé pour cartes capacité (hypothèse marge moy. 1 500 €/vente) */
+  paybackEstime: number | null;
+  /** Économies récurrentes sur CMV + amortissements */
+  economiesTotalesTrim: number;
 }
 
 function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
@@ -137,38 +178,72 @@ function analyserBenefice(carte: CarteDecision): BeneficeAnalyse {
   const hasCIR = carte.effetsRecurrents.some((e) => e.poste === "revenusExceptionnels" && e.delta > 0);
   const labelRevenusSpeciaux = hasCIR ? "Crédit Impôt Recherche" : revenusSpeciauxTrim > 0 ? "Bonus récurrent" : null;
 
-  // 4. Résultat net par trimestre
-  const margeClients = clients?.margeParTrim ?? 0;
-  const resultatNetTrim = margeClients + chargesRecurrentesTrim + revenusSpeciauxTrim;
-
-  // 5. Payback
+  // 5. Payback (recalculé plus bas après isOneShot)
   const coutInitial = Math.abs(impactTresorerieImmediat(carte));
-  let paybackTrimestres: number | null = null;
-  if (coutInitial > 0 && resultatNetTrim > 0) {
-    paybackTrimestres = Math.round((coutInitial / resultatNetTrim) * 10) / 10;
-  }
 
   // 6. Cartes bonus
   const cartesBonus = carte.carteDecisionBonus ?? 0;
 
   // 7. Bénéfice qualitatif (protection, service, tactique sans clients)
+  // "formation" génère un client one-shot (pas récurrent) → on l'affiche via qualificatif seulement
+  const isOneShot = carte.id === "formation";
   const beneficeQualitatif = BENEFICE_QUALITATIF[carte.id] ?? null;
+  const clientsEffectifs = isOneShot ? null : clients;
 
   // 8. Apport en capitaux propres (financement : levée de fonds, crowdfunding)
   const apportCapitaux = carte.effetsImmédiats
     .filter((e) => e.poste === "capitaux" && e.delta > 0)
     .reduce((sum, e) => sum + e.delta, 0);
 
+  // 9. Bonus capacité de production (mini-deck + investissements logistiques)
+  const bonusCapacite = BONUS_CAPACITE[carte.id] ?? 0;
+
+  // 10. Économies récurrentes sur le résultat (non capturées par trésorerie)
+  //   • Optimisation Lean : achats -1000/trim = CMV réduit = marge améliorée
+  //   • Maintenance Préventive : dotationsAmortissements -1000/trim = résultat amélioré
+  const economieCMVTrim = carte.effetsRecurrents
+    .filter((e) => e.poste === "achats" && e.delta < 0)
+    .reduce((sum, e) => sum + Math.abs(e.delta), 0);
+  const economieAmortTrim = carte.effetsRecurrents
+    .filter((e) => e.poste === "dotationsAmortissements" && e.delta < 0)
+    .reduce((sum, e) => sum + Math.abs(e.delta), 0);
+  const economiesTotalesTrim = economieCMVTrim + economieAmortTrim;
+
+  // Résultat net récurrent (marge clients + économies + revenus spéciaux − charges)
+  const margeClientsEffectifs = clientsEffectifs?.margeParTrim ?? 0;
+  const resultatNetTrimFinal =
+    margeClientsEffectifs + chargesRecurrentesTrim + revenusSpeciauxTrim + economiesTotalesTrim;
+
+  // Payback standard (coût immédiat / bénéfice net/trim)
+  let paybackTrimestres: number | null = null;
+  if (coutInitial > 0 && resultatNetTrimFinal > 0) {
+    paybackTrimestres = Math.round((coutInitial / resultatNetTrimFinal) * 10) / 10;
+  }
+
+  // Payback estimé pour cartes capacité sans clients définis
+  // Hypothèse : marge brute moyenne = 1 500 €/vente (moy. de 1000, 2000, 3000)
+  let paybackEstime: number | null = null;
+  const MARGE_MOYENNE = 1500;
+  if (paybackTrimestres === null && bonusCapacite > 0 && !clientsEffectifs && coutInitial > 0) {
+    const beneficePotentiel = bonusCapacite * MARGE_MOYENNE + chargesRecurrentesTrim + economiesTotalesTrim;
+    if (beneficePotentiel > 0) {
+      paybackEstime = Math.round((coutInitial / beneficePotentiel) * 10) / 10;
+    }
+  }
+
   return {
-    clients,
+    clients: clientsEffectifs,
     chargesRecurrentesTrim,
     revenusSpeciauxTrim,
-    resultatNetTrim,
+    resultatNetTrim: resultatNetTrimFinal,
     paybackTrimestres,
+    paybackEstime,
     cartesBonus,
     labelRevenusSpeciaux,
     beneficeQualitatif,
     apportCapitaux,
+    bonusCapacite,
+    economiesTotalesTrim,
   };
 }
 
@@ -508,7 +583,8 @@ function CarteInvestissement({
     benefice.revenusSpeciauxTrim > 0 ||
     benefice.beneficeQualitatif !== null ||
     benefice.chargesRecurrentesTrim < 0 ||
-    benefice.apportCapitaux > 0;
+    benefice.apportCapitaux > 0 ||
+    benefice.bonusCapacite > 0;
 
   // Handler : on route selon la source
   function handleInvestir() {
@@ -590,6 +666,14 @@ function CarteInvestissement({
           </span>
         )}
 
+        {/* Bonus capacité de production */}
+        {benefice.bonusCapacite > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-300">
+            <TrendingUp className="h-3 w-3 shrink-0" />
+            +{benefice.bonusCapacite} ventes/trim débloquées
+          </span>
+        )}
+
         {/* Cartes bonus */}
         {benefice.cartesBonus > 0 && (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-violet-300">
@@ -629,6 +713,14 @@ function CarteInvestissement({
             {benefice.labelRevenusSpeciaux} : +{fmt(benefice.revenusSpeciauxTrim)}/trim
           </span>
         )}
+
+        {/* Économies récurrentes (CMV réduit + amortissements réduits) */}
+        {benefice.economiesTotalesTrim > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-300">
+            <TrendingUp className="h-3 w-3 shrink-0" />
+            Économies : +{fmt(benefice.economiesTotalesTrim)}/trim
+          </span>
+        )}
       </div>
 
       {/* ── Ligne de synthèse : résultat net + payback ──────── */}
@@ -643,9 +735,12 @@ function CarteInvestissement({
               Résultat net : {benefice.resultatNetTrim > 0 ? "+" : ""}{fmt(benefice.resultatNetTrim)}/trim
             </span>
           )}
-          {benefice.paybackTrimestres !== null && (
+          {(benefice.paybackTrimestres !== null || benefice.paybackEstime !== null) && (
             <span className="text-[11px] font-medium text-cyan-300">
-              Payback : {benefice.paybackTrimestres} trim.
+              Payback : {benefice.paybackTrimestres ?? benefice.paybackEstime} trim.
+              {benefice.paybackEstime !== null && benefice.paybackTrimestres === null && (
+                <span className="text-slate-500"> (estimé)</span>
+              )}
             </span>
           )}
           {benefice.clients && benefice.clients.delai !== "comptant" && (
