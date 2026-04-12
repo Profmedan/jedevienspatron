@@ -223,22 +223,22 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 pt-6"
-         style={{ backgroundColor: "#020617", backgroundImage: "radial-gradient(circle at top left, rgba(34,211,238,0.10) 0%, transparent 30%), radial-gradient(circle at 80% 20%, rgba(250,204,21,0.06) 0%, transparent 25%), radial-gradient(circle at 70% 70%, rgba(16,185,129,0.08) 0%, transparent 25%)" }}>
+         style={{ backgroundColor: "#020617", backgroundImage: "radial-gradient(circle at top left, rgba(34,211,238,0.10) 0%, transparent 30%), radial-gradient(circle at 80% 20%, rgba(250,204,21,0.06) 0%, transparent 25%), radial-gradient(circle at 70% 70%, rgba(34,211,238,0.08) 0%, transparent 25%)" }}>
       <div className="rounded-[28px] border border-white/10 bg-slate-950/80 shadow-2xl max-w-lg w-full overflow-hidden">
 
         {/* En-tête entreprise */}
-        <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-4 flex items-center justify-between gap-3">
+        <div className="bg-gradient-to-r from-cyan-600 to-cyan-500 text-white p-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-3xl">{j.entreprise.icon}</span>
             <div>
               <div className="font-semibold">{j.pseudo} — {j.entreprise.nom}</div>
-              <div className="text-sm text-emerald-100">⚡ {j.entreprise.specialite}</div>
+              <div className="text-sm text-cyan-100">⚡ {j.entreprise.specialite}</div>
             </div>
           </div>
           {/* Bouton Passer — visible dès l'étape 0 */}
           <button
             onClick={onStart}
-            className="cursor-pointer shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-white/20"
+            className="cursor-pointer shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-cyan-100 transition-colors hover:bg-white/20"
             aria-label="Passer l'introduction et démarrer directement"
           >
             Passer →
@@ -251,7 +251,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
             <div
               key={i}
               className={`h-1.5 w-8 rounded-full transition-all ${
-                i <= step ? "bg-emerald-500" : "bg-slate-700"
+                i <= step ? "bg-cyan-400" : "bg-slate-700"
               }`}
             />
           ))}
@@ -273,14 +273,14 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {step < steps.length - 1 ? (
             <button
               onClick={() => setStep((s) => s + 1)}
-              className="flex-1 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+              className="flex-1 cursor-pointer bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold py-3 rounded-xl transition-all active:scale-95"
             >
               Suivant →
             </button>
           ) : (
             <button
               onClick={onStart}
-              className="flex-1 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+              className="flex-1 cursor-pointer bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold py-3 rounded-xl transition-all active:scale-95"
             >
               🚀 Commencer
             </button>
