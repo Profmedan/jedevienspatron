@@ -188,9 +188,12 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
     if (!open && triggerRef.current) {
       const rect        = triggerRef.current.getBoundingClientRect();
       const tooltipW    = 288; // w-72
+      const tooltipH    = 500; // estimation hauteur max du popup
       const marginRight = 8;
       const left        = Math.min(rect.left, window.innerWidth - tooltipW - marginRight);
-      setTooltipPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+      const maxTop      = window.innerHeight - tooltipH;
+      const top         = Math.min(rect.bottom + 4, maxTop);
+      setTooltipPos({ top, left: Math.max(8, left) });
     }
     setOpen(s => !s);
   }
@@ -219,38 +222,40 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
             onClick={() => setOpen(false)}
           />
           <div
-            className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl p-4 text-xs space-y-2 max-h-[70vh] overflow-y-auto"
+            className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl text-xs flex flex-col max-h-[80vh]"
             style={{ position: "fixed", top: tooltipPos.top, left: tooltipPos.left, zIndex: 9999, minWidth: "280px" }}
             onClick={e => e.stopPropagation()}
           >
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2 p-4 shrink-0 border-b border-gray-700/50">
             <div className="font-bold text-cyan-300 text-sm">{label}</div>
             <button onClick={e => { e.stopPropagation(); setOpen(false); }}
               className="text-gray-500 hover:text-gray-300 text-lg leading-none shrink-0">×</button>
           </div>
-          {formule && (
-            <div className="bg-blue-950/40 border border-blue-800/40 rounded-lg p-2 font-mono text-blue-200 text-xs">= {formule}</div>
-          )}
-          {gaugeConfig && (
-            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
-              <div className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">📍 Position actuelle</div>
-              <Gauge value={value} config={gaugeConfig} />
-            </div>
-          )}
-          {definition && <div><div className="font-semibold text-gray-300 mb-0.5">📖 Définition</div><p className="text-gray-300 leading-relaxed break-words">{definition}</p></div>}
-          {interpretation && <div><div className="font-semibold text-gray-300 mb-0.5">🔍 Interprétation</div><p className="text-gray-300 leading-relaxed break-words">{interpretation}</p></div>}
-          {analyseTexte && (
-            <div className="mt-2 pt-2 border-t border-gray-700">
-              <p className="text-xs font-bold text-cyan-300 mb-1">🎯 Pour toi ce trimestre</p>
-              <p className="text-xs text-gray-300 leading-relaxed break-words">{analyseTexte}</p>
-            </div>
-          )}
-          {objectif && (
-            <div className={`rounded-lg p-2 border ${positive === undefined ? "bg-gray-800/40 border-gray-700" : positive ? "bg-emerald-950/30 border-emerald-700/40" : "bg-red-950/30 border-red-700/40"}`}>
-              <div className={`font-semibold mb-0.5 ${positive === undefined ? "text-gray-300" : positive ? "text-emerald-300" : "text-red-300"}`}>🎯 Objectif</div>
-              <p className="text-gray-300 leading-relaxed break-words">{objectif}</p>
-            </div>
-          )}
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-3 p-4">
+            {formule && (
+              <div className="bg-blue-950/40 border border-blue-800/40 rounded-lg p-2 font-mono text-blue-200 text-xs">= {formule}</div>
+            )}
+            {gaugeConfig && (
+              <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                <div className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">📍 Position actuelle</div>
+                <Gauge value={value} config={gaugeConfig} />
+              </div>
+            )}
+            {definition && <div><div className="font-semibold text-gray-300 mb-0.5">📖 Définition</div><p className="text-gray-300 leading-relaxed break-words">{definition}</p></div>}
+            {interpretation && <div><div className="font-semibold text-gray-300 mb-0.5">🔍 Interprétation</div><p className="text-gray-300 leading-relaxed break-words">{interpretation}</p></div>}
+            {analyseTexte && (
+              <div className="pt-2 border-t border-gray-700">
+                <p className="text-xs font-bold text-cyan-300 mb-1">🎯 Pour toi ce trimestre</p>
+                <p className="text-xs text-gray-300 leading-relaxed break-words">{analyseTexte}</p>
+              </div>
+            )}
+            {objectif && (
+              <div className={`rounded-lg p-2 border ${positive === undefined ? "bg-gray-800/40 border-gray-700" : positive ? "bg-emerald-950/30 border-emerald-700/40" : "bg-red-950/30 border-red-700/40"}`}>
+                <div className={`font-semibold mb-0.5 ${positive === undefined ? "text-gray-300" : positive ? "text-emerald-300" : "text-red-300"}`}>🎯 Objectif</div>
+                <p className="text-gray-300 leading-relaxed break-words">{objectif}</p>
+              </div>
+            )}
+          </div>
           </div>
         </>
       )}

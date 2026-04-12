@@ -123,7 +123,7 @@ function TooltipRow({
   return (
     <div ref={rowRef} className="mb-1">
       <div
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-sm rounded-lg transition-all duration-300 ${
+        className={`flex items-center gap-1 px-2.5 py-1.5 text-sm rounded-lg transition-all duration-300 min-w-0 ${
           highlighted
             ? "ring-2 ring-amber-400 bg-amber-500/20 shadow-md shadow-amber-400/20 scale-[1.02] -mx-0.5 animate-pulse"
             : ""
@@ -144,7 +144,7 @@ function TooltipRow({
             ⓘ
           </button>
         )}
-        <span className="flex-1 text-gray-300 text-xs">{label}</span>
+        <span className="flex-1 text-gray-300 text-xs truncate">{label}</span>
         <div className="flex items-center shrink-0">
           {recentMod ? <BeforeAfterBadge mod={recentMod} /> : (
             <span className="font-bold tabular-nums text-sm text-gray-100">{value}</span>
@@ -262,11 +262,11 @@ export default function CompteResultatPanel({
         </span>
       </div>
 
-      <div className="p-4 flex-1 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-3 min-w-0">
+      <div className="p-4 flex-1 overflow-y-auto min-w-0">
+        <div className="grid grid-cols-2 gap-3 min-w-0 w-full">
 
           {/* ── CHARGES ── */}
-          <div className="bg-orange-950/20 rounded-xl p-3 border border-orange-900/50">
+          <div className="bg-orange-950/20 rounded-xl p-3 border border-orange-900/50 min-w-0 overflow-hidden">
             <div className="text-center text-xs font-black text-white mb-2.5 uppercase tracking-widest bg-orange-600 rounded-lg py-1.5">
               − Charges
             </div>
@@ -328,7 +328,7 @@ export default function CompteResultatPanel({
           </div>
 
           {/* ── PRODUITS ── */}
-          <div className="bg-emerald-950/20 rounded-xl p-3 border border-emerald-900/50">
+          <div className="bg-emerald-950/20 rounded-xl p-3 border border-emerald-900/50 min-w-0 overflow-hidden">
             <div className="text-center text-xs font-black text-white mb-2.5 uppercase tracking-widest bg-emerald-600 rounded-lg py-1.5">
               + Produits
             </div>

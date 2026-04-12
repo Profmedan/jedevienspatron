@@ -540,10 +540,13 @@ export function appliquerAvancementCreances(
 // ─── ÉTAPE 3 : Paiement des commerciaux ──────────────────────
 
 export function calculerCoutCommerciaux(joueur: Joueur): number {
+  // Les cartes commerciales ont effetsRecurrents: [] (vide par design).
+  // Le salaire récurrent est identique au coût d'embauche initial,
+  // stocké dans effetsImmédiats.chargesPersonnel.
   return joueur.cartesActives
     .filter((c) => c.categorie === "commercial")
     .reduce((sum, c) => {
-      const cout = c.effetsRecurrents
+      const cout = c.effetsImmédiats
         .filter((e) => e.poste === "chargesPersonnel")
         .reduce((s, e) => s + Math.abs(e.delta), 0);
       return sum + cout;

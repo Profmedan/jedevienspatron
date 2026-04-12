@@ -136,15 +136,15 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
         }}
         onClick={() => info && setShow((s) => !s)}
       >
-        <span className="text-gray-200 flex items-center gap-1 text-sm">
-          {label}
+        <span className="text-gray-200 flex items-center gap-1 text-sm min-w-0">
+          <span className="truncate">{label}</span>
           {info && (
-            <span className={`text-xs leading-none transition-colors ${show ? "text-white" : "text-gray-500"}`}>
+            <span className={`shrink-0 text-xs leading-none transition-colors ${show ? "text-white" : "text-gray-500"}`}>
               {show ? "▲" : "ⓘ"}
             </span>
           )}
         </span>
-        <div className="flex items-center">
+        <div className="flex items-center shrink-0">
           {recentMod ? (
             <BeforeAfterBadge mod={recentMod} />
           ) : (
@@ -330,9 +330,9 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 px-4 pb-4 items-stretch">
+      <div className="grid grid-cols-2 gap-3 px-4 pb-4 items-stretch min-w-0">
         {/* ── ACTIF ── */}
-        <div className="pr-4 border-r border-gray-700 flex flex-col h-full">
+        <div className="pr-4 border-r border-gray-700 flex flex-col h-full min-w-0">
           <div className="text-center text-xs font-black text-blue-300 mb-2 uppercase tracking-widest bg-blue-900/40 rounded-lg py-1">
             ACTIF · Ce que vous possédez
           </div>
@@ -446,7 +446,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
         </div>
 
         {/* ── PASSIF ── */}
-        <div className="pl-4 flex flex-col h-full">
+        <div className="pl-4 flex flex-col h-full min-w-0">
           <div className="text-center text-xs font-black text-amber-300 mb-2 uppercase tracking-widest bg-amber-900/40 rounded-lg py-1">
             PASSIF · D&apos;où vient le financement
           </div>
