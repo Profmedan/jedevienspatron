@@ -31,6 +31,7 @@ import {
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
 import {
+  getTotalActif,
   getTotalImmobilisations,
   getTotalStocks,
   getTresorerie,
@@ -1032,14 +1033,23 @@ export function appliquerCarteEvenement(
     return { succes: true, modifications };
   }
 
+  // Proportionnalisation : si tauxActif défini, le delta réel = sign(delta) × arrondi(totalActif × taux)
+  // Plancher de 500 € pour que l'événement reste perceptible même sur un petit bilan.
+  const totalActif = getTotalActif(joueur);
+
   for (const effet of carte.effets) {
+    let delta = effet.delta;
+    if (carte.tauxActif !== undefined) {
+      const montant = Math.max(500, Math.round((totalActif * carte.tauxActif) / 100) * 100);
+      delta = Math.sign(effet.delta) * montant;
+    }
     const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(
-      joueur, effet.poste, effet.delta
+      joueur, effet.poste, delta
     );
     modifications.push({
       joueurId: joueur.id, poste: effet.poste,
       ancienneValeur, nouvelleValeur,
-      explication: `${carte.titre} : ${effet.delta > 0 ? "+" : ""}${effet.delta} ${effet.poste}`,
+      explication: `${carte.titre} : ${delta > 0 ? "+" : ""}${delta} ${effet.poste}`,
     });
   }
 

@@ -698,6 +698,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
     titre: "Client VIP ⭐",
     description:
       "Une starlette de télé-réalité s'est prise en selfie avec votre produit. Vos ventes sont au beau fixe !",
+    // ── Palier MOYEN : ±7% de l'actif total ──
     effets: [
       { poste: "ventes", delta: 2000 },
       { poste: "tresorerie", delta: 2000 },
@@ -705,6 +706,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "achats", delta: 2000 }, // CMV correspondant
     ],
     annulableParAssurance: false,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -717,6 +719,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: -2000 },
     ],
     annulableParAssurance: true,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -724,11 +727,13 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
     titre: "Subvention Innovation 🎉",
     description:
       "Vous inventez un concept innovant ! Vous obtenez une subvention de la région pour le développer.",
+    // ── Palier FORT : ±10.7% de l'actif total ──
     effets: [
       { poste: "revenusExceptionnels", delta: 3000 },
       { poste: "tresorerie", delta: 3000 },
     ],
     annulableParAssurance: false,
+    tauxActif: 0.107,
   },
   {
     type: "evenement",
@@ -736,11 +741,13 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
     titre: "Placement Financier 📈",
     description:
       "Votre trésorerie placée génère des intérêts. La gestion prudente paye !",
+    // ── Palier PETIT : ±3.5% de l'actif total ──
     effets: [
       { poste: "produitsFinanciers", delta: 1000 },
       { poste: "tresorerie", delta: 1000 },
     ],
     annulableParAssurance: false,
+    tauxActif: 0.035,
   },
   {
     type: "evenement",
@@ -753,6 +760,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: -2000 },              // CRÉDIT Trésorerie
     ],
     annulableParAssurance: true,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -765,6 +773,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: 2000 },
     ],
     annulableParAssurance: false, // l'assurance change l'effet mais ne l'annule pas
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -777,6 +786,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: -2000 },              // CRÉDIT Trésorerie
     ],
     annulableParAssurance: true,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -789,6 +799,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: 1000 },
     ],
     annulableParAssurance: false,
+    tauxActif: 0.035,
   },
   {
     type: "evenement",
@@ -801,6 +812,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: -2000 },
     ],
     annulableParAssurance: true,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -815,6 +827,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "achats", delta: 3000 },           // DÉBIT CMV (coût des marchandises vendues)
     ],
     annulableParAssurance: false,
+    tauxActif: 0.107,
   },
 
   // ── NOUVEAUX ÉVÉNEMENTS (1 positif + 2 négatifs) ─────────────
@@ -830,6 +843,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: 2000 },             // DÉBIT Trésorerie (dotation prix)
     ],
     annulableParAssurance: false,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -842,6 +856,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: -2000 },              // CRÉDIT Trésorerie
     ],
     annulableParAssurance: false,
+    tauxActif: 0.07,
   },
   {
     type: "evenement",
@@ -854,6 +869,7 @@ export const CARTES_EVENEMENTS: CarteEvenement[] = [
       { poste: "tresorerie", delta: -3000 },              // CRÉDIT Trésorerie
     ],
     annulableParAssurance: true,
+    tauxActif: 0.107,
   },
 ];
 

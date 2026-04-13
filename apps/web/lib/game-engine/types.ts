@@ -195,6 +195,9 @@ export interface CarteEvenement {
   effets: EffetCarte[];
   /** Vrai si l'assurance prévoyance annule cet événement */
   annulableParAssurance: boolean;
+  /** Taux de l'actif total pour proportionnaliser les montants (ex: 0.07 = 7%).
+   *  delta_réel = sign(delta_original) × arrondi100(totalActif × tauxActif) */
+  tauxActif?: number;
 }
 
 export type Carte =
