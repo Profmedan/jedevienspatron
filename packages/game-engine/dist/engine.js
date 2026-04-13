@@ -5,12 +5,11 @@
 // Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.creerJoueur = creerJoueur;
 exports.initialiserJeu = initialiserJeu;
 exports.appliquerEtape0 = appliquerEtape0;
+exports.verifierEquilibreComptable = verifierEquilibreComptable;
 exports.appliquerAchatMarchandises = appliquerAchatMarchandises;
 exports.appliquerAvancementCreances = appliquerAvancementCreances;
-exports.calculerCoutCommerciaux = calculerCoutCommerciaux;
 exports.appliquerPaiementCommerciaux = appliquerPaiementCommerciaux;
 exports.licencierCommercial = licencierCommercial;
 exports.appliquerCarteClient = appliquerCarteClient;
@@ -356,6 +355,26 @@ function appliquerEtape0(etat, joueurIdx) {
         });
     }
     return { succes: true, modifications };
+}
+/**
+ * Vérifie l'invariant comptable ACTIF = PASSIF + RÉSULTAT après chaque étape.
+ * En développement, log un avertissement si l'équilibre est rompu (tolérance ±1€ pour arrondis).
+ * Ne lève pas d'erreur pour ne pas bloquer le jeu en production.
+ */
+function verifierEquilibreComptable(joueur, contexte) {
+    const totalActif = (0, calculators_1.getTotalActif)(joueur);
+    const totalPassif = (0, calculators_1.getTotalPassif)(joueur);
+    const resultatNet = (0, calculators_1.getResultatNet)(joueur);
+    const ecart = Math.abs(totalActif - (totalPassif + resultatNet));
+    if (ecart > 1) {
+        console.warn(`[GameEngine] Déséquilibre comptable après ${contexte} — Joueur ${joueur.id} (${joueur.pseudo})`, {
+            totalActif,
+            totalPassif,
+            resultatNet,
+            ecart,
+            attendu: `Actif (${totalActif}) = Passif (${totalPassif}) + Résultat (${resultatNet})`,
+        });
+    }
 }
 // ─── ÉTAPE 1 : Achats de marchandises (optionnel) ────────────
 function appliquerAchatMarchandises(etat, joueurIdx, quantite, modePaiement) {

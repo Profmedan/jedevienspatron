@@ -17,7 +17,6 @@ exports.calculerIndicateurs = calculerIndicateurs;
 exports.calculerSIGSimplifie = calculerSIGSimplifie;
 exports.calculerInterets = calculerInterets;
 exports.scorerDemandePret = scorerDemandePret;
-exports.verifierFailliteProgressive = verifierFailliteProgressive;
 exports.calculerSIG = calculerSIG;
 exports.calculerScore = calculerScore;
 exports.verifierFaillite = verifierFaillite;
@@ -253,18 +252,6 @@ function scorerDemandePret(joueur, montantDemande, tourActuel = 999) {
         raison = `Score ${score}/100 — accordé au taux standard (5%/an). ${details.filter(d => d.includes("✓")).join(", ")}.`;
     }
     return { accepte, montantAccorde: accepte ? montantDemande : 0, tauxMajore, score, raison };
-}
-// ─── VÉRIFICATION FAILLITE (PROGRESSIVE) ─────────────────────
-function verifierFailliteProgressive(joueur) {
-    const capitauxPropres = joueur.bilan.passifs
-        .filter((p) => p.categorie === "capitaux")
-        .reduce((s, p) => s + p.valeur, 0);
-    const resultatNet = getResultatNet(joueur);
-    const capitauxTotaux = capitauxPropres + resultatNet;
-    if (capitauxTotaux < 0) {
-        return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };
-    }
-    return { enFaillite: false };
 }
 function calculerSIG(joueur) {
     const cr = joueur.compteResultat;

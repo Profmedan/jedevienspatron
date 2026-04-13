@@ -256,19 +256,6 @@ export function scorerDemandePret(
   return { accepte, montantAccorde: accepte ? montantDemande : 0, tauxMajore, score, raison };
 }
 
-// ─── VÉRIFICATION FAILLITE (PROGRESSIVE) ─────────────────────
-export function verifierFailliteProgressive(joueur: Joueur): { enFaillite: boolean; raison?: string } {
-  const capitauxPropres = joueur.bilan.passifs
-    .filter((p) => p.categorie === "capitaux")
-    .reduce((s, p) => s + p.valeur, 0);
-  const resultatNet = getResultatNet(joueur);
-  const capitauxTotaux = capitauxPropres + resultatNet;
-  if (capitauxTotaux < 0) {
-    return { enFaillite: true, raison: "Capitaux propres négatifs — l'entreprise est insolvable" };
-  }
-  return { enFaillite: false };
-}
-
 // ─── SOLDES INTERMÉDIAIRES DE GESTION (SIG) ──────────────────
 
 export interface SIG {

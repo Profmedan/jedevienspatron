@@ -205,7 +205,7 @@ function appliquerDeltaPoste(
 
 // ─── CRÉATION DE L'ÉTAT INITIAL ──────────────────────────────
 
-export function creerJoueur(
+function creerJoueur(
   id: number,
   pseudo: string,
   nomEntreprise: NomEntreprise
@@ -577,7 +577,7 @@ export function appliquerAvancementCreances(
 
 // ─── ÉTAPE 3 : Paiement des commerciaux ──────────────────────
 
-export function calculerCoutCommerciaux(joueur: Joueur): number {
+function calculerCoutCommerciaux(joueur: Joueur): number {
   // Les cartes commerciales ont effetsRecurrents: [] (vide par design).
   // Le salaire récurrent est identique au coût d'embauche initial,
   // stocké dans effetsImmédiats.chargesPersonnel.

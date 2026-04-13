@@ -29,10 +29,6 @@ export interface SIGSimplifie {
 export declare function calculerSIGSimplifie(joueur: Joueur): SIGSimplifie;
 export declare function calculerInterets(empruntsTotal: number, majore?: boolean): number;
 export declare function scorerDemandePret(joueur: Joueur, montantDemande: number, tourActuel?: number): ResultatDemandePret;
-export declare function verifierFailliteProgressive(joueur: Joueur): {
-    enFaillite: boolean;
-    raison?: string;
-};
 export interface SIG {
     chiffreAffaires: number;
     achats: number;

@@ -170,3 +170,12 @@ Les skills s'intercalent sans remplacer les règles actuelles :
 - `game_sessions` : sessions créées par les formateurs (room_code, nb_tours)
 - `bypass_codes` : codes d'accès gratuits avec quota
 - Vue `credits_disponibles` : sum des crédits restants par organization_id
+
+## graphify
+
+This project has a graphify knowledge graph at graphify-out/.
+
+Rules:
+- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
+- After modifying code files in this session, run `python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"` to keep the graph current

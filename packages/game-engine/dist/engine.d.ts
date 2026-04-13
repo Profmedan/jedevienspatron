@@ -1,13 +1,17 @@
 import { EtatJeu, Joueur, CarteDecision, CarteClient, CarteEvenement, NomEntreprise, ResultatAction, ResultatDemandePret } from "./types";
-export declare function creerJoueur(id: number, pseudo: string, nomEntreprise: NomEntreprise): Joueur;
 export declare function initialiserJeu(joueursDefs: Array<{
     pseudo: string;
     nomEntreprise: NomEntreprise;
 }>, nbToursMax?: number): EtatJeu;
 export declare function appliquerEtape0(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * Vérifie l'invariant comptable ACTIF = PASSIF + RÉSULTAT après chaque étape.
+ * En développement, log un avertissement si l'équilibre est rompu (tolérance ±1€ pour arrondis).
+ * Ne lève pas d'erreur pour ne pas bloquer le jeu en production.
+ */
+export declare function verifierEquilibreComptable(joueur: Joueur, contexte: string): void;
 export declare function appliquerAchatMarchandises(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
 export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: number): ResultatAction;
-export declare function calculerCoutCommerciaux(joueur: Joueur): number;
 export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Licencie un commercial actif :
