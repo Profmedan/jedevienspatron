@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { getAvailableCredits } from "@/lib/credits";
 
 export const dynamic = "force-dynamic";
 
@@ -73,13 +74,7 @@ export default async function DashboardPage() {
   let creditsDisponibles = 0;
 
   if (profile?.organization_id) {
-    const { data: creditsData } = await serviceClient
-      .from("credits_disponibles")
-      .select("sessions_disponibles")
-      .eq("organization_id", profile.organization_id)
-      .single();
-
-    creditsDisponibles = creditsData?.sessions_disponibles ?? 0;
+    creditsDisponibles = await getAvailableCredits(profile.organization_id);
   }
 
   const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "Utilisateur";

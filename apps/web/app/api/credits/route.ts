@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getAvailableCredits } from "@/lib/credits";
 
 // ─── GET /api/credits — Récupère les crédits de l'utilisateur ───
 export async function GET() {
@@ -31,23 +32,7 @@ export async function GET() {
       );
     }
 
-    // Récupère le nombre total de sessions disponibles via la vue
-    const { data: creditsData, error: creditsError } = await serviceClient
-      .from("credits_disponibles")
-      .select("sessions_disponibles")
-      .eq("organization_id", profile.organization_id)
-      .single();
-
-    if (creditsError && creditsError.code !== "PGRST116") {
-      // PGRST116 = pas de ligne trouvée (c'est normal si pas de crédits)
-      console.error("Erreur récupération crédits:", creditsError);
-      return NextResponse.json(
-        { error: "Erreur lors de la récupération des crédits" },
-        { status: 500 }
-      );
-    }
-
-    const sessionsDisponibles = creditsData?.sessions_disponibles ?? 0;
+    const sessionsDisponibles = await getAvailableCredits(profile.organization_id);
 
     return NextResponse.json(
       { sessions_disponibles: sessionsDisponibles },

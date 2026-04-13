@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getAvailableCredits } from "@/lib/credits";
 import PacksCheckoutClient, { type Pack } from "./PacksCheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -94,17 +95,7 @@ export default async function PacksPage({
   let creditsDisponibles = 0;
 
   if (profile?.organization_id) {
-    const { data: creditsData, error: creditsError } = await serviceClient
-      .from("credits_disponibles")
-      .select("sessions_disponibles")
-      .eq("organization_id", profile.organization_id)
-      .single();
-
-    if (creditsError && creditsError.code !== "PGRST116") {
-      throw new Error("Impossible de charger les crédits disponibles.");
-    }
-
-    creditsDisponibles = creditsData?.sessions_disponibles ?? 0;
+    creditsDisponibles = await getAvailableCredits(profile.organization_id);
   }
 
   const packs = (packsData ?? []) as Pack[];
