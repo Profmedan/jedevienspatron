@@ -2,3 +2,9 @@ node_modules/
 .next/
 .env.local
 .worktrees/
+
+# Graphify analysis output
+graphify-out/
+
+# Coverage reports
+packages/game-engine/coverage/
