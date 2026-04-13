@@ -10,6 +10,7 @@ import {
   getResultatNet,
   calculerScore,
   type TrimSnapshot,
+  type LiveState,
 } from "@jedevienspatron/game-engine";
 import { type ActiveStep, getSens } from "@/components/jeu";
 
@@ -175,5 +176,37 @@ export function buildTrimSnapshot(
     nbClients,
     nbCommerciaux,
     decision,
+  };
+}
+
+// ─── Live state (dashboard formateur) ────────────────────────────────────────
+
+/**
+ * Construit un LiveState léger (~200B) pour le dashboard formateur temps réel.
+ * Appelé à chaque fin de trimestre pour envoyer un heartbeat.
+ */
+export function buildLiveState(
+  etat: EtatJeu,
+  joueurIdx: number,
+): LiveState {
+  const joueur = etat.joueurs[joueurIdx];
+
+  const capitauxPropres = joueur.bilan.passifs
+    .filter((p) => p.categorie === "capitaux")
+    .reduce((s, p) => s + p.valeur, 0);
+
+  const nbCommerciaux = joueur.cartesActives.filter(
+    (c) => c.categorie === "commercial",
+  ).length;
+
+  return {
+    tour: etat.tourActuel,
+    etape: etat.etapeTour,
+    tresorerie: getTresorerie(joueur),
+    resultatNet: getResultatNet(joueur),
+    score: calculerScore(joueur),
+    capitauxPropres,
+    nbCommerciaux,
+    elimine: joueur.elimine,
   };
 }

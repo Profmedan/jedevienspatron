@@ -154,6 +154,27 @@ export default async function SessionResultsPage({
           </div>
         </div>
 
+        {/* Boutons d’action */}
+        <div className="flex gap-3 flex-wrap">
+          {typedSession.status !== "finished" && (
+            <Link
+              href={`/dashboard/sessions/${typedSession.id}/live`}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              Suivre en direct
+            </Link>
+          )}
+          {typedSession.status === "finished" && (
+            <Link
+              href={`/rapport/${typedSession.room_code}`}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              📊 Rapport pédagogique
+            </Link>
+          )}
+        </div>
+
         {/* Code d’accès si session encore active */}
         {typedSession.status !== "finished" && (
           <div className="bg-indigo-950/30 border border-indigo-800 rounded-2xl p-6 flex items-center justify-between gap-6">

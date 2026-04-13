@@ -11,6 +11,10 @@ export const RATE_LIMITS = {
     windowSecs: 60,
     maxHits: 20,      // Max 20 soumissions de résultats par minute par IP
   },
+  "sessions/heartbeat": {
+    windowSecs: 60,
+    maxHits: 120,     // 1 heartbeat par trimestre × N joueurs — marge large
+  },
 } as const;
 
 // ─── Extraire l'IP du client depuis les headers Vercel ──────────

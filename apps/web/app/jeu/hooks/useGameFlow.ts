@@ -16,7 +16,7 @@ import {
 } from "@/components/jeu";
 import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
 import { activeStepReducer, type ActiveStepAction } from "./useActiveStepReducer";
-import { ETAPE_INFO, cloneEtat, buildActiveStep, buildTrimSnapshot, type ModificationMoteur } from "./gameFlowUtils";
+import { ETAPE_INFO, cloneEtat, buildActiveStep, buildTrimSnapshot, buildLiveState, type ModificationMoteur } from "./gameFlowUtils";
 import { usePedagogyFlow } from "./usePedagogyFlow";
 import { useLoansFlow } from "./useLoansFlow";
 import { useAchatFlow } from "./useAchatFlow";
@@ -54,6 +54,8 @@ interface UseGameFlowParams {
   setFlashData: (v: { poste: string; avant: number; apres: number } | null) => void;
   /** Crée une session solo (consomme 1 crédit) — depuis useGamePersistence */
   createSoloSession: (nbTours: number) => Promise<boolean>;
+  /** room_code de la session (null si solo sans code) — pour le heartbeat */
+  roomCode: string | null;
 }
 
 // ─── Retour du hook ────────────────────────────────────────────────────────
@@ -128,6 +130,7 @@ export function useGameFlow({
   setHighlightedPoste,
   setFlashData,
   createSoloSession,
+  roomCode,
 }: UseGameFlowParams): UseGameFlowReturn {
 
   // ─ État de base ────────────────────────────────────────────────────────────
@@ -394,6 +397,20 @@ export function useGameFlow({
     const snap = buildTrimSnapshot(next, idx, lastDecisionLabel);
     setSnapshots(prev => [...prev, snap]);
     setLastDecisionLabel(null);
+
+    // ── Heartbeat : envoyer le live_state au dashboard formateur ─────────
+    if (roomCode) {
+      const liveState = buildLiveState(next, idx);
+      fetch("/api/sessions/heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_code: roomCode,
+          guest_name: joueurNom,
+          live_state: liveState,
+        }),
+      }).catch(() => { /* heartbeat non critique — on ignore les erreurs réseau */ });
+    }
 
     const nextJoueurIdx = (idx + 1) % next.nbJoueurs;
     if (nextJoueurIdx === 0) {

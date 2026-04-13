@@ -2,6 +2,43 @@
 
 ---
 
+## Tâche 17 : Feature A — Dashboard formateur temps réel — 2026-04-13 ✅
+
+### Contexte
+Le formateur peut suivre en direct la progression de ses apprenants pendant une session.
+Les joueurs envoient un heartbeat (live_state) à chaque fin de trimestre via l'API.
+Le dashboard utilise Supabase Realtime pour recevoir les mises à jour sans rechargement.
+
+### Fichiers créés
+- [x] `apps/web/app/api/sessions/heartbeat/route.ts` — API POST (mise à jour live_state + last_heartbeat)
+- [x] `apps/web/app/dashboard/sessions/[id]/live/page.tsx` — Page live avec grille joueurs + stats temps réel + Supabase Realtime subscription
+- [x] `supabase/migrations/010_enable_realtime_game_players.sql` — Active Realtime sur game_players
+
+### Fichiers modifiés
+- [x] `apps/web/app/jeu/hooks/gameFlowUtils.ts` — Ajout `buildLiveState()` (LiveState léger ~200B)
+- [x] `apps/web/app/jeu/hooks/useGameFlow.ts` — Envoi heartbeat dans `confirmEndOfTurn` + param `roomCode`
+- [x] `apps/web/app/jeu/page.tsx` — Passage `roomCode` à useGameFlow
+- [x] `apps/web/app/dashboard/sessions/[id]/page.tsx` — Boutons "Suivre en direct" et "Rapport pédagogique"
+- [x] `apps/web/lib/rate-limit.ts` — Ajout config "sessions/heartbeat" (120/min)
+
+### Architecture
+```
+Joueur (page /jeu)
+  └─ confirmEndOfTurn → POST /api/sessions/heartbeat
+       └─ UPDATE game_players SET live_state, last_heartbeat
+
+Formateur (page /dashboard/sessions/[id]/live)
+  └─ Supabase Realtime subscription sur game_players
+       └─ postgres_changes (INSERT + UPDATE) filtré par session_id
+```
+
+### Notes
+- Migration 010 à appliquer manuellement par Pierre sur Supabase
+- Le heartbeat est fire-and-forget (non bloquant pour le joueur)
+- Détection inactivité : 5 min sans heartbeat = indicateur grisé
+
+---
+
 ## Tâche 16 : Feature B — Rapport pédagogique post-session — 2026-04-13 ✅
 
 ### Contexte

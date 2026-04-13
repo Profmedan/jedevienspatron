@@ -47,6 +47,7 @@ export default function JeuPage() {
     setHighlightedPoste: ui.setHighlightedPoste,
     setFlashData: ui.setFlashData,
     createSoloSession: persistence.createSoloSession,
+    roomCode: persistence.roomCode,
   });
 
   // Synchroniser la ref snapshots avec l'état du flow (pour persistence)
