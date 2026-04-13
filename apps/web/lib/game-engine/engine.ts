@@ -571,6 +571,53 @@ export function appliquerPaiementCommerciaux(
   return { succes: true, modifications };
 }
 
+// ─── LICENCIEMENT D'UN COMMERCIAL ─────────────────────────────
+/**
+ * Licencie un commercial actif :
+ *  - Indemnité = 1 trimestre de salaire → Charges exceptionnelles + Trésorerie
+ *  - Retire le commercial de cartesActives (arrêt des salaires et des clients)
+ *
+ * Pédagogie : l'indemnité passe en Charges exceptionnelles (cpt 671),
+ * pas en Charges de personnel (641) — distinction importante en comptabilité française.
+ */
+export function licencierCommercial(
+  etat: EtatJeu,
+  joueurIdx: number,
+  carteId: string
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const commercial = joueur.cartesActives.find((c) => c.id === carteId && c.categorie === "commercial");
+
+  if (!commercial) {
+    return { succes: false, messageErreur: "Commercial introuvable.", modifications: [] };
+  }
+
+  // Indemnité = absolu du premier effet trésorerie dans effetsImmédiats (= 1 trimestre de salaire)
+  const indemniteBrut = commercial.effetsImmédiats
+    .filter((e) => e.poste === "tresorerie")
+    .reduce((s, e) => s + Math.abs(e.delta), 0);
+
+  // Si la carte ne stocke pas d'effetsImmédiats (cartes clonées sans coût), fallback sur effetsRecurrents
+  const indemnite = indemniteBrut > 0
+    ? indemniteBrut
+    : commercial.effetsRecurrents
+        .filter((e) => e.poste === "chargesPersonnel")
+        .reduce((s, e) => s + Math.abs(e.delta), 0);
+
+  const modifications: ResultatAction["modifications"] = [];
+  const push = makePush(joueur, modifications);
+
+  if (indemnite > 0) {
+    push("chargesExceptionnelles", indemnite, `Indemnité de licenciement — ${commercial.titre} : +${indemnite} charges exceptionnelles`);
+    push("tresorerie", -indemnite, `Indemnité de licenciement — ${commercial.titre} : -${indemnite} trésorerie`);
+  }
+
+  // Retrait du commercial de cartesActives
+  joueur.cartesActives = joueur.cartesActives.filter((c) => c.id !== carteId);
+
+  return { succes: true, modifications };
+}
+
 // ─── ÉTAPE 4 : Traitement carte Client ───────────────────────
 /**
  * Comptabilisation en 4 écritures (partie double complète).
