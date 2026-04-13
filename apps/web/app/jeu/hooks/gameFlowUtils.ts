@@ -4,7 +4,13 @@
  * d'aucun état React.
  */
 
-import { EtatJeu } from "@jedevienspatron/game-engine";
+import {
+  EtatJeu,
+  getTresorerie,
+  getResultatNet,
+  calculerScore,
+  type TrimSnapshot,
+} from "@jedevienspatron/game-engine";
 import { type ActiveStep, getSens } from "@/components/jeu";
 
 // ─── Type partagé : modification renvoyée par le moteur ──────────────────────
@@ -122,5 +128,52 @@ export function buildActiveStep(
     entries,
     baseEtat: cloneEtat(baseEtat),
     previewEtat,
+  };
+}
+
+// ─── Snapshot trimestriel ────────────────────────────────────────────────────
+
+/**
+ * Construit un TrimSnapshot à partir de l'état courant d'un joueur.
+ * Appelé à la fin de chaque trimestre (étape 8) pour stocker l'historique
+ * utilisé par le rapport pédagogique post-session.
+ *
+ * @param etat   État de jeu courant (contient le joueur à l'index 0 en solo)
+ * @param joueurIdx  Index du joueur dans etat.joueurs (0 en solo)
+ * @param decision   Label de la dernière décision prise ce trimestre (null si aucune)
+ */
+export function buildTrimSnapshot(
+  etat: EtatJeu,
+  joueurIdx: number,
+  decision: string | null,
+): TrimSnapshot {
+  const joueur = etat.joueurs[joueurIdx];
+
+  const capitauxPropres = joueur.bilan.passifs
+    .filter((p) => p.categorie === "capitaux")
+    .reduce((s, p) => s + p.valeur, 0);
+
+  const nbCommerciaux = joueur.cartesActives.filter(
+    (c) => c.categorie === "commercial",
+  ).length;
+
+  // Nombre total de clients ce trimestre = ceux traités (clientsATrait)
+  // En fin de tour clientsATrait est vide (déjà traité), on compte via les commerciaux actifs
+  // + les clients initiaux. On utilise nbClientsParTour des cartes actives commerciales.
+  const nbClients = joueur.cartesActives
+    .filter((c) => c.categorie === "commercial")
+    .reduce((sum, c) => sum + (c.nbClientsParTour ?? 0), 0)
+    + (joueur.entreprise.clientGratuitParTour ? 1 : 0);
+
+  return {
+    tour: etat.tourActuel,
+    tresorerie: getTresorerie(joueur),
+    resultatNet: getResultatNet(joueur),
+    capitauxPropres,
+    chiffreAffaires: joueur.compteResultat.produits.ventes,
+    score: calculerScore(joueur),
+    nbClients,
+    nbCommerciaux,
+    decision,
   };
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useReducer } from "react";
 import {
-  EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT,
+  EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
@@ -16,7 +16,7 @@ import {
 } from "@/components/jeu";
 import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
 import { activeStepReducer, type ActiveStepAction } from "./useActiveStepReducer";
-import { ETAPE_INFO, cloneEtat, buildActiveStep, type ModificationMoteur } from "./gameFlowUtils";
+import { ETAPE_INFO, cloneEtat, buildActiveStep, buildTrimSnapshot, type ModificationMoteur } from "./gameFlowUtils";
 import { usePedagogyFlow } from "./usePedagogyFlow";
 import { useLoansFlow } from "./useLoansFlow";
 import { useAchatFlow } from "./useAchatFlow";
@@ -66,6 +66,8 @@ interface UseGameFlowReturn {
   recentModifications: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
   setRecentModifications: (m: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>) => void;
   effectiveRecentMods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
+  /** Snapshots trimestriels accumulés pendant la partie (rapport pédagogique) */
+  snapshots: TrimSnapshot[];
   achatQte: number;
   setAchatQte: (v: number) => void;
   achatMode: "tresorerie" | "dettes";
@@ -136,6 +138,10 @@ export function useGameFlow({
   }>>([]);
   const [tourTransition, setTourTransition] = useState<{ from: number; to: number } | null>(null);
   const [failliteInfo, setFailliteInfo]   = useState<{ joueurNom: string; raison: string } | null>(null);
+  /** Snapshots trimestriels pour le rapport pédagogique post-session */
+  const [snapshots, setSnapshots]         = useState<TrimSnapshot[]>([]);
+  /** Label de la dernière décision prise ce trimestre (reset à chaque tour) */
+  const [lastDecisionLabel, setLastDecisionLabel] = useState<string | null>(null);
 
   // Wrapper setActiveStep → dispatch (API publique stable)
   function setActiveStep(s: ActiveStep | null) {
@@ -242,6 +248,10 @@ export function useGameFlow({
 
     // 6a (recrutement) → 6b (investissement) sans avancer à l'étape 7
     if (etapeAvantAvancement === 6 && decisions.subEtape6 === "recrutement") {
+      // Capturer le label de la carte recrutée pour le snapshot trimestriel
+      if (decisions.selectedDecision) {
+        setLastDecisionLabel(decisions.selectedDecision.titre);
+      }
       decisions.setSubEtape6("investissement");
       setEtat({ ...next });
       setActiveStep(null);
@@ -252,6 +262,10 @@ export function useGameFlow({
 
     // 6b (investissement) → retour au panneau unifié (L33 : multi-investissements)
     if (etapeAvantAvancement === 6 && decisions.subEtape6 === "investissement") {
+      // Capturer le label de la carte investie pour le snapshot trimestriel
+      if (decisions.selectedDecision) {
+        setLastDecisionLabel(decisions.selectedDecision.titre);
+      }
       setEtat({ ...next });
       setActiveStep(null);
       setRecentModifications([]);
@@ -376,6 +390,11 @@ export function useGameFlow({
     const joueurNom = next.joueurs[idx].pseudo;
     if (fin.enFaillite) next.joueurs[idx].elimine = true;
 
+    // ── Snapshot trimestriel (AVANT transition de tour) ───────────────────
+    const snap = buildTrimSnapshot(next, idx, lastDecisionLabel);
+    setSnapshots(prev => [...prev, snap]);
+    setLastDecisionLabel(null);
+
     const nextJoueurIdx = (idx + 1) % next.nbJoueurs;
     if (nextJoueurIdx === 0) {
       if (next.tourActuel >= next.nbToursMax) {
@@ -422,6 +441,7 @@ export function useGameFlow({
     journal, setJournal,
     recentModifications, setRecentModifications,
     effectiveRecentMods,
+    snapshots,
     tourTransition, setTourTransition,
     failliteInfo, setFailliteInfo,
 

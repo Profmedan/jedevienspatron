@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
-  EtatJeu, MONTANTS_EMPRUNT,
+  EtatJeu, MONTANTS_EMPRUNT, TrimSnapshot,
   calculerScore, calculerIndicateurs, calculerSIGSimplifie,
 } from "@jedevienspatron/game-engine";
 import {
@@ -30,11 +30,14 @@ export default function JeuPage() {
   const [phase, setPhase] = useState<Phase>("setup");
   const [etat, setEtat]   = useState<EtatJeu | null>(null);
 
+  // Ref partagée : snapshots trimestriels (remplie par flow, lue par persistence)
+  const snapshotsRef = useRef<TrimSnapshot[]>([]);
+
   // ── UI state (onglets, highlight, mode rapide, flash) ─────────────────────
   const ui = useGameUIState();
 
   // ── Persistence (room code, sauvegarde Supabase / localStorage) ───────────
-  const persistence = useGamePersistence({ phase, etat });
+  const persistence = useGamePersistence({ phase, etat, snapshotsRef });
 
   // ── Game flow (toute la logique de jeu + states associés) ─────────────────
   const flow = useGameFlow({
@@ -45,6 +48,9 @@ export default function JeuPage() {
     setFlashData: ui.setFlashData,
     createSoloSession: persistence.createSoloSession,
   });
+
+  // Synchroniser la ref snapshots avec l'état du flow (pour persistence)
+  snapshotsRef.current = flow.snapshots;
 
   // ─── EARLY RETURNS ──────────────────────────────────────────────────────────
 
@@ -128,6 +134,14 @@ export default function JeuPage() {
           </div>
         )}
         <div className="flex gap-3 flex-wrap justify-center">
+          {persistence.roomCode && (
+            <Link
+              href={`/rapport/${persistence.roomCode}`}
+              className="bg-emerald-600 text-white font-bold px-8 py-3 rounded-2xl shadow hover:bg-emerald-500 transition-colors"
+            >
+              📊 Voir le rapport pédagogique
+            </Link>
+          )}
           <button
             onClick={() => { setPhase("setup"); setEtat(null); flow.setJournal([]); persistence.setSavedToDb(false); }}
             className="bg-indigo-600 text-white font-bold px-10 py-3 rounded-2xl shadow"

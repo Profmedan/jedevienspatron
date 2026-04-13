@@ -2,6 +2,56 @@
 
 ---
 
+## Tâche 16 : Feature B — Rapport pédagogique post-session — 2026-04-13 ✅
+
+### Contexte
+Page `/rapport/[room_code]` avec graphiques Recharts, diagnostic textuel automatique, et classement.
+Accessible par le formateur ET les joueurs après la partie (URL partageable).
+
+### Fichiers créés
+- [x] `apps/web/app/api/rapport/[room_code]/route.ts` — API GET (session + joueurs + snapshots depuis Supabase)
+- [x] `apps/web/lib/diagnostic.ts` — Moteur de diagnostic : 12 règles (4 alertes, 4 conseils, 4 forces)
+- [x] `apps/web/components/rapport/ReportCharts.tsx` — 3 graphiques Recharts (trésorerie, CA, score) avec courbes superposées en multi
+- [x] `apps/web/components/rapport/DiagnosticPanel.tsx` — Panneau diagnostic par joueur (alertes/conseils/forces colorés)
+- [x] `apps/web/app/rapport/[room_code]/page.tsx` — Page complète (classement + graphiques + diagnostic + navigation)
+
+### Fichiers modifiés
+- [x] `apps/web/app/jeu/page.tsx` — Bouton "Voir le rapport pédagogique" en gameover (lien vers `/rapport/{room_code}`)
+- [x] `apps/web/package.json` — Ajout de `recharts` en dépendance
+
+### Diagnostic : 12 règles pédagogiques
+**Alertes** : trésorerie négative persistante, déficit prolongé, capitaux propres négatifs, croissance non rentable
+**Conseils** : aucun commercial, recrutement tardif, aucune décision, gestion trop prudente
+**Forces** : croissance régulière, entreprise profitable, résilience, solidité financière renforcée
+
+### Prochaine phase
+- Phase 3 : Feature A — Dashboard formateur temps réel (heartbeat API, Supabase Realtime, live UI)
+
+---
+
+## Tâche 15 : Features A+B — Phase 1 (fondations snapshots) — 2026-04-13 ✅
+
+### Contexte
+Features A (dashboard formateur temps réel) et B (rapport pédagogique post-session) nécessitent une infrastructure de snapshots trimestriels. Phase 1 pose les fondations : migration SQL, types, accumulation côté client, sauvegarde en base.
+
+### Changes réalisés
+- [x] Migration `009_game_players_live_and_snapshots.sql` : colonnes `live_state`, `last_heartbeat`, `snapshots` sur `game_players`
+- [x] Types `LiveState` + `TrimSnapshot` dans `packages/game-engine/src/types.ts` + miroir `apps/web`
+- [x] `buildTrimSnapshot()` dans `gameFlowUtils.ts` : snapshot à partir de l'état courant du joueur
+- [x] `useGameFlow` : accumule les snapshots (useState) + capture le label de la dernière décision par trimestre
+- [x] `useGamePersistence` : reçoit les snapshots via `MutableRefObject` (résout dépendance circulaire), les inclut dans localStorage (solo) et API (multi)
+- [x] `/api/sessions/results` : validation + insertion du champ `snapshots` dans `game_players`
+- [x] `npx tsc --noEmit` → 0 erreur
+
+### Prochaines phases
+- Phase 2 : Feature B — Rapport pédagogique post-session (composants, graphiques, diagnostic)
+- Phase 3 : Feature A — Dashboard formateur temps réel (heartbeat API, Realtime, live UI)
+
+### Note
+Migration 009 à appliquer manuellement par Pierre sur Supabase.
+
+---
+
 ## Tâche 14 : Refactoring qualité code P1-P10 — 2026-04-13 ✅
 
 ### Contexte

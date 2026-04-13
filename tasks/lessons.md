@@ -298,3 +298,12 @@ useGameFlow (orchestrateur)
 
 **Résultat** : useGameFlow 810L → ~290L + 5 fichiers ciblés. `npx tsc --noEmit` → 0 erreur.
 **Règle** : pour tout hook >300L, identifier les groupes d'état cohérents (pédagogie, emprunts, achats, décisions), extraire en sous-hooks avec dépendances explicites en paramètres. Valider TSC à chaque étape.
+
+## L36 — 2026-04-13 : Dépendance circulaire hooks → useRef pour partage croisé
+**Problème** : `useGamePersistence` (appelé en premier) a besoin de `snapshots` produits par `useGameFlow` (appelé en second), mais `useGameFlow` a besoin de `createSoloSession` de `useGamePersistence`. Dépendance circulaire entre hooks.
+**Fix** : utiliser un `useRef<TrimSnapshot[]>([])` dans le composant parent (`page.tsx`), passé en `MutableRefObject` à `useGamePersistence`. Le flow écrit `snapshotsRef.current = flow.snapshots` à chaque render. Le ref est lu dans les `useEffect` de persistence (qui se déclenchent quand `phase === "gameover"`, à ce moment les snapshots sont complets).
+**Règle** : quand deux hooks ont une dépendance circulaire via les données (pas les callbacks), briser le cycle avec un `useRef` dans le parent. Le ref est la seule valeur React qui peut être écrite par un hook et lue par un autre sans causer de re-render ni violer l'ordre des hooks.
+
+## L37 — 2026-04-13 : CarteDecision.categorie (pas .type) pour filtrer commerciaux
+**Erreur** : dans `buildTrimSnapshot()`, filtrage `c.type === "commercial"` → erreur TS2367 car `CarteDecision.type` est littéralement `"decision"`. Les commerciaux sont identifiés par `c.categorie === "commercial"`.
+**Règle** : toujours vérifier le type TS de la propriété discriminante avant de filtrer. `type` et `categorie` sont deux champs distincts sur les interfaces de cartes — `type` discrimine le KIND de carte (`"decision"`, `"commercial"`, `"client"`, `"evenement"`), `categorie` discrimine la CATÉGORIE fonctionnelle au sein des `CarteDecision`.

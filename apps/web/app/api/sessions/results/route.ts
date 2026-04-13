@@ -8,6 +8,7 @@ const MAX_JOUEURS = 30;
 const MAX_PSEUDO_LENGTH = 50;
 const MAX_ENTREPRISE_LENGTH = 100;
 const MAX_ETAT_FINAL_SIZE = 100_000; // 100 KB max
+const MAX_SNAPSHOTS_SIZE = 20_000; // 20 KB max (~1.2 KB attendu, marge large)
 
 function validateJoueurs(
   joueurs: unknown
@@ -18,6 +19,7 @@ function validateJoueurs(
   elimine: boolean;
   etatFinal: Record<string, unknown>;
   tourFaillite?: number;
+  snapshots?: unknown[];
 }> {
   if (!Array.isArray(joueurs) || joueurs.length === 0 || joueurs.length > MAX_JOUEURS) {
     return false;
@@ -40,7 +42,11 @@ function validateJoueurs(
       (j.etatFinal === undefined ||
         j.etatFinal === null ||
         (typeof j.etatFinal === "object" &&
-          JSON.stringify(j.etatFinal).length <= MAX_ETAT_FINAL_SIZE))
+          JSON.stringify(j.etatFinal).length <= MAX_ETAT_FINAL_SIZE)) &&
+      (j.snapshots === undefined ||
+        j.snapshots === null ||
+        (Array.isArray(j.snapshots) &&
+          JSON.stringify(j.snapshots).length <= MAX_SNAPSHOTS_SIZE))
   );
 }
 
@@ -118,6 +124,7 @@ export async function POST(request: NextRequest) {
       is_bankrupt: j.elimine,
       bankrupt_at_tour: j.elimine ? (j.tourFaillite ?? null) : null,
       etat_final: j.etatFinal,
+      snapshots: j.snapshots ?? [],
     }));
 
     const { error: playersError } = await supabase

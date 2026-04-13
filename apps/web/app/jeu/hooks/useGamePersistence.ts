@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MutableRefObject } from "react";
 import { useRouter } from "next/navigation";
 import {
   EtatJeu,
+  TrimSnapshot,
   calculerIndicateurs,
   calculerScore,
   getTresorerie,
@@ -16,6 +17,8 @@ type Phase = "setup" | "intro" | "playing" | "gameover";
 interface UseGamePersistenceParams {
   phase: Phase;
   etat: EtatJeu | null;
+  /** Ref vers les snapshots trimestriels accumulés par useGameFlow (ref pour éviter dépendance circulaire) */
+  snapshotsRef: MutableRefObject<TrimSnapshot[]>;
 }
 
 interface UseGamePersistenceReturn {
@@ -35,6 +38,7 @@ interface UseGamePersistenceReturn {
 export function useGamePersistence({
   phase,
   etat,
+  snapshotsRef,
 }: UseGamePersistenceParams): UseGamePersistenceReturn {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [savedToDb, setSavedToDb] = useState(false);
@@ -72,12 +76,13 @@ export function useGamePersistence({
       tresorerie: getTresorerie(j),
       trimestresJoues: etat.tourActuel,
       faillite: j.elimine,
+      snapshots: snapshotsRef.current,
     };
     try {
       const existant = JSON.parse(localStorage.getItem("jdp_historique_solo") ?? "[]");
       localStorage.setItem("jdp_historique_solo", JSON.stringify([partie, ...existant].slice(0, 20)));
     } catch { /* localStorage indisponible (mode privé strict) */ }
-  }, [phase, etat, roomCode]);
+  }, [phase, etat, roomCode, snapshotsRef]);
 
   // ── Effet 3 : sauvegarde Supabase si room_code présent ──────────────────
   useEffect(() => {
@@ -88,6 +93,7 @@ export function useGamePersistence({
       scoreTotal: calculerScore(j),
       elimine: j.elimine,
       etatFinal: j,
+      snapshots: snapshotsRef.current,
     }));
     fetch("/api/sessions/results", {
       method: "POST",
@@ -97,7 +103,7 @@ export function useGamePersistence({
       .then(r => r.json())
       .then(() => { setSavedToDb(true); console.log("✅ Résultats sauvegardés dans Supabase"); })
       .catch(err => console.error("❌ Erreur save résultats:", err));
-  }, [phase, etat, roomCode, savedToDb]);
+  }, [phase, etat, roomCode, savedToDb, snapshotsRef]);
 
   // ── Créer une session solo (consomme 1 crédit) ──────────────────────────
   async function createSoloSession(nbTours: number): Promise<boolean> {

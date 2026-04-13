@@ -535,3 +535,37 @@ export interface ResultatDemandePret {
   score: number;
   raison: string;
 }
+
+// ─── DASHBOARD FORMATEUR + RAPPORT PÉDAGOGIQUE ─────────────────
+
+/**
+ * Snapshot léger envoyé au dashboard formateur en temps réel.
+ * ~200 octets — mis à jour 1× par trimestre par joueur.
+ */
+export interface LiveState {
+  tour: number;
+  etape: number;
+  tresorerie: number;
+  resultatNet: number;
+  score: number;
+  capitauxPropres: number;
+  nbCommerciaux: number;
+  elimine: boolean;
+}
+
+/**
+ * Snapshot trimestriel pour le rapport pédagogique post-session.
+ * ~100 octets × 12 trimestres max = ~1.2 KB par joueur.
+ */
+export interface TrimSnapshot {
+  tour: number;
+  tresorerie: number;
+  resultatNet: number;
+  capitauxPropres: number;
+  chiffreAffaires: number;
+  score: number;
+  nbClients: number;
+  nbCommerciaux: number;
+  /** Dernière décision prise ce trimestre (ex: "Recruté Junior", "Investi Camionnette") */
+  decision: string | null;
+}
