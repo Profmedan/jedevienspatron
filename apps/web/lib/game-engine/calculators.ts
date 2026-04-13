@@ -12,6 +12,8 @@ import {
   TAUX_INTERET_ANNUEL,
   TAUX_INTERET_MAJORE,
   DECOUVERT_MAX,
+  SCORE_SEUIL_STANDARD,
+  SCORE_SEUIL_MAJORE,
 } from "@/lib/game-engine/types";
 
 // ─── TOTAUX BILAN ────────────────────────────────────────────
@@ -239,8 +241,8 @@ export function scorerDemandePret(
   else if (ratioPret <= 20) { score += 5; details.push("Montant acceptable"); }
   else { details.push("Montant trop élevé ✗"); }
 
-  const accepte = score >= 50;
-  const tauxMajore = accepte && score < 65;
+  const accepte = score >= SCORE_SEUIL_MAJORE;
+  const tauxMajore = accepte && score < SCORE_SEUIL_STANDARD;
 
   let raison: string;
   if (!accepte) {

@@ -240,8 +240,8 @@ function scorerDemandePret(joueur, montantDemande, tourActuel = 999) {
     else {
         details.push("Montant trop élevé ✗");
     }
-    const accepte = score >= 50;
-    const tauxMajore = accepte && score < 65;
+    const accepte = score >= types_1.SCORE_SEUIL_MAJORE;
+    const tauxMajore = accepte && score < types_1.SCORE_SEUIL_STANDARD;
     let raison;
     if (!accepte) {
         raison = `Score ${score}/100 — insuffisant (min 50). ${details.filter(d => d.includes("✗")).join(", ")}.`;

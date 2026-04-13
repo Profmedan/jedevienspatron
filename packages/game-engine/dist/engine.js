@@ -129,7 +129,7 @@ function appliquerDeltaPoste(joueur, poste, delta) {
     // pour ne pas altérer les biens existants (Entrepôt, Camion, etc.)
     if (poste === "immobilisations") {
         let targetActif = delta > 0
-            ? bilanActifs.find((a) => a.nom === "Autres Immobilisations")
+            ? bilanActifs.find((a) => a.nom === types_1.NOM_IMMOBILISATIONS_AUTRES)
             : undefined;
         // Fallback : premier item immobilisations disponible
         if (!targetActif)
@@ -153,7 +153,14 @@ function appliquerDeltaPoste(joueur, poste, delta) {
         passif.valeur = Math.max(0, old + delta);
         return { ancienneValeur: old, nouvelleValeur: passif.valeur };
     }
-    // Poste introuvable — erreur pour détecter les typos/IDs invalides
+    // Poste introuvable — log + erreur pour détecter les typos/IDs invalides en dev et prod
+    console.error(`[GameEngine] appliquerDeltaPoste — poste inconnu: "${poste}"`, {
+        joueurId: joueur.id,
+        pseudo: joueur.pseudo,
+        delta,
+        postesCharges: Object.keys(joueur.compteResultat.charges),
+        postesProduits: Object.keys(joueur.compteResultat.produits),
+    });
     throw new Error(`[GameEngine] Poste inconnu : "${poste}". Vérifiez l'ID dans types.ts ou cartes.ts.`);
 }
 // ─── CRÉATION DE L'ÉTAT INITIAL ──────────────────────────────
@@ -191,6 +198,8 @@ function creerJoueur(id, pseudo, nomEntreprise) {
             icon: template.icon,
             type: template.type,
             specialite: template.specialite,
+            ...(template.reducDelaiPaiement ? { reducDelaiPaiement: true } : {}),
+            ...(template.clientGratuitParTour ? { clientGratuitParTour: true } : {}),
             ref: {
                 actifs: template.actifs.map((a) => a.valeur),
                 passifs: template.passifs.map((p) => p.valeur),
@@ -246,7 +255,7 @@ function appliquerEtape0(etat, joueurIdx) {
     // Agios = 10% du découvert, arrondi à la centaine supérieure — prélevés sur la trésorerie.
     // Si la trésorerie est insuffisante, elle tombe en négatif → découvert généré automatiquement.
     if (joueur.bilan.decouvert > 0) {
-        const agios = Math.ceil(joueur.bilan.decouvert * 0.10 / 100) * 100;
+        const agios = Math.ceil(joueur.bilan.decouvert * types_1.TAUX_AGIOS / 100) * 100;
         push("chargesInteret", agios, `Agios bancaires : 10% de ton découvert de ${joueur.bilan.decouvert} € = ${agios} € — prélevés sur ta trésorerie`);
         push("tresorerie", -agios, `Agios bancaires débités de ta trésorerie (-${agios} €) — si elle est insuffisante, tu bascules en découvert`);
     }
@@ -313,7 +322,7 @@ function appliquerEtape0(etat, joueurIdx) {
         const totalAvant = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
         // Appliquer -1 000 € directement à chaque bien (mutation directe pour éviter .find() répété)
         immoAmortissables.forEach((item) => {
-            item.valeur = Math.max(0, item.valeur - 1000);
+            item.valeur = Math.max(0, item.valeur - types_1.AMORTISSEMENT_PAR_BIEN);
         });
         const totalApres = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
         const totalDotation = totalAvant - totalApres; // = nombre de biens amortis
@@ -411,10 +420,13 @@ function appliquerAvancementCreances(etat, joueurIdx) {
 }
 // ─── ÉTAPE 3 : Paiement des commerciaux ──────────────────────
 function calculerCoutCommerciaux(joueur) {
+    // Les cartes commerciales ont effetsRecurrents: [] (vide par design).
+    // Le salaire récurrent est identique au coût d'embauche initial,
+    // stocké dans effetsImmédiats.chargesPersonnel.
     return joueur.cartesActives
         .filter((c) => c.categorie === "commercial")
         .reduce((sum, c) => {
-        const cout = c.effetsRecurrents
+        const cout = c.effetsImmédiats
             .filter((e) => e.poste === "chargesPersonnel")
             .reduce((s, e) => s + Math.abs(e.delta), 0);
         return sum + cout;
@@ -493,19 +505,19 @@ function appliquerCarteClient(etat, joueurIdx, carteClient, saleGroupIndex) {
     const montant = carteClient.montantVentes;
     const groupId = `vente-${saleGroupIndex ?? 0}`;
     const clientLabel = carteClient.titre;
-    // Spécialité Véloce Transports (Logistique) : livraison rapide → délai réduit de 1
-    const delaiEffectif = joueur.entreprise.nom === "Véloce Transports"
+    // Spécialité Logistique (reducDelaiPaiement) : livraison rapide → délai réduit de 1
+    const delaiEffectif = joueur.entreprise.reducDelaiPaiement
         ? Math.max(0, carteClient.delaiPaiement - 1)
         : carteClient.delaiPaiement;
     // ACTE 1 — Encaissement selon délai (le plus tangible)
     if (delaiEffectif === 0) {
-        const label = carteClient.delaiPaiement > 0 && joueur.entreprise.nom === "Véloce Transports"
+        const label = carteClient.delaiPaiement > 0 && joueur.entreprise.reducDelaiPaiement
             ? `🚀 Livraison rapide — encaissement accéléré : +${montant} € en caisse`
             : `Le client paie comptant : +${montant} € en caisse`;
         push("tresorerie", montant, label, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
     }
     else if (delaiEffectif === 1) {
-        const label = carteClient.delaiPaiement > 1 && joueur.entreprise.nom === "Véloce Transports"
+        const label = carteClient.delaiPaiement > 1 && joueur.entreprise.reducDelaiPaiement
             ? `🚀 Livraison rapide — créance accélérée : +${montant} € (C+1 au lieu de C+2)`
             : `Le client paiera dans 1 trimestre : +${montant} € en créance C+1`;
         push("creancesPlus1", montant, label, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
@@ -580,7 +592,7 @@ function appliquerSpecialiteEntreprise(etat, joueurIdx) {
  * • Azura Commerce : +1 client Particulier automatique par tour
  */
 function genererClientsSpecialite(joueur) {
-    if (joueur.entreprise.nom === "Azura Commerce") {
+    if (joueur.entreprise.clientGratuitParTour) {
         const clientParticulier = cartes_1.CARTES_CLIENTS.find((c) => c.id === "client-particulier");
         return clientParticulier ? [clientParticulier] : [];
     }
@@ -636,13 +648,13 @@ function acheterCarteDecision(etat, joueurIdx, carte) {
             explication: `${carte.titre} — effet immédiat`,
         });
     }
-    // Ajouter la carte aux actives
-    joueur.cartesActives.push(carte);
+    // Ajouter la carte aux actives (spread pour ne pas muter le tableau original)
+    joueur.cartesActives = [...joueur.cartesActives, carte];
     // Carte Formation : bonus d'1 client grand compte immédiat
     if (carte.id === CARTE_IDS.FORMATION) {
         const clientGC = cartes_1.CARTES_CLIENTS.find((c) => c.id === "client-grand-compte");
         if (clientGC)
-            joueur.clientsATrait.push(clientGC);
+            joueur.clientsATrait = [...joueur.clientsATrait, clientGC];
     }
     // Remboursement anticipé : solder les emprunts restants
     if (carte.id === CARTE_IDS.REMBOURSEMENT_ANTICIPE) {
@@ -708,9 +720,9 @@ function investirCartePersonnelle(etat, joueurIdx, carteId) {
             explication: `${carte.titre} — investissement logistique`,
         });
     }
-    // Retirer de piochePersonnelle, ajouter à cartesActives
+    // Retirer de piochePersonnelle, ajouter à cartesActives (spread pour immutabilité)
     joueur.piochePersonnelle = joueur.piochePersonnelle.filter((_, i) => i !== carteIdx);
-    joueur.cartesActives.push(carte);
+    joueur.cartesActives = [...joueur.cartesActives, carte];
     return { succes: true, modifications };
 }
 // ─── VENTE D'IMMOBILISATION (CESSION D'OCCASION) ─────────────
@@ -823,12 +835,20 @@ function appliquerCarteEvenement(etat, joueurIdx, carte) {
         etat.historiqueEvenements.push({ tour: etat.tourActuel, joueurId: joueur.id, carte });
         return { succes: true, modifications };
     }
+    // Proportionnalisation : si tauxActif défini, le delta réel = sign(delta) × arrondi(totalActif × taux)
+    // Plancher de 500 € pour que l'événement reste perceptible même sur un petit bilan.
+    const totalActif = (0, calculators_1.getTotalActif)(joueur);
     for (const effet of carte.effets) {
-        const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, effet.poste, effet.delta);
+        let delta = effet.delta;
+        if (carte.tauxActif !== undefined) {
+            const montant = Math.max(500, Math.round((totalActif * carte.tauxActif) / 100) * 100);
+            delta = Math.sign(effet.delta) * montant;
+        }
+        const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, effet.poste, delta);
         modifications.push({
             joueurId: joueur.id, poste: effet.poste,
             ancienneValeur, nouvelleValeur,
-            explication: `${carte.titre} : ${effet.delta > 0 ? "+" : ""}${effet.delta} ${effet.poste}`,
+            explication: `${carte.titre} : ${delta > 0 ? "+" : ""}${delta} ${effet.poste}`,
         });
     }
     etat.historiqueEvenements.push({ tour: etat.tourActuel, joueurId: joueur.id, carte });
@@ -964,7 +984,10 @@ function genererClientsParCommerciaux(joueur) {
             continue;
         const clientCarte = cartes_1.CARTES_CLIENTS.find((c) => c.id === `client-${carte.clientParTour}`);
         if (clientCarte) {
-            clients.push(clientCarte);
+            const nb = carte.nbClientsParTour ?? 1;
+            for (let i = 0; i < nb; i++) {
+                clients.push(clientCarte);
+            }
         }
     }
     return clients;

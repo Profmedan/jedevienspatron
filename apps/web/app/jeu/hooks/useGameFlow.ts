@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useReducer } from "react";
 import {
   EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
@@ -15,6 +15,12 @@ import {
   getSens, getPosteValue, applyDeltaToJoueur,
 } from "@/components/jeu";
 import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
+import { activeStepReducer, type ActiveStepAction } from "./useActiveStepReducer";
+import { ETAPE_INFO, cloneEtat, buildActiveStep, type ModificationMoteur } from "./gameFlowUtils";
+import { usePedagogyFlow } from "./usePedagogyFlow";
+import { useLoansFlow } from "./useLoansFlow";
+import { useAchatFlow } from "./useAchatFlow";
+import { useDecisionCards } from "./useDecisionCards";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -30,70 +36,8 @@ export interface JournalEntry {
   principe: string;
 }
 
-// ─── ETAPE_INFO (réutilisé pour le journal et les étapes actives) ────────
-
-const ETAPE_INFO: Record<number, { icone: string; titre: string; description: string; principe: string; conseil: string }> = {
-  0: {
-    icone: "💼", titre: "Charges fixes & Dotation aux amortissements",
-    description: "Chaque trimestre, ton entreprise paie ses charges fixes (loyer, énergie, assurances…) et constate l'usure de chaque bien immobilisé (−1 par bien). Si tu as un emprunt, les intérêts sont prélevés une fois par an.",
-    principe: "Ton entreprise paie ses charges obligatoires (loyer, énergie…) : ta trésorerie diminue. Tes équipements s'usent : leur valeur au bilan baisse, et une charge d'amortissement est enregistrée. Si tu as un emprunt, les intérêts sont aussi prélevés.",
-    conseil: "Ces charges sont obligatoires. L'amortissement n'est pas une sortie d'argent réelle, mais il réduit ton résultat — et donc tes capitaux propres à terme.",
-  },
-  1: {
-    icone: "📦", titre: "Achats de marchandises",
-    description: "Tu peux acheter des stocks pour les revendre. Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
-    principe: "Tu achètes des marchandises. Si tu paies comptant, ta trésorerie baisse immédiatement. Si tu achètes à crédit, tu gardes ta trésorerie aujourd'hui mais tu crées une dette à payer au trimestre suivant.",
-    conseil: "Acheter à crédit préserve ta trésorerie, mais crée une dette à rembourser au prochain tour. Trouve le bon équilibre.",
-  },
-  2: {
-    icone: "⏩", titre: "Avancement des créances clients",
-    description: "Les clients règlent à échéance : les créances à 2 trimestres passent à 1, et celles à 1 trimestre entrent en trésorerie.",
-    principe: "Tes clients te paient selon leur délai. Les créances à 1 trimestre entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant. L'argent arrive, mais avec du retard.",
-    conseil: "Un client Grand Compte est rentable mais paie en 2 trimestres. Attention au décalage : tu peux être en bénéfice et à court de cash en même temps.",
-  },
-  3: {
-    icone: "👔", titre: "Paiement des commerciaux",
-    description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1.",
-    principe: "Tu verses les salaires de tes commerciaux : ta trésorerie baisse et tes charges de personnel augmentent. En contrepartie, chaque commercial te ramène de nouveaux clients.",
-    conseil: "Junior → 2 clients particuliers/trim. Senior → 2 TPE/trim. Directrice → 2 Grands Comptes/trim. Recrute via les cartes Décision à l'étape 6.",
-  },
-  4: {
-    icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
-    description: "Chaque vente génère plusieurs écritures simultanées. Au T1, 2 clients initiaux sont traités ici — sans commercial, c'est normal.",
-    principe: "Chaque vente déclenche 4 mouvements : ton chiffre d'affaires augmente, ton stock diminue, le coût des marchandises vendues est enregistré, et tu encaisses (comptant ou à terme). C'est la partie double en action.",
-    conseil: "C'est le cœur du jeu : une seule vente crée 4 écritures qui s'équilibrent. Plus tu as de commerciaux, plus tu vends.",
-  },
-  5: {
-    icone: "🔄", titre: "Effets récurrents des cartes Décision",
-    description: "Effets récurrents de tes cartes actives : spécialité d'entreprise (ex. production stockée), abonnements, maintenance, intérêts…",
-    principe: "Chaque trimestre, tes cartes actives déclenchent automatiquement leurs effets. La production stockée (cpt 713) enregistre la valeur des marchandises que tu fabriques et mets en stock : c'est un produit qui augmente ton résultat, et un actif (stocks) qui augmente ton bilan. Une charge récurrente (abonnement, maintenance) fait l'inverse.",
-    conseil: "La production stockée n'est pas de la trésorerie : tu 'gagnes' sur le papier mais l'argent n'arrive que quand tu vends. Surveille le décalage entre résultat et trésorerie.",
-  },
-  6: {
-    icone: "🎯", titre: "Choix d'une carte Décision",
-    description: "Tu peux investir dans une carte Décision ce trimestre. Chaque carte a des effets immédiats et des effets récurrents. Ce choix est OPTIONNEL.",
-    principe: "Tu peux recruter un commercial (charge de personnel) ou investir dans un équipement (immobilisation). Chaque choix a un coût immédiat et des effets à long terme sur ton entreprise.",
-    conseil: "L'assurance protège des événements négatifs. La levée de fonds apporte des capitaux. Anticipe tes besoins avant d'investir.",
-  },
-  7: {
-    icone: "🎲", titre: "Événement aléatoire",
-    description: "Un événement imprévu affecte ton entreprise. Positif ou négatif : tu ne peux pas le refuser.",
-    principe: "Un événement imprévu touche ton entreprise. S'il est positif, ta trésorerie ou tes revenus augmentent. S'il est négatif, tu subis une charge exceptionnelle. L'assurance peut te protéger.",
-    conseil: "Avoir des réserves de trésorerie absorbe les chocs. L'assurance prévoyance annule certains événements négatifs.",
-  },
-  8: {
-    icone: "✅", titre: "Bilan de fin de trimestre",
-    description: "On vérifie l'équilibre du bilan, on contrôle la solvabilité et on calcule ton score. Si c'est le dernier trimestre, on clôture l'exercice.",
-    principe: "Fin du trimestre : on calcule ton résultat (produits − charges). S'il est positif, tes capitaux propres augmentent et ta solvabilité s'améliore. S'il est négatif, attention à la faillite.",
-    conseil: "Résultat Net = Produits − Charges. Positif = tes capitaux propres montent. Négatif = ta solvabilité baisse.",
-  },
-};
-
+// Re-export pour rétrocompatibilité (page.tsx importe ETAPE_INFO depuis ici)
 export { ETAPE_INFO };
-
-// ─── Utilitaire ────────────────────────────────────────────────────────────
-
-function cloneEtat(e: EtatJeu): EtatJeu { return JSON.parse(JSON.stringify(e)); }
 
 // ─── Paramètres du hook ────────────────────────────────────────────────────
 
@@ -184,94 +128,54 @@ export function useGameFlow({
   createSoloSession,
 }: UseGameFlowParams): UseGameFlowReturn {
 
-  const [activeStep, setActiveStep]       = useState<ActiveStep | null>(null);
+  // ─ État de base ────────────────────────────────────────────────────────────
+  const [activeStep, dispatchActiveStep] = useReducer(activeStepReducer, null);
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
   const [recentModifications, setRecentModifications] = useState<Array<{
     poste: string; ancienneValeur: number; nouvelleValeur: number;
   }>>([]);
-  const [achatQte, setAchatQte]           = useState(2);
-  const [achatMode, setAchatMode]         = useState<"tresorerie" | "dettes">("tresorerie");
-  const [selectedDecision, setSelectedDecision] = useState<CarteDecision | null>(null);
-  const [showCartes, setShowCartes]       = useState(false);
   const [tourTransition, setTourTransition] = useState<{ from: number; to: number } | null>(null);
   const [failliteInfo, setFailliteInfo]   = useState<{ joueurNom: string; raison: string } | null>(null);
-  const [decisionError, setDecisionError] = useState<string | null>(null);
 
-  // Sous-étape 6 : recrutement commercial (6a) puis carte décision/investissement (6b)
-  const [subEtape6, setSubEtape6] = useState<"recrutement" | "investissement">("recrutement");
+  // Wrapper setActiveStep → dispatch (API publique stable)
+  function setActiveStep(s: ActiveStep | null) {
+    dispatchActiveStep({ type: "SET_STEP", step: s });
+  }
 
-  // ── Pioche d'investissement stable du tour (Tâche 11 Volet 2) ──────────────
-  // À l'étape 6b, on tire une fois 4 cartes globales et on les conserve pendant
-  // tout le séjour sur cette sous-étape, pour permettre plusieurs investissements
-  // successifs sans que la pioche ne change à chaque render. Les cartes investies
-  // sont retirées explicitement dans `launchDecision`. Reset à null à la sortie.
-  const [pioche6b, setPioche6b] = useState<CarteDecision[] | null>(null);
+  // ─ Sous-hooks ──────────────────────────────────────────────────────────────
+  // Note : les déclarations de fonctions (addToJournal, etc.) sont hoistées
+  // donc disponibles comme arguments ici même si déclarées plus bas.
 
-  // ─ Pédagogie : modal d'explication + QCM fin de trimestre ──────────────────
-  const [etapesPedagoVues, setEtapesPedagoVues] = useState<Set<number>>(new Set());
-  const [modalEtapeEnAttente, setModalEtapeEnAttente] = useState<number | null>(null);
-  const [qcmTrimestreQuestions, setQcmTrimestreQuestions] = useState<QuestionQCM[] | undefined>(undefined);
-  const [qcmTrimestreScore, setQcmTrimestreScore] = useState<number | undefined>(undefined);
+  const pedagogy = usePedagogyFlow({ etat, setEtat });
 
-  // ─ Emprunt bancaire ───────────────────────────────────────────────────────
-  const [showDemandeEmprunt, setShowDemandeEmprunt] = useState(false);
-  const [montantEmpruntChoisi, setMontantEmpruntChoisi] = useState<number>(MONTANTS_EMPRUNT[1]);
-  const [reponseEmprunt, setReponseEmprunt] = useState<ResultatDemandePret | null>(null);
+  const loans = useLoansFlow({
+    etat, setEtat,
+    setRecentModifications,
+    addToJournal,
+    setActiveTab, setHighlightedPoste, setFlashData,
+  });
 
-  // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape 6 ──────────
-  useEffect(() => {
-    if (etat?.etapeTour === 6 && !activeStep) {
-      setShowCartes(true);
-    }
-  }, [etat?.etapeTour, subEtape6, activeStep]);
+  const achat = useAchatFlow({
+    etat, setEtat,
+    setRecentModifications,
+    setActiveStep,
+    maybeShowPedagoModal: pedagogy.maybeShowPedagoModal,
+  });
+
+  const decisions = useDecisionCards({
+    etat, setEtat,
+    setRecentModifications,
+    setActiveStep,
+    activeStep,
+    maybeShowPedagoModal: pedagogy.maybeShowPedagoModal,
+  });
 
   // ── Affichage progressif des badges avant/après ─────────────────────────
-  // On filtre recentModifications par INDEX (pas par poste) pour que :
-  //  • le badge reflète l'écriture EXACTE qui vient d'être appliquée
-  //  • si tresorerie est modifiée 3 fois (intérêts, remboursement, charges),
-  //    le badge montre bien "7600 → 7100" après le remboursement, pas "8000 → 7600"
-  // Note : recentModifications[i] ↔ activeStep.entries[i] — même filtre, même ordre.
+  // Filtrage par INDEX (pas par poste) — L29
   const effectiveRecentMods = useMemo(() => {
     if (!activeStep) return recentModifications;
     return recentModifications.filter((_, i) => activeStep.entries[i]?.applied === true);
   }, [activeStep, recentModifications]);
-
-  // ── Cartes disponibles (computed) ───────────────────────────────────────
-  // Étape 6b : on utilise `pioche6b` (stabilisée par useEffect ci-dessous) afin
-  // que la liste reste constante entre deux investissements et que les cartes
-  // déjà achetées disparaissent proprement. Hors étape 6b : tirage classique.
-  const cartesDisponibles: CarteDecision[] = etat
-    ? (etat.etapeTour === 6 && subEtape6 === "investissement"
-        ? (pioche6b ?? [])
-        : tirerCartesDecision(cloneEtat(etat), 4))
-    : [];
-  const cartesRecrutement = etat ? obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif) : [];
-
-  // ── Initialisation et reset de la pioche stable de l'étape 6b ────────────
-  // Init : à l'entrée dans 6b (et seulement si pioche6b === null), tirer 4 cartes.
-  // Reset : à la sortie de 6b (changement d'étape ou de sous-étape ou de tour).
-  useEffect(() => {
-    if (!etat) return;
-    const enInvestissement = etat.etapeTour === 6 && subEtape6 === "investissement";
-    if (enInvestissement && pioche6b === null) {
-      setPioche6b(tirerCartesDecision(cloneEtat(etat), 4));
-    } else if (!enInvestissement && pioche6b !== null) {
-      setPioche6b(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [etat?.etapeTour, etat?.tourActuel, etat?.joueurActif, subEtape6]);
-
-  // ─ Joueur affiché (avec écritures partiellement appliquées si étape active) ─
-  function getDisplayJoueur() {
-    if (!etat) return null;
-    if (!activeStep) return etat.joueurs[etat.joueurActif];
-    const cloned = cloneEtat(activeStep.baseEtat);
-    const j = cloned.joueurs[etat.joueurActif];
-    for (const entry of activeStep.entries.filter(e => e.applied)) {
-      applyDeltaToJoueur(j, entry.poste, entry.delta);
-    }
-    return j;
-  }
 
   // ─ Journal ────────────────────────────────────────────────────────────────
   function addToJournal(e: EtatJeu, entries: ActiveStep["entries"], etape: number) {
@@ -285,6 +189,18 @@ export function useGameFlow({
       entries,
       principe: info?.principe ?? "",
     }, ...prev.slice(0, 29)]);
+  }
+
+  // ─ Joueur affiché (avec écritures partiellement appliquées) ───────────────
+  function getDisplayJoueur() {
+    if (!etat) return null;
+    if (!activeStep) return etat.joueurs[etat.joueurActif];
+    const cloned = cloneEtat(activeStep.baseEtat);
+    const j = cloned.joueurs[etat.joueurActif];
+    for (const entry of activeStep.entries.filter(e => e.applied)) {
+      applyDeltaToJoueur(j, entry.poste, entry.delta);
+    }
+    return j;
   }
 
   // ─ Auto-switch onglet + surlignage au clic sur une écriture ──────────────
@@ -307,63 +223,14 @@ export function useGameFlow({
     setPhase("intro");
   }
 
-  // ─ Construire l'étape active à partir des modifications du moteur ─────────
-  function buildActiveStep(
-    baseEtat: EtatJeu,
-    mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string; saleGroupId?: string; saleClientLabel?: string; saleActIndex?: number }>,
-    previewEtat: EtatJeu,
-    etape: number,
-    override?: { titre?: string; icone?: string; description?: string },
-  ): ActiveStep {
-    const info = ETAPE_INFO[etape];
-    const entries = mods
-      .filter(m => m.nouvelleValeur !== m.ancienneValeur)
-      .map((m, i) => ({
-        id: `e${i}`,
-        poste: m.poste,
-        delta: m.nouvelleValeur - m.ancienneValeur,
-        description: m.explication,
-        applied: false,
-        sens: getSens(m.poste, m.nouvelleValeur - m.ancienneValeur) as "debit" | "credit",
-        saleGroupId: m.saleGroupId,
-        saleClientLabel: m.saleClientLabel,
-        saleActIndex: m.saleActIndex,
-      }));
-    return {
-      titre:       override?.titre       ?? info.titre,
-      icone:       override?.icone       ?? info.icone,
-      description: override?.description ?? info.description,
-      principe:    info.principe,
-      conseil:     info.conseil,
-      entries,
-      baseEtat: cloneEtat(baseEtat),
-      previewEtat,
-    };
-  }
-
   // ─ Appliquer une écriture (côté UI) ─────────────────────────────────────
-  // Une seule écriture à la fois : l'apprenant voit l'impact de chaque ligne
-  // sur le Bilan OU le Compte de Résultat avant de passer à la suivante.
-  // Le bilan peut être temporairement déséquilibré entre deux lignes d'une même
-  // transaction — c'est affiché comme "Saisie en cours…" (pas une erreur).
   function applyEntry(entryId: string) {
-    setActiveStep(prev =>
-      prev ? { ...prev, entries: prev.entries.map(e => e.id === entryId ? { ...e, applied: true } : e) } : null
-    );
+    dispatchActiveStep({ type: "APPLY_ENTRY", entryId });
   }
 
-  // ─ Appliquer un groupe de vente ATOMIQUEMENT (toutes les écritures d'un saleGroupId) ─
-  // Empêche le déséquilibre temporaire entre les écritures d'une même vente.
+  // ─ Appliquer un groupe de vente ATOMIQUEMENT ─────────────────────────────
   function applySaleGroup(saleGroupId: string) {
-    setActiveStep(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        entries: prev.entries.map(e =>
-          e.saleGroupId === saleGroupId ? { ...e, applied: true } : e
-        ),
-      };
-    });
+    dispatchActiveStep({ type: "APPLY_SALE_GROUP", saleGroupId });
   }
 
   // ─ Valider l'étape (toutes écritures cochées + bilan équilibré) ──────────
@@ -373,42 +240,31 @@ export function useGameFlow({
     addToJournal(next, activeStep.entries, next.etapeTour);
     const etapeAvantAvancement = next.etapeTour;
 
-    // Sous-étape 6a (recrutement) → passer à 6b (investissement) sans avancer à l'étape 7
-    if (etapeAvantAvancement === 6 && subEtape6 === "recrutement") {
-      setSubEtape6("investissement");
+    // 6a (recrutement) → 6b (investissement) sans avancer à l'étape 7
+    if (etapeAvantAvancement === 6 && decisions.subEtape6 === "recrutement") {
+      decisions.setSubEtape6("investissement");
       setEtat({ ...next });
       setActiveStep(null);
       setRecentModifications([]);
-      setSelectedDecision(null);
-      setShowCartes(false);
+      decisions.setSelectedDecision(null);
       return;
     }
 
-    // Sous-étape 6b (investissement) — Tâche 11 Volet 2 :
-    // Après une carte investie et validée, on REVIENT au panneau unifié pour
-    // permettre d'enchaîner d'autres investissements dans le même trimestre.
-    // Le passage à l'étape 7 se fera explicitement via le bouton "Terminer →"
-    // qui appelle `skipDecision()`.
-    if (etapeAvantAvancement === 6 && subEtape6 === "investissement") {
+    // 6b (investissement) → retour au panneau unifié (L33 : multi-investissements)
+    if (etapeAvantAvancement === 6 && decisions.subEtape6 === "investissement") {
       setEtat({ ...next });
       setActiveStep(null);
       setRecentModifications([]);
-      setSelectedDecision(null);
-      setShowCartes(false);
-      setDecisionError(null);
+      decisions.setSelectedDecision(null);
       return;
     }
 
     avancerEtape(next);
-    const prochEtape = next.etapeTour;
-    if (!etapesPedagoVues.has(prochEtape)) {
-      setModalEtapeEnAttente(prochEtape);
-      setEtapesPedagoVues(prev => new Set(prev).add(prochEtape));
-    }
+    pedagogy.maybeShowPedagoModal(next.etapeTour);
     setEtat({ ...next });
     setActiveStep(null);
     setRecentModifications([]);
-    if (etapeAvantAvancement === 6) setSubEtape6("recrutement");
+    if (etapeAvantAvancement === 6) decisions.setSubEtape6("recrutement");
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -416,7 +272,7 @@ export function useGameFlow({
     if (!etat) return;
     const next = cloneEtat(etat);
     const idx = next.joueurActif;
-    let mods: Array<{ joueurId: number; poste: string; ancienneValeur: number; nouvelleValeur: number; explication: string }> = [];
+    let mods: ModificationMoteur[] = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
 
     if (next.etapeTour === 0) {
@@ -424,14 +280,14 @@ export function useGameFlow({
     }
 
     switch (next.etapeTour) {
-      case 0: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications; break; }
-      case 2: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications; break; }
+      case 0: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
+      case 2: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
       case 3: {
         const clients = genererClientsParCommerciaux(next.joueurs[idx]);
         const clientsSpecialite = genererClientsSpecialite(next.joueurs[idx]);
         next.joueurs[idx].clientsATrait = [...next.joueurs[idx].clientsATrait, ...clients, ...clientsSpecialite];
         const r = appliquerPaiementCommerciaux(next, idx);
-        if (r.succes) mods = r.modifications;
+        if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
       case 4: {
@@ -451,7 +307,7 @@ export function useGameFlow({
 
         for (let si = 0; si < clientsTraites.length; si++) {
           const r = appliquerCarteClient(next, idx, clientsTraites[si], si);
-          if (r.succes) mods = [...mods, ...r.modifications];
+          if (r.succes) mods = [...mods, ...(r.modifications as ModificationMoteur[])];
         }
 
         clientsPerdusPrise = clientsPerdus.length;
@@ -471,9 +327,9 @@ export function useGameFlow({
       }
       case 5: {
         const r = appliquerEffetsRecurrents(next, idx);
-        if (r.succes) mods = r.modifications;
+        if (r.succes) mods = r.modifications as ModificationMoteur[];
         const rSpec = appliquerSpecialiteEntreprise(next, idx);
-        if (rSpec.succes) mods = [...mods, ...rSpec.modifications];
+        if (rSpec.succes) mods = [...mods, ...(rSpec.modifications as ModificationMoteur[])];
         break;
       }
       case 7: {
@@ -482,7 +338,7 @@ export function useGameFlow({
           evenementCapture = { titre: carte.titre, description: carte.description };
           const r = appliquerCarteEvenement(next, idx, carte);
           next.piocheEvenements = next.piocheEvenements.slice(1);
-          if (r.succes) mods = r.modifications;
+          if (r.succes) mods = r.modifications as ModificationMoteur[];
         }
         break;
       }
@@ -494,11 +350,7 @@ export function useGameFlow({
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
     if ((etapeActuelle === 2 || etapeActuelle === 3) && modsFiltrees.length === 0) {
       avancerEtape(next);
-      const prochEtapeAuto = next.etapeTour;
-      if (!etapesPedagoVues.has(prochEtapeAuto)) {
-        setModalEtapeEnAttente(prochEtapeAuto);
-        setEtapesPedagoVues(prev => new Set(prev).add(prochEtapeAuto));
-      }
+      pedagogy.maybeShowPedagoModal(next.etapeTour);
       setEtat({ ...next });
       setActiveStep(null);
       return;
@@ -511,12 +363,10 @@ export function useGameFlow({
     const AUTO_ETAPES = [0, 2, 3, 4, 5];
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
-      setActiveStep({
-        ...step,
-        entries: step.entries.map(e => ({ ...e, applied: true })),
-      });
+      dispatchActiveStep({ type: "SET_STEP", step });
+      dispatchActiveStep({ type: "SET_ALL_ENTRIES_APPLIED" });
     } else {
-      setActiveStep(step);
+      dispatchActiveStep({ type: "SET_STEP", step });
     }
   }
 
@@ -535,7 +385,9 @@ export function useGameFlow({
         return;
       }
       if (fin.enFaillite) {
-        setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
+        setEtat({ ...next });
+        setActiveStep(null);
+        decisions.resetDecisionState();
         setFailliteInfo({ joueurNom, raison: fin.raisonFaillite ?? "Situation financière irrécupérable" });
         return;
       }
@@ -544,267 +396,85 @@ export function useGameFlow({
       next.tourActuel = oldTour + 1;
       next.etapeTour = 0;
       next.joueurActif = 0;
-      if (!etapesPedagoVues.has(0)) {
-        setModalEtapeEnAttente(0);
-        setEtapesPedagoVues(prev => new Set(prev).add(0));
-      }
-      setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
-      const questions = tirerQuestionsTrimestriel();
-      setQcmTrimestreQuestions(questions);
-      setQcmTrimestreScore(undefined);
+      pedagogy.maybeShowPedagoModal(0);
+      setEtat({ ...next });
+      setActiveStep(null);
+      decisions.resetDecisionState();
+      pedagogy.prepareQCMNouveauTrimestre();
       setTourTransition({ from: oldTour, to: next.tourActuel });
     } else {
       avancerEtape(next);
       next.joueurActif = nextJoueurIdx;
       next.etapeTour = 0;
-      if (!etapesPedagoVues.has(0)) {
-        setModalEtapeEnAttente(0);
-        setEtapesPedagoVues(prev => new Set(prev).add(0));
-      }
-      setEtat({ ...next }); setActiveStep(null); setSelectedDecision(null); setShowCartes(false); setSubEtape6("recrutement");
-    }
-  }
-
-  // ─ QCM trimestriel : bonus / malus ───────────────────────────────────────
-  function handleQCMTermine(score: number) {
-    if (!etat) return;
-    setQcmTrimestreScore(score);
-
-    const next = cloneEtat(etat);
-    const joueurBonus = next.joueurs[next.joueurActif];
-    const tresoActif = joueurBonus.bilan.actifs.find(a => a.categorie === "tresorerie");
-
-    if (score === 4) {
-      if (tresoActif) tresoActif.valeur += 1;
-      joueurBonus.compteResultat.produits.revenusExceptionnels += 1;
-    } else if (score === 3) {
-      if (tresoActif) tresoActif.valeur += 1;
-      joueurBonus.compteResultat.produits.revenusExceptionnels += 1;
-    } else if (score < 2) {
-      if (tresoActif) tresoActif.valeur -= 1;
-      joueurBonus.compteResultat.charges.chargesExceptionnelles += 1;
-    }
-
-    setEtat({ ...next });
-  }
-
-  // ─ Emprunt bancaire ───────────────────────────────────────────────────────
-  function handleDemanderEmprunt() {
-    if (!etat) return;
-    const next = cloneEtat(etat);
-    const { resultat, modifications } = demanderEmprunt(next, next.joueurActif, montantEmpruntChoisi);
-    setReponseEmprunt(resultat);
-    if (resultat.accepte) {
-      const mods = modifications.map(m => ({
-        poste: m.poste,
-        ancienneValeur: m.ancienneValeur,
-        nouvelleValeur: m.nouvelleValeur,
-      }));
+      pedagogy.maybeShowPedagoModal(0);
       setEtat({ ...next });
-      setRecentModifications(mods);
-      const firstMod = mods[0];
-      if (firstMod) {
-        setActiveTab("bilan");
-        setFlashData({ poste: firstMod.poste, avant: firstMod.ancienneValeur, apres: firstMod.nouvelleValeur });
-        setHighlightedPoste(firstMod.poste);
-        setTimeout(() => setHighlightedPoste(null), 5000);
-      }
-      addToJournal(next, modifications.map((m, i) => ({
-        id: `emprunt_${i}`,
-        poste: m.poste,
-        delta: m.nouvelleValeur - m.ancienneValeur,
-        description: m.explication,
-        applied: true,
-        sens: m.nouvelleValeur - m.ancienneValeur > 0 ? "credit" as const : "debit" as const,
-      })), 99);
+      setActiveStep(null);
+      decisions.resetDecisionState();
     }
   }
 
-  // ─ Achats de marchandises ─────────────────────────────────────────────────
-  function launchAchat() {
-    if (!etat) return;
-    const next = cloneEtat(etat);
-    const r = appliquerAchatMarchandises(next, next.joueurActif, achatQte, achatMode);
-    if (!r.succes) return;
-    const modsFiltrees = r.modifications.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    setRecentModifications(modsFiltrees.map(m => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
-    })));
-    setActiveStep(buildActiveStep(etat, r.modifications, next, 1));
-  }
-
-  function skipAchat() {
-    if (!etat) return;
-    const next = cloneEtat(etat);
-    avancerEtape(next);
-    const prochEtape = next.etapeTour;
-    if (!etapesPedagoVues.has(prochEtape)) {
-      setModalEtapeEnAttente(prochEtape);
-      setEtapesPedagoVues(prev => new Set(prev).add(prochEtape));
-    }
-    setEtat(next);
-  }
-
-  // ─ Cartes Décision ────────────────────────────────────────────────────────
-  // Accepte une carte optionnelle en paramètre — permet à `InvestissementPanel`
-  // de déclencher l'achat directement (sans passer par setState asynchrone).
-  // Si aucune carte n'est fournie, on utilise `selectedDecision` (ancien flux).
-  function launchDecision(carteArg?: CarteDecision) {
-    if (!etat) return;
-    const carteUsed = carteArg ?? selectedDecision;
-    if (!carteUsed) return;
-    const next = cloneEtat(etat);
-    const r = acheterCarteDecision(next, next.joueurActif, carteUsed);
-    if (!r.succes) {
-      setDecisionError(r.messageErreur ?? "Impossible d'activer cette carte");
-      return;
-    }
-    setDecisionError(null);
-    let mods = r.modifications;
-
-    if (mods.length === 0 && carteUsed.effetsRecurrents.length > 0) {
-      const joueur = next.joueurs[next.joueurActif];
-      const syntheticMods: typeof mods = [];
-      for (const effet of carteUsed.effetsRecurrents) {
-        const ancienneValeur = getPosteValue(joueur, effet.poste);
-        applyDeltaToJoueur(joueur, effet.poste, effet.delta);
-        syntheticMods.push({
-          joueurId: joueur.id,
-          poste: effet.poste,
-          ancienneValeur,
-          nouvelleValeur: ancienneValeur + effet.delta,
-          explication: `${carteUsed.titre} — 1ʳᵉ activation (effet récurrent chaque trimestre)`,
-        });
-      }
-      mods = syntheticMods;
-    }
-    const modsDecisionFiltres = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    setRecentModifications(modsDecisionFiltres.map(m => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
-    })));
-    setActiveStep(buildActiveStep(etat, mods, next, 6));
-    // Tâche 11 Volet 2 : retirer la carte achetée de la pioche stable du tour
-    // pour qu'elle ne réapparaisse pas dans `cartesDisponibles` après confirmation.
-    setPioche6b(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null);
-  }
-
-  function handleInvestirPersonnel(carteId: string) {
-    if (!etat) return;
-    const next = cloneEtat(etat);
-    const result = investirCartePersonnelle(next, next.joueurActif, carteId);
-    if (!result.succes) {
-      setDecisionError(result.messageErreur ?? "Erreur investissement logistique");
-      return;
-    }
-    setDecisionError(null);
-    const modsInvestFiltres = result.modifications.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    setRecentModifications(modsInvestFiltres.map(m => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
-    })));
-    setActiveStep(buildActiveStep(etat, result.modifications, next, 6));
-  }
-
-  // Tâche 11 Volet 3 — vente d'une immobilisation d'occasion (cession)
-  function handleVendreImmobilisation(nomImmo: string, prixCession: number) {
-    if (!etat) return;
-    const next = cloneEtat(etat);
-    const result = vendreImmobilisation(next, next.joueurActif, nomImmo, prixCession);
-    if (!result.succes) {
-      setDecisionError(result.messageErreur ?? "Impossible de vendre cette immobilisation.");
-      return;
-    }
-    setDecisionError(null);
-    const modsFiltres = result.modifications.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    setRecentModifications(modsFiltres.map(m => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
-    })));
-    setActiveStep(buildActiveStep(etat, result.modifications, next, 6, {
-      titre: `Cession d'occasion — ${nomImmo}`,
-      icone: "💸",
-      description: `Vous vendez "${nomImmo}" sur le marché de l'occasion. Le prix de cession est encaissé en trésorerie, le bien sort du bilan à sa VNC, et l'écart est enregistré au CR (plus ou moins-value exceptionnelle).`,
-    }));
-  }
-
-  function handleLicencierCommercial(carteId: string) {
-    if (!etat) return;
-    const next = cloneEtat(etat);
-    const result = licencierCommercial(next, next.joueurActif, carteId);
-    if (!result.succes) {
-      setDecisionError(result.messageErreur ?? "Impossible de licencier ce commercial.");
-      return;
-    }
-    setDecisionError(null);
-    const modsFiltrés = result.modifications.filter((m: { nouvelleValeur: number; ancienneValeur: number }) => m.nouvelleValeur !== m.ancienneValeur);
-    setRecentModifications(modsFiltrés.map((m: { poste: string; ancienneValeur: number; nouvelleValeur: number }) => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
-    })));
-    setActiveStep(buildActiveStep(etat, result.modifications, next, 6, {
-      titre: "Licenciement",
-      icone: "📤",
-      description: "Vous licenciez un commercial. L'indemnité légale est versée immédiatement. Ce commercial ne génèrera plus de clients ni de salaires à partir du prochain trimestre.",
-    }));
-  }
-
-  function skipDecision() {
-    if (!etat) return;
-    if (etat.etapeTour === 6 && subEtape6 === "recrutement") {
-      setSubEtape6("investissement");
-      setShowCartes(false);
-      setSelectedDecision(null);
-      setDecisionError(null);
-      return;
-    }
-    const next = cloneEtat(etat);
-    avancerEtape(next);
-    const prochEtape = next.etapeTour;
-    if (!etapesPedagoVues.has(prochEtape)) {
-      setModalEtapeEnAttente(prochEtape);
-      setEtapesPedagoVues(prev => new Set(prev).add(prochEtape));
-    }
-    setEtat(next);
-    setShowCartes(false);
-    setSelectedDecision(null);
-    setDecisionError(null);
-    setSubEtape6("recrutement");
-  }
-
+  // ─ Retour ─────────────────────────────────────────────────────────────────
   return {
+    // ─ activeStep (géré par reducer)
     activeStep, setActiveStep,
+
+    // ─ État de base
     journal, setJournal,
     recentModifications, setRecentModifications,
     effectiveRecentMods,
-    achatQte, setAchatQte,
-    achatMode, setAchatMode,
-    selectedDecision, setSelectedDecision,
-    showCartes,
     tourTransition, setTourTransition,
     failliteInfo, setFailliteInfo,
-    decisionError,
-    subEtape6,
-    etapesPedagoVues, setEtapesPedagoVues,
-    modalEtapeEnAttente, setModalEtapeEnAttente,
-    qcmTrimestreQuestions, setQcmTrimestreQuestions,
-    qcmTrimestreScore, setQcmTrimestreScore,
-    showDemandeEmprunt, setShowDemandeEmprunt,
-    montantEmpruntChoisi, setMontantEmpruntChoisi,
-    reponseEmprunt, setReponseEmprunt,
+
+    // ─ Sous-hook : achats
+    ...achat,
+
+    // ─ Sous-hook : cartes décision
+    selectedDecision: decisions.selectedDecision,
+    setSelectedDecision: decisions.setSelectedDecision,
+    showCartes: decisions.showCartes,
+    decisionError: decisions.decisionError,
+    subEtape6: decisions.subEtape6,
+    cartesDisponibles: decisions.cartesDisponibles,
+    cartesRecrutement: decisions.cartesRecrutement,
+
+    // ─ Sous-hook : pédagogie
+    etapesPedagoVues: pedagogy.etapesPedagoVues,
+    setEtapesPedagoVues: pedagogy.setEtapesPedagoVues,
+    modalEtapeEnAttente: pedagogy.modalEtapeEnAttente,
+    setModalEtapeEnAttente: pedagogy.setModalEtapeEnAttente,
+    qcmTrimestreQuestions: pedagogy.qcmTrimestreQuestions,
+    setQcmTrimestreQuestions: pedagogy.setQcmTrimestreQuestions,
+    qcmTrimestreScore: pedagogy.qcmTrimestreScore,
+    setQcmTrimestreScore: pedagogy.setQcmTrimestreScore,
+
+    // ─ Sous-hook : emprunts
+    showDemandeEmprunt: loans.showDemandeEmprunt,
+    setShowDemandeEmprunt: loans.setShowDemandeEmprunt,
+    montantEmpruntChoisi: loans.montantEmpruntChoisi,
+    setMontantEmpruntChoisi: loans.setMontantEmpruntChoisi,
+    reponseEmprunt: loans.reponseEmprunt,
+    setReponseEmprunt: loans.setReponseEmprunt,
+
+    // ─ Derived
     getDisplayJoueur,
-    cartesDisponibles,
-    cartesRecrutement,
+
+    // ─ Actions principales
     handleStart,
     applyEntry,
     applySaleGroup,
     confirmActiveStep,
     launchStep,
     handleApplyEntry,
-    handleQCMTermine,
-    handleDemanderEmprunt,
-    launchAchat,
-    skipAchat,
-    launchDecision,
-    skipDecision,
-    handleInvestirPersonnel,
-    handleVendreImmobilisation,
-    handleLicencierCommercial,
+
+    // ─ Actions sous-hooks
+    handleQCMTermine: pedagogy.handleQCMTermine,
+    handleDemanderEmprunt: loans.handleDemanderEmprunt,
+    launchAchat: achat.launchAchat,
+    skipAchat: achat.skipAchat,
+    launchDecision: decisions.launchDecision,
+    skipDecision: decisions.skipDecision,
+    handleInvestirPersonnel: decisions.handleInvestirPersonnel,
+    handleVendreImmobilisation: decisions.handleVendreImmobilisation,
+    handleLicencierCommercial: decisions.handleLicencierCommercial,
   };
 }

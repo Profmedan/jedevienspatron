@@ -1,4 +1,38 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-12
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-13
+
+---
+
+## Tâche 14 : Refactoring qualité code P1-P10 — 2026-04-13 ✅
+
+### Contexte
+Graphify a identifié 10 points de qualité (🔴 critiques, 🟠 risque élevé, 🟡 moyen).
+Pierre a demandé qu'on traite tous les points en professionnel.
+
+### Résumé des changes
+
+| # | Criticité | Description | Statut |
+|---|---|---|---|
+| P1 | 🔴 | IDs hardcodés → constantes CARTE_IDS + throw sur poste inconnu | ✅ |
+| P2 | 🔴 | Flags sémantiques entreprises (reducDelaiPaiement, clientGratuitParTour) | ✅ |
+| P3 | 🟠 | push() → spread immutable sur cartesActives, clientsATrait | ✅ |
+| P4 | 🔴 | useGameFlow 810L → 4 sous-hooks (pedagogy, loans, achat, decisions) | ✅ |
+| P5 | 🟠 | Magic numbers → constantes nommées (TAUX_AGIOS, AMORTISSEMENT_PAR_BIEN, etc.) | ✅ |
+| P6 | 🟡 | Constants REVENU_PAR_CLIENT, BONUS_CAPACITE, BENEFICE_QUALITATIF → types.ts | ✅ |
+| P7 | 🟡 | Invariant verifierEquilibreComptable() | ✅ |
+| P8 | 🟠 | console.error avec contexte avant throw | ✅ |
+| P9 | 🟡 | ETAPES object nommé + satisfies | ✅ |
+| P10 | 🟡 | setActiveStep → useReducer typé (activeStepReducer) | ✅ |
+
+### Architecture P4 — 5 nouveaux fichiers
+- `hooks/gameFlowUtils.ts` — buildActiveStep, cloneEtat, ETAPE_INFO, ModificationMoteur
+- `hooks/usePedagogyFlow.ts` — QCM, modal pédago, maybeShowPedagoModal
+- `hooks/useLoansFlow.ts` — emprunts bancaires
+- `hooks/useAchatFlow.ts` — achats de marchandises
+- `hooks/useDecisionCards.ts` — cartes décision, pioche, cession, licenciement
+
+### Validation
+- [x] `npx tsc --noEmit` → 0 erreur ✅
+- [ ] Push + test visuel Pierre
 
 ---
 

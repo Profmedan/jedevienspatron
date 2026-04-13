@@ -274,3 +274,27 @@ const reactDir = path.dirname(require.resolve("react/package.json"));
 5. `joueur.bilan.actifs.splice(idx, 1)` pour retirer le bien
 6. Plus/moins-value au CR via mutation directe de `compteResultat.produits.revenusExceptionnels` ou `compteResultat.charges.chargesExceptionnelles`
 **Règle** : `appliquerDeltaPoste` est utile pour les effets génériques de cartes. Pour toute opération qui cible un bien nommé du bilan (cession, transfert, échange), manipuler directement le tableau `joueur.bilan.actifs` et logger des modifications avec le poste générique le plus proche (`immobilisations`, `tresorerie`).
+
+## L35 — 2026-04-13 : Décomposition de hooks React avec interdépendances
+
+**Contexte** : `useGameFlow.ts` (810 lignes) a été décomposé en 4 sous-hooks + 1 utilitaire.
+
+**Clé architecturale** :
+- Les fonctions pures (sans état React) vont dans un fichier utilitaire importé par tous → évite la dépendance circulaire
+- Les sous-hooks reçoivent leurs dépendances partagées (`etat`, `setEtat`, `setRecentModifications`, callbacks) en paramètres — pas de contexte React nécessaire
+- Les fonctions déclarées (`function foo()`) sont hoistées dans la portée d'un hook → on peut les passer en paramètre à un sous-hook même si elles sont déclarées plus bas dans le fichier
+- Le hook principal définit `setActiveStep` (wrapper autour de `dispatchActiveStep`) et le passe aux sous-hooks — un seul point de dispatch
+- `maybeShowPedagoModal` extrait du pattern répété 6× `if (!etapesPedagoVues.has(e)) { setModal(e); setVues(...) }` → DRY significatif
+- `resetDecisionState()` exposé par `useDecisionCards` pour que `confirmEndOfTurn` (orchestrateur) puisse reset l'étape 6 proprement
+
+**Pattern de composition** :
+```
+useGameFlow (orchestrateur)
+├── usePedagogyFlow    → retourne maybeShowPedagoModal (partagé)
+├── useLoansFlow       → reçoit addToJournal en param
+├── useAchatFlow       → reçoit maybeShowPedagoModal en param
+└── useDecisionCards   → reçoit maybeShowPedagoModal + activeStep en param
+```
+
+**Résultat** : useGameFlow 810L → ~290L + 5 fichiers ciblés. `npx tsc --noEmit` → 0 erreur.
+**Règle** : pour tout hook >300L, identifier les groupes d'état cohérents (pédagogie, emprunts, achats, décisions), extraire en sous-hooks avec dépendances explicites en paramètres. Valider TSC à chaque étape.

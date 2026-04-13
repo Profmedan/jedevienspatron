@@ -140,7 +140,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     }
   });
   // Bonus pour Azura Commerce
-  if (joueur.entreprise.nom === "Azura Commerce") {
+  if (joueur.entreprise.clientGratuitParTour) {
     clientsAttendusProchainTour.particulier += 1;
   }
   const totalClientsAttendus =

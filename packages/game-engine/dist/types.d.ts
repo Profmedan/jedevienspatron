@@ -59,6 +59,10 @@ export interface EntrepriseTemplate {
     /** Type d'activité affiché */
     type: string;
     specialite: string;
+    /** Réduit le délai de paiement client de 1 trimestre (spécialité Véloce Transports) */
+    reducDelaiPaiement?: boolean;
+    /** Génère automatiquement 1 client particulier par tour (spécialité Azura Commerce) */
+    clientGratuitParTour?: boolean;
     /** Effets passifs appliqués automatiquement à chaque tour (spécialité entreprise) */
     effetsPassifs?: EffetCarte[];
     /** Bilan de départ (Actif = Passif = 16 toujours) */
@@ -131,6 +135,9 @@ export interface CarteEvenement {
     effets: EffetCarte[];
     /** Vrai si l'assurance prévoyance annule cet événement */
     annulableParAssurance: boolean;
+    /** Taux de l'actif total pour proportionnaliser les montants (ex: 0.07 = 7%).
+     *  delta_réel = sign(delta_original) × arrondi100(totalActif × tauxActif) */
+    tauxActif?: number;
 }
 export type Carte = CarteCommercial | CarteClient | CarteDecision | CarteEvenement;
 export interface Joueur {
@@ -143,6 +150,10 @@ export interface Joueur {
         icon: string;
         type: string;
         specialite: string;
+        /** Réduit le délai de paiement client de 1 trimestre */
+        reducDelaiPaiement?: boolean;
+        /** Génère automatiquement 1 client particulier par tour */
+        clientGratuitParTour?: boolean;
         /** Valeurs de référence initiales (pour la phase de configuration) */
         ref: {
             actifs: number[];
@@ -165,6 +176,18 @@ export interface Joueur {
 }
 /** Les 9 étapes d'un tour de jeu */
 export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+/** Constantes nommées pour les étapes du tour — utilisez ces noms plutôt que les chiffres */
+export declare const ETAPES: {
+    readonly INIT: 0;
+    readonly ACHATS: 1;
+    readonly COMMERCIAUX: 2;
+    readonly VENTES: 3;
+    readonly CHARGES: 4;
+    readonly BILAN: 5;
+    readonly INVESTISSEMENT: 6;
+    readonly EVENEMENT: 7;
+    readonly CLOTURE: 8;
+};
 export interface EtatJeu {
     phase: "setup" | "playing" | "gameover";
     tourActuel: number;
@@ -249,6 +272,39 @@ export declare const TAUX_INTERET_ANNUEL = 5;
 export declare const TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
 export declare const MONTANTS_EMPRUNT: readonly [5000, 8000, 12000, 16000, 20000];
+/**
+ * Revenus et marges par type de client.
+ * Utilisé dans l'analyse des cartes commerciales pour calculer le chiffre d'affaires
+ * et la marge brute. Les délais de paiement varient par type (comptant, C+1, C+2).
+ */
+export declare const REVENU_PAR_CLIENT: Record<string, {
+    ventes: number;
+    marge: number;
+    label: string;
+    delai: string;
+}>;
+/**
+ * Bonus de capacité de production par carte.
+ * Indique combien de ventes supplémentaires par trimestre chaque carte logistique débloque.
+ * Miroir des valeurs CAPACITE_IMMOBILISATION du moteur.
+ */
+export declare const BONUS_CAPACITE: Partial<Record<string, number>>;
+/**
+ * Bénéfices qualitatifs par carte.
+ * Utilisé pour afficher des bénéfices textuels quand une carte n'a pas de métrique financière
+ * directe (p. ex. assurance, cybersécurité, optimisation de coûts, formations).
+ */
+export declare const BENEFICE_QUALITATIF: Partial<Record<string, string>>;
+/** Taux d'agios sur le découvert bancaire (10%/trimestre) */
+export declare const TAUX_AGIOS = 0.1;
+/** Nom exact de la ligne immobilisation cible pour les nouveaux investissements */
+export declare const NOM_IMMOBILISATIONS_AUTRES = "Autres Immobilisations";
+/** Amortissement comptable d'une immobilisation par trimestre (1 000€) */
+export declare const AMORTISSEMENT_PAR_BIEN = 1000;
+/** Score de crédit minimum pour obtenir un emprunt au taux standard */
+export declare const SCORE_SEUIL_STANDARD = 65;
+/** Score de crédit minimum pour obtenir un emprunt au taux majoré */
+export declare const SCORE_SEUIL_MAJORE = 50;
 /** Résultat d'une demande de prêt bancaire */
 export interface ResultatDemandePret {
     accepte: boolean;

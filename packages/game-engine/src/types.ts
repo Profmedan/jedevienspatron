@@ -81,6 +81,10 @@ export interface EntrepriseTemplate {
   /** Type d'activité affiché */
   type: string;
   specialite: string;
+  /** Réduit le délai de paiement client de 1 trimestre (spécialité Véloce Transports) */
+  reducDelaiPaiement?: boolean;
+  /** Génère automatiquement 1 client particulier par tour (spécialité Azura Commerce) */
+  clientGratuitParTour?: boolean;
   /** Effets passifs appliqués automatiquement à chaque tour (spécialité entreprise) */
   effetsPassifs?: EffetCarte[];
   /** Bilan de départ (Actif = Passif = 16 toujours) */
@@ -218,6 +222,10 @@ export interface Joueur {
     icon: string;
     type: string;
     specialite: string;
+    /** Réduit le délai de paiement client de 1 trimestre */
+    reducDelaiPaiement?: boolean;
+    /** Génère automatiquement 1 client particulier par tour */
+    clientGratuitParTour?: boolean;
     /** Valeurs de référence initiales (pour la phase de configuration) */
     ref: { actifs: number[]; passifs: number[] };
   };
@@ -249,6 +257,19 @@ export type EtapeTour =
   | 6 // 6a Recrutement commercial (optionnel) + 6b Carte Décision (optionnel)
   | 7 // Pioche de la carte Événement
   | 8; // Vérification de l'équilibre + fin de tour
+
+/** Constantes nommées pour les étapes du tour — utilisez ces noms plutôt que les chiffres */
+export const ETAPES = {
+  INIT: 0,
+  ACHATS: 1,
+  COMMERCIAUX: 2,
+  VENTES: 3,
+  CHARGES: 4,
+  BILAN: 5,
+  INVESTISSEMENT: 6,
+  EVENEMENT: 7,
+  CLOTURE: 8,
+} as const satisfies Record<string, EtapeTour>;
 
 export interface EtatJeu {
   phase: "setup" | "playing" | "gameover";
@@ -426,6 +447,85 @@ export const TAUX_INTERET_ANNUEL = 5;
 export const TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
 export const MONTANTS_EMPRUNT = [5000, 8000, 12000, 16000, 20000] as const;
+
+/**
+ * Revenus et marges par type de client.
+ * Utilisé dans l'analyse des cartes commerciales pour calculer le chiffre d'affaires
+ * et la marge brute. Les délais de paiement varient par type (comptant, C+1, C+2).
+ */
+export const REVENU_PAR_CLIENT: Record<string, { ventes: number; marge: number; label: string; delai: string }> = {
+  particulier: { ventes: 2000, marge: 1000, label: "Particulier", delai: "comptant" },
+  tpe:         { ventes: 3000, marge: 2000, label: "TPE",         delai: "C+1" },
+  grand_compte:{ ventes: 4000, marge: 3000, label: "Grand Compte",delai: "C+2" },
+};
+
+/**
+ * Bonus de capacité de production par carte.
+ * Indique combien de ventes supplémentaires par trimestre chaque carte logistique débloque.
+ * Miroir des valeurs CAPACITE_IMMOBILISATION du moteur.
+ */
+export const BONUS_CAPACITE: Partial<Record<string, number>> = {
+  // Véhicules globaux
+  "camionnette":          6,   // (Manufacture/Véloce: +6 ; Azura/Synergia: +2)
+  "fourgon-refrigere":    5,
+  "velo-cargo":           3,
+  "credit-bail":          6,
+  // Investissements logistiques globaux
+  "expansion":            10,  // (Manufacture/Véloce: +4 ; Azura/Synergia: +6)
+  "entrepot-automatise":  10,
+  // Mini-deck Manufacture Belvaux
+  "belvaux-robot-n1":     2,
+  "belvaux-robot-n2":     2,
+  "belvaux-entrepot":     2,
+  // Mini-deck Véloce Transports
+  "veloce-vehicule-n2":   2,
+  "veloce-dispatch-n1":   2,
+  "veloce-dispatch-n2":   2,
+  // Mini-deck Azura Commerce
+  "azura-marketplace-n1": 4,
+  "azura-marketplace-n2": 4,
+  "azura-soustraitance":  4,
+  // Mini-deck Synergia Lab
+  "synergia-erp-n1":      4,
+  "synergia-erp-n2":      4,
+  "synergia-partenariat": 4,
+};
+
+/**
+ * Bénéfices qualitatifs par carte.
+ * Utilisé pour afficher des bénéfices textuels quand une carte n'a pas de métrique financière
+ * directe (p. ex. assurance, cybersécurité, optimisation de coûts, formations).
+ */
+export const BENEFICE_QUALITATIF: Partial<Record<string, string>> = {
+  // Protection
+  "assurance-prevoyance":   "Annule incendie, grève, litige et contrôle fiscal",
+  "mutuelle-collective":    "Fidélise l'équipe et réduit le risque de grève",
+  "cybersecurite":          "Annule pertes de données et risques de piratage",
+  "maintenance-preventive": "Annule pannes machines + réduit les amortissements de 1 000 €/trim",
+  // Service
+  "affacturage":            "Convertit toutes vos créances en trésorerie immédiate",
+  "relance-clients":        "Avance d'un trimestre le paiement de toutes vos créances",
+  // Optimisation coûts
+  "optimisation-lean":      "Réduit le coût des marchandises vendues de 1 000 €/trim",
+  "sous-traitance":         "Ajoute 2 000 € de stocks produits chaque trimestre",
+  // Tactique ponctuelle
+  "achat-urgence":          "Déblocage immédiat de 5 000 € de stocks",
+  "remboursement-anticipe": "Solde l'emprunt et supprime les intérêts récurrents",
+  "revision-generale":      "Prolonge la durée de vie des immobilisations",
+  // Formation : client grand compte immédiat (one-shot, pas récurrent)
+  "formation":              "Décroche immédiatement 1 client Grand Compte ce trimestre",
+};
+
+/** Taux d'agios sur le découvert bancaire (10%/trimestre) */
+export const TAUX_AGIOS = 0.10;
+/** Nom exact de la ligne immobilisation cible pour les nouveaux investissements */
+export const NOM_IMMOBILISATIONS_AUTRES = "Autres Immobilisations";
+/** Amortissement comptable d'une immobilisation par trimestre (1 000€) */
+export const AMORTISSEMENT_PAR_BIEN = 1000;
+/** Score de crédit minimum pour obtenir un emprunt au taux standard */
+export const SCORE_SEUIL_STANDARD = 65;
+/** Score de crédit minimum pour obtenir un emprunt au taux majoré */
+export const SCORE_SEUIL_MAJORE = 50;
 
 /** Résultat d'une demande de prêt bancaire */
 export interface ResultatDemandePret {

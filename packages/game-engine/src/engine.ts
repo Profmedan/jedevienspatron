@@ -27,11 +27,18 @@ import {
   CAPACITE_BASE,
   CAPACITE_IMMOBILISATION,
   CAPACITE_IMMOBILISATION_PAR_ENTREPRISE,
+  TAUX_AGIOS,
+  AMORTISSEMENT_PAR_BIEN,
+  SCORE_SEUIL_STANDARD,
+  SCORE_SEUIL_MAJORE,
+  NOM_IMMOBILISATIONS_AUTRES,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
 import {
   getTotalActif,
+  getTotalPassif,
+  getResultatNet,
   getTotalImmobilisations,
   getTotalStocks,
   getTresorerie,
@@ -159,7 +166,7 @@ function appliquerDeltaPoste(
   // pour ne pas altérer les biens existants (Entrepôt, Camion, etc.)
   if (poste === "immobilisations") {
     let targetActif = delta > 0
-      ? bilanActifs.find((a) => a.nom === "Autres Immobilisations")
+      ? bilanActifs.find((a) => a.nom === NOM_IMMOBILISATIONS_AUTRES)
       : undefined;
     // Fallback : premier item immobilisations disponible
     if (!targetActif) targetActif = bilanActifs.find((a) => a.categorie === "immobilisations");
@@ -185,7 +192,14 @@ function appliquerDeltaPoste(
     return { ancienneValeur: old, nouvelleValeur: passif.valeur };
   }
 
-  // Poste introuvable — erreur pour détecter les typos/IDs invalides
+  // Poste introuvable — log + erreur pour détecter les typos/IDs invalides en dev et prod
+  console.error(`[GameEngine] appliquerDeltaPoste — poste inconnu: "${poste}"`, {
+    joueurId: joueur.id,
+    pseudo: joueur.pseudo,
+    delta,
+    postesCharges: Object.keys(joueur.compteResultat.charges),
+    postesProduits: Object.keys(joueur.compteResultat.produits),
+  });
   throw new Error(`[GameEngine] Poste inconnu : "${poste}". Vérifiez l'ID dans types.ts ou cartes.ts.`);
 }
 
@@ -232,6 +246,8 @@ export function creerJoueur(
       icon: template.icon,
       type: template.type,
       specialite: template.specialite,
+      ...(template.reducDelaiPaiement ? { reducDelaiPaiement: true } : {}),
+      ...(template.clientGratuitParTour ? { clientGratuitParTour: true } : {}),
       ref: {
         actifs: template.actifs.map((a) => a.valeur),
         passifs: template.passifs.map((p) => p.valeur),
@@ -300,7 +316,7 @@ export function appliquerEtape0(
   // Agios = 10% du découvert, arrondi à la centaine supérieure — prélevés sur la trésorerie.
   // Si la trésorerie est insuffisante, elle tombe en négatif → découvert généré automatiquement.
   if (joueur.bilan.decouvert > 0) {
-    const agios = Math.ceil(joueur.bilan.decouvert * 0.10 / 100) * 100;
+    const agios = Math.ceil(joueur.bilan.decouvert * TAUX_AGIOS / 100) * 100;
     push(
       "chargesInteret",
       agios,
@@ -409,7 +425,7 @@ export function appliquerEtape0(
 
     // Appliquer -1 000 € directement à chaque bien (mutation directe pour éviter .find() répété)
     immoAmortissables.forEach((item) => {
-      item.valeur = Math.max(0, item.valeur - 1000);
+      item.valeur = Math.max(0, item.valeur - AMORTISSEMENT_PAR_BIEN);
     });
 
     const totalApres = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
@@ -457,6 +473,27 @@ export function appliquerEtape0(
   }
 
   return { succes: true, modifications };
+}
+
+/**
+ * Vérifie l'invariant comptable ACTIF = PASSIF + RÉSULTAT après chaque étape.
+ * En développement, log un avertissement si l'équilibre est rompu (tolérance ±1€ pour arrondis).
+ * Ne lève pas d'erreur pour ne pas bloquer le jeu en production.
+ */
+export function verifierEquilibreComptable(joueur: Joueur, contexte: string): void {
+  const totalActif = getTotalActif(joueur);
+  const totalPassif = getTotalPassif(joueur);
+  const resultatNet = getResultatNet(joueur);
+  const ecart = Math.abs(totalActif - (totalPassif + resultatNet));
+  if (ecart > 1) {
+    console.warn(`[GameEngine] Déséquilibre comptable après ${contexte} — Joueur ${joueur.id} (${joueur.pseudo})`, {
+      totalActif,
+      totalPassif,
+      resultatNet,
+      ecart,
+      attendu: `Actif (${totalActif}) = Passif (${totalPassif}) + Résultat (${resultatNet})`,
+    });
+  }
 }
 
 // ─── ÉTAPE 1 : Achats de marchandises (optionnel) ────────────
@@ -654,19 +691,19 @@ export function appliquerCarteClient(
   const groupId = `vente-${saleGroupIndex ?? 0}`;
   const clientLabel = carteClient.titre;
 
-  // Spécialité Véloce Transports (Logistique) : livraison rapide → délai réduit de 1
-  const delaiEffectif = joueur.entreprise.nom === "Véloce Transports"
+  // Spécialité Logistique (reducDelaiPaiement) : livraison rapide → délai réduit de 1
+  const delaiEffectif = joueur.entreprise.reducDelaiPaiement
     ? Math.max(0, carteClient.delaiPaiement - 1) as 0 | 1 | 2
     : carteClient.delaiPaiement;
 
   // ACTE 1 — Encaissement selon délai (le plus tangible)
   if (delaiEffectif === 0) {
-    const label = carteClient.delaiPaiement > 0 && joueur.entreprise.nom === "Véloce Transports"
+    const label = carteClient.delaiPaiement > 0 && joueur.entreprise.reducDelaiPaiement
       ? `🚀 Livraison rapide — encaissement accéléré : +${montant} € en caisse`
       : `Le client paie comptant : +${montant} € en caisse`;
     push("tresorerie", montant, label, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
   } else if (delaiEffectif === 1) {
-    const label = carteClient.delaiPaiement > 1 && joueur.entreprise.nom === "Véloce Transports"
+    const label = carteClient.delaiPaiement > 1 && joueur.entreprise.reducDelaiPaiement
       ? `🚀 Livraison rapide — créance accélérée : +${montant} € (C+1 au lieu de C+2)`
       : `Le client paiera dans 1 trimestre : +${montant} € en créance C+1`;
     push("creancesPlus1", montant, label, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
@@ -768,7 +805,7 @@ export function appliquerSpecialiteEntreprise(
  * • Azura Commerce : +1 client Particulier automatique par tour
  */
 export function genererClientsSpecialite(joueur: Joueur): CarteClient[] {
-  if (joueur.entreprise.nom === "Azura Commerce") {
+  if (joueur.entreprise.clientGratuitParTour) {
     const clientParticulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
     return clientParticulier ? [clientParticulier] : [];
   }
@@ -843,13 +880,13 @@ export function acheterCarteDecision(
     });
   }
 
-  // Ajouter la carte aux actives
-  joueur.cartesActives.push(carte);
+  // Ajouter la carte aux actives (spread pour ne pas muter le tableau original)
+  joueur.cartesActives = [...joueur.cartesActives, carte];
 
   // Carte Formation : bonus d'1 client grand compte immédiat
   if (carte.id === CARTE_IDS.FORMATION) {
     const clientGC = CARTES_CLIENTS.find((c) => c.id === "client-grand-compte");
-    if (clientGC) joueur.clientsATrait.push(clientGC);
+    if (clientGC) joueur.clientsATrait = [...joueur.clientsATrait, clientGC];
   }
 
   // Remboursement anticipé : solder les emprunts restants
@@ -938,9 +975,9 @@ export function investirCartePersonnelle(
     });
   }
 
-  // Retirer de piochePersonnelle, ajouter à cartesActives
+  // Retirer de piochePersonnelle, ajouter à cartesActives (spread pour immutabilité)
   joueur.piochePersonnelle = joueur.piochePersonnelle.filter((_, i) => i !== carteIdx);
-  joueur.cartesActives.push(carte);
+  joueur.cartesActives = [...joueur.cartesActives, carte];
 
   return { succes: true, modifications };
 }
