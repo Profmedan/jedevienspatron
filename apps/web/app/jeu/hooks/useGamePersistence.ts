@@ -58,14 +58,14 @@ export function useGamePersistence({
     const access = params.get("access");
     if (code) {
       setRoomCode(code);
-      // Charger les templates de la session
+      // Charger les templates snapshotés dans la session
       fetch(`/api/sessions/${code}/templates`)
         .then(r => {
           if (r.ok) return r.json();
           throw new Error("Impossible de charger les templates");
         })
         .then(data => {
-          if (data.templates && Array.isArray(data.templates)) {
+          if (data.templates && Array.isArray(data.templates) && data.templates.length > 0) {
             setCustomTemplates(data.templates);
           }
         })
@@ -73,6 +73,43 @@ export function useGamePersistence({
     } else if (!access) {
       // Ni room_code ni bypass → mode solo (auth + crédit requis)
       setIsSolo(true);
+      // Charger les templates personnalisés du formateur connecté
+      fetch("/api/templates")
+        .then(r => {
+          if (r.ok) return r.json();
+          return null;
+        })
+        .then(data => {
+          if (data?.templates && Array.isArray(data.templates) && data.templates.length > 0) {
+            // Convertir les templates DB en format EntrepriseTemplate pour le moteur
+            const converted: EntrepriseTemplate[] = data.templates.map((t: any) => ({
+              nom: t.name,
+              type: t.base_enterprise,
+              couleur: t.couleur,
+              icon: t.icon,
+              specialite: t.specialite_label || "",
+              actifs: [
+                { nom: t.immo1_nom, valeur: t.immo1_valeur },
+                { nom: t.immo2_nom, valeur: t.immo2_valeur },
+                ...(t.autres_immo > 0 ? [{ nom: "Autres immobilisations", valeur: t.autres_immo }] : []),
+                { nom: "Stocks de marchandises", valeur: t.stocks },
+                { nom: "Trésorerie", valeur: t.tresorerie },
+              ],
+              passifs: [
+                { nom: "Capitaux propres", valeur: t.capitaux_propres },
+                ...(t.emprunts > 0 ? [{ nom: "Emprunt bancaire", valeur: t.emprunts }] : []),
+                ...(t.dettes > 0 ? [{ nom: "Dettes fournisseurs", valeur: t.dettes }] : []),
+              ],
+              effetsPassifs: [],
+              cartesLogistiquesDepart: [],
+              cartesLogistiquesDisponibles: [],
+              reducDelaiPaiement: t.reduc_delai_paiement ?? false,
+              clientGratuitParTour: t.client_gratuit_par_tour ?? false,
+            }));
+            setCustomTemplates(converted);
+          }
+        })
+        .catch(() => {}); // pas connecté ou pas de templates → silencieux
     }
   }, []);
 
