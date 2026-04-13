@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+interface Template {
+  id: string;
+  name: string;
+  base_enterprise: string;
+  totalActif: number;
+  actifs?: Array<{ nom: string; valeur: number }>;
+  passifs?: Array<{ nom: string; valeur: number }>;
+}
 
 export default function NewSessionPage() {
   const router = useRouter();
@@ -11,6 +20,10 @@ export default function NewSessionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ room_code: string; id: string } | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
+  const [expandTemplates, setExpandTemplates] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
 
   const durations: Record<number, string> = {
     6:  "~1h — session standard ✓",
@@ -19,16 +32,46 @@ export default function NewSessionPage() {
     12: "~1h45 — session longue",
   };
 
+  // Fetch templates on mount
+  useEffect(() => {
+    async function fetchTemplates() {
+      try {
+        const res = await fetch("/api/templates");
+        const data = await res.json();
+        if (res.ok && data.templates) {
+          // Calculate total assets and liabilities for display
+          const templatesWithTotals = (data.templates as any[]).map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            base_enterprise: t.base_enterprise,
+            totalActif: (t.immo1_valeur || 0) + (t.immo2_valeur || 0) + (t.autres_immo || 0) + (t.stocks || 0) + (t.tresorerie || 0),
+          }));
+          setTemplates(templatesWithTotals);
+        }
+      } catch (err) {
+        console.error("Erreur chargement templates:", err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    }
+    fetchTemplates();
+  }, []);
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      const body: any = { nb_tours: nbTours };
+      if (selectedTemplateIds.size > 0) {
+        body.template_ids = Array.from(selectedTemplateIds);
+      }
+
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nb_tours: nbTours }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -176,12 +219,78 @@ export default function NewSessionPage() {
               </div>
             </div>
 
+            {/* Scénario personnalisé (optionnel) */}
+            <div className="border border-gray-700 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setExpandTemplates(!expandTemplates)}
+                className="w-full bg-gray-800 hover:bg-gray-750 px-4 py-3 flex items-center justify-between transition-colors"
+              >
+                <span className="font-semibold text-gray-200">
+                  🎨 Scénario personnalisé <span className="text-xs text-gray-500 font-normal">(optionnel)</span>
+                </span>
+                <span className={`text-gray-400 transition-transform ${expandTemplates ? "rotate-180" : ""}`}>▼</span>
+              </button>
+
+              {expandTemplates && (
+                <div className="bg-gray-900/50 border-t border-gray-700 p-4 space-y-3">
+                  {loadingTemplates ? (
+                    <p className="text-sm text-gray-400">Chargement des scénarios…</p>
+                  ) : templates.length === 0 ? (
+                    <div className="text-sm text-gray-400 space-y-2">
+                      <p>Aucun scénario personnalisé disponible.</p>
+                      <Link
+                        href="/dashboard/templates"
+                        className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
+                      >
+                        ➕ Créer un scénario personnalisé
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {templates.map(template => (
+                        <label key={template.id} className="flex items-start gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedTemplateIds.has(template.id)}
+                            onChange={e => {
+                              const newSet = new Set(selectedTemplateIds);
+                              if (e.target.checked) {
+                                newSet.add(template.id);
+                              } else {
+                                newSet.delete(template.id);
+                              }
+                              setSelectedTemplateIds(newSet);
+                            }}
+                            className="mt-1 w-4 h-4 rounded accent-indigo-600"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-100 text-sm">{template.name}</div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Type: <span className="font-mono">{template.base_enterprise}</span>
+                              {template.totalActif > 0 && (
+                                <> · Bilan: <span className="font-mono">{template.totalActif.toLocaleString("fr-FR")}€</span></>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                      <p className="text-xs text-gray-500 mt-3">
+                        Les scénarios sélectionnés remplaceront les 4 entreprises standard.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Résumé */}
             <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 text-sm text-gray-300">
               <p>
                 <strong className="text-gray-100">Récapitulatif :</strong>{" "}
                 Session de <strong>{nbTours} trimestres</strong>
                 {groupName && <> · Groupe : <strong>{groupName}</strong></>}
+                {selectedTemplateIds.size > 0 && <> · <strong>{selectedTemplateIds.size}</strong> scénario{selectedTemplateIds.size > 1 ? "s" : ""} personnalisé{selectedTemplateIds.size > 1 ? "s" : ""}</>}
                 {" "}· Chaque apprenant joue en autonomie sur son propre appareil
               </p>
             </div>

@@ -2,6 +2,52 @@
 
 ---
 
+## Tâche 18 : Éditeur d'entreprises personnalisées (Option B) — 2026-04-13 ✅
+
+### Contexte
+Un formateur peut créer des scénarios personnalisés en modifiant le bilan initial d'une entreprise.
+Les cartes et effets passifs sont hérités de l'entreprise de base (4 défauts).
+Les templates sont snapshotés dans la session au moment de la création (immuables).
+
+### Fichiers créés
+- [x] `supabase/migrations/011_custom_enterprise_templates.sql` — Table + RLS + colonne enterprise_templates sur game_sessions
+- [x] `apps/web/app/api/templates/route.ts` — GET (liste) + POST (création) avec validation Actif=Passif
+- [x] `apps/web/app/api/templates/[id]/route.ts` — PUT (mise à jour) + DELETE (soft-delete)
+- [x] `apps/web/app/api/sessions/[code]/templates/route.ts` — GET templates d'une session par room_code
+- [x] `apps/web/app/dashboard/templates/page.tsx` — Page complète : liste cards + éditeur modal + validation bilan temps réel
+
+### Fichiers modifiés
+- [x] `packages/game-engine/src/types.ts` — NomEntreprise élargi (DefaultEntreprise | string & {})
+- [x] `packages/game-engine/src/engine.ts` — creerJoueur() + initialiserJeu() acceptent customTemplates?
+- [x] `apps/web/lib/game-engine/types.ts` — Miroir types
+- [x] `apps/web/lib/game-engine/engine.ts` — Miroir engine
+- [x] `apps/web/app/api/sessions/route.ts` — POST accepte template_ids, snapshot dans enterprise_templates
+- [x] `apps/web/app/dashboard/sessions/new/page.tsx` — Section "Scénario personnalisé" avec sélection templates
+- [x] `apps/web/components/jeu/SetupScreen.tsx` — Affiche entreprises custom en plus des 4 défauts
+- [x] `apps/web/app/jeu/hooks/useGamePersistence.ts` — Charge customTemplates depuis session
+- [x] `apps/web/app/jeu/hooks/useGameFlow.ts` — Passe customTemplates à initialiserJeu()
+- [x] `apps/web/app/jeu/page.tsx` — Wire customTemplates entre persistence, flow et SetupScreen
+
+### Architecture
+```
+Formateur crée template (POST /api/templates)
+  └─ Stocké en BDD (custom_enterprise_templates)
+
+Formateur crée session avec templates (POST /api/sessions + template_ids)
+  └─ Templates convertis en EntrepriseTemplate[] → snapshot JSONB dans game_sessions.enterprise_templates
+
+Joueur rejoint session
+  └─ useGamePersistence charge templates (GET /api/sessions/{code}/templates)
+  └─ SetupScreen affiche défauts + customs
+  └─ initialiserJeu(defs, nbTours, customTemplates) → creerJoueur lookup custom → defaults
+```
+
+### Validation
+- [x] `npx tsc --noEmit` — 0 erreur
+- [ ] Migration 011 à appliquer par Pierre sur Supabase
+
+---
+
 ## Tâche 17 : Feature A — Dashboard formateur temps réel — 2026-04-13 ✅
 
 ### Contexte

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   EtatJeu,
   TrimSnapshot,
+  EntrepriseTemplate,
   calculerIndicateurs,
   calculerScore,
   getTresorerie,
@@ -29,6 +30,7 @@ interface UseGamePersistenceReturn {
   soloLoading: boolean;
   soloError: string | null;
   setSoloError: (v: string | null) => void;
+  customTemplates: EntrepriseTemplate[] | null;
   /** Crée une session solo (consomme 1 crédit). Retourne true si OK, false si erreur/redirect. */
   createSoloSession: (nbTours: number) => Promise<boolean>;
 }
@@ -45,16 +47,29 @@ export function useGamePersistence({
   const [isSolo, setIsSolo] = useState(false);
   const [soloLoading, setSoloLoading] = useState(false);
   const [soloError, setSoloError] = useState<string | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<EntrepriseTemplate[] | null>(null);
 
   const router = useRouter();
 
-  // ── Effet 1 : lecture des paramètres URL au montage ──────────────────────
+  // ── Effet 1 : lecture des paramètres URL et chargement du template au montage ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const access = params.get("access");
     if (code) {
       setRoomCode(code);
+      // Charger les templates de la session
+      fetch(`/api/sessions/${code}/templates`)
+        .then(r => {
+          if (r.ok) return r.json();
+          throw new Error("Impossible de charger les templates");
+        })
+        .then(data => {
+          if (data.templates && Array.isArray(data.templates)) {
+            setCustomTemplates(data.templates);
+          }
+        })
+        .catch(err => console.warn("Templates non disponibles:", err));
     } else if (!access) {
       // Ni room_code ni bypass → mode solo (auth + crédit requis)
       setIsSolo(true);
@@ -152,6 +167,7 @@ export function useGamePersistence({
     soloLoading,
     soloError,
     setSoloError,
+    customTemplates,
     createSoloSession,
   };
 }

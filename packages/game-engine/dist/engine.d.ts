@@ -1,8 +1,9 @@
-import { EtatJeu, Joueur, CarteDecision, CarteClient, CarteEvenement, NomEntreprise, ResultatAction, ResultatDemandePret } from "./types";
+import { EtatJeu, Joueur, CarteDecision, CarteClient, CarteEvenement, NomEntreprise, ResultatAction, ResultatDemandePret, EntrepriseTemplate } from "./types";
 export declare function initialiserJeu(joueursDefs: Array<{
     pseudo: string;
     nomEntreprise: NomEntreprise;
-}>, nbToursMax?: number): EtatJeu;
+}>, nbToursMax?: number, // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
+customTemplates?: EntrepriseTemplate[]): EtatJeu;
 export declare function appliquerEtape0(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Vérifie l'invariant comptable ACTIF = PASSIF + RÉSULTAT après chaque étape.

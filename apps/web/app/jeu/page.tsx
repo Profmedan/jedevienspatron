@@ -48,6 +48,7 @@ export default function JeuPage() {
     setFlashData: ui.setFlashData,
     createSoloSession: persistence.createSoloSession,
     roomCode: persistence.roomCode,
+    customTemplates: persistence.customTemplates,
   });
 
   // Synchroniser la ref snapshots avec l'état du flow (pour persistence)
@@ -76,7 +77,7 @@ export default function JeuPage() {
     </div>
   );
 
-  if (phase === "setup") return <SetupScreen onStart={flow.handleStart} />;
+  if (phase === "setup") return <SetupScreen onStart={flow.handleStart} customTemplates={persistence.customTemplates} />;
   if (phase === "intro" && etat) return (
     <CompanyIntro
       joueurs={etat.joueurs}

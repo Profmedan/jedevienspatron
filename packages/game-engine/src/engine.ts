@@ -32,6 +32,7 @@ import {
   SCORE_SEUIL_STANDARD,
   SCORE_SEUIL_MAJORE,
   NOM_IMMOBILISATIONS_AUTRES,
+  EntrepriseTemplate,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
@@ -208,9 +209,13 @@ function appliquerDeltaPoste(
 function creerJoueur(
   id: number,
   pseudo: string,
-  nomEntreprise: NomEntreprise
+  nomEntreprise: NomEntreprise,
+  customTemplates?: EntrepriseTemplate[],
 ): Joueur {
-  const template = ENTREPRISES.find((e) => e.nom === nomEntreprise);
+  // Cherche d'abord dans les templates custom, puis dans les défauts
+  const template =
+    customTemplates?.find((e) => e.nom === nomEntreprise) ??
+    ENTREPRISES.find((e) => e.nom === nomEntreprise);
   if (!template) throw new Error(`Entreprise inconnue : ${nomEntreprise}`);
 
   const bilan = creerBilanVierge();
@@ -277,10 +282,11 @@ function creerJoueur(
 
 export function initialiserJeu(
   joueursDefs: Array<{ pseudo: string; nomEntreprise: NomEntreprise }>,
-  nbToursMax: number = 12 // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
+  nbToursMax: number = 12, // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
+  customTemplates?: EntrepriseTemplate[],
 ): EtatJeu {
   const joueurs = joueursDefs.map((def, i) =>
-    creerJoueur(i, def.pseudo, def.nomEntreprise)
+    creerJoueur(i, def.pseudo, def.nomEntreprise, customTemplates)
   );
 
   return {

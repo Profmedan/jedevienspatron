@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useReducer } from "react";
 import {
-  EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot,
+  EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
@@ -56,6 +56,8 @@ interface UseGameFlowParams {
   createSoloSession: (nbTours: number) => Promise<boolean>;
   /** room_code de la session (null si solo sans code) — pour le heartbeat */
   roomCode: string | null;
+  /** Templates d'entreprises personnalisées (chargées depuis la session) */
+  customTemplates?: EntrepriseTemplate[] | null;
 }
 
 // ─── Retour du hook ────────────────────────────────────────────────────────
@@ -131,6 +133,7 @@ export function useGameFlow({
   setFlashData,
   createSoloSession,
   roomCode,
+  customTemplates,
 }: UseGameFlowParams): UseGameFlowReturn {
 
   // ─ État de base ────────────────────────────────────────────────────────────
@@ -228,7 +231,7 @@ export function useGameFlow({
     if (!ok) return;
 
     const joueursDefs = players.map(p => ({ pseudo: p.pseudo, nomEntreprise: p.entreprise }));
-    setEtat(initialiserJeu(joueursDefs, nbTours));
+    setEtat(initialiserJeu(joueursDefs, nbTours, customTemplates ?? undefined));
     setPhase("intro");
   }
 

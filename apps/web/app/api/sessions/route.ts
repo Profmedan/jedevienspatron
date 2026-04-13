@@ -41,10 +41,77 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { class_id, nb_tours = 6 } = body as {
+    const { class_id, nb_tours = 6, template_ids } = body as {
       class_id?: string;
       nb_tours?: number;
+      template_ids?: string[];
     };
+
+    // Récupère et convertit les templates personnalisés si fournis
+    let enterpriseTemplates: Array<{
+      nom: string;
+      type: string;
+      couleur: string;
+      icon: string;
+      specialite: string;
+      actifs: Array<{ nom: string; valeur: number }>;
+      passifs: Array<{ nom: string; valeur: number }>;
+      effetsPassifs: Array<unknown>;
+      cartesLogistiquesDepart: Array<unknown>;
+      cartesLogistiquesDisponibles: Array<unknown>;
+      reducDelaiPaiement: number;
+      clientGratuitParTour: number;
+    }> | null = null;
+
+    if (template_ids && template_ids.length > 0) {
+      const { data: templates, error: templatesError } = await serviceClient
+        .from("custom_enterprise_templates")
+        .select("*")
+        .in("id", template_ids)
+        .eq("organization_id", profile.organization_id);
+
+      if (templatesError) {
+        console.error("Erreur récupération templates:", templatesError);
+        await releaseCredit(creditId);
+        return NextResponse.json(
+          { error: "Impossible de récupérer les templates" },
+          { status: 500 }
+        );
+      }
+
+      if (templates && templates.length > 0) {
+        enterpriseTemplates = templates.map((template: any) => ({
+          nom: template.name,
+          type: template.base_enterprise,
+          couleur: template.couleur,
+          icon: template.icon,
+          specialite: template.specialite_label,
+          actifs: [
+            { nom: template.immo1_nom, valeur: template.immo1_valeur },
+            { nom: template.immo2_nom, valeur: template.immo2_valeur },
+            ...(template.autres_immo > 0
+              ? [{ nom: "Autres immobilisations", valeur: template.autres_immo }]
+              : []),
+            { nom: "Stocks de marchandises", valeur: template.stocks },
+            { nom: "Trésorerie", valeur: template.tresorerie },
+          ],
+          passifs: [
+            { nom: "Capitaux propres", valeur: template.capitaux_propres },
+            ...(template.emprunts > 0
+              ? [{ nom: "Emprunt bancaire", valeur: template.emprunts }]
+              : []),
+            ...(template.dettes > 0
+              ? [{ nom: "Dettes fournisseurs", valeur: template.dettes }]
+              : []),
+          ],
+          effetsPassifs: [],
+          cartesLogistiquesDepart: [],
+          cartesLogistiquesDisponibles: [],
+          reducDelaiPaiement: template.reduc_delai_paiement,
+          clientGratuitParTour: template.client_gratuit_par_tour,
+        }));
+      }
+    }
 
     // Génère un room code unique via la fonction SQL
     const { data: codeResult } = await serviceClient.rpc("generate_room_code");
@@ -60,6 +127,7 @@ export async function POST(request: NextRequest) {
         room_code: roomCode,
         status: "waiting",
         nb_tours,
+        ...(enterpriseTemplates && { enterprise_templates: enterpriseTemplates }),
       })
       .select()
       .single();

@@ -49,7 +49,10 @@ export interface CompteResultat {
     charges: Charges;
     produits: Produits;
 }
-export type NomEntreprise = "Manufacture Belvaux" | "Véloce Transports" | "Azura Commerce" | "Synergia Lab";
+/** Noms des 4 entreprises par défaut */
+export type DefaultEntreprise = "Manufacture Belvaux" | "Véloce Transports" | "Azura Commerce" | "Synergia Lab";
+/** Accepte les 4 défauts + tout nom custom (string) avec autocomplétion */
+export type NomEntreprise = DefaultEntreprise | (string & {});
 export interface EntrepriseTemplate {
     nom: NomEntreprise;
     /** Couleur thématique */

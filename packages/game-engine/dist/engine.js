@@ -163,8 +163,10 @@ function appliquerDeltaPoste(joueur, poste, delta) {
     throw new Error(`[GameEngine] Poste inconnu : "${poste}". Vérifiez l'ID dans types.ts ou cartes.ts.`);
 }
 // ─── CRÉATION DE L'ÉTAT INITIAL ──────────────────────────────
-function creerJoueur(id, pseudo, nomEntreprise) {
-    const template = entreprises_1.ENTREPRISES.find((e) => e.nom === nomEntreprise);
+function creerJoueur(id, pseudo, nomEntreprise, customTemplates) {
+    // Cherche d'abord dans les templates custom, puis dans les défauts
+    const template = customTemplates?.find((e) => e.nom === nomEntreprise) ??
+        entreprises_1.ENTREPRISES.find((e) => e.nom === nomEntreprise);
     if (!template)
         throw new Error(`Entreprise inconnue : ${nomEntreprise}`);
     const bilan = creerBilanVierge();
@@ -225,9 +227,9 @@ function creerJoueur(id, pseudo, nomEntreprise) {
         piochePersonnelle: template.cartesLogistiquesDisponibles ?? [],
     };
 }
-function initialiserJeu(joueursDefs, nbToursMax = 12 // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
-) {
-    const joueurs = joueursDefs.map((def, i) => creerJoueur(i, def.pseudo, def.nomEntreprise));
+function initialiserJeu(joueursDefs, nbToursMax = 12, // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
+customTemplates) {
+    const joueurs = joueursDefs.map((def, i) => creerJoueur(i, def.pseudo, def.nomEntreprise, customTemplates));
     return {
         phase: "playing",
         tourActuel: 1,

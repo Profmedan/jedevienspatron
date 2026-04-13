@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Building2, Clock3, Users } from "lucide-react";
-import { NomEntreprise, ENTREPRISES } from "@jedevienspatron/game-engine";
+import { NomEntreprise, ENTREPRISES, EntrepriseTemplate } from "@jedevienspatron/game-engine";
 
 export interface PlayerSetup {
   pseudo: string;
@@ -12,9 +12,10 @@ export interface PlayerSetup {
 
 interface SetupScreenProps {
   onStart: (players: PlayerSetup[], nbTours: number) => void;
+  customTemplates?: EntrepriseTemplate[] | null;
 }
 
-export function SetupScreen({ onStart }: SetupScreenProps) {
+export function SetupScreen({ onStart, customTemplates }: SetupScreenProps) {
   const [nbJoueurs, setNbJoueurs] = useState(1);
   const [nbTours, setNbTours] = useState(8);
 
@@ -27,6 +28,9 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
   const [players, setPlayers] = useState<PlayerSetup[]>(defaults);
   const allEntreprises = ENTREPRISES.map((e) => e.nom);
+  // Ajouter les noms des templates personnalisés aux options disponibles
+  const customEntrepriseNames = customTemplates?.map((t) => t.nom) ?? [];
+  const allAvailableEnts = [...allEntreprises, ...customEntrepriseNames];
   const usedEnts = players.slice(0, nbJoueurs).map((p) => p.entreprise);
 
   function update(index: number, field: "pseudo" | "entreprise", value: string) {
@@ -131,9 +135,17 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {Array.from({ length: nbJoueurs }).map((_, index) => {
-                const entreprise = ENTREPRISES.find(
-                  (item) => item.nom === players[index].entreprise,
-                )!;
+                const currentEntreprise = players[index].entreprise;
+                // Chercher d'abord dans les défauts, puis dans les custom templates
+                const entrepriseDefault = ENTREPRISES.find(
+                  (item) => item.nom === currentEntreprise,
+                );
+                const enterpriseCustom = customTemplates?.find(
+                  (item) => item.nom === currentEntreprise,
+                );
+                const entreprise = entrepriseDefault || enterpriseCustom;
+
+                if (!entreprise) return null; // Sécurité
 
                 return (
                   <div
@@ -163,21 +175,21 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                       />
 
                       <select
-                        value={players[index].entreprise}
+                        value={currentEntreprise}
                         onChange={(e) =>
                           update(index, "entreprise", e.target.value as NomEntreprise)
                         }
                         className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
                         aria-label={`Entreprise du joueur ${index + 1}`}
                       >
-                        {allEntreprises.map((nom) => (
+                        {allAvailableEnts.map((nom) => (
                           <option
                             key={nom}
                             value={nom}
-                            disabled={usedEnts.includes(nom) && players[index].entreprise !== nom}
+                            disabled={usedEnts.includes(nom) && currentEntreprise !== nom}
                           >
                             {nom}
-                            {usedEnts.includes(nom) && players[index].entreprise !== nom
+                            {usedEnts.includes(nom) && currentEntreprise !== nom
                               ? " (déjà prise)"
                               : ""}
                           </option>
