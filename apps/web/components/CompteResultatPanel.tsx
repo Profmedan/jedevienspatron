@@ -144,10 +144,10 @@ function TooltipRow({
             ⓘ
           </button>
         )}
-        <span className="flex-1 text-gray-300 text-xs truncate">{label}</span>
+        <span className="flex-1 text-gray-300 text-[10px] xl:text-xs truncate">{label}</span>
         <div className="flex items-center shrink-0">
           {recentMod ? <BeforeAfterBadge mod={recentMod} /> : (
-            <span className="font-bold tabular-nums text-sm text-gray-100">{value}</span>
+            <span className="font-bold tabular-nums text-xs xl:text-sm text-gray-100">{value}</span>
           )}
         </div>
       </div>
@@ -322,8 +322,8 @@ export default function CompteResultatPanel({
             />
 
             <div className="flex justify-between px-2.5 py-2 border-t-2 border-orange-800 mt-2 font-bold bg-orange-900/20 rounded-lg">
-              <span className="text-xs text-orange-200 uppercase tracking-wide">Total charges</span>
-              <span className="text-xl font-black text-orange-400 tabular-nums">{totalCharges}</span>
+              <span className="text-[9px] xl:text-xs text-orange-200 uppercase tracking-wide">Total charges</span>
+              <span className="text-base xl:text-xl font-black text-orange-400 tabular-nums">{totalCharges}</span>
             </div>
           </div>
 
@@ -363,8 +363,8 @@ export default function CompteResultatPanel({
             />
 
             <div className="flex justify-between px-2.5 py-2 border-t-2 border-emerald-800 mt-2 font-bold bg-emerald-900/40 rounded-lg">
-              <span className="text-xs text-emerald-200 uppercase tracking-wide">Total produits</span>
-              <span className="text-xl font-black text-emerald-400 tabular-nums">{totalProduits}</span>
+              <span className="text-[9px] xl:text-xs text-emerald-200 uppercase tracking-wide">Total produits</span>
+              <span className="text-base xl:text-xl font-black text-emerald-400 tabular-nums">{totalProduits}</span>
             </div>
           </div>
         </div>

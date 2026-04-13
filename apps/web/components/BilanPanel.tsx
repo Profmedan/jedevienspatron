@@ -136,7 +136,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
         }}
         onClick={() => info && setShow((s) => !s)}
       >
-        <span className="text-gray-200 flex items-center gap-1 text-sm min-w-0">
+        <span className="text-gray-200 flex items-center gap-1 text-[10px] xl:text-xs min-w-0">
           <span className="truncate">{label}</span>
           {info && (
             <span className={`shrink-0 text-xs leading-none transition-colors ${show ? "text-white" : "text-gray-500"}`}>
@@ -148,7 +148,7 @@ function TooltipPoste({ label, value, color, categorie, sub, highlighted, recent
           {recentMod ? (
             <BeforeAfterBadge mod={recentMod} />
           ) : (
-            <span className={`font-bold tabular-nums text-sm ${value < 0 ? "text-red-400" : "text-gray-100"}`}>
+            <span className={`font-bold tabular-nums text-xs xl:text-sm ${value < 0 ? "text-red-400" : "text-gray-100"}`}>
               {value >= 0 ? value : `(${Math.abs(value)})`}
             </span>
           )}
@@ -217,13 +217,13 @@ function ColumnTotal({ label, value, variant }: { label: string; value: number; 
           isActif ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500" : "bg-amber-600 border-amber-600 text-white hover:bg-amber-500"
         }`}
       >
-        <span className="text-xs font-bold uppercase tracking-wide opacity-90 flex items-center gap-1.5">
+        <span className="text-[9px] xl:text-xs font-bold uppercase tracking-wide opacity-90 flex items-center gap-1.5">
           {label}
-          <span className={`text-xs font-normal ${open ? "opacity-100" : "opacity-60"}`}>
+          <span className={`text-[9px] xl:text-xs font-normal ${open ? "opacity-100" : "opacity-60"}`}>
             {open ? "▲" : "ⓘ"}
           </span>
         </span>
-        <span className="text-2xl font-black tabular-nums">{value}</span>
+        <span className="text-base xl:text-xl font-black tabular-nums">{value}</span>
       </button>
       {open && (
         <div

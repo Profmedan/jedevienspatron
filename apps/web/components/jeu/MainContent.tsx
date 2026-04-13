@@ -66,10 +66,17 @@ export function MainContent({
   onVendreImmobilisation,
 }: MainContentProps) {
   const [activeTab, setLocalActiveTab] = useState<TabType>(initialTab === "bilan" || initialTab === "cr" ? initialTab : "bilan");
+  const [tabVisibleState, setTabVisibleState] = useState<TabType | null>(initialTab === "bilan" || initialTab === "cr" ? initialTab : "bilan");
 
   const handleTabChange = (tab: TabType) => {
-    setLocalActiveTab(tab);
-    setActiveTab(tab);
+    // Toggle: si l'onglet cliqué est déjà visible, le fermer ; sinon l'ouvrir
+    if (tabVisibleState === tab) {
+      setTabVisibleState(null);
+    } else {
+      setLocalActiveTab(tab);
+      setActiveTab(tab);
+      setTabVisibleState(tab);
+    }
   };
 
   // ── Détecter si l’étape active touche les deux documents (Bilan ET CR) ──────
@@ -101,6 +108,7 @@ export function MainContent({
     const target: TabType = docType === "CR" ? "cr" : "bilan";
     setLocalActiveTab(target);
     setActiveTab(target);
+    setTabVisibleState(target);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appliedCount, _activeStep?.titre, modeDouble]);
 
@@ -130,10 +138,10 @@ export function MainContent({
                 key={tab}
                 type="button"
                 role="tab"
-                aria-selected={activeTab === tab}
+                aria-selected={tabVisibleState === tab}
                 onClick={() => handleTabChange(tab as TabType)}
                 className={`rounded-2xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 ${
-                  activeTab === tab
+                  tabVisibleState === tab
                     ? "bg-cyan-500 text-white"
                     : "bg-white/[0.04] text-slate-300 hover:bg-white/[0.07]"
                 }`}
@@ -263,7 +271,7 @@ export function MainContent({
         ) : (
           /* ── MODE ONGLETS : affichage classique avec auto-switch ─────────── */
           <AnimatePresence mode="wait">
-            {activeTab === "bilan" && (
+            {tabVisibleState === "bilan" && (
               <motion.div
                 key="bilan"
                 initial={{ opacity: 0, y: 10 }}
@@ -275,7 +283,7 @@ export function MainContent({
               </motion.div>
             )}
 
-            {activeTab === "cr" && (
+            {tabVisibleState === "cr" && (
               <motion.div
                 key="cr"
                 initial={{ opacity: 0, y: 10 }}

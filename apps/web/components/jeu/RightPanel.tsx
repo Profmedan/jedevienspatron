@@ -110,6 +110,44 @@ const RightPanel: React.FC<RightPanelProps> = ({
     c.categorie !== "commercial"
   );
 
+  // Compute clients per tour per commercial type
+  const clientsParTourParType = {
+    junior: cartesCommerciales
+      .filter((c) => c.titre.includes("Junior"))
+      .reduce((sum, c) => sum + (c.nbClientsParTour ?? 1), 0),
+    senior: cartesCommerciales
+      .filter((c) => c.titre.includes("Senior"))
+      .reduce((sum, c) => sum + (c.nbClientsParTour ?? 1), 0),
+    directeur: cartesCommerciales
+      .filter((c) => c.titre.includes("Directeur") || c.titre.includes("Directrice"))
+      .reduce((sum, c) => sum + (c.nbClientsParTour ?? 1), 0),
+  };
+
+  // Compute expected clients for next tour (for empty clientsATrait display)
+  const clientsAttendusProchainTour = {
+    particulier: 0,
+    tpe: 0,
+    grand_compte: 0,
+  };
+  cartesCommerciales.forEach((c) => {
+    const nbClients = c.nbClientsParTour ?? 1;
+    if (c.clientParTour === "particulier") {
+      clientsAttendusProchainTour.particulier += nbClients;
+    } else if (c.clientParTour === "tpe") {
+      clientsAttendusProchainTour.tpe += nbClients;
+    } else if (c.clientParTour === "grand_compte") {
+      clientsAttendusProchainTour.grand_compte += nbClients;
+    }
+  });
+  // Bonus pour Azura Commerce
+  if (joueur.entreprise.nom === "Azura Commerce") {
+    clientsAttendusProchainTour.particulier += 1;
+  }
+  const totalClientsAttendus =
+    clientsAttendusProchainTour.particulier +
+    clientsAttendusProchainTour.tpe +
+    clientsAttendusProchainTour.grand_compte;
+
   // Render tab content
   const renderTabContent = () => {
     switch (currentTab) {
@@ -124,9 +162,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
             <div>
               <h3 className="font-semibold text-emerald-400 mb-2">Commerciaux actifs</h3>
               <div className="space-y-1 bg-gray-900/40 rounded-lg p-2">
-                <div>🧑‍💼 Junior × {countByType.junior} (1 particulier/tour)</div>
-                <div>👔 Senior × {countByType.senior} (1 PME/tour)</div>
-                <div>👑 Directeur × {countByType.directeur} (1 grand compte/tour)</div>
+                <div>🧑‍💼 Junior × {countByType.junior} ({clientsParTourParType.junior} particulier{clientsParTourParType.junior > 1 ? "s" : ""}/tour)</div>
+                <div>👔 Senior × {countByType.senior} ({clientsParTourParType.senior} TPE/tour{clientsParTourParType.senior > 1 ? "s" : ""})</div>
+                <div>👑 Directeur × {countByType.directeur} ({clientsParTourParType.directeur} grand{clientsParTourParType.directeur > 1 ? "s" : ""} compte{clientsParTourParType.directeur > 1 ? "s" : ""}/tour)</div>
                 <div className="border-t border-gray-700 mt-2 pt-2 font-medium">
                   Total: {totalCommercials} commercial{totalCommercials > 1 ? "s" : ""}
                 </div>
@@ -134,22 +172,44 @@ const RightPanel: React.FC<RightPanelProps> = ({
             </div>
 
             <div>
-              <h3 className="font-semibold text-yellow-400 mb-2">
-                Clients à traiter ({joueur.clientsATrait.length})
-              </h3>
               {joueur.clientsATrait.length > 0 ? (
-                <div className="space-y-1 bg-gray-900/40 rounded-lg p-2">
-                  {joueur.clientsATrait.map((client, idx) => (
-                    <div key={idx}>
-                      {client.titre}{" "}
-                      {client.delaiPaiement === 0 && "(paiement immédiat)"}
-                      {client.delaiPaiement === 1 && "(paiement C+1)"}
-                      {client.delaiPaiement === 2 && "(paiement C+2)"}
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <h3 className="font-semibold text-yellow-400 mb-2">
+                    Clients à traiter ({joueur.clientsATrait.length})
+                  </h3>
+                  <div className="space-y-1 bg-gray-900/40 rounded-lg p-2">
+                    {joueur.clientsATrait.map((client, idx) => (
+                      <div key={idx}>
+                        {client.titre}{" "}
+                        {client.delaiPaiement === 0 && "(paiement immédiat)"}
+                        {client.delaiPaiement === 1 && "(paiement C+1)"}
+                        {client.delaiPaiement === 2 && "(paiement C+2)"}
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
-                <div className="text-gray-500 italic">Aucun client en attente</div>
+                <>
+                  <h3 className="font-semibold text-blue-400 mb-2">
+                    Clients attendus au prochain tour
+                  </h3>
+                  {totalClientsAttendus > 0 ? (
+                    <div className="space-y-1 bg-gray-900/40 rounded-lg p-2 text-gray-300">
+                      <div className="text-sm font-medium mb-2">Total : {totalClientsAttendus} client{totalClientsAttendus > 1 ? "s" : ""}</div>
+                      {clientsAttendusProchainTour.particulier > 0 && (
+                        <div className="text-xs">→ {clientsAttendusProchainTour.particulier} Particulier{clientsAttendusProchainTour.particulier > 1 ? "s" : ""}</div>
+                      )}
+                      {clientsAttendusProchainTour.tpe > 0 && (
+                        <div className="text-xs">→ {clientsAttendusProchainTour.tpe} TPE</div>
+                      )}
+                      {clientsAttendusProchainTour.grand_compte > 0 && (
+                        <div className="text-xs">→ {clientsAttendusProchainTour.grand_compte} Grand Compte{clientsAttendusProchainTour.grand_compte > 1 ? "s" : ""}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 italic">Aucun client attendu — embauchez des commerciaux</div>
+                  )}
+                </>
               )}
             </div>
 

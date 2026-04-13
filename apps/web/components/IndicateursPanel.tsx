@@ -222,8 +222,8 @@ function Indicateur({ label, value, unit, positive, formule, definition, interpr
             onClick={() => setOpen(false)}
           />
           <div
-            className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl text-xs flex flex-col max-h-[80vh]"
-            style={{ position: "fixed", top: tooltipPos.top, left: tooltipPos.left, zIndex: 9999, minWidth: "280px" }}
+            className="w-72 bg-gray-900/98 border border-gray-700 rounded-xl shadow-2xl text-xs flex flex-col"
+            style={{ position: "fixed", top: tooltipPos.top, left: tooltipPos.left, zIndex: 9999, minWidth: "280px", maxHeight: `calc(100vh - ${tooltipPos.top}px - 16px)` }}
             onClick={e => e.stopPropagation()}
           >
           <div className="flex items-start justify-between gap-2 p-4 shrink-0 border-b border-gray-700/50">
