@@ -308,6 +308,18 @@ useGameFlow (orchestrateur)
 **Erreur** : dans `buildTrimSnapshot()`, filtrage `c.type === "commercial"` → erreur TS2367 car `CarteDecision.type` est littéralement `"decision"`. Les commerciaux sont identifiés par `c.categorie === "commercial"`.
 **Règle** : toujours vérifier le type TS de la propriété discriminante avant de filtrer. `type` et `categorie` sont deux champs distincts sur les interfaces de cartes — `type` discrimine le KIND de carte (`"decision"`, `"commercial"`, `"client"`, `"evenement"`), `categorie` discrimine la CATÉGORIE fonctionnelle au sein des `CarteDecision`.
 
+## L39 — 2026-04-14 : Onboarding = wizard séquentiel, pas page monolithique
+**Contexte** : l'écran "Configurer la partie" présentait d'un coup tous les paramètres (nombre de joueurs, pseudos, entreprises, durée, conseil) → surcharge cognitive pour un primo-utilisateur. Le bouton "Créer ma propre entreprise" placé en dehors du dropdown semblait "spécial" sans raison apparente pour un débutant.
+**Règle pour tout onboarding** :
+1. **Une décision par étape** : nombre de joueurs → pseudos → entreprises → durée. Progression linéaire avec `AnimatePresence mode="wait"` + slide horizontal (`x: direction * 60`).
+2. **Barre de progression visible en haut** : pastilles numérotées + labels, état actif/fait/à faire clairement distingué (cyan / emerald / slate).
+3. **Option "créer/personnaliser"** : intégrée en DERNIÈRE position du dropdown avec icône ✏️ et valeur sentinel `__create__` dans le `<select>`. À la sélection, ouvrir le builder sans changer l'état du select (le `value` reste contrôlé sur la valeur précédente).
+4. **Conseil dynamique** : reformuler selon les choix courants `(nbJoueurs, nbTours)` pour éviter les contradictions ("1 joueur sur 6" alors que 8 est choisi). Ne JAMAIS laisser un conseil statique périmer.
+5. **Focus auto** : à chaque transition d'étape, focus sur le 1er élément interactif (bouton actif pour étape 1, premier input pour étape 2, etc.).
+6. **Raccourci clavier** : `Enter` = Suivant (sauf dans `<select>` ou `<textarea>`).
+7. **Validation par étape** : bouton "Suivant" désactivé si l'étape courante est invalide. Erreurs affichées inline.
+**Fichier concerné** : `apps/web/components/jeu/SetupScreen.tsx` — pattern à réutiliser pour tout wizard pédagogique du projet.
+
 ## L38 — 2026-04-14 : Panneau central UN SEUL document — auto-switch obligatoire en modeDouble
 **Contexte** : quand une écriture comptable touche à la fois le Bilan ET le Compte de Résultat (ex. achat immobilisation avec TVA), la tentation est d'afficher les deux documents en grille (2/3 + 1/3). C'est illisible sur fenêtre non-maximisée : les deux panneaux se chevauchent, le joueur ne comprend pas ce qu'il voit.
 **Règle** : le panneau central n'affiche JAMAIS deux documents simultanément. Il affiche toujours UN SEUL document (Bilan OU CR). Quand une opération touche les deux :

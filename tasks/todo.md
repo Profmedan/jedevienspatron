@@ -1,3 +1,41 @@
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-14
+
+---
+
+## Tâche 21 : SetupScreen refondu en wizard séquentiel — 2026-04-14 🚧
+
+### Contexte
+L'écran actuel empile tout (nombre joueurs, pseudos, entreprises, durée) sur une seule page → surcharge cognitive pour un nouveau joueur. Le bouton "Créer ma propre entreprise" n'est pas compréhensible pour un débutant qui n'a jamais vu les entreprises préexistantes. Le texte de conseil statique devient incohérent dès que l'utilisateur modifie son choix (ex. "1 joueur sur 6 trimestres" alors que 8 trimestres est sélectionné).
+
+### Décisions Pierre
+- Wizard **inline** (pas de modales empilées) avec transitions horizontales via `AnimatePresence`.
+- **4 étapes** : (1) nombre joueurs → (2) pseudos → (3) entreprises → (4) durée + récap + démarrer.
+- **"Créer ma propre entreprise"** intégré comme DERNIÈRE option du dropdown d'entreprise (icône ✏️), avec valeur spéciale `__create__` qui ouvre `EntrepriseBuilder`.
+- **Conseil de démarrage dynamique** : reformulé selon `(nbJoueurs, nbTours)` en cours. Texte de base conservé pour 1 joueur / 6 trimestres. Correction : "2, 3 ou 4 joueurs" (pas "2 ou 3").
+
+### Fichiers à modifier
+- [ ] `apps/web/components/jeu/SetupScreen.tsx` — réécriture complète
+- [ ] `tasks/lessons.md` — leçon L39 (wizard pattern pour onboarding)
+
+### Architecture
+- État lifted dans `SetupScreen` : `{ step, direction, nbJoueurs, nbTours, players[], adHocTemplates[], builderOpenForPlayer }`.
+- `step: 1 | 2 | 3 | 4` + `direction: 1 | -1` pour animation slide.
+- `canAdvance(step)` : validation par étape (pseudo non vide, entreprises uniques).
+- Barre de progression en haut (4 pastilles + labels).
+- Bandeau conseil dynamique visible sur toutes les étapes.
+- Focus auto sur le premier élément interactif de chaque étape.
+- Navigation : boutons "← Retour" et "Suivant →" (étape 4 → "Démarrer la partie").
+- Clavier : `Enter` = Suivant (si valide), `Escape` = Retour.
+
+### Validation
+- [ ] `npx tsc --noEmit` → 0 erreur
+- [ ] Flux joueur 1, 2, 3, 4 (chaque combinaison)
+- [ ] Flux "Créer ma propre entreprise" depuis le dropdown → builder → assignation auto
+- [ ] Retour/avance préserve l'état
+- [ ] Conseil dynamique reflète les choix courants
+
+---
+
 # Tâches JE DEVIENS PATRON — mis à jour 2026-04-13
 
 ---
