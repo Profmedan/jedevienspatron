@@ -153,7 +153,9 @@ export function MainContent({
           )}
         </div>
 
-        {/* Mini-aperçus d'impacts — visibles uniquement en modeDouble */}
+        {/* Mini-aperçus d'impacts — visibles uniquement en modeDouble
+            En modeDouble : les deux panels sont affichés → les cartes sont des scroll anchors.
+            En mode simple : elles basculeraient vers l'onglet (mais ce cas n'arrive pas ici). */}
         <AnimatePresence>
           {modeDouble && (
             <motion.div
@@ -169,19 +171,19 @@ export function MainContent({
                   accent="cyan"
                   label="📊 Bilan"
                   entries={entriesBilan}
-                  isCurrentTab={tabVisibleState === "bilan"}
-                  onClick={() => {
-                    if (tabVisibleState !== "bilan") handleTabChange("bilan");
-                  }}
+                  isScrollAnchor
+                  onClick={() =>
+                    document.getElementById("panel-bilan")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
                 />
                 <ImpactMiniCard
                   accent="violet"
                   label="📈 Compte de Résultat"
                   entries={entriesCR}
-                  isCurrentTab={tabVisibleState === "cr"}
-                  onClick={() => {
-                    if (tabVisibleState !== "cr") handleTabChange("cr");
-                  }}
+                  isScrollAnchor
+                  onClick={() =>
+                    document.getElementById("panel-cr")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
                 />
               </div>
             </motion.div>
@@ -263,43 +265,97 @@ export function MainContent({
         </div>
       )}
 
-      {/* Scrollable content area — toujours en mode onglets, jamais en split */}
-      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4">
-        <AnimatePresence mode="wait">
-          {tabVisibleState === "bilan" && (
-            <motion.div
-              key="bilan"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15 }}
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-2 pb-6 pt-3 md:px-4">
+        {modeDouble ? (
+          /* ── MODE DUAL : les deux documents sont affichés simultanément ────────────
+             Layout : grille 1 col (mobile) → 3 col (desktop, Bilan=2/3, CR=1/3).
+             Chaque panel a un scroll interne propre sur desktop (max-h-[55vh]). */
+          <motion.div
+            key="dual"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+            {/* ── Bilan : 2/3 largeur desktop ────────────────────────────────── */}
+            <div
+              id="panel-bilan"
+              className="md:col-span-2 flex flex-col rounded-xl border border-cyan-500/20 overflow-hidden"
             >
-              <BilanPanel
-                joueur={displayJoueur}
-                highlightedPoste={_highlightedPoste}
-                recentModifications={_recentModifications}
-              />
-            </motion.div>
-          )}
+              <div className="flex-shrink-0 border-b border-cyan-500/10 bg-cyan-500/[0.04] px-3 py-2">
+                <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
+                  📊 Bilan — Actif &amp; Passif
+                </h4>
+              </div>
+              <div className="overflow-y-auto md:max-h-[55vh]">
+                <BilanPanel
+                  joueur={displayJoueur}
+                  highlightedPoste={_highlightedPoste}
+                  recentModifications={_recentModifications}
+                />
+              </div>
+            </div>
 
-          {tabVisibleState === "cr" && (
-            <motion.div
-              key="cr"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15 }}
+            {/* ── Compte de Résultat : 1/3 largeur desktop ───────────────────── */}
+            <div
+              id="panel-cr"
+              className="md:col-span-1 flex flex-col rounded-xl border border-violet-500/20 overflow-hidden"
             >
-              <CompteResultatPanel
-                joueur={displayJoueur}
-                highlightedPoste={_highlightedPoste}
-                recentModifications={_recentModifications}
-                etapeTour={etapeTour}
-                hasActiveStep={!!_activeStep}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div className="flex-shrink-0 border-b border-violet-500/10 bg-violet-500/[0.04] px-3 py-2">
+                <h4 className="text-xs font-bold text-violet-300 uppercase tracking-wider">
+                  📈 Compte de Résultat
+                </h4>
+              </div>
+              <div className="overflow-y-auto md:max-h-[55vh]">
+                <CompteResultatPanel
+                  joueur={displayJoueur}
+                  highlightedPoste={_highlightedPoste}
+                  recentModifications={_recentModifications}
+                  etapeTour={etapeTour}
+                  hasActiveStep={!!_activeStep}
+                />
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          /* ── MODE ONGLETS : affichage classique avec auto-switch ─────────── */
+          <AnimatePresence mode="wait">
+            {tabVisibleState === "bilan" && (
+              <motion.div
+                key="bilan"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+              >
+                <BilanPanel
+                  joueur={displayJoueur}
+                  highlightedPoste={_highlightedPoste}
+                  recentModifications={_recentModifications}
+                />
+              </motion.div>
+            )}
+
+            {tabVisibleState === "cr" && (
+              <motion.div
+                key="cr"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+              >
+                <CompteResultatPanel
+                  joueur={displayJoueur}
+                  highlightedPoste={_highlightedPoste}
+                  recentModifications={_recentModifications}
+                  etapeTour={etapeTour}
+                  hasActiveStep={!!_activeStep}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
       </div>
     </main>
   );
@@ -312,7 +368,10 @@ interface ImpactMiniCardProps {
   accent: "cyan" | "violet";
   label: string;
   entries: Array<{ poste: string; delta: number; applied: boolean }>;
-  isCurrentTab: boolean;
+  /** Mode scroll anchor : les deux panels sont affichés, la carte fait défiler vers le bon panel. */
+  isScrollAnchor?: boolean;
+  /** Mode onglet : la carte est l'onglet actif (affichage en lecture seule). */
+  isCurrentTab?: boolean;
   onClick: () => void;
 }
 
@@ -320,7 +379,8 @@ function ImpactMiniCard({
   accent,
   label,
   entries,
-  isCurrentTab,
+  isScrollAnchor = false,
+  isCurrentTab = false,
   onClick,
 }: ImpactMiniCardProps) {
   const MAX_VISIBLE = 3;
@@ -328,31 +388,33 @@ function ImpactMiniCard({
   const remaining = entries.length - visible.length;
 
   const borderClass = accent === "cyan"
-    ? (isCurrentTab ? "border-cyan-400/60 bg-cyan-500/10" : "border-cyan-500/25 bg-cyan-500/[0.04] hover:bg-cyan-500/[0.08]")
-    : (isCurrentTab ? "border-violet-400/60 bg-violet-500/10" : "border-violet-500/25 bg-violet-500/[0.04] hover:bg-violet-500/[0.08]");
+    ? "border-cyan-500/30 bg-cyan-500/[0.05] hover:bg-cyan-500/[0.10]"
+    : "border-violet-500/30 bg-violet-500/[0.05] hover:bg-violet-500/[0.10]";
 
-  const labelClass = accent === "cyan"
-    ? "text-cyan-300"
-    : "text-violet-300";
+  const labelClass = accent === "cyan" ? "text-cyan-300" : "text-violet-300";
+
+  // En mode scroll anchor : toujours cliquable, hint "↕ faire défiler"
+  // En mode onglet : désactivé si déjà visible, hint "affiché ci-dessous"
+  const isDisabled = !isScrollAnchor && isCurrentTab;
+  const hint = isScrollAnchor
+    ? <span className="text-[9px] text-slate-500 italic">↕ faire défiler</span>
+    : isCurrentTab
+      ? <span className="text-[9px] text-slate-400 italic">affiché ci-dessous</span>
+      : <span className="text-[9px] text-slate-500 italic">cliquer pour voir →</span>;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={isCurrentTab}
-      aria-label={`Voir ${label}`}
-      className={`w-full text-left rounded-xl border p-2.5 transition-colors ${borderClass} ${isCurrentTab ? "cursor-default" : "cursor-pointer"}`}
+      disabled={isDisabled}
+      aria-label={`${isScrollAnchor ? "Faire défiler vers" : "Voir"} ${label}`}
+      className={`w-full text-left rounded-xl border p-2.5 transition-colors ${borderClass} ${isDisabled ? "cursor-default opacity-70" : "cursor-pointer"}`}
     >
       <div className="flex items-center justify-between mb-1.5">
         <p className={`text-[10px] font-bold uppercase tracking-wider ${labelClass}`}>
           {label}
         </p>
-        {!isCurrentTab && (
-          <span className="text-[9px] text-slate-500 italic">cliquer pour voir →</span>
-        )}
-        {isCurrentTab && (
-          <span className="text-[9px] text-slate-400 italic">affiché ci-dessous</span>
-        )}
+        {hint}
       </div>
       <div className="space-y-0.5">
         {visible.map((entry, idx) => {
