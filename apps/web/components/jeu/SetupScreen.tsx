@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Building2, Clock3, Users } from "lucide-react";
 import { NomEntreprise, ENTREPRISES, EntrepriseTemplate } from "@jedevienspatron/game-engine";
+import EntrepriseBuilder from "./EntrepriseBuilder";
 
 export interface PlayerSetup {
   pseudo: string;
@@ -11,7 +12,11 @@ export interface PlayerSetup {
 }
 
 interface SetupScreenProps {
-  onStart: (players: PlayerSetup[], nbTours: number) => void;
+  onStart: (
+    players: PlayerSetup[],
+    nbTours: number,
+    adHocTemplates?: EntrepriseTemplate[],
+  ) => void;
   customTemplates?: EntrepriseTemplate[] | null;
 }
 
@@ -27,10 +32,20 @@ export function SetupScreen({ onStart, customTemplates }: SetupScreenProps) {
   ];
 
   const [players, setPlayers] = useState<PlayerSetup[]>(defaults);
+
+  // Templates ad-hoc créés par le joueur via EntrepriseBuilder (éphémères, non persistés)
+  const [adHocTemplates, setAdHocTemplates] = useState<EntrepriseTemplate[]>([]);
+  const [builderOpenForPlayer, setBuilderOpenForPlayer] = useState<number | null>(null);
+
   const allEntreprises = ENTREPRISES.map((e) => e.nom);
-  // Ajouter les noms des templates personnalisés aux options disponibles
+  // Ajouter les noms des templates personnalisés (formateur) + ad-hoc (joueur) aux options
   const customEntrepriseNames = customTemplates?.map((t) => t.nom) ?? [];
-  const allAvailableEnts = [...allEntreprises, ...customEntrepriseNames];
+  const adHocEntrepriseNames = adHocTemplates.map((t) => t.nom);
+  const allAvailableEnts = [
+    ...allEntreprises,
+    ...customEntrepriseNames,
+    ...adHocEntrepriseNames,
+  ];
   const usedEnts = players.slice(0, nbJoueurs).map((p) => p.entreprise);
 
   function update(index: number, field: "pseudo" | "entreprise", value: string) {
@@ -136,14 +151,17 @@ export function SetupScreen({ onStart, customTemplates }: SetupScreenProps) {
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {Array.from({ length: nbJoueurs }).map((_, index) => {
                 const currentEntreprise = players[index].entreprise;
-                // Chercher d'abord dans les défauts, puis dans les custom templates
+                // Lookup priority: défauts → custom (formateur) → ad-hoc (joueur)
                 const entrepriseDefault = ENTREPRISES.find(
                   (item) => item.nom === currentEntreprise,
                 );
                 const enterpriseCustom = customTemplates?.find(
                   (item) => item.nom === currentEntreprise,
                 );
-                const entreprise = entrepriseDefault || enterpriseCustom;
+                const enterpriseAdHoc = adHocTemplates.find(
+                  (item) => item.nom === currentEntreprise,
+                );
+                const entreprise = entrepriseDefault || enterpriseCustom || enterpriseAdHoc;
 
                 if (!entreprise) return null; // Sécurité
 
@@ -195,6 +213,14 @@ export function SetupScreen({ onStart, customTemplates }: SetupScreenProps) {
                           </option>
                         ))}
                       </select>
+
+                      <button
+                        type="button"
+                        onClick={() => setBuilderOpenForPlayer(index)}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-cyan-400/30 bg-cyan-400/5 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition-colors hover:border-cyan-300/60 hover:bg-cyan-400/10"
+                      >
+                        ✏️ Créer ma propre entreprise
+                      </button>
                     </div>
 
                     <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -238,7 +264,12 @@ export function SetupScreen({ onStart, customTemplates }: SetupScreenProps) {
             </div>
 
             <button
-              onClick={() => onStart(players.slice(0, nbJoueurs), nbTours)}
+              onClick={() => {
+                // Ne transmettre que les ad-hoc utilisés par au moins un joueur actif
+                const usedNames = new Set(players.slice(0, nbJoueurs).map((p) => p.entreprise));
+                const usedAdHoc = adHocTemplates.filter((t) => usedNames.has(t.nom));
+                onStart(players.slice(0, nbJoueurs), nbTours, usedAdHoc.length > 0 ? usedAdHoc : undefined);
+              }}
               disabled={!canStart}
               className="inline-flex w-full items-center justify-center rounded-full bg-cyan-400 px-6 py-4 text-base font-semibold text-slate-950 transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
               aria-label="Suivant: Comprendre le bilan de départ"
@@ -248,6 +279,40 @@ export function SetupScreen({ onStart, customTemplates }: SetupScreenProps) {
           </section>
         </div>
       </div>
+
+      {/* Wizard de création d'entreprise personnalisée */}
+      <EntrepriseBuilder
+        isOpen={builderOpenForPlayer !== null}
+        onClose={() => setBuilderOpenForPlayer(null)}
+        onComplete={(template: EntrepriseTemplate) => {
+          // Assurer l'unicité du nom (évite collisions avec défauts ou ad-hoc existants)
+          let uniqueName = template.nom;
+          let counter = 2;
+          const existingNames = new Set([
+            ...allEntreprises,
+            ...customEntrepriseNames,
+            ...adHocTemplates.map((t) => t.nom),
+          ]);
+          while (existingNames.has(uniqueName)) {
+            uniqueName = `${template.nom} (${counter})`;
+            counter++;
+          }
+          const finalTemplate = { ...template, nom: uniqueName };
+
+          setAdHocTemplates((prev) => [...prev, finalTemplate]);
+
+          // Assigner automatiquement au joueur qui a ouvert le wizard
+          if (builderOpenForPlayer !== null) {
+            const nextPlayers = [...players];
+            nextPlayers[builderOpenForPlayer] = {
+              ...nextPlayers[builderOpenForPlayer],
+              entreprise: uniqueName,
+            };
+            setPlayers(nextPlayers);
+          }
+          setBuilderOpenForPlayer(null);
+        }}
+      />
     </div>
   );
 }

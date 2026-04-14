@@ -106,7 +106,11 @@ interface UseGameFlowReturn {
   cartesRecrutement: CarteDecision[];
 
   // ─ Actions ─
-  handleStart: (players: PlayerSetup[], nbTours?: number) => Promise<void>;
+  handleStart: (
+    players: PlayerSetup[],
+    nbTours?: number,
+    adHocTemplates?: EntrepriseTemplate[],
+  ) => Promise<void>;
   applyEntry: (entryId: string) => void;
   applySaleGroup: (saleGroupId: string) => void;
   confirmActiveStep: () => void;
@@ -226,12 +230,22 @@ export function useGameFlow({
   }
 
   // ─ Démarrer une partie ────────────────────────────────────────────────────
-  async function handleStart(players: PlayerSetup[], nbTours: number = 6) {
+  async function handleStart(
+    players: PlayerSetup[],
+    nbTours: number = 6,
+    adHocTemplates?: EntrepriseTemplate[],
+  ) {
     const ok = await createSoloSession(nbTours);
     if (!ok) return;
 
+    // Fusion : formateur (customTemplates) + joueur (adHocTemplates)
+    const mergedTemplates: EntrepriseTemplate[] = [
+      ...(customTemplates ?? []),
+      ...(adHocTemplates ?? []),
+    ];
+
     const joueursDefs = players.map(p => ({ pseudo: p.pseudo, nomEntreprise: p.entreprise }));
-    setEtat(initialiserJeu(joueursDefs, nbTours, customTemplates ?? undefined));
+    setEtat(initialiserJeu(joueursDefs, nbTours, mergedTemplates.length > 0 ? mergedTemplates : undefined));
     setPhase("intro");
   }
 
