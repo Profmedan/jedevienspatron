@@ -34,15 +34,18 @@ const EMOJI_SUGGESTIONS = [
 ];
 
 interface DifficultyPreset {
-  tresorerie?: number;
-  emprunts?: number;
-  capitaux?: number;
+  tresorerie: number;
+  emprunts: number;
+  dettes: number;
 }
 
+// Les presets définissent tresorerie + emprunts + dettes.
+// Les capitaux propres sont CALCULÉS automatiquement pour garantir Actif = Passif :
+//   capitaux = immo1 + immo2 + autresImmo + stocks + tresorerie - emprunts - dettes
 const DIFFICULTY_PRESETS: Record<string, DifficultyPreset> = {
-  easy: { tresorerie: 12, emprunts: 4, capitaux: 20 },
-  normal: {}, // Use template defaults
-  hard: { tresorerie: 4, emprunts: 14, capitaux: 14 },
+  easy:   { tresorerie: 12, emprunts:  4, dettes: 0 },
+  normal: { tresorerie: -1, emprunts: -1, dettes: -1 }, // -1 = utiliser les valeurs du template
+  hard:   { tresorerie:  4, emprunts: 14, dettes: 2 },
 };
 
 export default function EntrepriseBuilder({
@@ -129,10 +132,29 @@ export default function EntrepriseBuilder({
   const isBalanced = Math.abs(totalActif - totalPassif) < 0.01;
   const difference = totalActif - totalPassif;
 
-  const applyDifficultyPreset = (preset: DifficultyPreset) => {
-    if (preset.tresorerie !== undefined) setTresorerie(preset.tresorerie);
-    if (preset.emprunts !== undefined) setEmprunts(preset.emprunts);
-    if (preset.capitaux !== undefined) setCapitauxPropres(preset.capitaux);
+  const applyDifficultyPreset = (presetKey: keyof typeof DIFFICULTY_PRESETS) => {
+    const preset = DIFFICULTY_PRESETS[presetKey];
+
+    // Preset "normal" : réinitialiser depuis le template de base
+    if (preset.tresorerie === -1 && selectedTemplate) {
+      initializeStep3(selectedTemplate);
+      return;
+    }
+
+    // Pour easy/hard : garder immo + stocks, changer tresorerie/emprunts/dettes,
+    // puis calculer capitaux propres pour garantir Actif = Passif
+    const newTresorerie = preset.tresorerie;
+    const newEmprunts   = preset.emprunts;
+    const newDettes     = preset.dettes;
+
+    const immoTotal   = immo1Valeur + immo2Valeur + autresImmo;
+    const newTotalActif  = immoTotal + stocks + newTresorerie;
+    const newCapitaux = newTotalActif - newEmprunts - newDettes;
+
+    setTresorerie(newTresorerie);
+    setEmprunts(newEmprunts);
+    setDettes(newDettes);
+    setCapitauxPropres(Math.max(0, newCapitaux));
   };
 
   const handleNextStep = () => {
@@ -664,19 +686,19 @@ export default function EntrepriseBuilder({
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => applyDifficultyPreset(DIFFICULTY_PRESETS.easy)}
+                  onClick={() => applyDifficultyPreset("easy")}
                   className="px-4 py-2 rounded-full bg-white/10 text-slate-200 hover:bg-white/20 text-sm font-semibold transition-all"
                 >
                   💪 Facile
                 </button>
                 <button
-                  onClick={() => applyDifficultyPreset(DIFFICULTY_PRESETS.normal)}
+                  onClick={() => applyDifficultyPreset("normal")}
                   className="px-4 py-2 rounded-full bg-white/10 text-slate-200 hover:bg-white/20 text-sm font-semibold transition-all"
                 >
                   ⚖️ Normal
                 </button>
                 <button
-                  onClick={() => applyDifficultyPreset(DIFFICULTY_PRESETS.hard)}
+                  onClick={() => applyDifficultyPreset("hard")}
                   className="px-4 py-2 rounded-full bg-white/10 text-slate-200 hover:bg-white/20 text-sm font-semibold transition-all"
                 >
                   🔥 Difficile
