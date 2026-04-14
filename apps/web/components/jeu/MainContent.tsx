@@ -86,10 +86,12 @@ export function MainContent({
   const entriesCR    = _activeStep?.entries.filter((e) => getDocumentType(e.poste) === "CR")    ?? [];
   const modeDouble   = entriesBilan.length > 0 && entriesCR.length > 0;
 
-  // Auto-switch vers l’onglet du dernier poste appliqué (uniquement en mode onglet simple)
+  // Auto-switch vers l’onglet du document impacté par l’écriture courante.
+  // Fonctionne aussi en modeDouble : on affiche TOUJOURS un seul document,
+  // et on bascule automatiquement sur le bon document pour chaque écriture.
   const appliedCount = _activeStep?.entries.filter(e => e.applied).length ?? 0;
   useEffect(() => {
-    if (!_activeStep || modeDouble) return; // en mode split, pas besoin de switcher
+    if (!_activeStep) return;
     const appliedEntries = _activeStep.entries.filter(e => e.applied);
     let poste: string | undefined;
     if (appliedEntries.length > 0) {
@@ -107,7 +109,7 @@ export function MainContent({
     setActiveTab(target);
     setTabVisibleState(target);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedCount, _activeStep?.titre, modeDouble]);
+  }, [appliedCount, _activeStep?.titre]);
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-slate-950">
@@ -153,9 +155,11 @@ export function MainContent({
           )}
         </div>
 
-        {/* Mini-aperçus d'impacts — visibles uniquement en modeDouble
-            En modeDouble : les deux panels sont affichés → les cartes sont des scroll anchors.
-            En mode simple : elles basculeraient vers l'onglet (mais ce cas n'arrive pas ici). */}
+        {/* Mini-aperçus d'impacts — visibles uniquement en modeDouble.
+            Le panneau central n'affiche qu'UN SEUL document à la fois (bascule auto
+            selon l'écriture courante). Les mini-cartes servent à :
+            1) voir d'un coup d'œil ce qui bouge dans l'autre document,
+            2) basculer manuellement d'un document à l'autre (override utilisateur). */}
         <AnimatePresence>
           {modeDouble && (
             <motion.div
@@ -171,19 +175,15 @@ export function MainContent({
                   accent="cyan"
                   label="📊 Bilan"
                   entries={entriesBilan}
-                  isScrollAnchor
-                  onClick={() =>
-                    document.getElementById("panel-bilan")?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }
+                  isCurrentTab={tabVisibleState === "bilan"}
+                  onClick={() => handleTabChange("bilan")}
                 />
                 <ImpactMiniCard
                   accent="violet"
                   label="📈 Compte de Résultat"
                   entries={entriesCR}
-                  isScrollAnchor
-                  onClick={() =>
-                    document.getElementById("panel-cr")?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }
+                  isCurrentTab={tabVisibleState === "cr"}
+                  onClick={() => handleTabChange("cr")}
                 />
               </div>
             </motion.div>
@@ -265,97 +265,45 @@ export function MainContent({
         </div>
       )}
 
-      {/* Scrollable content area */}
+      {/* Scrollable content area — UN SEUL document à la fois.
+          Quand l'écriture touche les deux documents, l'auto-switch bascule
+          automatiquement vers le bon document pour chaque entrée. */}
       <div className="flex-1 overflow-y-auto px-2 pb-6 pt-3 md:px-4">
-        {modeDouble ? (
-          /* ── MODE DUAL : les deux documents sont affichés simultanément ────────────
-             Layout : grille 1 col (mobile) → 3 col (desktop, Bilan=2/3, CR=1/3).
-             Chaque panel a un scroll interne propre sur desktop (max-h-[55vh]). */
-          <motion.div
-            key="dual"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-          >
-            {/* ── Bilan : 2/3 largeur desktop ────────────────────────────────── */}
-            <div
-              id="panel-bilan"
-              className="md:col-span-2 flex flex-col rounded-xl border border-cyan-500/20 overflow-hidden"
+        <AnimatePresence mode="wait">
+          {tabVisibleState === "bilan" && (
+            <motion.div
+              key="bilan"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
             >
-              <div className="flex-shrink-0 border-b border-cyan-500/10 bg-cyan-500/[0.04] px-3 py-2">
-                <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
-                  📊 Bilan — Actif &amp; Passif
-                </h4>
-              </div>
-              <div className="overflow-y-auto md:max-h-[55vh]">
-                <BilanPanel
-                  joueur={displayJoueur}
-                  highlightedPoste={_highlightedPoste}
-                  recentModifications={_recentModifications}
-                />
-              </div>
-            </div>
+              <BilanPanel
+                joueur={displayJoueur}
+                highlightedPoste={_highlightedPoste}
+                recentModifications={_recentModifications}
+              />
+            </motion.div>
+          )}
 
-            {/* ── Compte de Résultat : 1/3 largeur desktop ───────────────────── */}
-            <div
-              id="panel-cr"
-              className="md:col-span-1 flex flex-col rounded-xl border border-violet-500/20 overflow-hidden"
+          {tabVisibleState === "cr" && (
+            <motion.div
+              key="cr"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
             >
-              <div className="flex-shrink-0 border-b border-violet-500/10 bg-violet-500/[0.04] px-3 py-2">
-                <h4 className="text-xs font-bold text-violet-300 uppercase tracking-wider">
-                  📈 Compte de Résultat
-                </h4>
-              </div>
-              <div className="overflow-y-auto md:max-h-[55vh]">
-                <CompteResultatPanel
-                  joueur={displayJoueur}
-                  highlightedPoste={_highlightedPoste}
-                  recentModifications={_recentModifications}
-                  etapeTour={etapeTour}
-                  hasActiveStep={!!_activeStep}
-                />
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          /* ── MODE ONGLETS : affichage classique avec auto-switch ─────────── */
-          <AnimatePresence mode="wait">
-            {tabVisibleState === "bilan" && (
-              <motion.div
-                key="bilan"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                <BilanPanel
-                  joueur={displayJoueur}
-                  highlightedPoste={_highlightedPoste}
-                  recentModifications={_recentModifications}
-                />
-              </motion.div>
-            )}
-
-            {tabVisibleState === "cr" && (
-              <motion.div
-                key="cr"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                <CompteResultatPanel
-                  joueur={displayJoueur}
-                  highlightedPoste={_highlightedPoste}
-                  recentModifications={_recentModifications}
-                  etapeTour={etapeTour}
-                  hasActiveStep={!!_activeStep}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
+              <CompteResultatPanel
+                joueur={displayJoueur}
+                highlightedPoste={_highlightedPoste}
+                recentModifications={_recentModifications}
+                etapeTour={etapeTour}
+                hasActiveStep={!!_activeStep}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </main>
   );
@@ -368,9 +316,7 @@ interface ImpactMiniCardProps {
   accent: "cyan" | "violet";
   label: string;
   entries: Array<{ poste: string; delta: number; applied: boolean }>;
-  /** Mode scroll anchor : les deux panels sont affichés, la carte fait défiler vers le bon panel. */
-  isScrollAnchor?: boolean;
-  /** Mode onglet : la carte est l'onglet actif (affichage en lecture seule). */
+  /** True si ce document est actuellement affiché dans le panneau central. */
   isCurrentTab?: boolean;
   onClick: () => void;
 }
@@ -379,7 +325,6 @@ function ImpactMiniCard({
   accent,
   label,
   entries,
-  isScrollAnchor = false,
   isCurrentTab = false,
   onClick,
 }: ImpactMiniCardProps) {
@@ -393,22 +338,19 @@ function ImpactMiniCard({
 
   const labelClass = accent === "cyan" ? "text-cyan-300" : "text-violet-300";
 
-  // En mode scroll anchor : toujours cliquable, hint "↕ faire défiler"
-  // En mode onglet : désactivé si déjà visible, hint "affiché ci-dessous"
-  const isDisabled = !isScrollAnchor && isCurrentTab;
-  const hint = isScrollAnchor
-    ? <span className="text-[9px] text-slate-500 italic">↕ faire défiler</span>
-    : isCurrentTab
-      ? <span className="text-[9px] text-slate-400 italic">affiché ci-dessous</span>
-      : <span className="text-[9px] text-slate-500 italic">cliquer pour voir →</span>;
+  // Onglet actif = affiché dans le panneau central → indicateur visuel, non désactivé
+  // (le bouton reste cliquable pour relancer une navigation si besoin).
+  const hint = isCurrentTab
+    ? <span className="text-[9px] text-emerald-400 italic">● affiché</span>
+    : <span className="text-[9px] text-slate-500 italic">cliquer pour voir →</span>;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={isDisabled}
-      aria-label={`${isScrollAnchor ? "Faire défiler vers" : "Voir"} ${label}`}
-      className={`w-full text-left rounded-xl border p-2.5 transition-colors ${borderClass} ${isDisabled ? "cursor-default opacity-70" : "cursor-pointer"}`}
+      aria-label={`Voir ${label}`}
+      aria-pressed={isCurrentTab}
+      className={`w-full text-left rounded-xl border p-2.5 transition-colors ${borderClass} ${isCurrentTab ? "ring-2 ring-offset-2 ring-offset-slate-950 " + (accent === "cyan" ? "ring-cyan-400/60" : "ring-violet-400/60") : ""} cursor-pointer`}
     >
       <div className="flex items-center justify-between mb-1.5">
         <p className={`text-[10px] font-bold uppercase tracking-wider ${labelClass}`}>

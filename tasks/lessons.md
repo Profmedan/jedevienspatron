@@ -307,3 +307,12 @@ useGameFlow (orchestrateur)
 ## L37 — 2026-04-13 : CarteDecision.categorie (pas .type) pour filtrer commerciaux
 **Erreur** : dans `buildTrimSnapshot()`, filtrage `c.type === "commercial"` → erreur TS2367 car `CarteDecision.type` est littéralement `"decision"`. Les commerciaux sont identifiés par `c.categorie === "commercial"`.
 **Règle** : toujours vérifier le type TS de la propriété discriminante avant de filtrer. `type` et `categorie` sont deux champs distincts sur les interfaces de cartes — `type` discrimine le KIND de carte (`"decision"`, `"commercial"`, `"client"`, `"evenement"`), `categorie` discrimine la CATÉGORIE fonctionnelle au sein des `CarteDecision`.
+
+## L38 — 2026-04-14 : Panneau central UN SEUL document — auto-switch obligatoire en modeDouble
+**Contexte** : quand une écriture comptable touche à la fois le Bilan ET le Compte de Résultat (ex. achat immobilisation avec TVA), la tentation est d'afficher les deux documents en grille (2/3 + 1/3). C'est illisible sur fenêtre non-maximisée : les deux panneaux se chevauchent, le joueur ne comprend pas ce qu'il voit.
+**Règle** : le panneau central n'affiche JAMAIS deux documents simultanément. Il affiche toujours UN SEUL document (Bilan OU CR). Quand une opération touche les deux :
+1. L'auto-switch `useEffect` bascule automatiquement vers le document de l'écriture courante (dernier poste appliqué, sinon premier poste en attente).
+2. Les mini-cartes sous la barre d'onglets montrent les impacts sur CHAQUE document (résumé condensé des 3 premières entrées + delta €) et servent d'override manuel pour basculer d'onglet.
+3. Le badge visuel "● affiché" (vert) marque la mini-carte correspondant au document visible ; un pastille colorée sur l'autre onglet signale l'impact non-affiché.
+**Anti-règle** : ne JAMAIS réintroduire un layout `grid md:grid-cols-3` avec `BilanPanel` + `CompteResultatPanel` côte à côte dans `MainContent.tsx`. Le cas ayant été tranché par l'utilisateur, c'est une décision UX définitive.
+**Fichier concerné** : `apps/web/components/jeu/MainContent.tsx` — useEffect lignes ~90-110 (sans guard `modeDouble`), AnimatePresence `mode="wait"` unique, mini-cartes avec `isCurrentTab` + `handleTabChange`.
