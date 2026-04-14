@@ -354,3 +354,22 @@ Deux stratégies V2 envisagées :
 - `apps/web/components/jeu/JournalReplay.tsx` : modale plein écran avec timeline (gauche) + détail Bilan/CR + écritures + principe (droite).
 - `apps/web/components/jeu/HeaderJeu.tsx` : bouton `⏮ Revoir` avec état désactivé.
 - `apps/web/app/jeu/page.tsx` : state `showReplay` + `useEffect` raccourci Backspace avec guard input/textarea.
+
+## L41 — 2026-04-14 : Double-comptage passifs — template stale vs champs directs bilan
+**Problème** : Total Passif affiché dans le panneau droit (Indicateurs) ≠ Total Passif dans le panneau central (Bilan), malgré le même objet `joueur`. Le badge "Bilan équilibré" s'affichait en faux positif.
+
+**Cause racine** : `joueur.bilan.passifs[]` contient une entrée héritée du template initial avec `categorie: "dettes"` (ex. "Dettes fournisseurs: 2000"). Le moteur de jeu n'écrit JAMAIS dans cette entrée — il écrit dans les champs directs `bilan.dettes`, `bilan.dettesD2`, `bilan.dettesFiscales`. L'entrée restait donc à la valeur initiale du template (stale). `getTotalPassif()` faisait un `passifs.reduce()` sans filtre → double-comptage.
+
+**3 implémentations divergentes** existaient :
+1. `getTotalPassif()` — reduce ALL passifs + champs dettes séparés → **trop grand** (double-compte)
+2. `calculerIndicateurs()` — filtre "capitaux" + "emprunts" + champs dettes → **correct**
+3. `verifierEquilibre()` — sa propre formule → **encore différente**
+
+**Fix** :
+1. `getTotalPassif()` → filtre `p.categorie !== "dettes"` avant reduce (exclut les stales)
+2. `verifierEquilibre()` → utilise `getTotalPassif()` directement (source unique)
+3. `calculerIndicateurs()` → `totalPassif = getTotalPassif(joueur)` (source unique)
+
+**Règle** : tout calcul de total dans un modèle métier doit avoir **une seule fonction source de vérité**. Ne jamais dupliquer la formule de total dans plusieurs endroits. Si une structure de données a des champs "directs" (ex. `bilan.dettes`) ET des entrées dans un tableau (ex. `passifs[]`) représentant la même notion, l'un des deux est stale — il faut explicitement choisir lequel fait foi et documenter pourquoi (commentaire dans le code).
+
+**Fichier concerné** : `packages/game-engine/src/calculators.ts` — fonctions `getTotalPassif`, `verifierEquilibre`, `calculerIndicateurs`.
