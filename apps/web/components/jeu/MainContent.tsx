@@ -114,43 +114,48 @@ export function MainContent({
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-slate-950">
-      {/* Tab bar — masquée en mode split (les deux docs sont déjà visibles) */}
+      {/* Tab bar — toujours des onglets cliquables, même en modeDouble */}
       <div className="flex-shrink-0 border-b border-white/10 bg-slate-950 px-4 py-3">
-        {modeDouble ? (
-          /* Bandeau indicateur en mode split */
-          <div className="flex items-center gap-2">
-            <span className="rounded-2xl bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-300 tracking-wide">
-              📊 Bilan
-            </span>
-            <span className="text-slate-600 text-xs">+</span>
-            <span className="rounded-2xl bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-300 tracking-wide">
-              📈 Compte de Résultat
-            </span>
-            <span className="ml-2 text-xs text-slate-500 italic">— affichés ensemble (cette opération touche les deux documents)</span>
-          </div>
-        ) : (
-          <div className="flex gap-2" role="tablist">
-            {[
-              ["bilan", "Bilan"],
-              ["cr", "Compte de Résultat"],
-            ].map(([tab, label]) => (
+        <div className="flex flex-wrap items-center gap-2" role="tablist">
+          {[
+            { tab: "bilan" as TabType, label: "Bilan",              accent: "cyan"   },
+            { tab: "cr"    as TabType, label: "Compte de Résultat", accent: "violet" },
+          ].map(({ tab, label, accent }) => {
+            const isActive   = tabVisibleState === tab;
+            const isTouched  = modeDouble; // les deux docs sont concernés par l'étape
+            return (
               <button
                 key={tab}
                 type="button"
                 role="tab"
-                aria-selected={tabVisibleState === tab}
-                onClick={() => handleTabChange(tab as TabType)}
-                className={`rounded-2xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 ${
-                  tabVisibleState === tab
-                    ? "bg-cyan-500 text-white"
+                aria-selected={isActive}
+                onClick={() => handleTabChange(tab)}
+                className={`relative rounded-2xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 ${
+                  isActive
+                    ? accent === "cyan"
+                      ? "bg-cyan-500 text-white"
+                      : "bg-violet-500 text-white"
                     : "bg-white/[0.04] text-slate-300 hover:bg-white/[0.07]"
                 }`}
               >
                 {label}
+                {/* Point indicateur : ce document est touché par l'étape en cours */}
+                {isTouched && !isActive && (
+                  <span
+                    className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full border-2 border-slate-950 ${
+                      accent === "cyan" ? "bg-cyan-400" : "bg-violet-400"
+                    }`}
+                  />
+                )}
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+          {modeDouble && (
+            <span className="ml-1 text-xs text-slate-500 italic">
+              — cette opération touche les deux documents
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ─── Étape 6a — Sélection recrutement (flux classique) ─────────── */}
@@ -227,38 +232,33 @@ export function MainContent({
         </div>
       )}
 
-      {/* Scrollable content area */}
+      {/* Scrollable content area — toujours en mode onglets, jamais en split */}
       <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4">
-        {modeDouble ? (
-          /* ── MODE SPLIT : Bilan + CR côte à côte ──────────────────────────────
-             Affiché quand l'étape active touche les deux documents comptables.
-             L'apprenant voit simultanément l'impact sur chaque document au fur
-             et à mesure qu'il applique ses écritures. */
-          <div className="flex flex-col gap-4 xl:flex-row xl:gap-6">
-            {/* Bilan (côté gauche en xl, en haut sur mobile) */}
-            <div className="flex-1 min-w-0">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-cyan-300">
-                  📊 Bilan
-                </span>
-              </div>
+        <AnimatePresence mode="wait">
+          {tabVisibleState === "bilan" && (
+            <motion.div
+              key="bilan"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
+            >
               <BilanPanel
                 joueur={displayJoueur}
                 highlightedPoste={_highlightedPoste}
                 recentModifications={_recentModifications}
               />
-            </div>
+            </motion.div>
+          )}
 
-            {/* Séparateur visible en xl */}
-            <div className="hidden xl:block w-px bg-white/10 self-stretch" />
-
-            {/* Compte de Résultat (côté droit en xl, en bas sur mobile) */}
-            <div className="flex-1 min-w-0">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-violet-300">
-                  📈 Compte de Résultat
-                </span>
-              </div>
+          {tabVisibleState === "cr" && (
+            <motion.div
+              key="cr"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
+            >
               <CompteResultatPanel
                 joueur={displayJoueur}
                 highlightedPoste={_highlightedPoste}
@@ -266,42 +266,9 @@ export function MainContent({
                 etapeTour={etapeTour}
                 hasActiveStep={!!_activeStep}
               />
-            </div>
-          </div>
-        ) : (
-          /* ── MODE ONGLETS : affichage classique avec auto-switch ─────────── */
-          <AnimatePresence mode="wait">
-            {tabVisibleState === "bilan" && (
-              <motion.div
-                key="bilan"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                <BilanPanel joueur={displayJoueur} highlightedPoste={_highlightedPoste} recentModifications={_recentModifications} />
-              </motion.div>
-            )}
-
-            {tabVisibleState === "cr" && (
-              <motion.div
-                key="cr"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                <CompteResultatPanel
-                  joueur={displayJoueur}
-                  highlightedPoste={_highlightedPoste}
-                  recentModifications={_recentModifications}
-                  etapeTour={etapeTour}
-                  hasActiveStep={!!_activeStep}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </main>
   );
