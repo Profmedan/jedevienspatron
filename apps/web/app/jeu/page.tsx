@@ -54,6 +54,15 @@ export default function JeuPage() {
   // Synchroniser la ref snapshots avec l'état du flow (pour persistence)
   snapshotsRef.current = flow.snapshots;
 
+  // ── Restauration depuis localStorage (si save trouvée au montage) ──────
+  useEffect(() => {
+    if (persistence.restoredGame) {
+      setPhase(persistence.restoredGame.phase);
+      setEtat(persistence.restoredGame.etat);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistence.restoredGame]);
+
   // ── Mode relecture (read-only replay) ──────────────────────────────
   const [showReplay, setShowReplay] = useState(false);
 
@@ -77,6 +86,56 @@ export default function JeuPage() {
   }, [phase, flow.journal.length]);
 
   // ─── EARLY RETURNS ──────────────────────────────────────────────────────────
+
+  // Attendre la fin de l'initialisation localStorage/serveur avant d'afficher
+  // quoi que ce soit (évite le flash de l'écran setup si une save est en cours de restauration)
+  if (!persistence.persistenceReady) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="flex flex-col items-center gap-4">
+        <div className="text-4xl animate-pulse">🎮</div>
+        <p className="text-gray-400 text-sm">Chargement…</p>
+      </div>
+    </div>
+  );
+
+  // Session terminée côté serveur (status = finished) → l'apprenant ne peut plus rejouer
+  if (persistence.sessionBlocked === "finished") return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-6 p-8 text-center">
+      <div className="text-6xl">🔒</div>
+      <h2 className="text-2xl font-bold text-white">Session terminée</h2>
+      <p className="text-gray-400 max-w-sm">
+        Cette session de jeu est déjà terminée. Chaque code ne permet qu&apos;une seule partie.
+        Contactez votre formateur pour obtenir un nouveau code.
+      </p>
+      <Link
+        href="/"
+        className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-xl transition-colors"
+      >
+        ← Retour à l&apos;accueil
+      </Link>
+    </div>
+  );
+
+  // Session déjà en cours (status = playing) sans sauvegarde locale disponible
+  if (persistence.sessionBlocked === "playing") return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-6 p-8 text-center">
+      <div className="text-6xl">⚠️</div>
+      <h2 className="text-2xl font-bold text-white">Session déjà en cours</h2>
+      <p className="text-gray-400 max-w-sm">
+        Cette partie est déjà démarrée. Si vous avez fermé cette fenêtre accidentellement,
+        rechargez la page pour tenter de restaurer votre progression.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-xl transition-colors"
+      >
+        🔄 Recharger la page
+      </button>
+      <Link href="/" className="text-gray-500 hover:text-gray-300 text-sm underline transition-colors">
+        ← Retour à l&apos;accueil
+      </Link>
+    </div>
+  );
 
   if (persistence.soloLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-6">

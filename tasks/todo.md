@@ -711,3 +711,38 @@ Pierre signale deux soucis dans le moteur de jeu :
 - [ ] Test flux bypass code (TEST0001 → jouer → code épuisé)
 - [ ] DNS jedevienspatron.fr propagé et ✅ sur Vercel
 - [ ] Stripe webhook URL → jedevienspatron.fr
+
+---
+
+## Tâche 23 : Session security + localStorage persistence — 2026-04-14 ✅
+
+### Contexte
+Pierre a corrigé le business model : 1 crédit = 1 code = 1 apprenant = 1 partie unique.
+Deux besoins : (A) empêcher un apprenant de rejouer après refresh (sécurité serveur), (B) restaurer la partie après un refresh accidentel (localStorage).
+
+### Implémentation
+
+**Route API (A)** :
+- [x] `POST /api/sessions/[code]/start` : `waiting→playing` (200), déjà `playing` (208), `finished` (403)
+- [x] `PATCH /api/sessions/[code]/start` : marque `finished` + `finished_at` en fin de partie
+- [x] Guard atomique `.eq("status", "waiting")` sur l'update pour éviter race conditions
+
+**Hook useGamePersistence (A+B)** :
+- [x] `SavedGame { version, savedAt, roomCode, phase, etat }` avec TTL 24h + versioning
+- [x] Effect 1 : init — local save → restore | pas de save → POST /start → handle 200/208/403
+- [x] Effect 2 : sauvegarde continue pendant `playing`/`intro`
+- [x] Effect 3 : gameover → clearSave + PATCH /start + remove pending key
+- [x] `persistenceReady` exporté pour spinner dans page.tsx
+- [x] `restoredGame` exporté (consommé via useEffect dans page.tsx)
+- [x] `sessionBlocked` exporté pour écrans d'erreur
+- [x] Solo : KEY_SOLO_PENDING pour retrouver le roomCode après refresh sans URL param
+
+**page.tsx** :
+- [x] Spinner tant que `!persistenceReady` (évite flash setup)
+- [x] Écran "Session terminée 🔒" si `sessionBlocked === "finished"`
+- [x] Écran "Session déjà en cours ⚠️" si `sessionBlocked === "playing"`
+- [x] `useEffect` sur `persistence.restoredGame` → `setPhase` + `setEtat`
+
+**TypeScript** :
+- [x] apps/web : 0 erreur
+- [x] game-engine : 0 erreur

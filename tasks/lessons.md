@@ -373,3 +373,36 @@ Deux stratégies V2 envisagées :
 **Règle** : tout calcul de total dans un modèle métier doit avoir **une seule fonction source de vérité**. Ne jamais dupliquer la formule de total dans plusieurs endroits. Si une structure de données a des champs "directs" (ex. `bilan.dettes`) ET des entrées dans un tableau (ex. `passifs[]`) représentant la même notion, l'un des deux est stale — il faut explicitement choisir lequel fait foi et documenter pourquoi (commentaire dans le code).
 
 **Fichier concerné** : `packages/game-engine/src/calculators.ts` — fonctions `getTotalPassif`, `verifierEquilibre`, `calculerIndicateurs`.
+
+## L42 — 2026-04-14 : Persistence localStorage + sécurité session (1 code = 1 partie)
+
+### Contexte
+Business model corrigé : 1 crédit = 1 code unique = 1 apprenant = 1 partie. Un refresh de page ne doit pas permettre de recommencer.
+
+### Architecture retenue
+
+**Persistence localStorage** :
+- `SavedGame { version, savedAt, roomCode, phase, etat }` avec TTL 24h et version invalidation
+- Clés : `jdp_game_room_${code}` (apprenant), `jdp_game_solo_${code}` (formateur), `jdp_solo_pending_code` (code solo entre createSession et handleStart)
+- Écrit à chaque changement d'`etat` pendant `playing`/`intro`
+- Nettoyé en `gameover` côté localStorage + PATCH `/api/sessions/[code]/start` côté DB
+
+**Sécurité session (route POST /api/sessions/[code]/start)** :
+- `waiting → playing` (200) : première fois, atomic update avec `.eq("status", "waiting")` guard
+- `playing` (208) : refresh probable → attendre restauration localStorage
+- `finished` (403) : partie terminée, blocage définitif
+- Fail-open sur erreur réseau (pour ne pas bloquer un cours)
+
+**Initialisation dans `useGamePersistence`** :
+- `persistenceReady` : booléen exporté, true seulement après la fin de l'Effect 1 (localStorage lu + éventuel fetch répondu)
+- `restoredGame` : exporté, consommé par `useEffect` dans `page.tsx` pour setter `phase` et `etat`
+- `sessionBlocked` : exporté, déclenche des écrans d'erreur dédiés dans `page.tsx`
+
+**Règle spinner** : ne jamais afficher l'écran de setup tant que `persistenceReady === false` — évite le flash de "setup → jeu" lors d'une restauration.
+
+**Règle solo refresh** : stocker le roomCode dans `localStorage.setItem("jdp_solo_pending_code", code)` après `createSoloSession()`, car il n'y a pas de code dans l'URL en mode solo.
+
+### Fichiers modifiés
+- `apps/web/app/jeu/hooks/useGamePersistence.ts` — complet rewrite
+- `apps/web/app/api/sessions/[code]/start/route.ts` — nouveau (POST + PATCH)
+- `apps/web/app/jeu/page.tsx` — useEffect restauration + écrans blocked/loading
