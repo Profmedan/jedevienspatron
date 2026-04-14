@@ -1,5 +1,5 @@
 "use client";
-import { Joueur, DECOUVERT_MAX, getTotalActif, getTotalPassif, getResultatNet } from "@jedevienspatron/game-engine";
+import { Joueur, DECOUVERT_MAX, REMBOURSEMENT_EMPRUNT_PAR_TOUR, getTotalActif, getTotalPassif, getResultatNet } from "@jedevienspatron/game-engine";
 import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
 import { useState, useRef, useEffect } from "react";
 
@@ -263,14 +263,14 @@ function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; tot
   // Construire l’analyse
   const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
 
-  if (tresoNette < 0) points.push({ niveau: "rouge", texte: `Trésorerie nette négative (${tresoNette}) — risque de faillite si découvert > ${DECOUVERT_MAX}.` });
-  else if (tresoNette < 3) points.push({ niveau: "jaune", texte: `Trésorerie faible (${tresoNette}) — préservez vos liquidités ce trimestre.` });
-  else points.push({ niveau: "vert", texte: `Trésorerie saine (${tresoNette}) — vous pouvez envisager un investissement.` });
+  if (tresoNette < 0) points.push({ niveau: "rouge", texte: `Trésorerie nette négative (${tresoNette.toLocaleString("fr-FR")} €) — risque de faillite si le découvert dépasse ${DECOUVERT_MAX.toLocaleString("fr-FR")} €.` });
+  else if (tresoNette < 3000) points.push({ niveau: "jaune", texte: `Trésorerie faible (${tresoNette.toLocaleString("fr-FR")} €) — préservez vos liquidités ce trimestre.` });
+  else points.push({ niveau: "vert", texte: `Trésorerie saine (${tresoNette.toLocaleString("fr-FR")} €) — vous pouvez envisager un investissement.` });
 
-  if (emprunts > capitaux) points.push({ niveau: "rouge", texte: `Vos emprunts (${emprunts}) dépassent vos capitaux propres (${capitaux}) — endettement excessif.` });
-  else if (emprunts > 0) points.push({ niveau: "jaune", texte: `Emprunts en cours (${emprunts}) — chaque trimestre −1 de remboursement automatique.` });
+  if (emprunts > capitaux) points.push({ niveau: "rouge", texte: `Vos emprunts (${emprunts.toLocaleString("fr-FR")} €) dépassent vos capitaux propres (${capitaux.toLocaleString("fr-FR")} €) — endettement excessif.` });
+  else if (emprunts > 0) points.push({ niveau: "jaune", texte: `Emprunts en cours (${emprunts.toLocaleString("fr-FR")} €) — remboursement automatique de ${REMBOURSEMENT_EMPRUNT_PAR_TOUR.toLocaleString("fr-FR")} € chaque trimestre.` });
 
-  if (stocks > 5) points.push({ niveau: "jaune", texte: `Stocks élevés (${stocks}) — immobilisation de trésorerie. Vendez avant d’acheter davantage.` });
+  if (stocks > 5000) points.push({ niveau: "jaune", texte: `Stocks élevés (${stocks.toLocaleString("fr-FR")} €) — immobilisation de trésorerie. Vendez avant d’acheter davantage.` });
 
   const colors = {
     rouge: "text-red-600 bg-red-50 border-red-200",
