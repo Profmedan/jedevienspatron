@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useReducer } from "react";
 import {
-  EtatJeu, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate,
+  EtatJeu, Joueur, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
@@ -34,6 +34,12 @@ export interface JournalEntry {
   titre: string;
   entries: Array<{ poste: string; delta: number; applied?: boolean }>;
   principe: string;
+  /**
+   * Snapshot deep-cloné du joueur APRÈS application complète de cette étape.
+   * Permet d'afficher un Bilan/CR fidèle à la réalité historique en mode
+   * relecture (read-only). Cf. L40.
+   */
+  joueurSnapshot: Joueur;
 }
 
 // Re-export pour rétrocompatibilité (page.tsx importe ETAPE_INFO depuis ici)
@@ -196,6 +202,9 @@ export function useGameFlow({
   // ─ Journal ────────────────────────────────────────────────────────────────
   function addToJournal(e: EtatJeu, entries: ActiveStep["entries"], etape: number) {
     const info = ETAPE_INFO[etape];
+    // Snapshot deep-cloné du joueur au moment où l'étape est validée —
+    // indispensable au mode relecture read-only (L40).
+    const joueurSnapshot: Joueur = structuredClone(e.joueurs[e.joueurActif]);
     setJournal(prev => [{
       id: prev.length + 1,
       tour: e.tourActuel,
@@ -204,6 +213,7 @@ export function useGameFlow({
       titre: info?.titre ?? `Étape ${etape}`,
       entries,
       principe: info?.principe ?? "",
+      joueurSnapshot,
     }, ...prev.slice(0, 29)]);
   }
 

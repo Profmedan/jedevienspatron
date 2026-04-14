@@ -10,6 +10,10 @@ interface HeaderJeuProps {
   nbToursMax: number;
   etapeTour: number;
   etapeTitle: string;
+  /** Callback d'ouverture du mode relecture (undefined = bouton masqué) */
+  onOpenReplay?: () => void;
+  /** Vrai si le journal contient au moins une étape → bouton actif */
+  canReplay?: boolean;
 }
 
 export function HeaderJeu({
@@ -19,6 +23,8 @@ export function HeaderJeu({
   nbToursMax,
   etapeTour,
   etapeTitle,
+  onOpenReplay,
+  canReplay,
 }: HeaderJeuProps) {
   const joueurActif = joueurs[joueurActifIdx];
 
@@ -39,6 +45,22 @@ export function HeaderJeu({
             <p className="truncate text-sm font-semibold text-white">{etapeTitle}</p>
           </div>
         </div>
+
+        {onOpenReplay && (
+          <button
+            type="button"
+            onClick={onOpenReplay}
+            disabled={!canReplay}
+            title={canReplay ? "Revoir les étapes passées (Retour arrière)" : "Aucune étape à relire pour l'instant"}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              canReplay
+                ? "border-violet-400/30 bg-violet-400/10 text-violet-100 hover:bg-violet-400/20"
+                : "border-white/5 bg-white/5 text-slate-500 cursor-not-allowed"
+            }`}
+          >
+            <span>⏮ Revoir</span>
+          </button>
+        )}
 
         <div className="order-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-center sm:px-4 sm:py-2">
           <div className="text-[11px] font-semibold text-cyan-100 sm:hidden">

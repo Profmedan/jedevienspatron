@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -10,7 +10,7 @@ import {
 import {
   HeaderJeu, LeftPanel, MainContent,
   OverlayTransition, OverlayFaillite,
-  SetupScreen, CompanyIntro,
+  SetupScreen, CompanyIntro, JournalReplay,
 } from "@/components/jeu";
 import { ImpactFlash } from "@/components/ImpactFlash";
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
@@ -53,6 +53,28 @@ export default function JeuPage() {
 
   // Synchroniser la ref snapshots avec l'état du flow (pour persistence)
   snapshotsRef.current = flow.snapshots;
+
+  // ── Mode relecture (read-only replay) ──────────────────────────────
+  const [showReplay, setShowReplay] = useState(false);
+
+  // Raccourci clavier : Backspace ouvre le replay (si phase = playing et
+  // qu'on n'est pas en train de taper dans un champ de saisie).
+  useEffect(() => {
+    if (phase !== "playing") return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Backspace") return;
+      const tgt = e.target as HTMLElement | null;
+      if (tgt) {
+        const tag = tgt.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tgt.isContentEditable) return;
+      }
+      if (flow.journal.length === 0) return;
+      e.preventDefault();
+      setShowReplay(true);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, flow.journal.length]);
 
   // ─── EARLY RETURNS ──────────────────────────────────────────────────────────
 
@@ -296,7 +318,17 @@ export default function JeuPage() {
         nbToursMax={etat.nbToursMax}
         etapeTour={etat.etapeTour}
         etapeTitle={etapeInfo?.titre ?? ""}
+        onOpenReplay={() => setShowReplay(true)}
+        canReplay={flow.journal.length > 0}
       />
+
+      {/* ─── MODE RELECTURE (read-only) ─── */}
+      {showReplay && (
+        <JournalReplay
+          journal={flow.journal}
+          onClose={() => setShowReplay(false)}
+        />
+      )}
 
       {/* ─── ALERTE DÉCOUVERT BANCAIRE ─── */}
       <div className="px-4 py-2 sm:px-6">

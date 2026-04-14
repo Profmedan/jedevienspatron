@@ -12,6 +12,7 @@ export { OverlayTransition } from "./OverlayTransition";
 export { OverlayFaillite } from "./OverlayFaillite";
 export { SetupScreen, type PlayerSetup } from "./SetupScreen";
 export { CompanyIntro } from "./CompanyIntro";
+export { JournalReplay } from "./JournalReplay";
 export { default as ModalEtape } from "./ModalEtape";
 export { default as QCMEtape } from "./QCMEtape";
 

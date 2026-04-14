@@ -2,6 +2,39 @@
 
 ---
 
+## Tâche 22 : Mode relecture par étape (read-only replay) — 2026-04-14 🚧
+
+### Contexte
+Pendant une partie, l'apprenant peut vouloir revenir sur une écriture passée qu'il n'a pas bien comprise, sans pour autant pouvoir la modifier (principe comptable : on ne corrige pas rétroactivement le passé, on l'analyse). Aujourd'hui, le journal existe (30 dernières étapes) mais n'affiche pas le Bilan/CR reconstitué du moment. Pierre veut un mode relecture **read-only** avec Bilan/CR fidèles à la réalité de l'époque.
+
+### Décisions Pierre
+- **V2** (snapshots complets) retenu plutôt que V1 (simple résumé écritures) → besoin de chiffres fiables pour la formation.
+- **Granularité par étape** (pas par écriture) → respecte le principe de partie double (Actif = Passif à la fin d'une étape complète, jamais entre deux écritures d'une même étape).
+- Raccourci clavier **Backspace** + bouton **⏮ Revoir** dans le header.
+- Bandeau pédagogique rouge : "En gestion d'entreprise, on ne peut pas annuler ni modifier les actions du passé…"
+
+### Architecture
+- Chaque `JournalEntry` embarque un `joueurSnapshot: Joueur` (deep-clone via `structuredClone`) pris **après** application complète de l'étape.
+- Composant `JournalReplay.tsx` : modale plein écran avec timeline à gauche (groupée par trimestre → étapes) et panneau détail à droite.
+- Panneau détail : Bilan/CR APRÈS cette étape + liste des écritures (postes + deltas) + principe pédagogique.
+- Bouton "Reprendre la partie" (vert) en bas à droite + `Escape` pour fermer.
+
+### Fichiers à modifier
+- [ ] `apps/web/app/jeu/hooks/useGameFlow.ts` — enrichir `JournalEntry` + capture snapshot dans `confirmActiveStep`
+- [ ] `apps/web/components/jeu/JournalReplay.tsx` — nouveau composant
+- [ ] `apps/web/components/jeu/HeaderJeu.tsx` — bouton ⏮ Revoir
+- [ ] `apps/web/app/jeu/page.tsx` — state `showReplay` + raccourci Backspace
+- [ ] `apps/web/components/jeu/index.ts` — export
+- [ ] `tasks/lessons.md` — L40 (replay pattern via snapshots deep-clone)
+
+### Validation
+- [ ] `npx tsc --noEmit` → 0 erreur
+- [ ] Journal vide → bouton désactivé
+- [ ] Backspace ignoré si focus dans input/textarea
+- [ ] Chiffres affichés cohérents avec la réalité du moment historique
+
+---
+
 ## Tâche 21 : SetupScreen refondu en wizard séquentiel — 2026-04-14 🚧
 
 ### Contexte

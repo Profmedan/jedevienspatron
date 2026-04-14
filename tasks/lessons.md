@@ -328,3 +328,29 @@ useGameFlow (orchestrateur)
 3. Le badge visuel "● affiché" (vert) marque la mini-carte correspondant au document visible ; un pastille colorée sur l'autre onglet signale l'impact non-affiché.
 **Anti-règle** : ne JAMAIS réintroduire un layout `grid md:grid-cols-3` avec `BilanPanel` + `CompteResultatPanel` côte à côte dans `MainContent.tsx`. Le cas ayant été tranché par l'utilisateur, c'est une décision UX définitive.
 **Fichier concerné** : `apps/web/components/jeu/MainContent.tsx` — useEffect lignes ~90-110 (sans guard `modeDouble`), AnimatePresence `mode="wait"` unique, mini-cartes avec `isCurrentTab` + `handleTabChange`.
+
+## L40 — 2026-04-14 : Mode relecture pédagogique = snapshots deep-clone par étape, jamais de re-simulation
+**Contexte** : Pierre souhaitait que l'apprenant puisse revenir sur une écriture passée pour la comprendre, sans pouvoir la modifier (principe comptable : on ne corrige pas rétroactivement le passé, on l'analyse). Deux approches possibles :
+- **V1** : afficher juste le résumé écritures → insuffisant en formation (les chiffres du Bilan/CR du moment ne sont pas visibles).
+- **V2** : reconstituer Bilan/CR fidèles du moment → besoin de données exactes.
+
+Deux stratégies V2 envisagées :
+- **A** : à chaque étape validée, deep-cloner le `Joueur` (`structuredClone`) et le stocker dans `JournalEntry.joueurSnapshot`.
+- **B** : rejouer le journal depuis l'état initial → danger de divergence si les règles changent entre versions.
+
+**Choix retenu** : A (snapshot). ~1 Mo max en RAM pour 30 étapes × 2–4 joueurs, zéro risque de divergence, lecture O(1).
+
+**Granularité** : par **étape**, pas par écriture. Raisonnement pédagogique : le principe de partie double impose que `Actif = Passif` SEULEMENT à la fin d'une opération complète (une étape). Entre deux écritures d'une même étape, le bilan est volontairement déséquilibré. Afficher cet état intermédiaire à un apprenant lui ferait croire à un bug comptable. L'étape est donc l'unité pédagogique indivisible.
+
+**Règle** :
+1. Pour tout mode relecture / historique pédagogique : stocker un snapshot deep-cloné (`structuredClone`) de l'entité métier (Joueur, Compte…) au moment où l'opération est **complète et équilibrée**. Jamais au milieu d'une transaction.
+2. Ne jamais rejouer l'historique depuis un état de départ — les règles du moteur peuvent évoluer entre deux versions et casser silencieusement les données historiques.
+3. La modale replay est **fullscreen + read-only** : bandeau rouge explicitant l'impossibilité de modifier le passé, bouton vert "Reprendre la partie" en bas à droite, raccourci `Échap` pour fermer.
+4. Raccourci clavier (`Backspace`) pour ouvrir : **toujours guarder** avec un test sur `tagName === "INPUT" | "TEXTAREA"` ou `isContentEditable`, sinon on casse la saisie dans les formulaires.
+5. Le bouton d'ouverture doit être **désactivé** tant que le journal est vide (`journal.length === 0`) — éviter une modale creuse qui déroute l'apprenant.
+
+**Fichiers concernés** :
+- `apps/web/app/jeu/hooks/useGameFlow.ts` : `JournalEntry.joueurSnapshot: Joueur`, capture via `structuredClone` dans `addToJournal`.
+- `apps/web/components/jeu/JournalReplay.tsx` : modale plein écran avec timeline (gauche) + détail Bilan/CR + écritures + principe (droite).
+- `apps/web/components/jeu/HeaderJeu.tsx` : bouton `⏮ Revoir` avec état désactivé.
+- `apps/web/app/jeu/page.tsx` : state `showReplay` + `useEffect` raccourci Backspace avec guard input/textarea.
