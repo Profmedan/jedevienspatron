@@ -1,4 +1,238 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-14
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-18
+
+---
+
+## Tâche 24 : Défis du dirigeant X — couche d'orchestration de partie — 2026-04-18 🚧
+
+### Statut
+Couche d'orchestration **centrale** (pas une feature secondaire). Architecture arrêtée le 2026-04-18. 4 points bloquants tranchés. Vague 1 prête à démarrer.
+
+### Contexte
+Le cycle de 9 étapes (vérifié `packages/game-engine/src/engine.ts:313`, `apps/web/app/jeu/hooks/gameFlowUtils.ts:33-90`) est strictement identique à chaque trimestre. Dès T3, l'apprenant a vu tout le cycle deux fois → risque de lassitude confirmé.
+
+Stratégie retenue : **couche d'orchestration** "Défi du dirigeant [Pseudo]" qui introduit dramaturgie et rupture de rythme, via des slots dramaturgiques attachés au pipeline existant.
+
+### Framework (6 éléments par défi)
+1. Contexte narratif (personnalisé via `formatContexte`)
+2. Choix (1 à 3 options)
+3. Conséquence immédiate
+4. Conséquence différée (obligatoire pour ≥ 50% des défis)
+5. Concept comptable ciblé (débrief pédagogique)
+6. Résolution en fin de trimestre ou d'exercice
+
+### Slots dramaturgiques — un défi s'attache à un slot explicite
+
+**Règle fondamentale** : on ne force pas tous les défis au même endroit du pipeline. Un défi BFR n'a pas le même moment naturel qu'une clôture ou qu'un départ de commercial.
+
+| Slot | Rôle | Défis attendus |
+|---|---|---|
+| `debut_tour` | Météo, arc différé, tension annoncée | Événements externes, retours de conséquences différées |
+| `apres_ventes` | Capacité, stock, BFR, clients perdus | Défis flux opérationnel |
+| `avant_decision` | Arbitrage de dirigeant | Paliers stratégiques, choix structurants |
+| `avant_bilan` | Conséquence immédiate, défi court | Défis secondaires rapides |
+| `fin_exercice` | Clôture, IS, affectation | Clôture obligatoire |
+| `finale` | Palier irréversible, sortie | Dernier palier stratégique |
+
+### Timing dramaturgique
+- **T1-T2** : apprentissage actif (défis d'observation, sans sanction)
+- **T3** : « Le marché me résiste » — premier défi GARANTI
+- **Tour "juge"** : slot `fin_exercice` déclenché (clôture obligatoire)
+- **Tour "revient"** : slot `debut_tour` déclenche une résolution différée
+- **Finale** : slot `finale` déclenche un palier irréversible
+
+### Matrice timing × durée
+
+| Durée | T1-T2 | Résiste | Juge | Revient | 2e palier | Finale |
+|---|---|---|---|---|---|---|
+| 6 | Observation | T3 | T4 | T5 | — | T6 |
+| 8 | Observation | T3 | T5 | T6-T7 | — | T8 |
+| 10 | Observation | T3 | T5 | T6 | T8 | T10 |
+| 12 | Observation | T3 | T4 + T8 | T5 + T9 | — | T12 |
+
+### 4 points bloquants tranchés (2026-04-18)
+
+1. **Finale vs étape 8** : la finale (slot `finale`) s'intercale **avant** l'étape 8 Bilan. Elle ne la remplace jamais. L'étape 8 reste la vérité comptable finale qui calcule le score.
+2. **Défis conditionnels (archétype 7)** : coexistent avec le défi obligatoire. Règle dure = **maximum 1 défi majeur + 1 alerte conditionnelle courte par trimestre**.
+3. **Dette IS** : portée par le poste `dettesFiscales` existant. Pas de nouveau poste en V1 — simplicité d'abord, extension plus tard si la pédagogie l'exige.
+4. **Personnalisation narrative** : fonction `formatContexte(defi, joueur, etat)` — pas de simple template `{{pseudo}}`. Permet d'injecter pseudo, entreprise, saison, trésorerie, score, choix passés.
+
+### T3 — scénario d'ouverture de la dramaturgie
+
+Le T3 matérialise le basculement "je fais de la compta → je deviens dirigeant". Ordre exact :
+
+1. **Slot `debut_tour` — Écran 1 : « Le marché change »**
+   Défi externe court (archétype 3 ou 4), contextualisé par saison et entreprise. Effet immédiat léger OU contrainte annoncée (arc différé).
+
+2. **Étapes 1-5 normales** — le joueur joue comme d'habitude, mais avec la pression du marché ressentie.
+
+3. **Slot `avant_decision` — Écran 2 : « Comment veux-tu te positionner ? »**
+   Palier stratégique irréversible (archétype 6 — Positionnement). Le joueur choisit sa réponse au marché APRÈS avoir senti la pression.
+
+4. **Étapes 6-8 normales** — le bilan final du trimestre n'est pas remplacé.
+
+**Règles UX T3** :
+- Chaque écran doit être **court** (< 30s de lecture).
+- Les deux écrans doivent être **visuellement très différents** (palette, iconographie, tonalité).
+- L'un doit **répondre à l'autre** narrativement (même arc : le marché change → je me positionne).
+
+### Archétypes mécaniques (7)
+
+| # | Archétype | Slot par défaut | Caractéristique |
+|---|---|---|---|
+| 1 | Observation | `debut_tour` (T1, T2) | Question pédagogique, aucun effet, pas de sanction |
+| 2 | Choix binaire simple | variable | 2 options, effet immédiat uniquement |
+| 3 | Choix à arbitrage | `debut_tour` ou `apres_ventes` | 3 options avec trade-offs |
+| 4 | Conséquence différée | `debut_tour` | Effet étalé sur 2-4 trim via `defisActifs: ArcDiffere[]` |
+| 5 | Clôture obligatoire | `fin_exercice` | Automatique, IS + affectation |
+| 6 | Palier stratégique | `avant_decision` ou `finale` | Choix irréversible, modifie paramètres globaux |
+| 7 | Conditionnel | variable | Coexiste avec défi obligatoire (max 1 alerte courte) |
+
+### Catalogue V1 (27 défis)
+
+**Matrice narrative 5 × 4 = 20 défis** :
+
+| Tonalité \ Format | Simple | À choix | Différé | Avancé (entreprise) |
+|---|---|---|---|---|
+| 1 — Trésorerie / BFR | ⬜ | ⬜ | ⬜ | ⬜ |
+| 2 — Capacité / production / stock | ⬜ | ⬜ | ⬜ | ⬜ |
+| 3 — Financement / banque / dette | ⬜ | ⬜ | ⬜ | ⬜ |
+| 4 — Risque / protection / juridique | ⬜ | ⬜ | ⬜ | ⬜ |
+| 5 — Positionnement / stratégie / marché | ⬜ | ⬜ | ⬜ | ⬜ |
+
+**Systémiques (7 défis)** :
+- 3 observations : T1 "où est l'argent disponible ?", T1-fin "résultat = trésorerie ?", T2 "Grand Compte = encaissement immédiat ?"
+- 1 clôture paramétrable (slot `fin_exercice`)
+- 3 paliers stratégiques : positionnement (T3-T4), croissance (T6-T8), sortie (finale)
+
+### Architecture par vagues
+
+**Vague 1 — Socle technique (game-engine)**
+
+Types dans `packages/game-engine/src/types.ts` — **noms sans accent, cf. L44** :
+- [x] `DefiDirigeant`, `ChoixDefi`, `EffetDiffere`, `ArcDiffere`, `DefiResolu`
+- [x] `SlotDramaturgique = "debut_tour" | "apres_ventes" | "avant_decision" | "avant_bilan" | "fin_exercice" | "finale"`
+- [x] `RuptureType = "resiste" | "juge" | "revient" | "second_palier" | "finale"`
+- [x] Extension `EtatJeu` : `defisActifs?: ArcDiffere[]`, `defisResolus?: DefiResolu[]`, `defisActives?: boolean` (optionnels pour rétrocompatibilité) ; `Joueur.choixStrategiques?: Record<string, string>`
+
+Logique pure dans `packages/game-engine/src/defis.ts` :
+- [x] `piocherDefi(etat, joueur, slot, catalogue, rng?): DefiDirigeant | null`
+- [x] `appliquerChoixDefi(defi, choix, etat, joueur): ResultatChoixDefi` (pur, sans mutation)
+- [x] `resoudreConsequencesDifferees(etat): ResolutionEffetsDifferes`
+- [x] `formatContexte(template, etat, joueur): string` (tokens : `{pseudo}`, `{entreprise}`, `{saison}`, `{tresorerie}`, `{tour}`)
+
+Fonctions de calibrage dans `packages/game-engine/src/calibrage.ts` :
+- [x] `montantUnites(n)` → `arrondirJeu(n * PRIX_UNITAIRE_MARCHANDISE)` (constante vérifiée `types.ts` = 1000)
+- [x] `montantChargeFixe(ratio)` → `arrondirJeu(ratio * CHARGES_FIXES_PAR_TOUR)` (constante `types.ts` = 2000)
+- [x] `montantTresorerieCritique(etat, joueur)` → tension structurelle bornée par `DECOUVERT_MAX`
+- [x] `arrondirJeu(montant)` → pas de 500 €, préserve le signe, zéro invariant
+
+Catalogue (reporté en Vague 2+ — la Vague 1 livre un socle testable, le catalogue V1 viendra avec l'orchestration flow) :
+- [ ] `packages/game-engine/src/data/defis/observation.ts`
+- [ ] `packages/game-engine/src/data/defis/cloture.ts`
+- [ ] `packages/game-engine/src/data/defis/paliers.ts`
+- [ ] `packages/game-engine/src/data/defis/catalogue.ts`
+
+Tests :
+- [x] `packages/game-engine/tests/defis.test.ts` (28 tests, 100% couverture sur `defis.ts`)
+- [x] `packages/game-engine/tests/calibrage.test.ts` (16 tests, 100% couverture sur `calibrage.ts`)
+
+**Review Vague 1 (2026-04-18)**
+
+- `npx tsc --noEmit` sur `packages/game-engine` : 0 erreur.
+- `npx jest tests/calibrage.test.ts tests/defis.test.ts` : 44 tests verts.
+- Couverture : `calibrage.ts` 100 %, `defis.ts` 100 %, `types.ts` 100 %.
+- Régression moteur : aucune. `engine.test.ts` échoue avec les mêmes erreurs TypeScript qu'avant (fonctions `creerJoueur` / `calculerCoutCommerciaux` non exportées depuis `engine.ts:209` et `engine.ts:586`). Problème antérieur, hors périmètre Vague 1.
+- Rétrocompatibilité : tous les nouveaux champs sur `EtatJeu` / `Joueur` sont optionnels. Les parties en cours restent valides.
+- Index public : `calibrage` et `defis` sont désormais exportés via `packages/game-engine/src/index.ts` et consommables depuis `apps/web`.
+
+**Vague 2 — Orchestration flow (apps/web)**
+
+- [ ] `apps/web/app/jeu/hooks/gameFlowUtils.ts` — ajouter :
+  - `determinerTimingRupture(tour, nbTours): RuptureType | null`
+  - `determinerSlotsActifs(tour, etat): SlotDramaturgique[]`
+- [ ] `apps/web/app/jeu/hooks/useGameFlow.ts` — pipeline avec consultation des slots :
+  - Avant étape 1 → slot `debut_tour` (inclut résolution des arcs différés qui reviennent)
+  - Après étape 5 → slot `apres_ventes`
+  - Avant étape 6 → slot `avant_decision`
+  - Avant étape 8 → slot `avant_bilan` + slot `finale` si dernier trim
+  - Clôture d'exercice → slot `fin_exercice`
+- [ ] Flag de sécurité `defisActives: boolean` dans la config (rollback instantané si régression)
+
+**Vague 3 — UI**
+
+- [ ] `apps/web/components/jeu/DefiDirigeantScreen.tsx` — écran plein écran
+  - Variante **courte** (< 30s, archétypes 2/3/4/7) avec palette par tonalité
+  - Variante **longue** (palier stratégique, archétype 6) avec bilan projectif
+  - Variante **clôture** (archétype 5) avec bilan consolidé + calcul IS + affectation
+- [ ] `apps/web/components/jeu/JournalDefis.tsx` — chronologie des défis et arcs en cours dans `RightPanel`
+- [ ] `apps/web/app/jeu/page.tsx` — phase intermédiaire `defi` (entre étapes)
+- [ ] `apps/web/components/jeu/index.ts` — exports
+
+**Vague 4 — Écriture narrative**
+
+- [ ] Remplir la matrice 5 × 4 (20 défis)
+- [ ] Écrire les 3 observations
+- [ ] Écrire les 3 paliers stratégiques
+- [ ] Paramétrer le défi clôture
+- [ ] `docs/DEFIS_DIRIGEANT_V1.md` — catalogue complet
+
+**Vague 5 — Équilibrage & tests**
+
+- [ ] Appliquer les règles d'équilibrage via fonctions de calibrage
+- [ ] Tests unitaires, tests d'intégration, tests pédagogiques (cf. Validation)
+
+### Règles d'équilibrage (via fonctions de calibrage)
+
+Tous les montants dans les défis passent par les 4 fonctions de `calibrage.ts`. Les défis restent lisibles (ex. `montantUnites(5)` au lieu de `5000`).
+
+**Clôture (slot `fin_exercice`)** :
+- IS = 15% du bénéfice de l'exercice, puis `arrondirJeu()`
+- Réserve légale obligatoire = `arrondirJeu(500)` tant que capitaux propres < `montantUnites(20)`
+- Dividendes : 0 à 50% du (résultat net − IS − réserve), tranches `arrondirJeu`
+- Dette IS portée en `dettesFiscales` existant
+
+**Palier croissance (slot `avant_decision` en T6-T8)** :
+- Emprunt : `+montantUnites(10)` tréso, rembours. `REMBOURSEMENT_EMPRUNT_PAR_TOUR`, intérêts `TAUX_INTERET_ANNUEL`
+- Levée : `+montantUnites(15)` apport, dilution 30%
+- Organique : +5% ventes cumulatif sur 4 trim
+
+**Palier positionnement (slot `avant_decision` en T3-T4)** :
+- Low-cost : marges −25%, volumes +40%
+- Milieu de gamme : neutre
+- Premium : marges +30%, volumes −20% (exige ISO ou R&D sous 2 trim)
+
+**Palier sortie (slot `finale`)** :
+- Transmission familiale : bonus score si capitaux propres > `montantUnites(25)`
+- Cession fonds : multiplicateur score basé sur EBITDA moyen 3 derniers trim
+- IPO : 3 exercices bénéficiaires consécutifs
+
+**Saisonnalité (coefficients neutres sur 4 trim, injectés via `formatContexte`)** :
+- T1 (hiver) : ventes × 0.95, charges × 1.15
+- T2 (printemps) : ventes × 1.05, charges × 1.00
+- T3 (été) : ventes × 0.85, charges × 0.95
+- T4 (fin d'année) : ventes × 1.15, charges × 1.10
+
+### Validation
+
+- [ ] `npx tsc --noEmit` sur game-engine : 0 erreur
+- [ ] `npx tsc --noEmit` sur apps/web : 0 nouvelle erreur (erreurs pré-existantes tolérées cf. Tâche 6.5)
+- [ ] Test unitaire : `determinerTimingRupture(tour, nbTours)` pour les 4 durées
+- [ ] Test unitaire : `determinerSlotsActifs(tour, etat)` respecte la règle "1 majeur + 1 alerte max"
+- [ ] Test unitaire : arc différé à 3 trim → résolution correcte au bon tour via `debut_tour`
+- [ ] Test unitaire : les 4 fonctions de `calibrage.ts` (bornes, arrondis, dérivation de trésorerie)
+- [ ] Test unitaire : `formatContexte` injecte pseudo, saison, entreprise, trésorerie
+- [ ] Test d'intégration : partie durée 8, tous les slots déclenchent le défi attendu au bon tour
+- [ ] Test visuel : les 3 variantes de `DefiDirigeantScreen` (courte, longue, clôture) + 5 palettes
+- [ ] Test pédagogique : soumettre 3 défis à un enseignant de gestion, validation concept comptable reconnaissable
+- [ ] Test anti-régression : `defisActives = false` → comportement strictement identique à V actuelle (pipeline 9 étapes préservé)
+
+### Ressources
+- Constantes économiques : `packages/game-engine/src/types.ts:344-528` (incluant `PRIX_UNITAIRE_MARCHANDISE:347` = 1000)
+- Moteur étape 0 (charges fixes, amortissements) : `packages/game-engine/src/engine.ts:313-482`
+- Cartes existantes (41 Décision + 15 Événements) : `packages/game-engine/src/data/cartes.ts`
+- Flow actuel et ETAPE_INFO : `apps/web/app/jeu/hooks/gameFlowUtils.ts:33-90`
+- Snapshots trimestriels déjà collectés : `apps/web/app/jeu/hooks/gameFlowUtils.ts:146`
+- Leçons pertinentes : L43 (échelle des montants), L44 (nommage sans accent)
 
 ---
 

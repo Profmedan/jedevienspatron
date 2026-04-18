@@ -406,3 +406,59 @@ Business model corrigé : 1 crédit = 1 code unique = 1 apprenant = 1 partie. Un
 - `apps/web/app/jeu/hooks/useGamePersistence.ts` — complet rewrite
 - `apps/web/app/api/sessions/[code]/start/route.ts` — nouveau (POST + PATCH)
 - `apps/web/app/jeu/page.tsx` — useEffect restauration + écrans blocked/loading
+
+---
+
+## L43 — 2026-04-18 : Échelle des montants du moteur
+
+### Erreur
+Lors de la conception du système « Défis du dirigeant X » (Tâche 24), j'ai proposé plusieurs fois des chiffres à l'échelle 1-10€ en lisant littéralement les valeurs `CHARGES_FIXES_PAR_TOUR = 2000`, `DECOUVERT_MAX = 8000`, `AMORTISSEMENT_PAR_BIEN = 1000`. Pierre a dû corriger à deux reprises avant que je vérifie effectivement les unités dans le code.
+
+### Cause
+Les constantes de `packages/game-engine/src/types.ts:344-528` sont en **euros réels** (pas en milliers, pas en unités symboliques), mais la déclaration ne le précise ni par suffixe, ni par commentaire explicite. L'échelle n'est confirmée que par :
+- les explications utilisateur (`engine.ts:453` : "1 000 € par bien")
+- les composants d'affichage (`BilanPanel.tsx:266-271` utilisent `toLocaleString("fr-FR")` avec seuils à 3 000€)
+- le formateur `formatEuro` dans `ReportCharts.tsx:38` qui convertit en `K€` quand `>= 1000`
+
+### Règle
+**Avant toute proposition de chiffres pour ce jeu** :
+1. Lire les constantes dans `packages/game-engine/src/types.ts:344-528`
+2. Vérifier l'échelle dans un composant d'affichage (`BilanPanel.tsx`, `CompteResultatPanel.tsx`) qui formate avec `€`
+3. Retenir les ordres de grandeur suivants :
+   - Montants trimestriels : 500 à 5 000€
+   - Bilan cumulé mid-partie : 10 000 à 40 000€
+   - Résultat annuel plausible : 5 000 à 20 000€
+   - Seuil faillite : 8 000€ de découvert
+4. **Ne jamais calquer la fiscalité réelle sans rescaler** (ex. seuil IS PME à 42 500€ n'a aucun sens ici — l'IS doit être un pourcentage du bénéfice du jeu, pas un barème progressif réel)
+5. **Préférer les pourcentages aux montants absolus** dans les propositions de design, car les % restent cohérents quelle que soit l'échelle
+
+### Fichiers concernés
+- `packages/game-engine/src/types.ts:344-528` (constantes économiques)
+- `apps/web/components/BilanPanel.tsx:266-271` (seuils diagnostic)
+- `apps/web/components/CompteResultatPanel.tsx:54` (amortissement 1 000€/bien confirmé)
+- `apps/web/components/rapport/ReportCharts.tsx:38` (formateur K€)
+
+---
+
+## L44 — 2026-04-18 : Pas d'accents dans les nouveaux types TypeScript
+
+### Décision Pierre (Tâche 24)
+Le code existant a des accents historiques (`effetsImmédiats`, `publicitéCeTour` — cf. Tâche 6.4 skipped pour risque cross-file). Mais pour tout **nouveau** type, propriété, fonction : **pas d'accent**.
+
+### Règle
+- `EffetDiffere` et non `EffetDifferé`
+- `ArcDiffere` et non `ArcDifferé`
+- `defisResolus` et non `defisRésolus`
+- `cloture` et non `clôture`
+
+### Pourquoi
+- Les chaînes accentuées dans les noms d'identifiants compliquent les refactos automatiques (certains outils IDE/grep les traitent mal).
+- Incohérence cross-file (certains modules en ont, d'autres non) → lecture difficile.
+- Coût d'une migration complète (Tâche 6.4) jugé trop élevé. Donc : ne plus en ajouter.
+
+### Exception
+Les **chaînes affichées à l'utilisateur** (libellés de défis, explications, messages pédagogiques) conservent tous leurs accents français. La règle ne porte que sur les **identifiants de code**.
+
+### Fichiers concernés
+- `packages/game-engine/src/types.ts` (pour tout nouvel ajout)
+- Toute nouvelle fonction pure ou type dans `game-engine/` ou `apps/web/`

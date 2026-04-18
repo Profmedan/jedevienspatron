@@ -58,3 +58,22 @@ export {
 // Données
 export { ENTREPRISES, ENTREPRISE_INDEX } from "./data/entreprises";
 export { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS, CARTES_COMMERCIAUX } from "./data/cartes";
+
+// ─── DÉFIS DU DIRIGEANT (Tâche 24, Vague 1) ─────────────────
+// Calibrage des montants (respecte l'échelle du jeu — cf. L43).
+export {
+  arrondirJeu,
+  montantUnites,
+  montantChargeFixe,
+  montantTresorerieCritique,
+} from "./calibrage";
+
+// Orchestration des défis (logique pure, sans catalogue).
+export {
+  piocherDefi,
+  appliquerChoixDefi,
+  resoudreConsequencesDifferees,
+  formatContexte,
+  type ResultatChoixDefi,
+  type ResolutionEffetsDifferes,
+} from "./defis";
