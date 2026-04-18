@@ -145,18 +145,71 @@ Tests :
 - Rétrocompatibilité : tous les nouveaux champs sur `EtatJeu` / `Joueur` sont optionnels. Les parties en cours restent valides.
 - Index public : `calibrage` et `defis` sont désormais exportés via `packages/game-engine/src/index.ts` et consommables depuis `apps/web`.
 
-**Vague 2 — Orchestration flow (apps/web)**
+**Vague 2 — Orchestration flow vertical minimal (apps/web)**
 
-- [ ] `apps/web/app/jeu/hooks/gameFlowUtils.ts` — ajouter :
-  - `determinerTimingRupture(tour, nbTours): RuptureType | null`
-  - `determinerSlotsActifs(tour, etat): SlotDramaturgique[]`
-- [ ] `apps/web/app/jeu/hooks/useGameFlow.ts` — pipeline avec consultation des slots :
-  - Avant étape 1 → slot `debut_tour` (inclut résolution des arcs différés qui reviennent)
-  - Après étape 5 → slot `apres_ventes`
-  - Avant étape 6 → slot `avant_decision`
-  - Avant étape 8 → slot `avant_bilan` + slot `finale` si dernier trim
-  - Clôture d'exercice → slot `fin_exercice`
-- [ ] Flag de sécurité `defisActives: boolean` dans la config (rollback instantané si régression)
+Scope choisi avec Pierre 2026-04-18 : vertical très court pour valider le cœur émotionnel
+« T1 observe → T3 marché change → T3 positionnement → T5 choix revient → T6 fin normale ».
+Flag `defisActives = false` par défaut. Activation via URL `?defis=1` (setting DB en Vague 2.5).
+
+- [x] **Step 1** — `packages/game-engine/src/data/defis/catalogue-v2.ts` (mini-catalogue 4 défis)
+- [x] **Step 2** — `packages/game-engine/src/timing.ts` (2 fonctions pures, V2 minimaliste) + re-exports
+  dans `apps/web/app/jeu/hooks/gameFlowUtils.ts`.
+  Validation : 74 tests game-engine verts. `tsc --noEmit` apps/web : aucune nouvelle erreur.
+- [x] **Step 3** — `apps/web/components/jeu/DefiDirigeantScreen.tsx` (UI minimale, 1 seule variante).
+  Plein écran sobre : header indigo→violet, contexte formaté, liste de boutons de choix,
+  pédagogie affichée après sélection, bouton « Appliquer ce choix ». Export ajouté dans
+  `apps/web/components/jeu/index.ts`. `tsc --noEmit` : OK.
+- [x] **Step 4** — `apps/web/app/jeu/hooks/useGameFlow.ts` — branchement V2 minimaliste :
+  - Nouvel import : `determinerSlotsActifs`, `piocherDefi`, `appliquerChoixDefi`,
+    `resoudreConsequencesDifferees`, `formatContexte`, `CATALOGUE_V2`,
+    types `DefiDirigeant` / `SlotDramaturgique`.
+  - 2 nouveaux états : `defiEnAttente`, `contexteDefi`.
+  - 3 nouvelles fonctions : `slotPourEtapeCourante`, `resoudreArcsDifferes`, `resoudreDefi`.
+  - Interception dans `launchStep()` avant le flow normal, encadrée par
+    `if (workingEtat.defisActives)` → **flag OFF = comportement strictement identique**.
+  - Arcs différés résolus silencieusement au début du trimestre (étape 0, joueur 0)
+    — le joueur voit ses postes bouger dans le bilan/CR, sans écran intermédiaire.
+  - Consultation des slots `debut_tour` (étape 0) et `avant_decision` (étape 6).
+  - Retour API étendu : `defiEnAttente`, `contexteDefi`, `resoudreDefi`.
+- [x] **Step 5** — `apps/web/app/jeu/page.tsx` — lecture `?defis=1`, injection, overlay :
+  - Import de `DefiDirigeantScreen`.
+  - 1 nouvel état : `defisActivesURL` (lu via `URLSearchParams`).
+  - 2 nouveaux `useEffect` : lecture au montage + injection sur `etat.defisActives` une fois.
+  - Rendu de `<DefiDirigeantScreen>` en tout premier dans le JSX principal (prend le dessus).
+- [ ] **Step 6** — Validation manuelle (flag OFF identique, flag ON parcours T1→T5) + commit + push
+
+### Résultats Vague 2
+
+- `packages/game-engine` : 74 tests verts (timing 13, catalogue-v2 17, defis 28, calibrage 16).
+- `tsc --noEmit` sur apps/web : seules erreurs = React 18 vs 19 types pré-existants
+  (Link, RightPanel). Aucune erreur nouvelle liée aux défis.
+- Rétrocompatibilité : sans `?defis=1`, `etat.defisActives === undefined`, toute la
+  logique défis est court-circuitée dans `useGameFlow.launchStep()` — le comportement
+  est strictement identique à la version commitée au 2b7b4bc.
+- Parcours cible (`?defis=1`, durée 6 trimestres) :
+  - T1 étape 0 → observation `obs-t1` (slot `debut_tour`)
+  - T2 étape 0 → observation `obs-t2`
+  - T3 étape 0 → défi `defi-t3-marche` (archétype choix_binaire)
+  - T3 étape 6 → palier `palier-t3-positionnement` (choix low_cost / milieu / premium)
+  - T5 étape 0 → résolution silencieuse de l'arc différé du palier (effets sur ventes/achats/trésorerie)
+  - T6 étape 8 → fin normale, OverlayTransition et gameover inchangés.
+- Leçon L45 ajoutée dans `tasks/lessons.md` : workspace link manquant dans le VM (symlink
+  manuel possible comme fallback rapide).
+
+### Reste à faire (Step 6)
+
+- Validation manuelle par Pierre depuis le Mac :
+  1. `http://localhost:3000/jeu` sans `?defis=1` → comportement identique à avant.
+  2. `http://localhost:3000/jeu?defis=1` → enchaînement T1/T2/T3/T5 décrit ci-dessus.
+- Si OK → commit + push depuis le Mac (VM ne peut pas pousser).
+
+**Ce qu'on NE FAIT PAS en Vague 2** (reporté) :
+- Catalogue complet 27 défis (Vague 4)
+- Clôture IS / réserve légale / affectation (Vague 4)
+- 5 palettes visuelles finales (Vague 3)
+- Paliers croissance / sortie / conditionnels avancés (Vague 4)
+- Setting formateur en DB (Vague 2.5 — migration 006)
+- Scoring final par doctrine (Vague 5)
 
 **Vague 3 — UI**
 

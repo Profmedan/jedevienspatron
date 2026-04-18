@@ -23,7 +23,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CARTES_COMMERCIAUX = exports.CARTES_EVENEMENTS = exports.CARTES_CLIENTS = exports.CARTES_DECISION = exports.ENTREPRISE_INDEX = exports.ENTREPRISES = exports.verifierEquilibreComptable = exports.calculerCapaciteLogistique = exports.demanderEmprunt = exports.obtenirCarteRecrutement = exports.cloturerAnnee = exports.verifierFinTour = exports.appliquerCarteEvenement = exports.vendreImmobilisation = exports.licencierCommercial = exports.investirCartePersonnelle = exports.acheterCarteDecision = exports.tirerCartesDecision = exports.genererClientsParCommerciaux = exports.genererClientsSpecialite = exports.appliquerSpecialiteEntreprise = exports.appliquerEffetsRecurrents = exports.appliquerCarteClient = exports.appliquerPaiementCommerciaux = exports.appliquerAvancementCreances = exports.appliquerAchatMarchandises = exports.appliquerEtape0 = exports.avancerEtape = exports.initialiserJeu = exports.calculerScore = exports.calculerSIGSimplifie = exports.calculerSIG = exports.calculerIndicateurs = exports.getResultatNet = exports.getTotalProduits = exports.getTotalCharges = exports.getTresorerie = exports.getTotalPassif = exports.getTotalActif = void 0;
+exports.determinerTimingRupture = exports.CATALOGUE_V2_INDEX = exports.CATALOGUE_V2 = exports.formatContexte = exports.resoudreConsequencesDifferees = exports.appliquerChoixDefi = exports.piocherDefi = exports.montantTresorerieCritique = exports.montantChargeFixe = exports.montantUnites = exports.arrondirJeu = exports.CARTES_COMMERCIAUX = exports.CARTES_EVENEMENTS = exports.CARTES_CLIENTS = exports.CARTES_DECISION = exports.ENTREPRISE_INDEX = exports.ENTREPRISES = exports.verifierEquilibreComptable = exports.calculerCapaciteLogistique = exports.demanderEmprunt = exports.obtenirCarteRecrutement = exports.cloturerAnnee = exports.verifierFinTour = exports.appliquerCarteEvenement = exports.vendreImmobilisation = exports.licencierCommercial = exports.investirCartePersonnelle = exports.acheterCarteDecision = exports.tirerCartesDecision = exports.genererClientsParCommerciaux = exports.genererClientsSpecialite = exports.appliquerSpecialiteEntreprise = exports.appliquerEffetsRecurrents = exports.appliquerCarteClient = exports.appliquerPaiementCommerciaux = exports.appliquerAvancementCreances = exports.appliquerAchatMarchandises = exports.appliquerEtape0 = exports.avancerEtape = exports.initialiserJeu = exports.calculerScore = exports.calculerSIGSimplifie = exports.calculerSIG = exports.calculerIndicateurs = exports.getResultatNet = exports.getTotalProduits = exports.getTotalCharges = exports.getTresorerie = exports.getTotalPassif = exports.getTotalActif = void 0;
+exports.determinerSlotsActifs = void 0;
 // Types et constantes : tout est public
 __exportStar(require("./types"), exports);
 // Calculateurs — sous-ensemble public
@@ -72,4 +73,25 @@ Object.defineProperty(exports, "CARTES_DECISION", { enumerable: true, get: funct
 Object.defineProperty(exports, "CARTES_CLIENTS", { enumerable: true, get: function () { return cartes_1.CARTES_CLIENTS; } });
 Object.defineProperty(exports, "CARTES_EVENEMENTS", { enumerable: true, get: function () { return cartes_1.CARTES_EVENEMENTS; } });
 Object.defineProperty(exports, "CARTES_COMMERCIAUX", { enumerable: true, get: function () { return cartes_1.CARTES_COMMERCIAUX; } });
+// ─── DÉFIS DU DIRIGEANT (Tâche 24, Vague 1) ─────────────────
+// Calibrage des montants (respecte l'échelle du jeu — cf. L43).
+var calibrage_1 = require("./calibrage");
+Object.defineProperty(exports, "arrondirJeu", { enumerable: true, get: function () { return calibrage_1.arrondirJeu; } });
+Object.defineProperty(exports, "montantUnites", { enumerable: true, get: function () { return calibrage_1.montantUnites; } });
+Object.defineProperty(exports, "montantChargeFixe", { enumerable: true, get: function () { return calibrage_1.montantChargeFixe; } });
+Object.defineProperty(exports, "montantTresorerieCritique", { enumerable: true, get: function () { return calibrage_1.montantTresorerieCritique; } });
+// Orchestration des défis (logique pure, sans catalogue).
+var defis_1 = require("./defis");
+Object.defineProperty(exports, "piocherDefi", { enumerable: true, get: function () { return defis_1.piocherDefi; } });
+Object.defineProperty(exports, "appliquerChoixDefi", { enumerable: true, get: function () { return defis_1.appliquerChoixDefi; } });
+Object.defineProperty(exports, "resoudreConsequencesDifferees", { enumerable: true, get: function () { return defis_1.resoudreConsequencesDifferees; } });
+Object.defineProperty(exports, "formatContexte", { enumerable: true, get: function () { return defis_1.formatContexte; } });
+// Mini-catalogue V2 (démo Vague 2 — 4 défis sur 6 trimestres).
+var catalogue_v2_1 = require("./data/defis/catalogue-v2");
+Object.defineProperty(exports, "CATALOGUE_V2", { enumerable: true, get: function () { return catalogue_v2_1.CATALOGUE_V2; } });
+Object.defineProperty(exports, "CATALOGUE_V2_INDEX", { enumerable: true, get: function () { return catalogue_v2_1.CATALOGUE_V2_INDEX; } });
+// Timing dramaturgique (V2 minimaliste).
+var timing_1 = require("./timing");
+Object.defineProperty(exports, "determinerTimingRupture", { enumerable: true, get: function () { return timing_1.determinerTimingRupture; } });
+Object.defineProperty(exports, "determinerSlotsActifs", { enumerable: true, get: function () { return timing_1.determinerSlotsActifs; } });
 //# sourceMappingURL=index.js.map

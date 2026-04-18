@@ -10,6 +10,7 @@ export { EntryPanel, type ActiveStep } from "./EntryPanel";
 export { EntryCard, type EntryLine } from "./EntryCard";
 export { OverlayTransition } from "./OverlayTransition";
 export { OverlayFaillite } from "./OverlayFaillite";
+export { DefiDirigeantScreen } from "./DefiDirigeantScreen";
 export { SetupScreen, type PlayerSetup } from "./SetupScreen";
 export { CompanyIntro } from "./CompanyIntro";
 export { JournalReplay } from "./JournalReplay";

@@ -11,6 +11,7 @@ import {
   HeaderJeu, LeftPanel, MainContent,
   OverlayTransition, OverlayFaillite,
   SetupScreen, CompanyIntro, JournalReplay,
+  DefiDirigeantScreen,
 } from "@/components/jeu";
 import { ImpactFlash } from "@/components/ImpactFlash";
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
@@ -53,6 +54,26 @@ export default function JeuPage() {
 
   // Synchroniser la ref snapshots avec l'état du flow (pour persistence)
   snapshotsRef.current = flow.snapshots;
+
+  // ─── Défis du dirigeant (Tâche 24, V2) ──────────────────────────
+  // Lire le flag URL `?defis=1` au montage. Activation via URL uniquement
+  // en V2 — le setting DB formateur arrivera en V2.5 (migration 006).
+  const [defisActivesURL, setDefisActivesURL] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setDefisActivesURL(params.get("defis") === "1");
+  }, []);
+
+  // Injection du flag sur l'état dès qu'il est disponible, une seule fois.
+  // `etat.defisActives` est optionnel → undefined signifie « pas encore patché ».
+  useEffect(() => {
+    if (!etat) return;
+    if (!defisActivesURL) return;
+    if (etat.defisActives === true) return; // déjà patché
+    setEtat({ ...etat, defisActives: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etat, defisActivesURL]);
 
   // ── Restauration depuis localStorage (si save trouvée au montage) ──────
   useEffect(() => {
@@ -256,6 +277,17 @@ export default function JeuPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
+
+      {/* ─── DÉFI DU DIRIGEANT (Tâche 24, V2) ─── */}
+      {/* Affiché dès qu'un défi est en attente de résolution. */}
+      {/* Prend le dessus sur tous les autres overlays via z-50 + ordre DOM. */}
+      {flow.defiEnAttente && (
+        <DefiDirigeantScreen
+          defi={flow.defiEnAttente}
+          contexteFormate={flow.contexteDefi}
+          onChoix={flow.resoudreDefi}
+        />
+      )}
 
       {/* ─── OVERLAY TRANSITION (fin de trimestre) ─── */}
       {flow.tourTransition && (

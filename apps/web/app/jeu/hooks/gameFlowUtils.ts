@@ -14,6 +14,16 @@ import {
 } from "@jedevienspatron/game-engine";
 import { type ActiveStep, getSens } from "@/components/jeu";
 
+// ─── Défis du dirigeant (Tâche 24, Vague 2) ─────────────────────────────────
+// Les 2 fonctions de timing vivent dans game-engine (logique pure,
+// testée en Jest). On les ré-expose ici pour que les hooks web aient
+// un point d'import local cohérent.
+
+export {
+  determinerTimingRupture,
+  determinerSlotsActifs,
+} from "@jedevienspatron/game-engine";
+
 // ─── Type partagé : modification renvoyée par le moteur ──────────────────────
 
 export type ModificationMoteur = {

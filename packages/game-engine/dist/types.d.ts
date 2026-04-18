@@ -176,6 +176,12 @@ export interface Joueur {
     clientsPerdusCeTour: number;
     /** Mini-deck logistique personnel — cartes disponibles à l'investissement */
     piochePersonnelle: CarteDecision[];
+    /**
+     * Choix stratégiques mémorisés issus des Défis du dirigeant (Tâche 24).
+     * Clé libre (ex: "positionnement", "politique_credit"), valeur = id du choix retenu.
+     * Optionnel pour rétrocompatibilité : les parties existantes ignorent ce champ.
+     */
+    choixStrategiques?: Record<string, string>;
 }
 /** Les 9 étapes d'un tour de jeu */
 export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -211,6 +217,16 @@ export interface EtatJeu {
         carte: CarteEvenement;
     }>;
     messages: string[];
+    /**
+     * Défis du dirigeant (Tâche 24) — tous les champs ci-dessous sont optionnels
+     * pour rétrocompatibilité : une partie démarrée avant la Vague 1 reste valide.
+     */
+    /** Activation globale du système de défis (défaut : false tant que la Vague 5 n'est pas branchée). */
+    defisActives?: boolean;
+    /** Arcs différés en cours (conséquences multi-trimestres). */
+    defisActifs?: ArcDiffere[];
+    /** Trace des défis déjà résolus (rapport pédagogique + évitement des répétitions). */
+    defisResolus?: DefiResolu[];
 }
 export interface ResultatAction {
     succes: boolean;
@@ -345,5 +361,103 @@ export interface TrimSnapshot {
     nbCommerciaux: number;
     /** Dernière décision prise ce trimestre (ex: "Recruté Junior", "Investi Camionnette") */
     decision: string | null;
+}
+/** Slots où un défi peut s'attacher dans le pipeline du trimestre. */
+export type SlotDramaturgique = "debut_tour" | "apres_ventes" | "avant_decision" | "avant_bilan" | "fin_exercice" | "finale";
+/** Nature dramaturgique d'un trimestre charnière. */
+export type RuptureType = "resiste" | "juge" | "revient" | "second_palier" | "finale";
+/** Tonalité thématique d'un défi (catalogue narratif). */
+export type TonaliteDefi = "tresorerie" | "capacite" | "financement" | "risque" | "positionnement";
+/** Format mécanique d'un défi. */
+export type ArchetypeDefi = "observation" | "choix_binaire" | "choix_arbitrage" | "consequence_differee" | "cloture" | "palier_strategique" | "conditionnel";
+/** Concept comptable ciblé par un défi — pour débrief pédagogique. */
+export type ConceptComptable = "bilan_actif_passif" | "tresorerie_vs_resultat" | "creances_clients" | "dettes_fournisseurs" | "bfr" | "amortissement" | "capacite_production" | "marge_commerciale" | "emprunt_bancaire" | "levee_de_fonds" | "impot_societes" | "affectation_resultat" | "reserve_legale" | "creance_douteuse" | "provision" | "resultat_exceptionnel" | "positionnement_strategique" | "transmission_entreprise";
+/** Un effet comptable différé, appliqué N trimestres plus tard. */
+export interface EffetDiffere {
+    /** Nombre de trimestres avant l'application (1 = trimestre suivant). */
+    dansNTrimestres: number;
+    /** Effets comptables à appliquer. */
+    effets: EffetCarte[];
+    /** Explication pédagogique affichée au joueur lors de la résolution. */
+    explication: string;
+}
+/** Arc différé actif — un défi dont les conséquences se déroulent sur plusieurs trimestres. */
+export interface ArcDiffere {
+    /** Identifiant unique (ex: "arc-creance-douteuse-T3-J0"). */
+    id: string;
+    /** Identifiant du défi source dans le catalogue. */
+    defiId: string;
+    /** ID du joueur concerné. */
+    joueurId: number;
+    /** Trimestre de déclenchement (absolu dans la partie). */
+    trimestreDeclenchement: number;
+    /** ID du choix effectué parmi ceux du défi. */
+    choixId: string;
+    /** Effets restant à appliquer, avec leur échéance absolue. */
+    effetsRestants: Array<{
+        /** Trimestre absolu d'application (1..nbToursMax). */
+        trimestreApplication: number;
+        effets: EffetCarte[];
+        explication: string;
+    }>;
+}
+/** Un choix proposé dans un défi. */
+export interface ChoixDefi {
+    /** Identifiant unique dans le défi (ex: "a", "b", "c"). */
+    id: string;
+    /** Libellé affiché au joueur. */
+    libelle: string;
+    /** Description/implication courte (optionnelle). */
+    description?: string;
+    /** Effets immédiats appliqués au choix. */
+    effetsImmediats: EffetCarte[];
+    /** Effet(s) différé(s) éventuel(s). */
+    effetsDiffere?: EffetDiffere[];
+    /** Explication pédagogique affichée après le choix. */
+    pedagogie: string;
+}
+/** Un défi du dirigeant. */
+export interface DefiDirigeant {
+    /** Identifiant unique. */
+    id: string;
+    /** Archétype mécanique. */
+    archetype: ArchetypeDefi;
+    /** Tonalité thématique (null pour systémiques : observation/cloture/palier). */
+    tonalite: TonaliteDefi | null;
+    /** Concept comptable ciblé pour le débrief. */
+    conceptCible: ConceptComptable;
+    /** Slot dramaturgique où ce défi apparaît. */
+    slot: SlotDramaturgique;
+    /** Tour minimum de déclenchement (inclusif). */
+    tourMin: number;
+    /** Tour maximum de déclenchement (inclusif ; undefined = pas de plafond). */
+    tourMax?: number;
+    /** Condition supplémentaire de déclenchement (archétype "conditionnel"). */
+    condition?: (etat: EtatJeu, joueur: Joueur) => boolean;
+    /** Contexte narratif brut (avant formatContexte). Supporte {pseudo}, {entreprise}, {saison}, {tresorerie}, {tour}. */
+    contexte: string;
+    /** Choix possibles (0 pour observation, 1-3 pour les autres). */
+    choix: ChoixDefi[];
+    /** Défi obligatoire (ne peut être sauté) — vrai pour clôture et finale. */
+    obligatoire: boolean;
+    /** Entreprise exclusive éventuelle (format "avancé"). */
+    entrepriseExclusive?: NomEntreprise;
+}
+/** Trace d'un défi résolu dans la partie. */
+export interface DefiResolu {
+    /** Identifiant unique d'instance. */
+    id: string;
+    /** Identifiant du défi source dans le catalogue. */
+    defiId: string;
+    /** ID du joueur concerné. */
+    joueurId: number;
+    /** Trimestre où le défi a été déclenché. */
+    trimestre: number;
+    /** Slot utilisé. */
+    slot: SlotDramaturgique;
+    /** ID du choix effectué (null si pas de choix, ex: observation sans interaction). */
+    choixId: string | null;
+    /** Concept comptable visé (pour rapport pédagogique post-session). */
+    conceptCible: ConceptComptable;
 }
 //# sourceMappingURL=types.d.ts.map

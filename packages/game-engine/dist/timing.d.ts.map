@@ -1,0 +1,1 @@
+{"version":3,"file":"timing.d.ts","sourceRoot":"","sources":["../src/timing.ts"],"names":[],"mappings":"AAmBA,OAAO,EAAE,WAAW,EAAE,iBAAiB,EAAE,MAAM,SAAS,CAAC;AAEzD;;;;;;;;GAQG;AACH,wBAAgB,uBAAuB,CACrC,IAAI,EAAE,MAAM,EACZ,UAAU,EAAE,MAAM,GACjB,WAAW,GAAG,IAAI,CAKpB;AAED;;;;;;;;;;;;GAYG;AACH,wBAAgB,qBAAqB,CACnC,IAAI,EAAE,MAAM,EACZ,UAAU,EAAE,MAAM,GACjB,iBAAiB,EAAE,CAcrB"}

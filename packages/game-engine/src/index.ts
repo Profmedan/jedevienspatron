@@ -77,3 +77,9 @@ export {
   type ResultatChoixDefi,
   type ResolutionEffetsDifferes,
 } from "./defis";
+
+// Mini-catalogue V2 (démo Vague 2 — 4 défis sur 6 trimestres).
+export { CATALOGUE_V2, CATALOGUE_V2_INDEX } from "./data/defis/catalogue-v2";
+
+// Timing dramaturgique (V2 minimaliste).
+export { determinerTimingRupture, determinerSlotsActifs } from "./timing";

@@ -9,6 +9,11 @@ import {
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
+  // ─── Défis du dirigeant (Tâche 24, Vague 2) ────────────────────────
+  determinerSlotsActifs, piocherDefi, appliquerChoixDefi,
+  resoudreConsequencesDifferees, formatContexte,
+  CATALOGUE_V2,
+  type DefiDirigeant, type SlotDramaturgique,
 } from "@jedevienspatron/game-engine";
 import {
   type PlayerSetup, type ActiveStep,
@@ -131,6 +136,14 @@ interface UseGameFlowReturn {
   handleInvestirPersonnel: (carteId: string) => void;
   handleVendreImmobilisation: (nomImmo: string, prixCession: number) => void;
   handleLicencierCommercial: (carteId: string) => void;
+
+  // ─── Défis du dirigeant (Tâche 24, V2) ──────────────────────
+  /** Défi actuellement en attente de résolution (null si aucun). */
+  defiEnAttente: DefiDirigeant | null;
+  /** Contexte narratif du défi, tokens déjà résolus. */
+  contexteDefi: string;
+  /** Applique le choix du joueur et libère le flow. Appelé par DefiDirigeantScreen. */
+  resoudreDefi: (choixId: string | null) => void;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────
@@ -158,6 +171,11 @@ export function useGameFlow({
   const [snapshots, setSnapshots]         = useState<TrimSnapshot[]>([]);
   /** Label de la dernière décision prise ce trimestre (reset à chaque tour) */
   const [lastDecisionLabel, setLastDecisionLabel] = useState<string | null>(null);
+  /** ─── Défis du dirigeant (Tâche 24, Vague 2) ─────────────────────
+   *  `defiEnAttente` : défi consulté mais non encore résolu — bloque le flow.
+   *  `contexteDefi`  : contexte narratif déjà formaté (tokens résolus). */
+  const [defiEnAttente, setDefiEnAttente] = useState<DefiDirigeant | null>(null);
+  const [contexteDefi, setContexteDefi]   = useState<string>("");
 
   // Wrapper setActiveStep → dispatch (API publique stable)
   function setActiveStep(s: ActiveStep | null) {
@@ -311,10 +329,120 @@ export function useGameFlow({
     if (etapeAvantAvancement === 6) decisions.setSubEtape6("recrutement");
   }
 
+  // ─── Défis du dirigeant (Tâche 24, V2) ──────────────────────────────────
+  //
+  // Retourne le slot dramaturgique pertinent pour l'étape courante, ou null.
+  // V2 : seuls `debut_tour` (étape 0) et `avant_decision` (étape 6) sont câblés.
+  function slotPourEtapeCourante(e: EtatJeu): SlotDramaturgique | null {
+    if (e.etapeTour === 0) return "debut_tour";
+    if (e.etapeTour === 6) return "avant_decision";
+    return null;
+  }
+
+  // Résout les effets différés dont l'échéance est atteinte (trimestreApplication ≤ tourActuel).
+  // Appelé au début de chaque trimestre (étape 0, joueur 0) avant toute autre mécanique.
+  // Applique silencieusement — l'UI n'affiche pas d'écran intermédiaire en V2.
+  function resoudreArcsDifferes(e: EtatJeu): EtatJeu {
+    const resolution = resoudreConsequencesDifferees(e);
+    if (resolution.effetsAppliquer.length === 0
+        && resolution.defisActifsRestants.length === (e.defisActifs?.length ?? 0)) {
+      return e; // rien à faire
+    }
+    const next = cloneEtat(e);
+    for (const appl of resolution.effetsAppliquer) {
+      const j = next.joueurs.find((p) => p.id === appl.joueurId);
+      if (!j) continue;
+      for (const ef of appl.effets) {
+        applyDeltaToJoueur(j, ef.poste, ef.delta);
+      }
+    }
+    next.defisActifs = resolution.defisActifsRestants;
+    return next;
+  }
+
+  // Résolution du défi affiché : applique le choix, trace, et libère le flow.
+  // Le joueur revient sur le CenterPanel de l'étape et clique « Commencer » à nouveau.
+  // L'anti-répétition dans `piocherDefi` garantit que le défi ne sera pas re-tiré.
+  function resoudreDefi(choixId: string | null) {
+    if (!etat || !defiEnAttente) return;
+    const next = cloneEtat(etat);
+    const joueur = next.joueurs[next.joueurActif];
+
+    const choix = choixId
+      ? defiEnAttente.choix.find((c) => c.id === choixId) ?? null
+      : null;
+
+    if (!choix) {
+      // Observation sans interaction : trace seulement, pas d'effet.
+      next.defisResolus = [
+        ...(next.defisResolus ?? []),
+        {
+          id: `${defiEnAttente.id}-T${next.tourActuel}-J${joueur.id}`,
+          defiId: defiEnAttente.id,
+          joueurId: joueur.id,
+          trimestre: next.tourActuel,
+          slot: defiEnAttente.slot,
+          choixId: null,
+          conceptCible: defiEnAttente.conceptCible,
+        },
+      ];
+    } else {
+      const res = appliquerChoixDefi(defiEnAttente, choix, next, joueur);
+      // Effets immédiats appliqués sur le joueur.
+      for (const ef of res.effetsImmediats) {
+        applyDeltaToJoueur(joueur, ef.poste, ef.delta);
+      }
+      if (res.arcDiffereACreer) {
+        next.defisActifs = [...(next.defisActifs ?? []), res.arcDiffereACreer];
+      }
+      next.defisResolus = [...(next.defisResolus ?? []), res.trace];
+    }
+
+    setEtat(next);
+    setDefiEnAttente(null);
+    setContexteDefi("");
+  }
+
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
   function launchStep() {
     if (!etat) return;
-    const next = cloneEtat(etat);
+
+    // ─── Défis du dirigeant (Tâche 24, V2) ────────────────────────────────
+    // Tout ce bloc est court-circuité si le flag est OFF → comportement
+    // strictement identique à la version sans défis.
+    let workingEtat: EtatJeu = etat;
+    if (workingEtat.defisActives) {
+      // 1. Résolution des arcs différés : uniquement au tout début d'un
+      //    trimestre (étape 0, premier joueur). On l'applique silencieusement.
+      if (workingEtat.etapeTour === 0 && workingEtat.joueurActif === 0) {
+        const resolu = resoudreArcsDifferes(workingEtat);
+        if (resolu !== workingEtat) {
+          workingEtat = resolu;
+          setEtat(workingEtat);
+        }
+      }
+
+      // 2. Consultation du slot applicable à l'étape courante.
+      const slot = slotPourEtapeCourante(workingEtat);
+      if (slot) {
+        const slotsActifs = determinerSlotsActifs(
+          workingEtat.tourActuel,
+          workingEtat.nbToursMax,
+        );
+        if (slotsActifs.includes(slot)) {
+          const joueur = workingEtat.joueurs[workingEtat.joueurActif];
+          const defi = piocherDefi(workingEtat, joueur, slot, CATALOGUE_V2);
+          if (defi) {
+            setDefiEnAttente(defi);
+            setContexteDefi(formatContexte(defi.contexte, workingEtat, joueur));
+            return; // stop : le DefiDirigeantScreen prend la main via page.tsx
+          }
+        }
+      }
+    }
+
+    // ─── Flow normal (inchangé) ────────────────────────────────────────────
+    const next = cloneEtat(workingEtat);
     const idx = next.joueurActif;
     let mods: ModificationMoteur[] = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
@@ -540,5 +668,10 @@ export function useGameFlow({
     handleInvestirPersonnel: decisions.handleInvestirPersonnel,
     handleVendreImmobilisation: decisions.handleVendreImmobilisation,
     handleLicencierCommercial: decisions.handleLicencierCommercial,
+
+    // ─── Défis du dirigeant (Tâche 24, V2) ───────────────────
+    defiEnAttente,
+    contexteDefi,
+    resoudreDefi,
   };
 }

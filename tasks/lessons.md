@@ -462,3 +462,43 @@ Les **chaînes affichées à l'utilisateur** (libellés de défis, explications,
 ### Fichiers concernés
 - `packages/game-engine/src/types.ts` (pour tout nouvel ajout)
 - Toute nouvelle fonction pure ou type dans `game-engine/` ou `apps/web/`
+
+---
+
+## L45 — 2026-04-18 : Workspace link manquant dans le VM Cowork
+
+### Erreur
+Après un `git pull` propre sur le VM, `npx tsc --noEmit` dans `apps/web` échouait avec :
+```
+Module '"@jedevienspatron/game-engine"' has no exported member 'determinerTimingRupture'.
+```
+
+### Cause
+`apps/web/node_modules/@jedevienspatron/game-engine` n'existe pas dans le VM. Les `npm install`
+précédents ont été lancés depuis le Mac de Pierre, donc les symlinks de workspace npm sont
+présents localement mais n'ont pas été propagés au VM.
+
+### Règle
+Avant toute première validation TypeScript dans `apps/web/` sur le VM, vérifier :
+```
+ls apps/web/node_modules/@jedevienspatron/game-engine
+```
+
+Si absent, deux options :
+1. `npm install` à la racine (peut timeout en 2 min dans le VM).
+2. **Fallback rapide** (préféré pour validation seule) :
+   ```
+   mkdir -p apps/web/node_modules/@jedevienspatron
+   ln -s ../../../../packages/game-engine apps/web/node_modules/@jedevienspatron/game-engine
+   ```
+
+### Prérequis au fallback
+- `packages/game-engine/dist/` doit être à jour (`npm run build --workspace=packages/game-engine`).
+- Le package est consommé via `main: "dist/index.js"` dans `package.json`, donc **tout changement
+  dans `src/`** nécessite un rebuild avant validation d'`apps/web`.
+
+### Ce que ça confirme
+- L'API publique de `game-engine` doit exporter tout ce qui est importé côté `apps/web`,
+  sinon la résolution via dist/ échoue silencieusement.
+- Le symlink local suffit pour `tsc --noEmit` ; pour un `npm run dev` ou `build`, préférer
+  le vrai `npm install` depuis le Mac.

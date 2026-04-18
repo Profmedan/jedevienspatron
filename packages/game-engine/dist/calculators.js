@@ -43,7 +43,14 @@ function getTresorerie(joueur) {
     return t ? t.valeur : 0;
 }
 function getTotalPassif(joueur) {
-    const passifsBruts = joueur.bilan.passifs.reduce((s, p) => s + p.valeur, 0);
+    // IMPORTANT : on exclut les postes passifs avec categorie "dettes" du tableau passifs[].
+    // Ces entrées héritées du template initial sont STALES : le moteur écrit les dettes
+    // directement dans bilan.dettes / bilan.dettesD2 / bilan.dettesFiscales (champs directs),
+    // jamais dans passifs[]. Les inclure provoquerait un double-comptage.
+    // Seules "capitaux" et "emprunts" vivent réellement dans passifs[].
+    const passifsBruts = joueur.bilan.passifs
+        .filter((p) => p.categorie !== "dettes")
+        .reduce((s, p) => s + p.valeur, 0);
     const decouvert = joueur.bilan.decouvert;
     const dettes = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
     const resultat = getResultatNet(joueur);
@@ -76,14 +83,14 @@ function getResultatNet(joueur) {
  * (équivalent à ACTIF = PASSIF + RÉSULTAT)
  */
 function verifierEquilibre(joueur) {
+    // Utilise getTotalPassif (source unique de vérité) pour éviter toute divergence.
     const totalActif = getTotalActif(joueur);
-    const totalPassif = joueur.bilan.passifs.reduce((s, p) => s + p.valeur, 0) +
-        joueur.bilan.decouvert + joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
-    const ecart = totalActif - totalPassif - getResultatNet(joueur);
+    const totalPassif = getTotalPassif(joueur);
+    const ecart = totalActif - totalPassif;
     return {
         equilibre: Math.abs(ecart) < 0.001,
         totalActif,
-        totalPassif: totalPassif + getResultatNet(joueur),
+        totalPassif,
         ecart,
     };
 }
@@ -102,7 +109,8 @@ function calculerIndicateurs(joueur) {
         .reduce((s, p) => s + p.valeur, 0);
     const dettes = joueur.bilan.dettes + (joueur.bilan.dettesD2 ?? 0) + joueur.bilan.dettesFiscales;
     const resultatNet = getResultatNet(joueur);
-    const totalPassif = capitauxPropres + emprunts + dettes + joueur.bilan.decouvert + resultatNet;
+    // Source unique de vérité : getTotalPassif (filtre les stales dettes passifs[]).
+    const totalPassif = getTotalPassif(joueur);
     const dotations = joueur.compteResultat.charges.dotationsAmortissements;
     // Fonds de Roulement = Capitaux permanents - Immobilisations
     const capitauxPermanents = capitauxPropres + resultatNet + emprunts;

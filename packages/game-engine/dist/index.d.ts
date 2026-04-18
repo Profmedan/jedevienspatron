@@ -3,4 +3,8 @@ export { getTotalActif, getTotalPassif, getTresorerie, getTotalCharges, getTotal
 export { initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises, appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient, appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite, genererClientsParCommerciaux, tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation, appliquerCarteEvenement, verifierFinTour, cloturerAnnee, obtenirCarteRecrutement, demanderEmprunt, calculerCapaciteLogistique, verifierEquilibreComptable, type ResultatFinTour, } from "./engine";
 export { ENTREPRISES, ENTREPRISE_INDEX } from "./data/entreprises";
 export { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS, CARTES_COMMERCIAUX } from "./data/cartes";
+export { arrondirJeu, montantUnites, montantChargeFixe, montantTresorerieCritique, } from "./calibrage";
+export { piocherDefi, appliquerChoixDefi, resoudreConsequencesDifferees, formatContexte, type ResultatChoixDefi, type ResolutionEffetsDifferes, } from "./defis";
+export { CATALOGUE_V2, CATALOGUE_V2_INDEX } from "./data/defis/catalogue-v2";
+export { determinerTimingRupture, determinerSlotsActifs } from "./timing";
 //# sourceMappingURL=index.d.ts.map
