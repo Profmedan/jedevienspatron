@@ -4,18 +4,22 @@
 // Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 //
 // ── Bilans initiaux équilibrés (Actif = Passif) ─────────────
-//   • Manufacture Belvaux : Actif = Passif = 28
-//       Immos (8+8) + Stocks 4 + Tréso 8 = 28
-//       Capitaux 20 + Emprunts 8 = 28
-//   • Véloce Transports   : Actif = Passif = 28
-//       Immos (10+6) + Stocks 4 + Tréso 8 = 28
-//       Capitaux 20 + Emprunts 8 = 28
-//   • Azura Commerce      : Actif = Passif = 28
-//       Immos (8+8) + Stocks 4 + Tréso 8 = 28
-//       Capitaux 20 + Emprunts 8 = 28
-//   • Synergia Lab        : Actif = Passif = 25
-//       Immos (8+5) + Stocks 4 + Tréso 8 = 25
-//       Capitaux 17 + Emprunts 8 = 25
+// Tâche 25 (2026-04-18) : +2 000 € de capital ET +2 000 € de trésorerie
+// pour les 4 entreprises. Motif : le designer lui-même fait faillite au T6
+// du jeu actuel. Le coussin de démarrage supplémentaire permet d'absorber
+// la charge fixe du T1 sans forcer l'emprunt immédiat.
+//   • Manufacture Belvaux : Actif = Passif = 30
+//       Immos (8+8) + Stocks 4 + Tréso 10 = 30
+//       Capitaux 22 + Emprunts 8 = 30
+//   • Véloce Transports   : Actif = Passif = 30
+//       Immos (10+6) + Stocks 4 + Tréso 10 = 30
+//       Capitaux 22 + Emprunts 8 = 30
+//   • Azura Commerce      : Actif = Passif = 30
+//       Immos (8+8) + Stocks 4 + Tréso 10 = 30
+//       Capitaux 22 + Emprunts 8 = 30
+//   • Synergia Lab        : Actif = Passif = 27
+//       Immos (8+5) + Stocks 4 + Tréso 10 = 27
+//       Capitaux 19 + Emprunts 8 = 27
 //
 // ── Logique d'amortissement (PCG) ──────────────────────────
 // Chaque bien immobilisé perd -1 par trimestre (durée de vie = valeur initiale).
@@ -33,8 +37,9 @@
 // achetés via les Cartes Décision et commence alors à s'amortir.
 //
 // ── Financement ─────────────────────────────────────────────
-// Emprunts = 8 pour toutes les entreprises (remboursement -1/tour × 8 tours)
-// Capitaux propres ajustés pour équilibrer chaque bilan (20 ou 17)
+// Emprunts = 8 pour toutes les entreprises (remboursement -500/tour)
+// Capitaux propres ajustés pour équilibrer chaque bilan (22 ou 19).
+// Depuis Tâche 25 : capitaux +2 000 € en contrepartie de la trésorerie +2 000 €.
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ENTREPRISE_INDEX = exports.ENTREPRISES = void 0;
@@ -67,13 +72,13 @@ exports.ENTREPRISES = [
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS
             { nom: "Stocks", valeur: 4000 },
-            // TRÉSORERIE
-            { nom: "Trésorerie", valeur: 8000 },
+            // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
+            { nom: "Trésorerie", valeur: 10000 },
         ],
         passifs: [
-            // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
-            { nom: "Capitaux propres", valeur: 20000 },
-            // EMPRUNTS — remboursement -1/trimestre pendant 8 trimestres
+            // CAPITAUX PROPRES — 22 pour équilibrer : Immos 16 + Stocks 4 + Tréso 10 = 30
+            { nom: "Capitaux propres", valeur: 22000 },
+            // EMPRUNTS — remboursement -500/trimestre
             { nom: "Emprunts", valeur: 8000 },
             // DETTES FOURNISSEURS
             { nom: "Dettes fournisseurs", valeur: 0 },
@@ -102,12 +107,12 @@ exports.ENTREPRISES = [
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS
             { nom: "Stocks", valeur: 4000 },
-            // TRÉSORERIE
-            { nom: "Trésorerie", valeur: 8000 },
+            // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
+            { nom: "Trésorerie", valeur: 10000 },
         ],
         passifs: [
-            // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
-            { nom: "Capitaux propres", valeur: 20000 },
+            // CAPITAUX PROPRES — 22 pour équilibrer : Immos 16 + Stocks 4 + Tréso 10 = 30
+            { nom: "Capitaux propres", valeur: 22000 },
             { nom: "Emprunts", valeur: 8000 },
             { nom: "Dettes fournisseurs", valeur: 0 },
         ],
@@ -135,12 +140,12 @@ exports.ENTREPRISES = [
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS
             { nom: "Stocks", valeur: 4000 },
-            // TRÉSORERIE
-            { nom: "Trésorerie", valeur: 8000 },
+            // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
+            { nom: "Trésorerie", valeur: 10000 },
         ],
         passifs: [
-            // CAPITAUX PROPRES — 20 pour équilibrer : Immos 16 + Stocks 4 + Tréso 8 = 28
-            { nom: "Capitaux propres", valeur: 20000 },
+            // CAPITAUX PROPRES — 22 pour équilibrer : Immos 16 + Stocks 4 + Tréso 10 = 30
+            { nom: "Capitaux propres", valeur: 22000 },
             { nom: "Emprunts", valeur: 8000 },
             { nom: "Dettes fournisseurs", valeur: 0 },
         ],
@@ -173,12 +178,12 @@ exports.ENTREPRISES = [
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS
             { nom: "Stocks", valeur: 4000 },
-            // TRÉSORERIE
-            { nom: "Trésorerie", valeur: 8000 },
+            // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
+            { nom: "Trésorerie", valeur: 10000 },
         ],
         passifs: [
-            // CAPITAUX PROPRES — 17 pour équilibrer : Immos 13 + Stocks 4 + Tréso 8 = 25
-            { nom: "Capitaux propres", valeur: 17000 },
+            // CAPITAUX PROPRES — 19 pour équilibrer : Immos 13 + Stocks 4 + Tréso 10 = 27
+            { nom: "Capitaux propres", valeur: 19000 },
             { nom: "Emprunts", valeur: 8000 },
             { nom: "Dettes fournisseurs", valeur: 0 },
         ],

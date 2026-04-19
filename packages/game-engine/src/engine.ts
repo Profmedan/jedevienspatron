@@ -334,9 +334,19 @@ export function appliquerEtape0(
   }
 
   // 0b. Intérêts annuels sur emprunt (tous les 4 trimestres = 1 fois/an)
+  // Tâche 25 (2026-04-18) : cadence décalée de 2 trimestres → première
+  // facturation à T3, puis T7, T11… Motif : le T1 doit rester « découverte »
+  // (charges fixes + amortissements seulement), l'emprunt donne 2 trimestres
+  // de répit avant de charger ses intérêts. Le remboursement du capital
+  // (-500 € / trim.), lui, commence bien dès T1 (voir section 4 ci-dessous).
   // Intérêt = taux × capital, arrondi à la centaine supérieure — sans minimum artificiel.
   const empruntsPoste = joueur.bilan.passifs.find((p) => p.categorie === "emprunts");
-  if (empruntsPoste && empruntsPoste.valeur > 0 && etat.tourActuel % INTERET_EMPRUNT_FREQUENCE === 1) {
+  if (
+    empruntsPoste &&
+    empruntsPoste.valeur > 0 &&
+    etat.tourActuel >= 3 &&
+    (etat.tourActuel - 3) % INTERET_EMPRUNT_FREQUENCE === 0
+  ) {
     const interetEmprunt = Math.ceil(empruntsPoste.valeur * TAUX_INTERET_ANNUEL / 100 / 100) * 100;
     push(
       "chargesInteret",

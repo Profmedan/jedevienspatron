@@ -400,8 +400,8 @@ describe("formatContexte — substitution de tokens narratifs", () => {
   test("Replace {tresorerie} avec un montant formaté en euros", () => {
     const etat = etatDeBase();
     const res = formatContexte("{tresorerie}", etat, etat.joueurs[0]);
-    // Manufacture Belvaux démarre avec 8000 € de trésorerie, découvert 0.
-    expect(res).toContain("8");
+    // Tâche 25 : Manufacture Belvaux démarre avec 10 000 € de trésorerie, découvert 0.
+    expect(res).toContain("10");
     expect(res).toContain("€");
   });
 

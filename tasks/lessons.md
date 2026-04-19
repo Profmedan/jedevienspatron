@@ -626,3 +626,87 @@ Mieux qu'un test jest absent, plus léger que d'installer jest juste pour un hel
   (distinctness, complétude des champs) que les chaînes elles-mêmes.
 - Préférer 6 constantes dupliquées en apparence à 1 constante dynamique : le JIT Tailwind
   n'a pas d'autre choix.
+
+---
+
+## L49 — 2026-04-19 : Blocs shell pour Pierre — zéro placeholder, zéro `#` inline
+
+### Symptôme
+J'ai proposé à Pierre ce bloc copy-paste après un commit :
+```
+cd /chemin/vers/jedevienspatron-github
+git pull       # récupère le commit 758f247 du VM
+git log --oneline -3   # confirme que 758f247 est présent
+git push origin main
+```
+
+Deux erreurs sur son Mac (zsh) :
+1. `cd: no such file or directory: /chemin/vers/jedevienspatron-github` — placeholder bidon.
+2. `zsh: command not found: #` + `fatal: '#' does not appear to be a git repository` — **zsh interactif ne traite PAS `#` comme commentaire par défaut** (contrairement à bash, ou zsh en mode script). Il faut `setopt INTERACTIVE_COMMENTS` pour ça.
+
+Le push final a fini par passer, mais c'est de la chance — le bloc a été exécuté à moitié en erreur.
+
+### Règle
+Quand je propose un bloc de commandes shell pour copy-paste à Pierre :
+
+1. **Zéro placeholder inventé** (`/chemin/vers/...`, `<ton-fichier>`, etc.). Si je ne connais
+   pas le chemin exact, j'écris la consigne en français (« dans ton dossier du repo ») au
+   lieu d'un faux chemin. Pierre connaît son filesystem mieux que moi.
+
+2. **Zéro `#` inline dans les commandes**. Les explications vont AVANT ou APRÈS le bloc,
+   pas dedans. Si une explication est essentielle, je l'écris hors code.
+
+3. **Un bloc = une intention exécutable** sans édition manuelle. Pierre doit pouvoir faire
+   ⌘C / ⌘V sans relire.
+
+### Exemple correct
+Au lieu de :
+```
+cd /chemin/vers/jedevienspatron-github    # ton repo
+git pull       # récupère le commit
+git push origin main   # push
+```
+
+Écrire :
+> Dans le dossier du repo sur ton Mac :
+> ```
+> git pull
+> git push origin main
+> ```
+> (Le `git pull` n'est pas toujours nécessaire — seulement si quelqu'un d'autre a pushé entre-temps.)
+
+### À retenir
+- `zsh` interactif est plus strict que `bash` : pas de commentaires inline sans opt-in explicite.
+- Un placeholder est une **source de honte et de bruit** dans une réponse à un utilisateur :
+  il signale que je n'ai pas vérifié son environnement avant de proposer la commande.
+- Règle absolue : je ne donne PAS de commande avec un chemin que je n'ai pas vu moi-même.
+
+---
+
+## L50 — 2026-04-19 : Cartographier le scope AVANT de planifier, pas pendant l'implémentation
+
+### Symptôme
+Tâche 25 avait été planifiée en 3 sous-tâches "simples" (trésorerie, intérêts, ordre des étapes). J'ai démarré T25.C (réordonner les 9 étapes) sur cette base. En ouvrant le code, j'ai découvert :
+1. **Deux copies du moteur de jeu** coexistent (`packages/game-engine/src/engine.ts` canonique + `apps/web/lib/game-engine/` legacy encore utilisé par l'app). Réordonner dans une seule casse l'autre silencieusement.
+2. **~170 lignes de contenu pédagogique** (`MODALES_ETAPES` — 9 entrées, `QCM_ETAPES` — 10 entrées) sont **indexées par numéro d'étape**. Passer de 9 à 8 étapes n'est pas une renumérotation, c'est un **re-mapping sémantique** ("l'étape 5 signifie maintenant décision, pas fin-période — donc la modale doit changer, pas juste se décaler").
+3. Tâche 24 (défis du dirigeant) a câblé des **slots dramaturgiques** (`debut_tour`, `avant_decision`, etc.) sur l'ordre actuel. Les déplacer invalide les ancrages narratifs en cours d'implémentation.
+
+Si j'avais continué sur l'élan "les 3 sous-tâches sont approuvées, j'exécute", j'aurais livré une régression silencieuse OU fait exploser le scope du commit.
+
+### Règle
+Pour toute tâche qui touche une **structure transversale** (numéro d'étape, signature d'API publique, identifiant stable utilisé dans les données), je dois exécuter un **inventaire du scope** AVANT de dire "approuvé, j'y vais" :
+
+1. `grep` sur les utilisateurs de la structure (ici : tous les endroits qui font `etapeTour === N` ou indexent par `N`).
+2. Recenser les copies de fichiers qui devraient être en sync (`apps/web/lib/game-engine/` vs `packages/game-engine/`).
+3. Repérer les données indexées par la structure (`MODALES_ETAPES[0..8]`, `QCM_ETAPES[0..9]`).
+4. Vérifier les fonctionnalités récemment câblées qui en dépendent (Tâche 24 slots).
+
+Si l'inventaire révèle un scope très supérieur à ce qui avait été envisagé : **STOP, re-plan immédiatement**, ne pas "juste livrer la version light et on verra plus tard" — parce que "plus tard" part avec une dette mal documentée.
+
+### Application dans Tâche 25
+J'ai livré T25.A + T25.B (changements localisés, testables) et **reporté T25.C** avec une note explicite dans `tasks/todo.md` décrivant les 3 surfaces de code à coordonner. Pierre aura un plan propre pour décider du séquencement (faire T25.C en même temps que la suppression du moteur dupliqué ? en même temps que le re-mapping pédagogique ?) au lieu d'une demi-livraison.
+
+### À retenir
+- **Un scope qui grossit pendant l'implémentation est un signal d'arrêt**, pas d'accélération.
+- Les "petites refontes d'ordre" sont souvent les plus toxiques : elles touchent des indexations implicites partout.
+- Documenter un report est une livraison à part entière — pas un échec.

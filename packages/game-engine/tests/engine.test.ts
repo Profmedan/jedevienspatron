@@ -40,8 +40,9 @@ describe("Création joueur", () => {
   test("Le bilan initial est équilibré (Actif = Passif)", () => {
     const joueur = joueurOrange();
     const { equilibre, totalActif } = verifierEquilibre(joueur);
-    // Manufacture Belvaux : Entrepôt(8000) + Camionnette(8000) + Stocks(4000) + Tréso(8000) = 28000
-    expect(totalActif).toBe(28000);
+    // Tâche 25 : trésorerie +2 000 € (8 000 → 10 000) → total 30 000 €
+    // Belvaux : Entrepôt(8000) + Camionnette(8000) + Stocks(4000) + Tréso(10000) = 30000
+    expect(totalActif).toBe(30000);
     expect(equilibre).toBe(true);
   });
 
@@ -80,8 +81,9 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
 
     const tresoAfter = getTresorerie(joueur);
     expect(joueur.compteResultat.charges.servicesExterieurs).toBe(2000);
-    // Tour 1 = premier trimestre de l'année → intérêts annuels appliqués : 8000 × 5% = 400
-    expect(tresoAfter).toBe(tresoBefore - 2000 - 500 - 400); // -2000 charges fixes - 500 remboursement - 400 intérêts
+    // Tâche 25 : plus d'intérêts à T1 (décalés à T3).
+    // T1 = -2 000 charges fixes -500 remboursement emprunt = -2 500 €
+    expect(tresoAfter).toBe(tresoBefore - 2000 - 500);
   });
 
   test("L'amortissement réduit les immobilisations", () => {
@@ -376,8 +378,8 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
     expect(result.succes).toBe(true);
 
     const joueur = etat.joueurs[0];
-    // Trésorerie : 8 000 + 10 000 = 18 000
-    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(18000);
+    // Tâche 25 : trésorerie initiale 10 000 € + cession 10 000 € = 20 000 €
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(20000);
     // Camionnette retirée du bilan
     expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
     // Plus-value de 2 000 € en revenus exceptionnels
@@ -392,8 +394,8 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
     expect(result.succes).toBe(true);
 
     const joueur = etat.joueurs[0];
-    // Trésorerie : 8 000 + 5 000 = 13 000
-    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(13000);
+    // Tâche 25 : trésorerie initiale 10 000 € + cession 5 000 € = 15 000 €
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(15000);
     // Entrepôt retiré
     expect(joueur.bilan.actifs.find((a) => a.nom === "Entrepôt")).toBeUndefined();
     // Moins-value de 3 000 € en charges exceptionnelles

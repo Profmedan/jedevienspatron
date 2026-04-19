@@ -1,4 +1,44 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-18
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-19
+
+---
+
+## Tâche 25 : Rééquilibrage de la courbe de difficulté (T1 respirable) — 2026-04-18 🚧
+
+### Déclencheur
+Pierre a lui-même fait faillite au T6 dans une partie test. Constat : la charge fixe du T1 (≈ 2 000 €) + le premier intérêt d'emprunt consomment immédiatement le coussin initial et forcent un emprunt dès T2, cassant le contrat pédagogique "le T1 est une prise de contact".
+
+### Ajustements approuvés le 2026-04-18
+| Sous-tâche | Contenu | Statut |
+|---|---|---|
+| **T25.A** | +2 000 € de trésorerie initiale ET +2 000 € de capitaux propres sur les 4 entreprises (bilans restent équilibrés : Belvaux/Véloce/Azura = 30 k, Synergia = 27 k). | ✅ |
+| **T25.B** | Intérêts d'emprunt décalés : pas d'intérêts à T1/T2, première facturation annuelle à T3, puis T7, T11… Le remboursement du capital (-500 €/trim.) reste inchangé dès T1. | ✅ |
+| **T25.C** | Réordonner les 9 étapes en 8 étapes ("activité puis clôture" au lieu de "payer d'abord"). | ⏸️ **reporté** — scope découvert trop large (2 copies du moteur à garder en sync + 170 lignes de contenu pédagogique `MODALES_ETAPES` / `QCM_ETAPES` à re-mapper). Nécessite une note de planning dédiée avant exécution. |
+| **T25.D** | Tests unitaires : trésorerie T1 = 10 000 €, capitaux 22 000/19 000, équilibre bilan, cadence intérêts T1/T2/T3/T4/T7, remboursement capital intact. | ✅ (12 tests passent) |
+| **T25.E** | Vérification + docs (tsc, rebuild dist/, todo.md, lessons.md). | 🚧 |
+
+### Fichiers modifiés dans ce lot (T25.A + T25.B uniquement)
+- `packages/game-engine/src/data/entreprises.ts` — Trésorerie 8 000 → 10 000 (×4), Capitaux propres 20 000 → 22 000 (×3) et 17 000 → 19 000 (Synergia). En-têtes de fichier mis à jour.
+- `packages/game-engine/src/engine.ts` — Étape 0 : calcul des intérêts gated sur `tourActuel >= 3 && (tourActuel - 3) % 4 === 0`. Remboursement du capital laissé inchangé (toujours -500 € dès T1).
+- `packages/game-engine/tests/tache25.test.ts` — **Nouveau fichier**, 12 tests, utilise uniquement l'API publique (`initialiserJeu`, `appliquerEtape0`, `getTresorerie`, `getTotalActif/Passif`, `getResultatNet`, `ENTREPRISES`).
+- `packages/game-engine/tests/engine.test.ts` — Mises à jour de valeurs attendues (total actif 28 000 → 30 000 ; trésorerie après étape 0 ajustée ; cessions 18 000 → 20 000 et 13 000 → 15 000).
+- `packages/game-engine/tests/defis.test.ts` — Mise à jour du motif de trésorerie attendu ("8" → "10") sur Belvaux au T1.
+
+### Pourquoi un fichier de tests dédié
+La suite `engine.test.ts` est cassée en compilation depuis le commit d8571b4 ("nettoyer l'API publique du package") — `creerJoueur` et `calculerCoutCommerciaux` n'y sont plus exportés. La réparer dépasse le scope de Tâche 25 (dette de typage indépendante). Un fichier dédié à l'API publique évite ce champ de mines tout en garantissant une couverture suffisante.
+
+### Pourquoi T25.C est reporté
+L'inventaire du code a révélé que réordonner les étapes impacte :
+1. Deux copies du moteur (`packages/game-engine/src/engine.ts` + `apps/web/lib/game-engine/` — legacy encore utilisé par l'app).
+2. ~170 lignes de contenu pédagogique indexées par numéro d'étape : `MODALES_ETAPES` (9 entrées) et `QCM_ETAPES` (10 entrées) qu'il faut **re-mapper sémantiquement**, pas juste renuméroter.
+3. Les slots dramaturgiques de Tâche 24 (`debut_tour`, `avant_decision`, etc.) attachés au pipeline actuel.
+
+Règle appliquée : **"If something goes sideways, STOP and re-plan immediately"**. Un plan dédié à T25.C sera rédigé avant exécution.
+
+### Vérification
+- `npx tsc --noEmit` (game-engine) : ✅ aucune erreur
+- `npx jest tests/tache25.test.ts` : ✅ 12/12 tests passent
+- `npx jest` (full) : ✅ 96/96 tests passent (la seule suite cassée est `engine.test.ts`, cassure pré-existante, cf. dette d8571b4)
+- `npm run build` game-engine : ✅ dist/ régénéré
 
 ---
 
