@@ -502,3 +502,73 @@ Si absent, deux options :
   sinon la résolution via dist/ échoue silencieusement.
 - Le symlink local suffit pour `tsc --noEmit` ; pour un `npm run dev` ou `build`, préférer
   le vrai `npm install` depuis le Mac.
+
+---
+
+## L46 — 2026-04-19 : Pré-chargement redondant = doublement des ventes au T1
+
+### Symptôme rapporté par Pierre
+Au T1, avec un Commercial Junior par défaut (qui génère 2 clients Particuliers/trimestre),
+**4 ventes distinctes apparaissaient à l'étape 4 au lieu de 2**, pour toutes les entreprises
+(Belvaux production confirmée). Bug antérieur, pas une régression Vague 2 Défis.
+
+### Cause racine
+`packages/game-engine/src/engine.ts` L272-275 pré-chargeait 2 clients Particuliers dans
+`clientsATrait` à la création du joueur (`creerJoueur`). À l'étape 3 du T1,
+`genererClientsParCommerciaux` AJOUTAIT (avec spread) 2 clients supplémentaires du Commercial
+Junior par défaut → **2 pré-chargés + 2 junior = 4 clients**, traités à l'étape 4 comme
+4 ventes distinctes.
+
+Le pré-chargement était un artefact historique d'une version antérieure **sans** Commercial
+Junior par défaut : il donnait de la visibilité aux 1ères ventes. Depuis l'ajout du Commercial
+Junior en dotation initiale (L265-266), il fait doublon.
+
+### Fix
+Remplacer L272-275 par `clientsATrait: []` — le Commercial Junior génère déjà les 2 clients à
+l'étape 3. Commentaire explicatif inline pour prévenir une régression future.
+
+### Règle
+**Toujours vérifier si une initialisation "de confort" reste nécessaire après un changement
+d'architecture.** Ici, la dotation initiale (cartesActives avec Commercial Junior) rendait
+le pré-chargement de clientsATrait redondant — mais sans test dédié, le bug est passé inaperçu.
+
+### À retenir
+- Quand une entité a plusieurs sources d'alimentation (`clientsATrait` = pré-chargement +
+  commerciaux + spécialité), toute addition doit documenter qui alimente quoi, et quand.
+- Le test `engine.test.ts:210-215` attendait 1 client (valeur obsolète depuis le passage à
+  `nbClientsParTour: 2`). La suite est déjà cassée à la compilation (erreur pré-existante),
+  donc ce test faux ne ralentit personne — mais il faudrait le corriger un jour.
+
+---
+
+## L47 — 2026-04-19 : CTA secondaire "Passer" doit rester visible sans confusion hiérarchique
+
+### Symptôme rapporté par Pierre
+À l'étape 6b (Investissement), les boutons "Passer →" (en-tête) et "Passer cette étape →"
+(bas de section) étaient stylés `bg-white/10` / `bg-white/[0.06]` — ils se confondaient
+avec le fond sombre et le joueur ne voyait pas l'option pour skipper.
+
+### Fix
+Appliquer la palette **amber** déjà utilisée dans la section Logistique & Innovation
+(cohérence sémantique : amber = secondaire important) :
+```
+bg-amber-500 text-slate-950 font-bold
+border border-amber-300/60 ring-2 ring-amber-300/50 shadow-lg shadow-amber-500/40
+hover:bg-amber-400
+```
+
+Deux boutons modifiés dans `apps/web/components/jeu/InvestissementPanel.tsx` (L390-398 et L491-500).
+
+### Règle
+Un CTA secondaire **nécessaire mais non-principal** ("Passer", "Skip") doit :
+1. **Contraster avec le fond** : éviter `bg-white/*` sur fond sombre pour les actions utiles.
+2. **Ne pas rivaliser avec le CTA principal** : choisir une teinte différente (ici amber vs cyan
+   pour "Investir").
+3. **Rester cohérent avec la sémantique de section** : la section Investissement utilise déjà
+   amber pour "Logistique & Innovation" → le bouton Passer s'intègre naturellement.
+
+### À retenir
+- Les boutons "neutres" sur fond sombre (`bg-white/10`) sont invisibles pour les utilisateurs
+  non habitués au design du produit. Toujours tester l'affichage avec un œil neuf.
+- Avant de styler, chercher les palettes amber/yellow déjà utilisées dans le même composant
+  pour garantir la cohérence — pas créer une 6ème teinte.

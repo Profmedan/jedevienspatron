@@ -391,7 +391,7 @@ export function InvestissementPanel({
           type="button"
           onClick={onTerminer}
           disabled={disabled}
-          className="shrink-0 cursor-pointer rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+          className="shrink-0 cursor-pointer rounded-full border border-amber-300/60 bg-amber-500 px-4 py-1.5 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Passer l'étape investissement et continuer"
         >
           Passer →
@@ -486,13 +486,13 @@ export function InvestissementPanel({
         </section>
       )}
 
-      {/* ── Bouton Passer — visible en bas pour ne pas rater l'option ── */}
+      {/* ── Bouton Passer — mis en surbrillance amber pour ne pas rater l'option ── */}
       <div className="flex justify-center pt-1 pb-2">
         <button
           type="button"
           onClick={onTerminer}
           disabled={disabled}
-          className="cursor-pointer rounded-xl border border-white/20 bg-white/[0.06] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+          className="cursor-pointer rounded-xl border border-amber-300/60 bg-amber-500 px-7 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Passer l'étape investissement et continuer"
         >
           Passer cette étape →

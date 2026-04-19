@@ -214,13 +214,11 @@ function creerJoueur(id, pseudo, nomEntreprise, customTemplates) {
             const base = comJunior ? [{ ...comJunior, id: `${comJunior.id}-init-${_nextCommercialId++}` }] : [];
             return [...base, ...(template.cartesLogistiquesDepart ?? [])];
         })(),
-        // 2 clients Particuliers pré-chargés dès T1 : l'entreprise avait déjà
-        // quelques clients avant le début du jeu — le joueur voit immédiatement
-        // une vente et son écriture sans attendre d'avoir recruté un commercial.
-        clientsATrait: (() => {
-            const cp = cartes_1.CARTES_CLIENTS.find((c) => c.id === "client-particulier");
-            return cp ? [cp, cp] : [];
-        })(),
+        // clientsATrait initialisé à vide : le Commercial Junior par défaut (ajouté
+        // ci-dessus dans cartesActives) génère déjà 2 clients Particuliers à
+        // l'étape 3 du T1. Le pré-chargement antérieur de 2 clients créait un
+        // doublon (2 pré + 2 junior = 4 ventes au lieu de 2) — cf. lessons.md L46.
+        clientsATrait: [],
         elimine: false,
         publicitéCeTour: false,
         clientsPerdusCeTour: 0,

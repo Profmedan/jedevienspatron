@@ -1033,3 +1033,79 @@ Deux besoins : (A) empêcher un apprenant de rejouer après refresh (sécurité 
 **TypeScript** :
 - [x] apps/web : 0 erreur
 - [x] game-engine : 0 erreur
+
+---
+
+## 🐛 2026-04-19 — Fixes post-test manuel Vague 2 (Tâche 24)
+
+Pierre teste Vague 2 Défis du dirigeant sur 6 trimestres (commit `8cc38cc` déjà pushé).
+Deux issues rapportées pendant le test.
+
+### Fix #1 — Bug 4 ventes au lieu de 2 au T1 (bug antérieur, pas une régression V2)
+
+**Constat** :
+- Entreprise : Belvaux production
+- Étape 4, T1 : 4 ventes distinctes au lieu des 2 attendues (1 commercial junior = 2 clients)
+
+**Cause racine** : `packages/game-engine/src/engine.ts` L272-275 pré-chargeait 2 clients
+Particuliers dans `clientsATrait` à la création du joueur, et à l'étape 3 le Commercial Junior
+par défaut AJOUTAIT 2 clients supplémentaires (spread, pas override). Total T1 : 2+2=4.
+
+**Fix** : remplacer le pré-chargement par `clientsATrait: []`. Le Commercial Junior
+génère déjà ses 2 clients à l'étape 3.
+
+**Fichier modifié** :
+- [x] `packages/game-engine/src/engine.ts` L272-275 → `clientsATrait: []` + commentaire explicatif
+- [x] `packages/game-engine/dist/engine.js` recompilé via `npx tsc`
+
+**Tests** :
+- [x] 74 tests game-engine passent (calibrage, catalogue-v2, defis, timing)
+- [x] `engine.test.ts` a des erreurs de compilation pré-existantes (non liées au fix)
+
+### Fix #2 — Bouton "Passer →" étape 6b pas assez visible (UX)
+
+**Constat** : après un investissement ou lors du renoncement, le bouton "Passer" en
+`bg-white/10` se confond avec le fond sombre → Pierre ne voit pas l'option pour skipper.
+
+**Fix** : appliquer la palette amber (déjà utilisée dans la section Logistique & Innovation
+du même panel) pour créer cohérence + visibilité :
+```
+bg-amber-500 text-slate-950 font-bold
+border border-amber-300/60 ring-2 ring-amber-300/50 shadow-lg shadow-amber-500/40
+hover:bg-amber-400
+```
+
+**Fichier modifié** :
+- [x] `apps/web/components/jeu/InvestissementPanel.tsx` L390-398 (bouton en-tête "Passer →")
+- [x] `apps/web/components/jeu/InvestissementPanel.tsx` L491-500 (bouton bas "Passer cette étape →")
+
+### Vérifications
+
+- [x] `cd packages/game-engine && npx tsc` → build dist/ OK
+- [x] `cd apps/web && npx tsc --noEmit` → 0 régression liée à mes modifs
+- [x] 74/74 tests game-engine passent
+- [x] `tasks/lessons.md` : ajout L46 (pré-chargement redondant) + L47 (CTA secondaire)
+
+### À faire côté Pierre
+
+- [ ] Commit + push depuis le Mac (VM ne peut pas supprimer `.git/index.lock`)
+- [ ] Retester T1 Belvaux production → confirmer 2 ventes (attendu)
+- [ ] Valider visuellement le contraste du bouton Passer amber (étape 6b)
+- [ ] Continuer le test 6 trimestres avec le flag `?defis=1`
+
+### Message de commit suggéré
+
+```
+fix(game): bug 4 ventes au T1 + UX bouton Passer étape 6b
+
+- Supprime le pré-chargement de 2 clients Particuliers dans creerJoueur
+  (packages/game-engine/src/engine.ts L272-275) qui créait un doublon
+  avec les 2 clients générés par le Commercial Junior par défaut à l'étape 3.
+  Au T1 : 2 ventes au lieu de 4 ventes distinctes.
+
+- Met en surbrillance amber les 2 boutons "Passer" de l'étape 6b
+  Investissement pour éviter qu'ils se confondent avec le fond sombre.
+  Cohérent avec la palette Logistique & Innovation du même panel.
+
+- Documente dans lessons.md L46 (pré-chargement redondant) + L47 (CTA).
+```
