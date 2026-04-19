@@ -357,3 +357,158 @@ export function getPedagogieContexte(poste: string, delta: number, isDebit: bool
   if (!mapping) return "";
   return isDebit ? mapping.debit : mapping.credit;
 }
+
+// ─────────────────────────────────────────────────────────────
+// PALETTE PAR TONALITÉ DE DÉFI (Vague 3, Tâche 24)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Tonalités thématiques des défis du dirigeant — mirror du type
+ * `TonaliteDefi` de game-engine. Null pour observations/cloture
+ * (défis systémiques sans tonalité).
+ */
+export type TonaliteDefi =
+  | "tresorerie"
+  | "capacite"
+  | "financement"
+  | "risque"
+  | "positionnement"
+  | null;
+
+/**
+ * Palette Tailwind appliquée à l'overlay DefiDirigeantScreen selon
+ * la tonalité. Les classes sont écrites en dur (pas construites
+ * dynamiquement) parce que le JIT de Tailwind ne détecte pas les
+ * littéraux assemblés à l'exécution.
+ *
+ * Mapping sémantique :
+ *   - tresorerie    → emerald (vert : argent, liquidité)
+ *   - capacite      → sky     (bleu industriel : production, logistique)
+ *   - financement   → violet  (bancaire : dette, levée de fonds)
+ *   - risque        → rose    (alerte sobre, sans agressivité)
+ *   - positionnement → indigo  (stratégie, identique au défaut V2)
+ *   - null          → slate   (neutre : observations, clôture)
+ */
+export interface PaletteTonalite {
+  /** Couleur de fond de l'overlay (transparence 80%). */
+  overlayBg: string;
+  /** Gradient d'en-tête (déroulement from-/to-). */
+  headerGradient: string;
+  /** Couleur d'icône et de libellé d'accent. */
+  accentText: string;
+  /** Classes de la carte de choix (hover border + bg). */
+  choixHover: string;
+  /** Couleur du titre de chaque choix. */
+  choixTitre: string;
+  /** Bloc pédagogique après sélection : background. */
+  pedagogieBg: string;
+  /** Bloc pédagogique après sélection : border. */
+  pedagogieBorder: string;
+  /** Bloc pédagogique après sélection : titre de la section. */
+  pedagogieTitre: string;
+  /** Gradient du bouton « Valider/Appliquer/Continuer ». */
+  validerBtn: string;
+}
+
+/** Palette par défaut (tonalité null : indigo — neutre systémique). */
+const PALETTE_INDIGO: PaletteTonalite = {
+  overlayBg: "bg-indigo-900/80",
+  headerGradient: "from-indigo-600 to-purple-600",
+  accentText: "text-indigo-200",
+  choixHover: "hover:border-indigo-500 hover:bg-indigo-950/40",
+  choixTitre: "text-indigo-200",
+  pedagogieBg: "bg-indigo-950/30",
+  pedagogieBorder: "border-indigo-700/50",
+  pedagogieTitre: "text-indigo-300",
+  validerBtn:
+    "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800",
+};
+
+const PALETTE_EMERALD: PaletteTonalite = {
+  overlayBg: "bg-emerald-900/80",
+  headerGradient: "from-emerald-600 to-teal-600",
+  accentText: "text-emerald-200",
+  choixHover: "hover:border-emerald-500 hover:bg-emerald-950/40",
+  choixTitre: "text-emerald-200",
+  pedagogieBg: "bg-emerald-950/30",
+  pedagogieBorder: "border-emerald-700/50",
+  pedagogieTitre: "text-emerald-300",
+  validerBtn:
+    "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800",
+};
+
+const PALETTE_SKY: PaletteTonalite = {
+  overlayBg: "bg-sky-900/80",
+  headerGradient: "from-sky-600 to-cyan-600",
+  accentText: "text-sky-200",
+  choixHover: "hover:border-sky-500 hover:bg-sky-950/40",
+  choixTitre: "text-sky-200",
+  pedagogieBg: "bg-sky-950/30",
+  pedagogieBorder: "border-sky-700/50",
+  pedagogieTitre: "text-sky-300",
+  validerBtn:
+    "bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800",
+};
+
+const PALETTE_VIOLET: PaletteTonalite = {
+  overlayBg: "bg-violet-900/80",
+  headerGradient: "from-violet-600 to-purple-600",
+  accentText: "text-violet-200",
+  choixHover: "hover:border-violet-500 hover:bg-violet-950/40",
+  choixTitre: "text-violet-200",
+  pedagogieBg: "bg-violet-950/30",
+  pedagogieBorder: "border-violet-700/50",
+  pedagogieTitre: "text-violet-300",
+  validerBtn:
+    "bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800",
+};
+
+const PALETTE_ROSE: PaletteTonalite = {
+  overlayBg: "bg-rose-900/80",
+  headerGradient: "from-rose-600 to-pink-600",
+  accentText: "text-rose-200",
+  choixHover: "hover:border-rose-500 hover:bg-rose-950/40",
+  choixTitre: "text-rose-200",
+  pedagogieBg: "bg-rose-950/30",
+  pedagogieBorder: "border-rose-700/50",
+  pedagogieTitre: "text-rose-300",
+  validerBtn:
+    "bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800",
+};
+
+const PALETTE_SLATE: PaletteTonalite = {
+  overlayBg: "bg-slate-900/80",
+  headerGradient: "from-slate-600 to-slate-700",
+  accentText: "text-slate-200",
+  choixHover: "hover:border-slate-400 hover:bg-slate-800/40",
+  choixTitre: "text-slate-200",
+  pedagogieBg: "bg-slate-800/40",
+  pedagogieBorder: "border-slate-600/50",
+  pedagogieTitre: "text-slate-300",
+  validerBtn:
+    "bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800",
+};
+
+/**
+ * Retourne la palette Tailwind associée à une tonalité de défi.
+ * Pour tonalite=null (observations, clôture), la palette slate neutre
+ * est utilisée — ces défis systémiques ne doivent pas rivaliser
+ * visuellement avec les 5 tonalités thématiques.
+ */
+export function getPaletteTonalite(tonalite: TonaliteDefi): PaletteTonalite {
+  switch (tonalite) {
+    case "tresorerie":
+      return PALETTE_EMERALD;
+    case "capacite":
+      return PALETTE_SKY;
+    case "financement":
+      return PALETTE_VIOLET;
+    case "risque":
+      return PALETTE_ROSE;
+    case "positionnement":
+      return PALETTE_INDIGO;
+    case null:
+    default:
+      return PALETTE_SLATE;
+  }
+}

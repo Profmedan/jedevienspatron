@@ -1109,3 +1109,81 @@ fix(game): bug 4 ventes au T1 + UX bouton Passer étape 6b
 
 - Documente dans lessons.md L46 (pré-chargement redondant) + L47 (CTA).
 ```
+
+---
+
+## 🌊 2026-04-19 — Vague 3 (Tâche 24) — Refonte `DefiDirigeantScreen`
+
+### Périmètre de cette session
+
+Ordre voulu par Pierre : **variante courte/longue → palette par tonalité → (clôture + journal : sessions suivantes)**.
+
+### Livraisons
+
+#### 1. Mini-catalogue étendu (`packages/game-engine/src/data/defis/catalogue-v2.ts`)
+- [x] Ajout de `DEFI_T4_CREDIT_CLIENT` (archétype `choix_arbitrage`, tonalité `tresorerie`, 3 choix avec trade-off ventes/trésorerie/créances C+1 / C+2)
+- [x] Ajout de `OBSERVATION_T5_CREANCE_DOUTEUSE` (archétype `consequence_differee`, tonalité `risque`, principe de prudence : créance sort / charge entre à valeur absolue égale)
+- [x] `CATALOGUE_V2` contient 6 défis et couvre 5 archétypes + 4 tonalités (tresorerie, risque, positionnement, null)
+
+#### 2. Helper palette par tonalité (`apps/web/components/jeu/utils.ts`)
+- [x] Type `TonaliteDefi` miroir de game-engine + `PaletteTonalite` (9 champs de classes Tailwind)
+- [x] 6 constantes palette déclarées en dur (contrainte JIT Tailwind : pas de classe construite) : PALETTE_EMERALD (tresorerie), PALETTE_SKY (capacite), PALETTE_VIOLET (financement), PALETTE_ROSE (risque), PALETTE_INDIGO (positionnement), PALETTE_SLATE (null)
+- [x] Fonction `getPaletteTonalite(tonalite)` : switch explicite, defaulte sur slate
+
+#### 3. Refonte de `DefiDirigeantScreen.tsx` (`apps/web/components/jeu/`)
+- [x] Routage archétype → variante via `variantePourArchetype()` (seul `palier_strategique` → `longue`, tout le reste → `courte`)
+- [x] Variante **courte** : enchaînement linéaire choix → validation → pédagogie, palette appliquée partout (overlay, header, hover, bouton valider)
+- [x] Variante **longue** : sous-composant `BilanProjectif` qui liste pour chaque choix les effets Maintenant et dans N trimestres, avec sous-composant `EffetsList` (poste + delta signé ±, vert si +, rouge si −)
+- [x] Badge dynamique à côté du titre par archétype (Observation / Décision rapide / Conséquence / Alerte / Décision stratégique / Clôture d'exercice)
+
+### Tests
+
+- [x] `packages/game-engine/tests/catalogue-v2.test.ts` étendu : 27 tests (vs 18 avant), couvre explicitement les 2 nouveaux défis + sémantique comptable (monotonie CA, principe de prudence, trade-off BFR)
+- [x] `apps/web/components/jeu/__tests__/palette.verify.ts` — script d'assertion autonome (pas de jest dans apps/web) : vérifie que les 6 tonalités retournent des palettes complètes, distinctes, et correctement mappées. Compilation + exécution runtime validées.
+- [x] **Suite jest complète** : 84 tests passent (10 nouveaux). Les erreurs `engine.test.ts` sont pré-existantes (non liées à Vague 3).
+
+### Vérifications
+
+- [x] `cd packages/game-engine && npx tsc` → dist/ recompilée (new defis visibles dans `dist/data/defis/catalogue-v2.js`)
+- [x] `cd apps/web && npx tsc --noEmit` → aucune nouvelle erreur sur `DefiDirigeantScreen`, `utils`, `__tests__/palette.verify`. Erreurs lucide/recharts pré-existantes (Tâche 6.5)
+- [x] `npx jest` dans game-engine → 84/84 verts sur les suites qui compilent
+- [x] Palette runtime : `✓ 6 tonalités validées, 9 champs par palette, 5 overlay distincts`
+
+### Reste à faire (priorité Pierre, sessions suivantes)
+
+- [ ] Variante **clôture** (archétype `cloture`) — bilan consolidé + calcul IS + réserve légale + affectation du résultat
+- [ ] `JournalDefis.tsx` — chronologie des défis résolus + arcs différés en cours dans `RightPanel`
+- [ ] Écriture narrative complète (Vague 4) : 27 défis couvrant 7 archétypes × 5 tonalités
+
+### À faire côté Pierre
+
+- [ ] Commit + push depuis le Mac
+- [ ] Tester visuellement les variantes avec `?defis=1` sur une partie 6 trim : observation T1/T2 (slate), choix_binaire T3 marché (indigo), palier T3 positionnement (indigo, variante longue), arbitrage T4 crédit (emerald), consequence_differee T5 créance (rose)
+- [ ] Valider que la palette se lit : tresorerie reconnaissable au premier coup d'œil sans lire le titre
+
+### Message de commit suggéré
+
+```
+feat(defis): Vague 3 — variantes courte/longue + palette par tonalité
+
+- DefiDirigeantScreen.tsx : routage archétype → variante, palette
+  par tonalité appliquée partout (overlay, header, hover, valider),
+  sous-composant BilanProjectif pour palier_strategique qui liste
+  effets Maintenant + Dans N trimestres avec EffetsList signée.
+
+- utils.ts : types TonaliteDefi / PaletteTonalite + 6 palettes
+  hardcodées (contrainte JIT Tailwind) + getPaletteTonalite().
+
+- catalogue-v2.ts : +2 défis (DEFI_T4_CREDIT_CLIENT tresorerie,
+  OBSERVATION_T5_CREANCE_DOUTEUSE risque) pour couvrir plus
+  d'archétypes et tonalités en test.
+
+- tests/catalogue-v2.test.ts : 27 tests (vs 18), sémantique
+  comptable des 2 nouveaux défis (monotonie CA, principe de
+  prudence, trade-off BFR).
+
+- __tests__/palette.verify.ts : assertion runtime autonome des
+  6 tonalités × 9 champs (5 overlay distincts).
+
+Documente lessons.md L48 (routage archétype → variante + palette).
+```

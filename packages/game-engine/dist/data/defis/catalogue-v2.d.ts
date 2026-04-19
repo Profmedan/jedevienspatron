@@ -1,7 +1,8 @@
 import { DefiDirigeant } from "../../types";
 /**
- * Mini-catalogue de démo pour la Vague 2. 5 défis couvrant
- * l'arc émotionnel T1→T5 en durée 6.
+ * Mini-catalogue de démo pour les Vagues 2 et 3. 6 défis couvrant
+ * l'arc émotionnel T1→T5 en durée 6, avec 3 archétypes et 3 tonalités
+ * (observation/choix_binaire/choix_arbitrage/palier_strategique/consequence_differee).
  *
  * Les IDs sont stables : une partie qui mémorise un arc avec ces
  * IDs pourra être rechargée tant qu'ils existent dans le catalogue.

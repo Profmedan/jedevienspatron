@@ -25,6 +25,7 @@ export {
   getPosteValue,
   applyDeltaToJoueur,
   analyserSituationFinanciere,
+  getPaletteTonalite,
   ACTIF_KEYS,
   PASSIF_KEYS,
   CHARGES_KEYS,
@@ -32,4 +33,6 @@ export {
   type SensEcriture,
   type DocumentInfo,
   type MessageAnalyse,
+  type TonaliteDefi,
+  type PaletteTonalite,
 } from "./utils";

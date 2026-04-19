@@ -42,8 +42,10 @@ function piocherAuTour(
 // ─── 1. STRUCTURE DU CATALOGUE ───────────────────────────────
 
 describe("Structure du catalogue V2", () => {
-  test("Contient exactement 4 défis", () => {
-    expect(CATALOGUE_V2).toHaveLength(4);
+  test("Contient exactement 6 défis (4 de base + 2 ajoutés Vague 3)", () => {
+    // Vague 2 : obs-t1, obs-t2, defi-t3-marche, palier-t3-positionnement (4)
+    // Vague 3 : defi-t4-credit-client, obs-t5-creance-douteuse (+2)
+    expect(CATALOGUE_V2).toHaveLength(6);
   });
 
   test("Tous les IDs sont uniques", () => {
@@ -103,11 +105,31 @@ describe("Parcours émotionnel T1 → T3 (défis obligatoires)", () => {
     expect(defi?.choix).toHaveLength(3);
   });
 
-  test("T4/T5/T6 slot debut_tour : plus de défi tiré (catalogue court)", () => {
+  test("T4 slot debut_tour : pas de défi (obs-t5 vise debut_tour mais T5)", () => {
     const etat = etatNeuf();
     expect(piocherAuTour(4, "debut_tour", etat)).toBeNull();
-    expect(piocherAuTour(5, "debut_tour", etat)).toBeNull();
+  });
+
+  test("T5 slot debut_tour : créance douteuse tirée", () => {
+    const etat = etatNeuf();
+    const defi = piocherAuTour(5, "debut_tour", etat);
+    expect(defi?.id).toBe("obs-t5-creance-douteuse");
+    expect(defi?.archetype).toBe("consequence_differee");
+    expect(defi?.tonalite).toBe("risque");
+  });
+
+  test("T6 slot debut_tour : aucun défi (catalogue court)", () => {
+    const etat = etatNeuf();
     expect(piocherAuTour(6, "debut_tour", etat)).toBeNull();
+  });
+
+  test("T4 slot avant_decision : crédit client tiré", () => {
+    const etat = etatNeuf();
+    const defi = piocherAuTour(4, "avant_decision", etat);
+    expect(defi?.id).toBe("defi-t4-credit-client");
+    expect(defi?.archetype).toBe("choix_arbitrage");
+    expect(defi?.tonalite).toBe("tresorerie");
+    expect(defi?.choix).toHaveLength(3);
   });
 
   test("Anti-répétition : un même défi ne se retire pas au joueur qui l'a déjà résolu", () => {
@@ -192,7 +214,78 @@ describe("Arc différé du palier positionnement (T3 → T5)", () => {
   });
 });
 
-// ─── 4. CALIBRAGE : AUCUN MONTANT HARDCODÉ ──────────────────
+// ─── 4. DÉFIS VAGUE 3 : SÉMANTIQUE COMPTABLE ────────────────
+
+describe("DEFI_T4_CREDIT_CLIENT (choix_arbitrage, tonalité trésorerie)", () => {
+  const defi = CATALOGUE_V2_INDEX["defi-t4-credit-client"];
+
+  test("Le défi vise le slot avant_decision au T4", () => {
+    expect(defi.slot).toBe("avant_decision");
+    expect(defi.tourMin).toBe(4);
+    expect(defi.tourMax).toBe(4);
+  });
+
+  test("Accepter-long : CA + créance C+2 (effet de BFR)", () => {
+    const c = defi.choix.find((x) => x.id === "accepter-long")!;
+    const ventes = c.effetsImmediats.find((e) => e.poste === "ventes")!;
+    const creances = c.effetsImmediats.find((e) => e.poste === "creancesPlus2")!;
+    expect(ventes.delta).toBeGreaterThan(0);
+    expect(creances.delta).toBeGreaterThan(0);
+    // Aucun impact trésorerie immédiat — c'est le cœur de l'arbitrage.
+    expect(c.effetsImmediats.find((e) => e.poste === "tresorerie")).toBeUndefined();
+  });
+
+  test("Compromis : CA + créance C+1 (délai intermédiaire)", () => {
+    const c = defi.choix.find((x) => x.id === "compromis")!;
+    const creances = c.effetsImmediats.find((e) => e.poste === "creancesPlus1")!;
+    expect(creances.delta).toBeGreaterThan(0);
+    // Pas de C+2 sur le compromis.
+    expect(c.effetsImmediats.find((e) => e.poste === "creancesPlus2")).toBeUndefined();
+  });
+
+  test("Paiement-immédiat : CA + trésorerie immédiate, pas de créance", () => {
+    const c = defi.choix.find((x) => x.id === "paiement-immediat")!;
+    const tresorerie = c.effetsImmediats.find((e) => e.poste === "tresorerie")!;
+    expect(tresorerie.delta).toBeGreaterThan(0);
+    // Pas de créance ajoutée (tout est encaissé).
+    expect(c.effetsImmediats.find((e) => e.poste === "creancesPlus1")).toBeUndefined();
+    expect(c.effetsImmediats.find((e) => e.poste === "creancesPlus2")).toBeUndefined();
+  });
+
+  test("Monotonie du CA : accepter-long > compromis > paiement-immediat", () => {
+    const ventes = (id: string) =>
+      defi.choix.find((c) => c.id === id)!.effetsImmediats.find((e) => e.poste === "ventes")!.delta;
+    expect(ventes("accepter-long")).toBeGreaterThan(ventes("compromis"));
+    expect(ventes("compromis")).toBeGreaterThan(ventes("paiement-immediat"));
+  });
+});
+
+describe("OBSERVATION_T5_CREANCE_DOUTEUSE (consequence_differee, tonalité risque)", () => {
+  const defi = CATALOGUE_V2_INDEX["obs-t5-creance-douteuse"];
+
+  test("Le défi vise le slot debut_tour au T5 et est obligatoire", () => {
+    expect(defi.slot).toBe("debut_tour");
+    expect(defi.tourMin).toBe(5);
+    expect(defi.tourMax).toBe(5);
+    expect(defi.obligatoire).toBe(true);
+  });
+
+  test("Unique choix « provisionner » : ↓ créance C+2 et ↑ charges exceptionnelles", () => {
+    expect(defi.choix).toHaveLength(1);
+    const c = defi.choix[0];
+    expect(c.id).toBe("provisionner");
+
+    const creances = c.effetsImmediats.find((e) => e.poste === "creancesPlus2")!;
+    const charges = c.effetsImmediats.find((e) => e.poste === "chargesExceptionnelles")!;
+    expect(creances.delta).toBeLessThan(0);
+    expect(charges.delta).toBeGreaterThan(0);
+    // Principe de prudence : les deux deltas sont symétriques en valeur absolue
+    // (la provision matérialise la perte : créance sort du bilan, charge entre au CR).
+    expect(Math.abs(creances.delta)).toBe(Math.abs(charges.delta));
+  });
+});
+
+// ─── 5. CALIBRAGE : AUCUN MONTANT HARDCODÉ ──────────────────
 
 describe("Respect de l'échelle de jeu (L43)", () => {
   test("Tous les deltas sont des multiples de 500 (pas arrondirJeu)", () => {

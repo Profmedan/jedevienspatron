@@ -572,3 +572,57 @@ Un CTA secondaire **nécessaire mais non-principal** ("Passer", "Skip") doit :
   non habitués au design du produit. Toujours tester l'affichage avec un œil neuf.
 - Avant de styler, chercher les palettes amber/yellow déjà utilisées dans le même composant
   pour garantir la cohérence — pas créer une 6ème teinte.
+
+---
+
+## L48 — 2026-04-19 : Variantes d'un écran de défi — routage par archétype, pas par tonalité
+
+### Contexte
+Dans `DefiDirigeantScreen.tsx` (Vague 3), j'avais deux axes de différenciation disponibles :
+l'**archétype** (structure dramaturgique du défi : observation, choix_binaire, palier, etc.)
+et la **tonalité** (thème comptable : trésorerie, risque, positionnement, etc.).
+
+### Décision
+- **Archétype** détermine la **variante structurelle** (courte vs longue vs clôture) — c'est
+  lui qui dicte *quelle* UI on montre.
+- **Tonalité** détermine la **palette visuelle** — elle dicte *comment* on la colore.
+
+Deux fonctions pures dédiées :
+```ts
+function variantePourArchetype(archetype): "courte" | "longue" | "cloture"
+function getPaletteTonalite(tonalite): PaletteTonalite
+```
+
+Chaque fonction a une seule responsabilité et un seul `switch` exhaustif. Aucun couplage
+croisé : un défi « palier_strategique » peut avoir n'importe quelle tonalité, ça ne change
+que la palette, pas la variante.
+
+### Règle
+Quand une entité a plusieurs dimensions orthogonales (archétype × tonalité × slot...),
+**une fonction pure par dimension**. Ne jamais concaténer archétype + tonalité dans une
+clef unique — ça fige les combinaisons et empêche d'en ajouter.
+
+### À retenir sur Tailwind JIT
+Les classes Tailwind **doivent être des littéraux statiques** détectables par le JIT. Interdit :
+```ts
+// ❌ JIT ne verra JAMAIS ces classes
+const palette = `bg-${couleur}-900/80 border-${couleur}-700`;
+```
+Écrire 6 objets constants complets avec classes en dur (comme `PALETTE_EMERALD`, `PALETTE_ROSE`...)
+et mapper via un switch explicite. Plus verbeux, mais fiable.
+
+### Tests sans framework quand la partie UI n'a pas jest
+`apps/web` n'a pas jest. Pour tester le palette helper, j'ai créé un script d'assertion
+autonome `__tests__/palette.verify.ts` qui :
+1. Passe `npx tsc --noEmit` (type-safe)
+2. Se compile + exécute ponctuellement via `node` pour vérifier les invariants runtime
+3. Documente sa procédure d'exécution en commentaire (pas de magie cachée)
+
+Mieux qu'un test jest absent, plus léger que d'installer jest juste pour un helper.
+
+### À retenir
+- Un helper pur de 50 lignes avec switch + string literals est mieux couvert par tsc que par
+  un test qui réaffirme les valeurs constantes. Tester plutôt **les invariants structurels**
+  (distinctness, complétude des champs) que les chaînes elles-mêmes.
+- Préférer 6 constantes dupliquées en apparence à 1 constante dynamique : le JIT Tailwind
+  n'a pas d'autre choix.

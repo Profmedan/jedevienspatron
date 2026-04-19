@@ -172,10 +172,91 @@ const PALIER_T3_POSITIONNEMENT = {
     ],
     obligatoire: true,
 };
+// ─── T4 avant_decision — Crédit client (choix d'arbitrage) ──
+// Ajout Vague 3 : test de la variante courte + tonalité tresorerie
+// + archétype choix_arbitrage (3 choix avec trade-offs marge/délai).
+const DEFI_T4_CREDIT_CLIENT = {
+    id: "defi-t4-credit-client",
+    archetype: "choix_arbitrage",
+    tonalite: "tresorerie",
+    conceptCible: "creances_clients",
+    slot: "avant_decision",
+    tourMin: 4,
+    tourMax: 4,
+    contexte: "Un gros client, {pseudo}. Il est prêt à te signer une belle commande chez " +
+        "{entreprise}, mais il négocie les conditions de paiement. Trois options sur la table.",
+    choix: [
+        {
+            id: "accepter-long",
+            libelle: "Accepter un délai de 60 jours",
+            description: "Tu décroches la commande, mais tu attends 2 trimestres avant d'encaisser.",
+            effetsImmediats: [
+                { poste: "ventes", delta: (0, calibrage_1.montantChargeFixe)(1.5) },
+                { poste: "creancesPlus2", delta: (0, calibrage_1.montantChargeFixe)(1.5) },
+            ],
+            pedagogie: "Délai long = créance à C+2 : ton chiffre d'affaires monte tout de suite, " +
+                "mais la trésorerie ne suit qu'au T+2. Attention au BFR qui gonfle.",
+        },
+        {
+            id: "compromis",
+            libelle: "Compromis à 30 jours",
+            description: "Délai intermédiaire : moins de risque, commande un peu plus petite.",
+            effetsImmediats: [
+                { poste: "ventes", delta: (0, calibrage_1.montantChargeFixe)(1) },
+                { poste: "creancesPlus1", delta: (0, calibrage_1.montantChargeFixe)(1) },
+            ],
+            pedagogie: "Créance à C+1 : équilibre raisonnable entre volume et trésorerie. Bon réflexe quand " +
+                "on veut éviter l'effet ciseau sans renoncer à la croissance.",
+        },
+        {
+            id: "paiement-immediat",
+            libelle: "Paiement comptant contre remise",
+            description: "Tu concèdes 20% de remise mais tu encaisses tout de suite.",
+            effetsImmediats: [
+                { poste: "ventes", delta: (0, calibrage_1.montantChargeFixe)(0.75) },
+                { poste: "tresorerie", delta: (0, calibrage_1.montantChargeFixe)(0.75) },
+            ],
+            pedagogie: "Encaissement immédiat : tréso solide, BFR inchangé, mais marge unitaire rabotée. " +
+                "À privilégier quand ta trésorerie est sous tension.",
+        },
+    ],
+    obligatoire: false,
+};
+// ─── T5 debut_tour — Créance douteuse (conséquence différée) ─
+// Ajout Vague 3 : test variante courte + tonalité risque + archétype
+// consequence_differee (révélation comptable d'une dérive silencieuse).
+const OBSERVATION_T5_CREANCE_DOUTEUSE = {
+    id: "obs-t5-creance-douteuse",
+    archetype: "consequence_differee",
+    tonalite: "risque",
+    conceptCible: "creance_douteuse",
+    slot: "debut_tour",
+    tourMin: 5,
+    tourMax: 5,
+    contexte: "Mauvaise nouvelle, {pseudo}. L'un des clients de {entreprise} vient de déposer le bilan. " +
+        "La créance que tu attendais ne rentrera probablement jamais. " +
+        "Tu dois constater la perte comptablement.",
+    choix: [
+        {
+            id: "provisionner",
+            libelle: "Provisionner la créance douteuse",
+            description: "Tu passes l'écriture de provision : créance réduite, charge constatée.",
+            effetsImmediats: [
+                { poste: "creancesPlus2", delta: -(0, calibrage_1.montantChargeFixe)(0.5) },
+                { poste: "chargesExceptionnelles", delta: (0, calibrage_1.montantChargeFixe)(0.5) },
+            ],
+            pedagogie: "Principe de prudence : dès qu'une créance devient douteuse, on la sort du bilan " +
+                "et on enregistre la perte en charges exceptionnelles. Le résultat baisse, " +
+                "mais le bilan redevient sincère.",
+        },
+    ],
+    obligatoire: true,
+};
 // ─── EXPORT DU CATALOGUE V2 ─────────────────────────────────
 /**
- * Mini-catalogue de démo pour la Vague 2. 5 défis couvrant
- * l'arc émotionnel T1→T5 en durée 6.
+ * Mini-catalogue de démo pour les Vagues 2 et 3. 6 défis couvrant
+ * l'arc émotionnel T1→T5 en durée 6, avec 3 archétypes et 3 tonalités
+ * (observation/choix_binaire/choix_arbitrage/palier_strategique/consequence_differee).
  *
  * Les IDs sont stables : une partie qui mémorise un arc avec ces
  * IDs pourra être rechargée tant qu'ils existent dans le catalogue.
@@ -185,6 +266,8 @@ exports.CATALOGUE_V2 = [
     OBSERVATION_T2,
     DEFI_T3_MARCHE,
     PALIER_T3_POSITIONNEMENT,
+    DEFI_T4_CREDIT_CLIENT,
+    OBSERVATION_T5_CREANCE_DOUTEUSE,
 ];
 /** Indexation par ID pour lookup O(1) lors de la résolution d'un arc. */
 exports.CATALOGUE_V2_INDEX = Object.fromEntries(exports.CATALOGUE_V2.map((d) => [d.id, d]));
