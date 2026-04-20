@@ -231,7 +231,7 @@ customTemplates) {
     return {
         phase: "playing",
         tourActuel: 1,
-        etapeTour: 0,
+        etapeTour: types_1.ETAPES.CHARGES_FIXES,
         joueurActif: 0,
         joueurs,
         nbJoueurs: joueurs.length,
@@ -936,13 +936,12 @@ function cloturerAnnee(etat) {
         joueur.clientsPerdusCeTour = 0;
     }
     etat.tourActuel = 1;
-    etat.etapeTour = 0;
+    etat.etapeTour = types_1.ETAPES.CHARGES_FIXES;
     etat.joueurActif = 0;
 }
 // ─── AVANCEMENT DU TOUR ─────────────────────────────────────
 function avancerEtape(etat) {
-    const maxEtape = 8;
-    if (etat.etapeTour < maxEtape) {
+    if (etat.etapeTour < types_1.ETAPES.BILAN) {
         etat.etapeTour = (etat.etapeTour + 1);
     }
     else {
@@ -953,7 +952,7 @@ function avancerEtape(etat) {
             etat.joueurActif = 0;
             etat.tourActuel++;
         }
-        etat.etapeTour = 0;
+        etat.etapeTour = types_1.ETAPES.CHARGES_FIXES;
     }
 }
 // ─── DEMANDE D'EMPRUNT BANCAIRE ──────────────────────────────

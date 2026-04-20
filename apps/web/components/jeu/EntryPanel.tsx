@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EtatJeu, Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron/game-engine";
+import { EtatJeu, Joueur, getTotalActif, getTotalPassif, ETAPES } from "@jedevienspatron/game-engine";
 
 import { DoubleEntrySalesCard } from "./DoubleEntrySalesCard";
 import { EntryCard, type EntryLine } from "./EntryCard";
@@ -210,7 +210,7 @@ export function EntryPanel({
   const impactApplied = impactRows.filter((row) => row.delta !== 0).length;
   const nextEntry = pendingEntries[0];
 
-  const isSalesStep = etapeTour === 4;
+  const isSalesStep = etapeTour === ETAPES.VENTES;
 
   // Nouveau : détection des groupes de vente narratifs (saleGroupId)
   const hasSaleGroupEntries = useMemo(() => entries.some(e => e.saleGroupId), [entries]);

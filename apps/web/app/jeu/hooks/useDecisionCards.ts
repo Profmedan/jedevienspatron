@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  EtatJeu, CarteDecision,
+  EtatJeu, CarteDecision, ETAPES,
   acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   tirerCartesDecision, obtenirCarteRecrutement, avancerEtape,
 } from "@jedevienspatron/game-engine";
@@ -44,9 +44,9 @@ export function useDecisionCards({
   // explicitement dans `launchDecision`. Reset à null à la sortie.
   const [pioche6b, setPioche6b] = useState<CarteDecision[] | null>(null);
 
-  // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape 6 ───────────
+  // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape Décision ────
   useEffect(() => {
-    if (etat?.etapeTour === 6 && !activeStep) {
+    if (etat?.etapeTour === ETAPES.DECISION && !activeStep) {
       setShowCartes(true);
     }
   }, [etat?.etapeTour, subEtape6, activeStep]);
@@ -54,7 +54,7 @@ export function useDecisionCards({
   // ── Init / reset de la pioche stable de l'étape 6b ───────────────────────
   useEffect(() => {
     if (!etat) return;
-    const enInvestissement = etat.etapeTour === 6 && subEtape6 === "investissement";
+    const enInvestissement = etat.etapeTour === ETAPES.DECISION && subEtape6 === "investissement";
     if (enInvestissement && pioche6b === null) {
       setPioche6b(tirerCartesDecision(cloneEtat(etat), 4));
     } else if (!enInvestissement && pioche6b !== null) {
@@ -65,7 +65,7 @@ export function useDecisionCards({
 
   // ── Cartes disponibles (computed) ────────────────────────────────────────
   const cartesDisponibles: CarteDecision[] = etat
-    ? (etat.etapeTour === 6 && subEtape6 === "investissement"
+    ? (etat.etapeTour === ETAPES.DECISION && subEtape6 === "investissement"
         ? (pioche6b ?? [])
         : tirerCartesDecision(cloneEtat(etat), 4))
     : [];
@@ -190,7 +190,7 @@ export function useDecisionCards({
    */
   function skipDecision() {
     if (!etat) return;
-    if (etat.etapeTour === 6 && subEtape6 === "recrutement") {
+    if (etat.etapeTour === ETAPES.DECISION && subEtape6 === "recrutement") {
       setSubEtape6("investissement");
       setShowCartes(false);
       setSelectedDecision(null);

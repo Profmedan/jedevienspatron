@@ -17,17 +17,22 @@
  *   • les effets observables par étape (quel poste bouge de combien)
  *     sur une partie Belvaux au T1
  *
- * ⚠️ Tests qui DOIVENT casser après le refactor :
- *    • Les tests du bloc A qui affirment `ETAPES.INIT === 0`, etc.
- *      (Commit 2 renomme les clés ; Commit 3 passe à 8 étapes).
- *    • Les tests du bloc B qui nomment une étape par son nom actuel
- *      divergent (ex. "Étape 2 (COMMERCIAUX — nom) = avancement
- *      des créances (réalité)") : après Commit 2 ils perdent leur
- *      raison d'être et seront supprimés ou mis à jour dans Commit 3.
+ * ⚠️ Évolution attendue au fil des commits de T25.C :
+ *    • Commit 0 (état initial) : nomenclature divergente — les noms de
+ *      `ETAPES.*` ne correspondent pas à ce que la fonction moteur associée
+ *      fait (ex. ETAPES.COMMERCIAUX = 2 mais étape 2 = créances).
+ *    • Commit 2 (2026-04-20) : nomenclature alignée sur la réalité exécutée,
+ *      sans changement de valeur. Les constantes passent à
+ *      CHARGES_FIXES / ACHATS_STOCK / ENCAISSEMENTS_CREANCES / COMMERCIAUX /
+ *      VENTES / EFFETS_RECURRENTS / DECISION / EVENEMENT / BILAN — les
+ *      numéros restent 0-8. Le bloc A teste désormais ces noms avec les
+ *      valeurs actuelles.
+ *    • Commit 3 (à venir) : passage à 8 étapes ; le bloc A sera recalé
+ *      ou supprimé selon la nouvelle grille.
  *
- * Ces tests n'ont pas vocation à survivre à T25.C — leur seul job est
- * de rester verts entre Commit 0 et Commit 2 comme « constantes vitales »
- * du cycle actuel.
+ * Ces tests n'ont pas vocation à survivre entièrement à T25.C — leur
+ * seul job est de figer les constantes vitales du cycle entre chaque
+ * étape de la refonte.
  */
 
 import {
@@ -83,48 +88,47 @@ function stocksOf(joueur: Joueur): number {
 
 // ─── A. ETAPES — valeurs numériques actuelles ────────────────
 
-describe("Caractérisation A — Valeurs actuelles de ETAPES (nomenclature divergente)", () => {
-  // Ces tests documentent la divergence nom ↔ réalité héritée :
-  //  - ETAPES.COMMERCIAUX = 2, mais étape 2 = avancement des créances
-  //  - ETAPES.VENTES = 3, mais étape 3 = paiement des commerciaux
-  //  - ETAPES.CHARGES = 4, mais étape 4 = cartes Client (= vraies ventes)
-  //  - ETAPES.BILAN = 5, mais étape 5 = effets récurrents + spécialité
-  // La refonte (Commit 2) renommera ces constantes pour coller à la réalité.
+describe("Caractérisation A — Valeurs de ETAPES (nomenclature alignée sur la réalité)", () => {
+  // Depuis le Commit 2 de T25.C (2026-04-20), les clés de ETAPES portent
+  // désormais le nom de ce que la fonction moteur associée exécute. Les
+  // valeurs numériques restent celles du cycle 9-étapes actuel ; le Commit 3
+  // les réassignera et fusionnera CHARGES_FIXES + EFFETS_RECURRENTS dans un
+  // nouveau CLOTURE_TRIMESTRE.
 
-  test("ETAPES.INIT = 0", () => {
-    expect(ETAPES.INIT).toBe(0);
+  test("ETAPES.CHARGES_FIXES = 0", () => {
+    expect(ETAPES.CHARGES_FIXES).toBe(0);
   });
 
-  test("ETAPES.ACHATS = 1", () => {
-    expect(ETAPES.ACHATS).toBe(1);
+  test("ETAPES.ACHATS_STOCK = 1", () => {
+    expect(ETAPES.ACHATS_STOCK).toBe(1);
   });
 
-  test("ETAPES.COMMERCIAUX = 2 (nom trompeur — étape 2 = créances)", () => {
-    expect(ETAPES.COMMERCIAUX).toBe(2);
+  test("ETAPES.ENCAISSEMENTS_CREANCES = 2", () => {
+    expect(ETAPES.ENCAISSEMENTS_CREANCES).toBe(2);
   });
 
-  test("ETAPES.VENTES = 3 (nom trompeur — étape 3 = paiement commerciaux)", () => {
-    expect(ETAPES.VENTES).toBe(3);
+  test("ETAPES.COMMERCIAUX = 3", () => {
+    expect(ETAPES.COMMERCIAUX).toBe(3);
   });
 
-  test("ETAPES.CHARGES = 4 (nom trompeur — étape 4 = cartes Client = vraies ventes)", () => {
-    expect(ETAPES.CHARGES).toBe(4);
+  test("ETAPES.VENTES = 4 (= traitement des cartes Client)", () => {
+    expect(ETAPES.VENTES).toBe(4);
   });
 
-  test("ETAPES.BILAN = 5 (nom trompeur — étape 5 = effets récurrents + spécialité)", () => {
-    expect(ETAPES.BILAN).toBe(5);
+  test("ETAPES.EFFETS_RECURRENTS = 5", () => {
+    expect(ETAPES.EFFETS_RECURRENTS).toBe(5);
   });
 
-  test("ETAPES.INVESTISSEMENT = 6", () => {
-    expect(ETAPES.INVESTISSEMENT).toBe(6);
+  test("ETAPES.DECISION = 6", () => {
+    expect(ETAPES.DECISION).toBe(6);
   });
 
   test("ETAPES.EVENEMENT = 7", () => {
     expect(ETAPES.EVENEMENT).toBe(7);
   });
 
-  test("ETAPES.CLOTURE = 8", () => {
-    expect(ETAPES.CLOTURE).toBe(8);
+  test("ETAPES.BILAN = 8", () => {
+    expect(ETAPES.BILAN).toBe(8);
   });
 
   test("Il y a bien 9 clés dans ETAPES (le Commit 3 passera à 8)", () => {
@@ -145,7 +149,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(ecart).toBe(0);
   });
 
-  test("Étape 0 (INIT) : -2 000 € charges fixes et -500 € capital emprunt, pas d'intérêts à T1", () => {
+  test("Étape 0 (CHARGES_FIXES) : -2 000 € charges fixes et -500 € capital emprunt, pas d'intérêts à T1", () => {
     const etat = initBelvaux();
     const tresoAvant = getTresorerie(etat.joueurs[0]);
     appliquerEtape0(etat, 0);
@@ -164,7 +168,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(ecart).toBe(0);
   });
 
-  test("Étape 1 (ACHATS) : no-op si quantité = 0", () => {
+  test("Étape 1 (ACHATS_STOCK) : no-op si quantité = 0", () => {
     const etat = initBelvaux();
     appliquerEtape0(etat, 0);
     const snapAvant = equilibre(etat.joueurs[0]);
@@ -175,7 +179,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(snapApres).toEqual(snapAvant);
   });
 
-  test("Étape 2 (COMMERCIAUX — nom) = avancement des créances (réalité)", () => {
+  test("Étape 2 (ENCAISSEMENTS_CREANCES) = avancement des créances clients", () => {
     const etat = initBelvaux();
     appliquerEtape0(etat, 0);
     // T1 : aucune créance C+1/C+2 → tréso inchangée, message pédagogique.
@@ -185,7 +189,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(getTresorerie(etat.joueurs[0])).toBe(tresoAvant);
   });
 
-  test("Étape 3 (VENTES — nom) = paiement des commerciaux (réalité) : -1 000 € (Junior par défaut)", () => {
+  test("Étape 3 (COMMERCIAUX) = paiement des commerciaux : -1 000 € (Junior par défaut)", () => {
     const etat = initBelvaux();
     appliquerEtape0(etat, 0);
     // Commercial Junior par défaut : 1 000 €/trimestre en salaire.
@@ -197,7 +201,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(etat.joueurs[0].compteResultat.charges.chargesPersonnel - chargesPersoAvant).toBe(1000);
   });
 
-  test("Étape 4 (CHARGES — nom) = carte Client (réalité = vraie vente) : +2 000 € tréso, +2 000 € ventes, -1 000 € stocks", () => {
+  test("Étape 4 (VENTES) = traitement carte Client : +2 000 € tréso, +2 000 € ventes, -1 000 € stocks", () => {
     const etat = initBelvaux();
     // Particulier : 2 000 € comptant, consomme 1 unité (1 000 € de stock).
     const particulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
@@ -212,7 +216,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(stocksAvant - stocksOf(etat.joueurs[0])).toBe(1000);
   });
 
-  test("Étape 5 (BILAN — nom) = effets récurrents + spécialité (réalité) : Belvaux = +1 000 € productionStockee, +1 000 € stocks", () => {
+  test("Étape 5 (EFFETS_RECURRENTS) = effets récurrents + spécialité : Belvaux = +1 000 € productionStockee, +1 000 € stocks", () => {
     const etat = initBelvaux();
     const stocksAvant = stocksOf(etat.joueurs[0]);
     appliquerEffetsRecurrents(etat, 0);
@@ -221,7 +225,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(etat.joueurs[0].compteResultat.produits.productionStockee).toBe(1000);
   });
 
-  // Étape 6 (INVESTISSEMENT) : pas de caractérisation ici — l'étape dépend
+  // Étape 6 (DECISION) : pas de caractérisation ici — l'étape dépend
   // d'un choix interactif (achat de carte, recrutement). Couvert séparément
   // dans les tests d'intégration UI.
 
@@ -236,7 +240,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(ecartApres).toBe(ecartAvant);
   });
 
-  test("Étape 8 (CLOTURE) : verifierFinTour retourne score numérique, pas de faillite à T1", () => {
+  test("Étape 8 (BILAN) : verifierFinTour retourne score numérique, pas de faillite à T1", () => {
     const etat = initBelvaux();
     appliquerEtape0(etat, 0);
     const res = verifierFinTour(etat, 0);
@@ -258,7 +262,7 @@ describe("Caractérisation C — L'invariant Actif = Passif + Résultat tient su
     appliquerEtape0(etat, 0);
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
 
-    // Étape 1 (ACHATS) : pas d'achat ce T1.
+    // Étape 1 (ACHATS_STOCK) : pas d'achat ce T1.
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
 
     appliquerAvancementCreances(etat, 0);
@@ -274,7 +278,7 @@ describe("Caractérisation C — L'invariant Actif = Passif + Résultat tient su
     appliquerSpecialiteEntreprise(etat, 0);
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
 
-    // Étape 6 (INVESTISSEMENT) : sautée — pas d'achat de carte.
+    // Étape 6 (DECISION) : sautée — pas d'achat de carte.
 
     appliquerCarteEvenement(etat, 0, CARTES_EVENEMENTS[0]);
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getTotalActif, getTotalPassif, CarteDecision, Joueur } from "@jedevienspatron/game-engine";
+import { getTotalActif, getTotalPassif, CarteDecision, Joueur, ETAPES } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
 // NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel à l'étape 6b.
@@ -112,7 +112,7 @@ export function LeftPanel({
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
   const hasCommerciaux = joueur.cartesActives.some((c) => c.categorie === "commercial");
   const stepHelp =
-    etapeTour === 3
+    etapeTour === ETAPES.COMMERCIAUX
       ? hasCommerciaux
         ? "Les salaires de vos commerciaux seront versés et de nouveaux clients seront générés."
         : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape 6 pour générer de nouveaux clients."
@@ -126,7 +126,7 @@ export function LeftPanel({
     const allApplied   = !firstPending;
 
     // ── Données pour la modale de confirmation ────────────────────────────────
-    const isDecisionStep    = etapeTour === 6;
+    const isDecisionStep    = etapeTour === ETAPES.DECISION;
     const isFirstEntry      = isDecisionStep && activeStep.entries.every((e) => !e.applied);
     const tresorerieActuelle = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")?.valeur ?? 0;
     const deltasTresorerie  = activeStep.entries
@@ -227,8 +227,8 @@ export function LeftPanel({
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <div className="space-y-4">
             {(() => {
-              // ── MODE VENTES GROUPÉES (step 4 avec saleGroupId) ──
-              const hasSaleGroups = etapeTour === 4 && activeStep.entries.some(e => e.saleGroupId);
+              // ── MODE VENTES GROUPÉES (étape VENTES avec saleGroupId) ──
+              const hasSaleGroups = etapeTour === ETAPES.VENTES && activeStep.entries.some(e => e.saleGroupId);
               if (hasSaleGroups && onApplySaleGroup) {
                 // Constantes d’affichage pédagogique
                 const DISPLAY_POS: Record<number, number> = { 2: 1, 1: 2, 3: 3, 4: 4 };
@@ -522,7 +522,7 @@ export function LeftPanel({
           <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <p className="text-sm text-slate-300">{stepHelp}</p>
 
-            {etapeTour === 1 && (
+            {etapeTour === ETAPES.ACHATS_STOCK && (
               <div className="space-y-2">
                 <div>
                   <label htmlFor="qty" className="block text-xs font-semibold text-white mb-1">
@@ -612,7 +612,7 @@ export function LeftPanel({
               </div>
             )}
 
-            {etapeTour === 6 && (
+            {etapeTour === ETAPES.DECISION && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-300">
                   {subEtape6 === "recrutement" ? "6a — Recrutement" : "6b — Investissement"}

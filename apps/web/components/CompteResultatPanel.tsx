@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Joueur, getTotalCharges, getTotalProduits, getResultatNet } from "@jedevienspatron/game-engine";
+import { Joueur, getTotalCharges, getTotalProduits, getResultatNet, ETAPES } from "@jedevienspatron/game-engine";
 import { isBonPourEntreprise } from "@/lib/pedagogie/poste-helpers";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };
@@ -245,9 +245,14 @@ export default function CompteResultatPanel({
   const totalProduits = getTotalProduits(produits);
   const resultat      = getResultatNet(joueur);
 
+  // Le résultat est provisoire pendant toute la période « activité » du
+  // trimestre — de ACHATS_STOCK (après charges fixes initiales) jusqu'à
+  // EVENEMENT inclus. Devient définitif à l'étape BILAN (8).
   const isProvisoire =
     hasActiveStep === true ||
-    (etapeTour !== undefined && etapeTour >= 1 && etapeTour <= 7);
+    (etapeTour !== undefined &&
+      etapeTour >= ETAPES.ACHATS_STOCK &&
+      etapeTour <= ETAPES.EVENEMENT);
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 flex flex-col max-h-full">

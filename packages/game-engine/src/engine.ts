@@ -33,6 +33,7 @@ import {
   SCORE_SEUIL_MAJORE,
   NOM_IMMOBILISATIONS_AUTRES,
   EntrepriseTemplate,
+  ETAPES,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
@@ -290,7 +291,7 @@ export function initialiserJeu(
   return {
     phase: "playing",
     tourActuel: 1,
-    etapeTour: 0,
+    etapeTour: ETAPES.CHARGES_FIXES,
     joueurActif: 0,
     joueurs,
     nbJoueurs: joueurs.length,
@@ -1236,15 +1237,14 @@ export function cloturerAnnee(etat: EtatJeu): void {
   }
 
   etat.tourActuel = 1;
-  etat.etapeTour = 0;
+  etat.etapeTour = ETAPES.CHARGES_FIXES;
   etat.joueurActif = 0;
 }
 
 // ─── AVANCEMENT DU TOUR ─────────────────────────────────────
 
 export function avancerEtape(etat: EtatJeu): void {
-  const maxEtape = 8;
-  if (etat.etapeTour < maxEtape) {
+  if (etat.etapeTour < ETAPES.BILAN) {
     etat.etapeTour = (etat.etapeTour + 1) as EtapeTour;
   } else {
     // Fin du tour pour ce joueur — passer au joueur suivant
@@ -1254,7 +1254,7 @@ export function avancerEtape(etat: EtatJeu): void {
       etat.joueurActif = 0;
       etat.tourActuel++;
     }
-    etat.etapeTour = 0;
+    etat.etapeTour = ETAPES.CHARGES_FIXES;
   }
 }
 

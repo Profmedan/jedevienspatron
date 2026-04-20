@@ -256,29 +256,39 @@ export interface Joueur {
 
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
 
-/** Les 9 étapes d'un tour de jeu */
+/** Les 9 étapes d'un tour de jeu (cycle actuel — sera ramené à 8 au Commit 3 de T25.C) */
 export type EtapeTour =
-  | 0 // Remboursements obligatoires + charges fixes + amortissements
-  | 1 // Achats de marchandises (optionnel)
-  | 2 // Avancement des créances
-  | 3 // Paiement des commerciaux (+ quiz pédagogique)
-  | 4 // Traitement des cartes Client
-  | 5 // Application des effets récurrents des cartes Décision
-  | 6 // 6a Recrutement commercial (optionnel) + 6b Carte Décision (optionnel)
-  | 7 // Pioche de la carte Événement
-  | 8; // Vérification de l'équilibre + fin de tour
+  | 0 // Charges fixes + amortissements + remboursement emprunt + agios (→ fusion prévue dans CLOTURE_TRIMESTRE au Commit 3)
+  | 1 // Achats de marchandises
+  | 2 // Avancement des créances → encaissements
+  | 3 // Paiement des commerciaux (+ génération clients commerciaux/spécialité)
+  | 4 // Traitement des cartes Client (= vraies ventes)
+  | 5 // Effets récurrents des cartes actives + spécialité entreprise (→ fusion prévue dans CLOTURE_TRIMESTRE au Commit 3)
+  | 6 // Recrutement commercial + carte Décision
+  | 7 // Carte Événement
+  | 8; // Bilan de fin de trimestre
 
-/** Constantes nommées pour les étapes du tour — utilisez ces noms plutôt que les chiffres */
+/**
+ * Constantes nommées pour les étapes du tour.
+ *
+ * Les noms correspondent à la **réalité exécutée par le moteur**, pas au nom
+ * historique. Les valeurs numériques sont celles du cycle 9-étapes actuel ;
+ * le Commit 3 de T25.C réassignera les valeurs et fusionnera `CHARGES_FIXES`
+ * et `EFFETS_RECURRENTS` dans un nouveau `CLOTURE_TRIMESTRE`.
+ *
+ * Utilisez ces noms plutôt que les chiffres pour que le Commit 3 n'ait
+ * qu'à toucher `types.ts` + `engine.ts` (pas tous les consommateurs).
+ */
 export const ETAPES = {
-  INIT: 0,
-  ACHATS: 1,
-  COMMERCIAUX: 2,
-  VENTES: 3,
-  CHARGES: 4,
-  BILAN: 5,
-  INVESTISSEMENT: 6,
-  EVENEMENT: 7,
-  CLOTURE: 8,
+  CHARGES_FIXES: 0,           // Charges fixes + amortissements + emprunt (sera fusionné au Commit 3)
+  ACHATS_STOCK: 1,            // Achats de marchandises
+  ENCAISSEMENTS_CREANCES: 2,  // Avancement des créances clients
+  COMMERCIAUX: 3,             // Paiement commerciaux + génération clients
+  VENTES: 4,                  // Traitement des cartes Client
+  EFFETS_RECURRENTS: 5,       // Effets récurrents + spécialité (sera fusionné au Commit 3)
+  DECISION: 6,                // Recrutement commercial + carte Décision
+  EVENEMENT: 7,               // Carte Événement
+  BILAN: 8,                   // Bilan de fin de trimestre
 } as const satisfies Record<string, EtapeTour>;
 
 export interface EtatJeu {

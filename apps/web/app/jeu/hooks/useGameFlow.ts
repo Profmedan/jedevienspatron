@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useReducer } from "react";
 import {
-  EtatJeu, Joueur, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate,
+  EtatJeu, Joueur, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate, ETAPES,
   initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
@@ -332,10 +332,10 @@ export function useGameFlow({
   // ─── Défis du dirigeant (Tâche 24, V2) ──────────────────────────────────
   //
   // Retourne le slot dramaturgique pertinent pour l'étape courante, ou null.
-  // V2 : seuls `debut_tour` (étape 0) et `avant_decision` (étape 6) sont câblés.
+  // V2 : seuls `debut_tour` (étape CHARGES_FIXES) et `avant_decision` (étape DECISION) sont câblés.
   function slotPourEtapeCourante(e: EtatJeu): SlotDramaturgique | null {
-    if (e.etapeTour === 0) return "debut_tour";
-    if (e.etapeTour === 6) return "avant_decision";
+    if (e.etapeTour === ETAPES.CHARGES_FIXES) return "debut_tour";
+    if (e.etapeTour === ETAPES.DECISION) return "avant_decision";
     return null;
   }
 
@@ -414,7 +414,7 @@ export function useGameFlow({
     if (workingEtat.defisActives) {
       // 1. Résolution des arcs différés : uniquement au tout début d'un
       //    trimestre (étape 0, premier joueur). On l'applique silencieusement.
-      if (workingEtat.etapeTour === 0 && workingEtat.joueurActif === 0) {
+      if (workingEtat.etapeTour === ETAPES.CHARGES_FIXES && workingEtat.joueurActif === 0) {
         const resolu = resoudreArcsDifferes(workingEtat);
         if (resolu !== workingEtat) {
           workingEtat = resolu;
@@ -447,14 +447,14 @@ export function useGameFlow({
     let mods: ModificationMoteur[] = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
 
-    if (next.etapeTour === 0) {
+    if (next.etapeTour === ETAPES.CHARGES_FIXES) {
       next.joueurs[idx].clientsPerdusCeTour = 0;
     }
 
     switch (next.etapeTour) {
-      case 0: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
-      case 2: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
-      case 3: {
+      case ETAPES.CHARGES_FIXES: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
+      case ETAPES.ENCAISSEMENTS_CREANCES: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
+      case ETAPES.COMMERCIAUX: {
         const clients = genererClientsParCommerciaux(next.joueurs[idx]);
         const clientsSpecialite = genererClientsSpecialite(next.joueurs[idx]);
         next.joueurs[idx].clientsATrait = [...next.joueurs[idx].clientsATrait, ...clients, ...clientsSpecialite];
@@ -462,7 +462,7 @@ export function useGameFlow({
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
-      case 4: {
+      case ETAPES.VENTES: {
         const joueur = next.joueurs[idx];
         const capacite = calculerCapaciteLogistique(joueur);
         const clientsAtrait = joueur.clientsATrait;
@@ -497,14 +497,14 @@ export function useGameFlow({
         }
         break;
       }
-      case 5: {
+      case ETAPES.EFFETS_RECURRENTS: {
         const r = appliquerEffetsRecurrents(next, idx);
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         const rSpec = appliquerSpecialiteEntreprise(next, idx);
         if (rSpec.succes) mods = [...mods, ...(rSpec.modifications as ModificationMoteur[])];
         break;
       }
-      case 7: {
+      case ETAPES.EVENEMENT: {
         if (next.piocheEvenements.length > 0) {
           const carte = next.piocheEvenements[0];
           evenementCapture = { titre: carte.titre, description: carte.description };
@@ -514,13 +514,13 @@ export function useGameFlow({
         }
         break;
       }
-      case 8: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
+      case ETAPES.BILAN: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
       default: break;
     }
 
     const etapeActuelle = next.etapeTour;
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    if ((etapeActuelle === 2 || etapeActuelle === 3) && modsFiltrees.length === 0) {
+    if ((etapeActuelle === ETAPES.ENCAISSEMENTS_CREANCES || etapeActuelle === ETAPES.COMMERCIAUX) && modsFiltrees.length === 0) {
       avancerEtape(next);
       pedagogy.maybeShowPedagoModal(next.etapeTour);
       setEtat({ ...next });

@@ -183,19 +183,29 @@ export interface Joueur {
      */
     choixStrategiques?: Record<string, string>;
 }
-/** Les 9 étapes d'un tour de jeu */
+/** Les 9 étapes d'un tour de jeu (cycle actuel — sera ramené à 8 au Commit 3 de T25.C) */
 export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-/** Constantes nommées pour les étapes du tour — utilisez ces noms plutôt que les chiffres */
+/**
+ * Constantes nommées pour les étapes du tour.
+ *
+ * Les noms correspondent à la **réalité exécutée par le moteur**, pas au nom
+ * historique. Les valeurs numériques sont celles du cycle 9-étapes actuel ;
+ * le Commit 3 de T25.C réassignera les valeurs et fusionnera `CHARGES_FIXES`
+ * et `EFFETS_RECURRENTS` dans un nouveau `CLOTURE_TRIMESTRE`.
+ *
+ * Utilisez ces noms plutôt que les chiffres pour que le Commit 3 n'ait
+ * qu'à toucher `types.ts` + `engine.ts` (pas tous les consommateurs).
+ */
 export declare const ETAPES: {
-    readonly INIT: 0;
-    readonly ACHATS: 1;
-    readonly COMMERCIAUX: 2;
-    readonly VENTES: 3;
-    readonly CHARGES: 4;
-    readonly BILAN: 5;
-    readonly INVESTISSEMENT: 6;
+    readonly CHARGES_FIXES: 0;
+    readonly ACHATS_STOCK: 1;
+    readonly ENCAISSEMENTS_CREANCES: 2;
+    readonly COMMERCIAUX: 3;
+    readonly VENTES: 4;
+    readonly EFFETS_RECURRENTS: 5;
+    readonly DECISION: 6;
     readonly EVENEMENT: 7;
-    readonly CLOTURE: 8;
+    readonly BILAN: 8;
 };
 export interface EtatJeu {
     phase: "setup" | "playing" | "gameover";

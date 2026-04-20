@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   CarteDecision,
   Joueur,
+  ETAPES,
 } from "@jedevienspatron/game-engine";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
@@ -192,7 +193,7 @@ export function MainContent({
       </div>
 
       {/* ─── Étape 6a — Sélection recrutement (flux classique) ─────────── */}
-      {etapeTour === 6 && subEtape6 === "recrutement" && !_activeStep && (
+      {etapeTour === ETAPES.DECISION && subEtape6 === "recrutement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
@@ -251,7 +252,7 @@ export function MainContent({
       )}
 
       {/* ─── Étape 6b — Investissement (panneau unifié catégorisé) ─────── */}
-      {etapeTour === 6 && subEtape6 === "investissement" && !_activeStep && (
+      {etapeTour === ETAPES.DECISION && subEtape6 === "investissement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3 max-h-[65vh] overflow-y-auto">
           <InvestissementPanel
             joueur={displayJoueur}
