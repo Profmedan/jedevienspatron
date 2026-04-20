@@ -252,6 +252,20 @@ export interface Joueur {
    * Optionnel pour rétrocompatibilité : les parties existantes ignorent ce champ.
    */
   choixStrategiques?: Record<string, string>;
+  /**
+   * Compte de résultat cumulatif de la partie entière (B6 — 2026-04-20).
+   * Alimenté par `compteResultat` lors de chaque clôture d'exercice, puis
+   * `compteResultat` est remis à zéro. Sert à afficher le CA total partie,
+   * rédiger le rapport pédagogique, et présenter la progression de l'élève.
+   */
+  compteResultatCumulePartie: CompteResultat;
+  /**
+   * Historique des exercices déjà clôturés (B6 — 2026-04-20).
+   * Chaque entrée capture l'IS payé, la réserve dotée, les dividendes versés
+   * et le report à nouveau pour pédagogie et traçabilité.
+   * Optionnel : les parties antérieures (SAVE_VERSION < 3) n'ont pas ce champ.
+   */
+  historiqueExercices?: ExerciceArchive[];
 }
 
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
@@ -324,6 +338,19 @@ export interface EtatJeu {
   defisActifs?: ArcDiffere[];
   /** Trace des défis déjà résolus (rapport pédagogique + évitement des répétitions). */
   defisResolus?: DefiResolu[];
+  /**
+   * Numéro de l'exercice comptable en cours (B6 — 2026-04-20).
+   * Commence à 1 (T1-T4), passe à 2 (T5-T8), etc. Incrémenté au moment où
+   * l'on valide la clôture d'un exercice. Optionnel pour rétrocompatibilité.
+   */
+  numeroExerciceEnCours?: number;
+  /**
+   * Dernier trimestre où une clôture d'exercice a eu lieu (B6 — 2026-04-20).
+   * 0 tant qu'aucune clôture n'a été validée. Permet au pipeline de savoir
+   * quand déclencher la modale de clôture (après BILAN d'un Tn multiple de 4
+   * ou du dernier trimestre).
+   */
+  dernierTourClotureExercice?: number;
 }
 
 // ─── RÉSULTATS / ACTIONS ─────────────────────────────────────
@@ -480,6 +507,66 @@ export const TAUX_INTERET_ANNUEL = 5;
 export const TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
 export const MONTANTS_EMPRUNT = [5000, 8000, 12000, 16000, 20000] as const;
+
+// ─── CLÔTURE D'EXERCICE (B6 — 2026-04-20) ─────────────────────
+//
+// Règles métier arbitrées par Pierre (cf. tasks/plan-b6-fin-exercice.md §1) :
+// • IS PME : 15 % du résultat avant impôt (IS = 0 sur perte — pas de carry-back).
+// • Charge : impotsTaxes (compte 695 simplifié) + décaissement immédiat
+//   (pas de dette d'IS portée au trimestre suivant).
+// • Réserve légale : dotation obligatoire de 500 € tant que les capitaux
+//   propres sont < 20 000 € (seuil pédagogique simplifié ; en comptabilité
+//   française, la réserve légale est 5 % du bénéfice jusqu'à atteindre
+//   10 % du capital social — ici on fige un forfait pour ne pas complexifier).
+// • Dividendes : choix du dirigeant parmi 0 % / 10 % / 25 % / 50 % du
+//   résultat distribuable (résultat après IS − réserve légale).
+// • Report à nouveau : ce qui reste (non distribué, non mis en réserve)
+//   est ajouté aux capitaux propres.
+// ──────────────────────────────────────────────────────────────
+
+/** Taux de l'impôt sur les sociétés PME simplifié (15 % du résultat avant IS). */
+export const TAUX_IS = 0.15;
+
+/** Dotation forfaitaire à la réserve légale tant que capitaux propres < seuil. */
+export const RESERVE_LEGALE_MONTANT = 500;
+
+/** Seuil au-delà duquel la réserve légale n'est plus obligatoire. */
+export const RESERVE_LEGALE_SEUIL_CAPITAUX = 20000;
+
+/** Taux de distribution de dividendes proposés au joueur à la clôture. */
+export const TAUX_DIVIDENDES_AUTORISES = [0, 0.10, 0.25, 0.50] as const;
+
+/** Durée standard d'un exercice comptable (en trimestres). */
+export const NB_TRIMESTRES_PAR_EXERCICE = 4;
+
+/**
+ * Archive d'un exercice clôturé : photographie pédagogique conservée pour
+ * le rapport post-partie et l'écran de clôture.
+ */
+export interface ExerciceArchive {
+  /** Numéro d'exercice (1, 2, 3...). */
+  numero: number;
+  /** Trimestre de début (inclusif). */
+  tourDebut: number;
+  /** Trimestre de fin (inclusif) — celui où la clôture s'opère. */
+  tourFin: number;
+  /** Compte de résultat figé juste avant la clôture (avant passage IS). */
+  compteResultat: CompteResultat;
+  /** Résultat avant impôt (= produits − charges au moment de la clôture). */
+  resultatAvantIS: number;
+  /** Montant d'impôt sur les sociétés effectivement payé (0 si perte). */
+  impotSociete: number;
+  /** Résultat après IS (= résultatAvantIS − impotSociete). */
+  resultatApresIS: number;
+  /** Dotation à la réserve légale (0 si seuil atteint ou perte). */
+  reserveLegale: number;
+  /** Pourcentage de dividendes choisi par le dirigeant (0, 0.10, 0.25, 0.50). */
+  tauxDividendes: number;
+  /** Dividendes effectivement versés en trésorerie. */
+  dividendesVerses: number;
+  /** Report à nouveau ajouté aux capitaux propres. */
+  reportANouveau: number;
+}
 
 /**
  * Revenus et marges par type de client.

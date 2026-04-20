@@ -4,7 +4,7 @@
 // Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
+exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
 /**
  * Constantes nommées pour les étapes du tour (8 étapes depuis le Commit 3 de T25.C).
  *
@@ -123,6 +123,31 @@ exports.TAUX_INTERET_ANNUEL = 5;
 exports.TAUX_INTERET_MAJORE = 8;
 /** Montants disponibles pour un emprunt bancaire */
 exports.MONTANTS_EMPRUNT = [5000, 8000, 12000, 16000, 20000];
+// ─── CLÔTURE D'EXERCICE (B6 — 2026-04-20) ─────────────────────
+//
+// Règles métier arbitrées par Pierre (cf. tasks/plan-b6-fin-exercice.md §1) :
+// • IS PME : 15 % du résultat avant impôt (IS = 0 sur perte — pas de carry-back).
+// • Charge : impotsTaxes (compte 695 simplifié) + décaissement immédiat
+//   (pas de dette d'IS portée au trimestre suivant).
+// • Réserve légale : dotation obligatoire de 500 € tant que les capitaux
+//   propres sont < 20 000 € (seuil pédagogique simplifié ; en comptabilité
+//   française, la réserve légale est 5 % du bénéfice jusqu'à atteindre
+//   10 % du capital social — ici on fige un forfait pour ne pas complexifier).
+// • Dividendes : choix du dirigeant parmi 0 % / 10 % / 25 % / 50 % du
+//   résultat distribuable (résultat après IS − réserve légale).
+// • Report à nouveau : ce qui reste (non distribué, non mis en réserve)
+//   est ajouté aux capitaux propres.
+// ──────────────────────────────────────────────────────────────
+/** Taux de l'impôt sur les sociétés PME simplifié (15 % du résultat avant IS). */
+exports.TAUX_IS = 0.15;
+/** Dotation forfaitaire à la réserve légale tant que capitaux propres < seuil. */
+exports.RESERVE_LEGALE_MONTANT = 500;
+/** Seuil au-delà duquel la réserve légale n'est plus obligatoire. */
+exports.RESERVE_LEGALE_SEUIL_CAPITAUX = 20000;
+/** Taux de distribution de dividendes proposés au joueur à la clôture. */
+exports.TAUX_DIVIDENDES_AUTORISES = [0, 0.10, 0.25, 0.50];
+/** Durée standard d'un exercice comptable (en trimestres). */
+exports.NB_TRIMESTRES_PAR_EXERCICE = 4;
 /**
  * Revenus et marges par type de client.
  * Utilisé dans l'analyse des cartes commerciales pour calculer le chiffre d'affaires

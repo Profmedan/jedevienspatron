@@ -25,8 +25,15 @@ type Phase = "setup" | "intro" | "playing" | "gameover";
  * désigne plus les mêmes contenus. Une sauvegarde v1 restaurée sur le nouveau
  * moteur ferait planter le joueur sur une étape qui ne signifie plus la même
  * chose. Bump SAVE_VERSION 1→2 → useGamePersistence.ts:52 rejette les v1.
+ *
+ * v3 (B6, 2026-04-20) — ajout des champs obligatoires `compteResultatCumulePartie`
+ * (Joueur) et optionnels `numeroExerciceEnCours` / `dernierTourClotureExercice`
+ * (EtatJeu). Une sauvegarde v2 restaurée sur le nouveau moteur n'aurait pas
+ * `compteResultatCumulePartie` → les calculs B6 planteraient au premier
+ * accès. La rejection automatique (readSave retourne null si version ≠)
+ * réinitialise proprement la partie : l'élève doit repartir de T1.
  */
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const SAVE_TTL_MS  = 24 * 60 * 60 * 1000; // 24 h
 
 interface SavedGame {

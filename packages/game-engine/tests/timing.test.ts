@@ -2,7 +2,7 @@
 // JEDEVIENSPATRON — Tests du timing dramaturgique
 // ============================================================
 
-import { determinerSlotsActifs, determinerTimingRupture } from "../src/timing";
+import { determinerSlotsActifs, determinerTimingRupture, estFinExercice } from "../src/timing";
 
 // ─── 1. determinerTimingRupture ──────────────────────────────
 
@@ -101,5 +101,55 @@ describe("determinerSlotsActifs — slots consultables par tour", () => {
       const slots = determinerSlotsActifs(t, 12);
       expect(slots.length).toBeLessThanOrEqual(3);
     }
+  });
+});
+
+// ─── 3. estFinExercice (B6 — 2026-04-20) ─────────────────────
+//
+// Règle métier : clôture d'exercice à chaque multiple de 4 (T4, T8, T12)
+// ET au dernier trimestre même s'il n'est pas multiple de 4 (ex: T6 pour
+// une partie 6 trimestres).
+
+describe("estFinExercice — déclenchement de la clôture d'exercice", () => {
+  test("Hors plage : false", () => {
+    expect(estFinExercice(0, 8)).toBe(false);
+    expect(estFinExercice(-1, 8)).toBe(false);
+    expect(estFinExercice(9, 8)).toBe(false);
+    expect(estFinExercice(13, 12)).toBe(false);
+  });
+
+  test("Partie 12 trimestres : clôture à T4, T8, T12 uniquement", () => {
+    const dureeTotale = 12;
+    for (let t = 1; t <= dureeTotale; t++) {
+      const attendu = t === 4 || t === 8 || t === 12;
+      expect(estFinExercice(t, dureeTotale)).toBe(attendu);
+    }
+  });
+
+  test("Partie 8 trimestres : clôture à T4 et T8", () => {
+    const dureeTotale = 8;
+    for (let t = 1; t <= dureeTotale; t++) {
+      const attendu = t === 4 || t === 8;
+      expect(estFinExercice(t, dureeTotale)).toBe(attendu);
+    }
+  });
+
+  test("Partie 6 trimestres : clôture à T4 et T6 (dernier tour)", () => {
+    const dureeTotale = 6;
+    expect(estFinExercice(1, dureeTotale)).toBe(false);
+    expect(estFinExercice(2, dureeTotale)).toBe(false);
+    expect(estFinExercice(3, dureeTotale)).toBe(false);
+    expect(estFinExercice(4, dureeTotale)).toBe(true);  // multiple de 4
+    expect(estFinExercice(5, dureeTotale)).toBe(false);
+    expect(estFinExercice(6, dureeTotale)).toBe(true);  // dernier trimestre
+  });
+
+  test("Partie 10 trimestres : clôture à T4, T8, T10 (dernier tour)", () => {
+    const dureeTotale = 10;
+    expect(estFinExercice(4, dureeTotale)).toBe(true);
+    expect(estFinExercice(8, dureeTotale)).toBe(true);
+    expect(estFinExercice(10, dureeTotale)).toBe(true);
+    expect(estFinExercice(9, dureeTotale)).toBe(false);
+    expect(estFinExercice(5, dureeTotale)).toBe(false);
   });
 });

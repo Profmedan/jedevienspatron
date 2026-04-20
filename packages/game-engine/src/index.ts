@@ -39,6 +39,8 @@ export {
   appliquerEffetsRecurrents,
   appliquerSpecialiteEntreprise,
   appliquerClotureTrimestre,
+  appliquerClotureExercice,
+  finaliserClotureExercice,
   basculerTresorerieSiNegative,
   genererClientsSpecialite,
   genererClientsParCommerciaux,
@@ -84,4 +86,4 @@ export {
 export { CATALOGUE_V2, CATALOGUE_V2_INDEX } from "./data/defis/catalogue-v2";
 
 // Timing dramaturgique (V2 minimaliste).
-export { determinerTimingRupture, determinerSlotsActifs } from "./timing";
+export { determinerTimingRupture, determinerSlotsActifs, estFinExercice } from "./timing";

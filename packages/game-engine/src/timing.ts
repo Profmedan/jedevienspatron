@@ -17,7 +17,7 @@
 // Le catalogue décide ensuite "quel défi y a-t-il effectivement ?".
 // ============================================================
 
-import { RuptureType, SlotDramaturgique } from "./types";
+import { RuptureType, SlotDramaturgique, NB_TRIMESTRES_PAR_EXERCICE } from "./types";
 
 /**
  * Décrit la nature dramaturgique d'un trimestre.
@@ -36,6 +36,29 @@ export function determinerTimingRupture(
   if (tour === nbToursMax) return "finale";
   if (tour === 3) return "resiste";
   return null;
+}
+
+/**
+ * Détermine si le trimestre courant doit déclencher une clôture d'exercice.
+ *
+ * Règle arbitrée par Pierre (cf. tasks/plan-b6-fin-exercice.md §1) :
+ *  - Tout trimestre multiple de `NB_TRIMESTRES_PAR_EXERCICE` (4) clôture
+ *    un exercice comptable (T4, T8, T12...).
+ *  - Le dernier trimestre de la partie clôture également — même s'il n'est
+ *    pas un multiple de 4, on doit fermer les comptes avant la fin.
+ *
+ * Conséquence : une partie 6 trimestres déclenche la clôture à T4 puis à T6
+ * (exercice court de 2 trimestres). Une partie 8 trimestres la déclenche à
+ * T4 puis T8. Une partie 12 trimestres : T4, T8, T12.
+ *
+ * @param tourActuel  Trimestre courant (1..nbToursMax).
+ * @param nbToursMax  Durée totale de la partie (6, 8, 10 ou 12).
+ * @returns           true si une clôture d'exercice doit être proposée.
+ */
+export function estFinExercice(tourActuel: number, nbToursMax: number): boolean {
+  if (tourActuel < 1 || tourActuel > nbToursMax) return false;
+  if (tourActuel === nbToursMax) return true;
+  return tourActuel % NB_TRIMESTRES_PAR_EXERCICE === 0;
 }
 
 /**

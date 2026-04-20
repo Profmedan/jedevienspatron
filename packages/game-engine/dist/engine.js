@@ -17,6 +17,8 @@ exports.appliquerCarteClient = appliquerCarteClient;
 exports.appliquerEffetsRecurrents = appliquerEffetsRecurrents;
 exports.appliquerSpecialiteEntreprise = appliquerSpecialiteEntreprise;
 exports.appliquerClotureTrimestre = appliquerClotureTrimestre;
+exports.appliquerClotureExercice = appliquerClotureExercice;
+exports.finaliserClotureExercice = finaliserClotureExercice;
 exports.genererClientsSpecialite = genererClientsSpecialite;
 exports.obtenirCarteRecrutement = obtenirCarteRecrutement;
 exports.tirerCartesDecision = tirerCartesDecision;
@@ -225,6 +227,11 @@ function creerJoueur(id, pseudo, nomEntreprise, customTemplates) {
         publicitéCeTour: false,
         clientsPerdusCeTour: 0,
         piochePersonnelle: template.cartesLogistiquesDisponibles ?? [],
+        // B6 (2026-04-20) — compte de résultat cumulatif de la partie, indépendant
+        // du compte de résultat de l'exercice en cours (qui sera remis à zéro à
+        // chaque clôture d'exercice). Démarre vierge.
+        compteResultatCumulePartie: creerCompteResultatVierge(),
+        historiqueExercices: [],
     };
 }
 function initialiserJeu(joueursDefs, nbToursMax = 12, // 6 = session courte, 8 = standard, 12 = complet (3 exercices)
@@ -245,6 +252,9 @@ customTemplates) {
         messages: [
             `Bienvenue dans JEDEVIENSPATRON ! Trimestre 1/${nbToursMax} — 3 exercices comptables de ${Math.round(nbToursMax / 3)} trimestres chacun. Étape 1 : encaissement des créances clients.`,
         ],
+        // B6 (2026-04-20) — suivi des exercices comptables.
+        numeroExerciceEnCours: 1,
+        dernierTourClotureExercice: 0,
     };
 }
 // ─── ÉTAPE « CLÔTURE TRIMESTRE » : helpers internes (charges + amortissements) ──
@@ -684,6 +694,201 @@ function appliquerClotureTrimestre(etat, joueurIdx) {
             ...resRebasculeFinale.modifications,
         ],
     };
+}
+// ─── CLÔTURE D'EXERCICE (B6 — 2026-04-20) ─────────────────────
+//
+// Clôture annuelle simplifiée (trimestre multiple de 4 ou dernier trimestre).
+// Pipeline en 8 étapes atomiques, appliquées SUR le compte de résultat en
+// cours de l'exercice :
+//
+//   1. Calcul du résultat avant IS (produits − charges actuels).
+//   2. Calcul de l'impôt : IS = max(0, 15 % × résultat avant IS).
+//      IS = 0 sur perte (pas de carry-back pédagogique).
+//   3. Enregistrement de l'IS : +IS impotsTaxes ; −IS trésorerie.
+//   4. Re-calcul du résultat après IS (≈ résultatAvantIS − IS sur bénéfice,
+//      = résultatAvantIS sur perte).
+//   5. Dotation à la réserve légale si capitaux propres < 20 000 € et
+//      résultatApresIS > 0 : réserve = min(500, résultatApresIS).
+//   6. Calcul des dividendes : résultatDistribuable = résultatApresIS − réserve ;
+//      dividendes = pctDividendes × max(0, résultatDistribuable).
+//   7. Affectation aux capitaux propres : +réserve + report ; versement
+//      dividendes : −dividendes trésorerie.
+//   8. Cumul du compte de résultat exercice dans compteResultatCumulePartie,
+//      puis reset du compteResultat de l'exercice, archive dans historiqueExercices,
+//      incrément numeroExerciceEnCours, mise à jour dernierTourClotureExercice.
+//
+// Preuve d'équilibre (cf. tasks/plan-b6-fin-exercice.md §3) :
+//   - Étape 3 : Actif −IS ; Résultat −IS → Passif −IS ✓
+//   - Étape 7 : Actif −dividendes ; Résultat → 0 (−résultatApresIS du passif)
+//     mais +(réserve + report) = résultatApresIS − dividendes sur capitaux.
+//     Passif net : −résultatApresIS + (résultatApresIS − dividendes) = −dividendes ✓
+//
+// La fonction est idempotente vis-à-vis de la trésorerie sur une perte
+// (IS=0, dividendes=0, réserve=0) : elle se contente d'effacer la perte et
+// de la reporter en diminution des capitaux propres. C'est la règle
+// comptable française : une perte vient en déduction du report à nouveau
+// (et/ou des réserves) — ici, réduction directe des capitaux propres car
+// on n'a pas de ligne "report à nouveau" séparée dans le bilan pédagogique.
+/**
+ * Additionne un CompteResultat source dans un CompteResultat cible.
+ * Mutation pure sur `cible`. Utilisé pour cumuler l'exercice dans la partie.
+ */
+function cumulerCompteResultat(cible, source) {
+    cible.charges.achats += source.charges.achats;
+    cible.charges.servicesExterieurs += source.charges.servicesExterieurs;
+    cible.charges.impotsTaxes += source.charges.impotsTaxes;
+    cible.charges.chargesInteret += source.charges.chargesInteret;
+    cible.charges.chargesPersonnel += source.charges.chargesPersonnel;
+    cible.charges.chargesExceptionnelles += source.charges.chargesExceptionnelles;
+    cible.charges.dotationsAmortissements += source.charges.dotationsAmortissements;
+    cible.produits.ventes += source.produits.ventes;
+    cible.produits.productionStockee += source.produits.productionStockee;
+    cible.produits.produitsFinanciers += source.produits.produitsFinanciers;
+    cible.produits.revenusExceptionnels += source.produits.revenusExceptionnels;
+}
+/**
+ * Clône un CompteResultat (pour archiver avant modification).
+ */
+function clonerCompteResultat(source) {
+    return {
+        charges: { ...source.charges },
+        produits: { ...source.produits },
+    };
+}
+/**
+ * Applique la clôture d'exercice comptable pour un joueur.
+ *
+ * @param etat            État de jeu courant (mutation).
+ * @param joueurIdx       Index du joueur cible.
+ * @param pctDividendes   Pourcentage de dividendes choisi par le dirigeant.
+ *                        Doit figurer dans TAUX_DIVIDENDES_AUTORISES (0, 10, 25 ou 50 %).
+ * @returns               ResultatAction avec les modifications comptables tracées.
+ *
+ * Effets sur l'état :
+ *   - joueur.compteResultat → cumulé dans compteResultatCumulePartie puis reset.
+ *   - joueur.bilan.passifs (capitaux) → bumpé de (réserve + report).
+ *   - joueur.bilan.actifs (trésorerie) → décrémenté de (IS + dividendes).
+ *   - joueur.historiqueExercices → ajoute une ExerciceArchive.
+ *   - etat.numeroExerciceEnCours → incrémenté.
+ *   - etat.dernierTourClotureExercice → fixé à etat.tourActuel.
+ */
+function appliquerClotureExercice(etat, joueurIdx, pctDividendes) {
+    const joueur = etat.joueurs[joueurIdx];
+    const modifications = [];
+    // Garde-fou 1 : joueur éliminé → on fige un archive vide et on avance
+    // (pas de clôture possible sur un joueur en faillite).
+    if (joueur.elimine) {
+        return { succes: true, modifications };
+    }
+    // Garde-fou 2 : pctDividendes doit figurer dans la liste autorisée.
+    if (!types_1.TAUX_DIVIDENDES_AUTORISES.includes(pctDividendes)) {
+        return {
+            succes: false,
+            messageErreur: `Taux de dividendes invalide : ${pctDividendes}. Autorisés : ${types_1.TAUX_DIVIDENDES_AUTORISES.join(", ")}.`,
+            modifications,
+        };
+    }
+    const push = makePush(joueur, modifications);
+    // ÉTAPE 1 — Résultat avant IS (= produits − charges du compte de résultat EN COURS)
+    //
+    // Attention : joueur.compteResultat est cumulatif DEPUIS LA DERNIÈRE CLÔTURE
+    // (ou depuis le début de la partie si c'est le premier exercice). C'est le
+    // bon scope pour l'IS de l'exercice.
+    const produitsExercice = joueur.compteResultat.produits.ventes +
+        joueur.compteResultat.produits.productionStockee +
+        joueur.compteResultat.produits.produitsFinanciers +
+        joueur.compteResultat.produits.revenusExceptionnels;
+    const chargesExercice = joueur.compteResultat.charges.achats +
+        joueur.compteResultat.charges.servicesExterieurs +
+        joueur.compteResultat.charges.impotsTaxes +
+        joueur.compteResultat.charges.chargesInteret +
+        joueur.compteResultat.charges.chargesPersonnel +
+        joueur.compteResultat.charges.chargesExceptionnelles +
+        joueur.compteResultat.charges.dotationsAmortissements;
+    const resultatAvantIS = produitsExercice - chargesExercice;
+    // ÉTAPE 2 — Calcul de l'IS (arrondi à l'euro près pour éviter les centimes)
+    const impotSociete = resultatAvantIS > 0 ? Math.round(resultatAvantIS * types_1.TAUX_IS) : 0;
+    // ÉTAPE 3 — Enregistrement comptable de l'IS
+    if (impotSociete > 0) {
+        push("impotsTaxes", impotSociete, `Impôt sur les sociétés (${(types_1.TAUX_IS * 100).toFixed(0)} % du résultat avant IS de ${resultatAvantIS} €) : +${impotSociete} €`);
+        push("tresorerie", -impotSociete, `Paiement immédiat de l'IS : −${impotSociete} €`);
+    }
+    else {
+        modifications.push({
+            joueurId: joueur.id,
+            poste: "impotsTaxes",
+            ancienneValeur: joueur.compteResultat.charges.impotsTaxes,
+            nouvelleValeur: joueur.compteResultat.charges.impotsTaxes,
+            explication: resultatAvantIS < 0
+                ? `Perte de ${Math.abs(resultatAvantIS)} € cet exercice : pas d'IS (l'entreprise ne paie pas d'impôt sur les bénéfices quand elle est déficitaire).`
+                : `Résultat nul cet exercice : pas d'IS à payer.`,
+        });
+    }
+    // ÉTAPE 4 — Résultat après IS
+    const resultatApresIS = resultatAvantIS - impotSociete;
+    // ÉTAPE 5 — Réserve légale (si capitaux propres < seuil ET bénéfice)
+    const capitauxPropresActuels = joueur.bilan.passifs
+        .filter((p) => p.categorie === "capitaux")
+        .reduce((s, p) => s + p.valeur, 0);
+    const reserveLegale = resultatApresIS > 0 && capitauxPropresActuels < types_1.RESERVE_LEGALE_SEUIL_CAPITAUX
+        ? Math.min(types_1.RESERVE_LEGALE_MONTANT, resultatApresIS)
+        : 0;
+    // ÉTAPE 6 — Dividendes
+    const resultatDistribuable = Math.max(0, resultatApresIS - reserveLegale);
+    const dividendesVerses = Math.round(resultatDistribuable * pctDividendes);
+    // ÉTAPE 7 — Affectation aux capitaux propres et versement des dividendes
+    //
+    // Logique : le résultat (positif ou négatif) est transféré vers les capitaux
+    // propres. Sur bénéfice, on ajoute (réserve + report) aux capitaux ; on paie
+    // les dividendes en trésorerie. Sur perte, on diminue les capitaux propres
+    // de |résultatApresIS|. On utilise appliquerDeltaPoste directement sur le
+    // passif "capitaux" pour bumper la première ligne trouvée (celle du template).
+    const reportANouveau = resultatApresIS - reserveLegale - dividendesVerses;
+    const deltaCapitaux = reserveLegale + reportANouveau; // = resultatApresIS − dividendesVerses
+    if (deltaCapitaux !== 0) {
+        const explicationCapitaux = deltaCapitaux > 0
+            ? `Affectation du résultat aux capitaux propres : +${deltaCapitaux} € ` +
+                `(réserve légale ${reserveLegale} € + report à nouveau ${reportANouveau} €).`
+            : `Imputation de la perte sur les capitaux propres : ${deltaCapitaux} €.`;
+        push("capitaux", deltaCapitaux, explicationCapitaux);
+    }
+    if (dividendesVerses > 0) {
+        push("tresorerie", -dividendesVerses, `Versement des dividendes (${(pctDividendes * 100).toFixed(0)} % du résultat distribuable) : −${dividendesVerses} €`);
+    }
+    // ÉTAPE 8 — Cumul dans compteResultatCumulePartie (sans l'IS qu'on vient
+    // d'ajouter ? Non : on cumule tout, y compris l'IS, car c'est bien une
+    // charge de l'exercice écoulé). Puis archive + reset.
+    cumulerCompteResultat(joueur.compteResultatCumulePartie, joueur.compteResultat);
+    const numeroExerciceClos = etat.numeroExerciceEnCours ?? 1;
+    const tourDebutExercice = (etat.dernierTourClotureExercice ?? 0) + 1;
+    const archive = {
+        numero: numeroExerciceClos,
+        tourDebut: tourDebutExercice,
+        tourFin: etat.tourActuel,
+        compteResultat: clonerCompteResultat(joueur.compteResultat),
+        resultatAvantIS,
+        impotSociete,
+        resultatApresIS,
+        reserveLegale,
+        tauxDividendes: pctDividendes,
+        dividendesVerses,
+        reportANouveau,
+    };
+    if (!joueur.historiqueExercices)
+        joueur.historiqueExercices = [];
+    joueur.historiqueExercices.push(archive);
+    // Reset du compte de résultat pour le prochain exercice
+    joueur.compteResultat = creerCompteResultatVierge();
+    return { succes: true, modifications };
+}
+/**
+ * Synchronise l'état après clôture de TOUS les joueurs d'un exercice.
+ * À appeler UNE SEULE FOIS par tour après que chaque joueur a validé sa
+ * clôture individuelle — met à jour les compteurs globaux de l'état.
+ */
+function finaliserClotureExercice(etat) {
+    etat.dernierTourClotureExercice = etat.tourActuel;
+    etat.numeroExerciceEnCours = (etat.numeroExerciceEnCours ?? 1) + 1;
 }
 /**
  * Génère les clients bonus liés à la spécialité d'entreprise.

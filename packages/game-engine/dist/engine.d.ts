@@ -60,6 +60,30 @@ export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: numb
 export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: number): ResultatAction;
 export declare function appliquerClotureTrimestre(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
+ * Applique la clôture d'exercice comptable pour un joueur.
+ *
+ * @param etat            État de jeu courant (mutation).
+ * @param joueurIdx       Index du joueur cible.
+ * @param pctDividendes   Pourcentage de dividendes choisi par le dirigeant.
+ *                        Doit figurer dans TAUX_DIVIDENDES_AUTORISES (0, 10, 25 ou 50 %).
+ * @returns               ResultatAction avec les modifications comptables tracées.
+ *
+ * Effets sur l'état :
+ *   - joueur.compteResultat → cumulé dans compteResultatCumulePartie puis reset.
+ *   - joueur.bilan.passifs (capitaux) → bumpé de (réserve + report).
+ *   - joueur.bilan.actifs (trésorerie) → décrémenté de (IS + dividendes).
+ *   - joueur.historiqueExercices → ajoute une ExerciceArchive.
+ *   - etat.numeroExerciceEnCours → incrémenté.
+ *   - etat.dernierTourClotureExercice → fixé à etat.tourActuel.
+ */
+export declare function appliquerClotureExercice(etat: EtatJeu, joueurIdx: number, pctDividendes: number): ResultatAction;
+/**
+ * Synchronise l'état après clôture de TOUS les joueurs d'un exercice.
+ * À appeler UNE SEULE FOIS par tour après que chaque joueur a validé sa
+ * clôture individuelle — met à jour les compteurs globaux de l'état.
+ */
+export declare function finaliserClotureExercice(etat: EtatJeu): void;
+/**
  * Génère les clients bonus liés à la spécialité d'entreprise.
  * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.
  *
