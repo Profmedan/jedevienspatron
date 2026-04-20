@@ -38,6 +38,7 @@ export {
   appliquerCarteClient,
   appliquerEffetsRecurrents,
   appliquerSpecialiteEntreprise,
+  appliquerClotureTrimestre,
   genererClientsSpecialite,
   genererClientsParCommerciaux,
   tirerCartesDecision,

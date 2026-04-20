@@ -6,26 +6,22 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
 /**
- * Constantes nommées pour les étapes du tour.
+ * Constantes nommées pour les étapes du tour (8 étapes depuis le Commit 3 de T25.C).
  *
- * Les noms correspondent à la **réalité exécutée par le moteur**, pas au nom
- * historique. Les valeurs numériques sont celles du cycle 9-étapes actuel ;
- * le Commit 3 de T25.C réassignera les valeurs et fusionnera `CHARGES_FIXES`
- * et `EFFETS_RECURRENTS` dans un nouveau `CLOTURE_TRIMESTRE`.
- *
- * Utilisez ces noms plutôt que les chiffres pour que le Commit 3 n'ait
- * qu'à toucher `types.ts` + `engine.ts` (pas tous les consommateurs).
+ * Cycle « activité puis clôture » validé par Pierre 2026-04-19 :
+ * on encaisse et on vend avant d'être assommé par les charges de fin de
+ * période. Les anciennes étapes 0 (charges fixes) et 5 (effets récurrents)
+ * sont fusionnées dans `CLOTURE_TRIMESTRE`.
  */
 exports.ETAPES = {
-    CHARGES_FIXES: 0, // Charges fixes + amortissements + emprunt (sera fusionné au Commit 3)
-    ACHATS_STOCK: 1, // Achats de marchandises
-    ENCAISSEMENTS_CREANCES: 2, // Avancement des créances clients
-    COMMERCIAUX: 3, // Paiement commerciaux + génération clients
-    VENTES: 4, // Traitement des cartes Client
-    EFFETS_RECURRENTS: 5, // Effets récurrents + spécialité (sera fusionné au Commit 3)
-    DECISION: 6, // Recrutement commercial + carte Décision
-    EVENEMENT: 7, // Carte Événement
-    BILAN: 8, // Bilan de fin de trimestre
+    ENCAISSEMENTS_CREANCES: 0, // Avancement des créances clients
+    COMMERCIAUX: 1, // Paiement commerciaux + génération clients + recrutement
+    ACHATS_STOCK: 2, // Achats de marchandises
+    VENTES: 3, // Traitement des cartes Client
+    DECISION: 4, // Carte Décision / Investissement
+    EVENEMENT: 5, // Carte Événement
+    CLOTURE_TRIMESTRE: 6, // Fusion : charges fixes + emprunt + amortissements + effets récurrents + spécialité
+    BILAN: 7, // Bilan de fin de trimestre
 };
 // ─── CONSTANTES ───────────────────────────────────────────────
 exports.DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement

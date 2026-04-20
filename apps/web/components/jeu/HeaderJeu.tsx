@@ -64,12 +64,12 @@ export function HeaderJeu({
 
         <div className="order-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-center sm:px-4 sm:py-2">
           <div className="text-[11px] font-semibold text-cyan-100 sm:hidden">
-            T{tourActuel}/{nbToursMax} · E{etapeTour + 1}/9
+            T{tourActuel}/{nbToursMax} · E{etapeTour + 1}/8
           </div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 sm:text-xs sm:tracking-[0.18em]">
             <span className="hidden sm:inline">Trimestre {tourActuel}/{nbToursMax}</span>
           </div>
-          <div className="hidden text-xs text-slate-200 sm:block sm:text-sm">Étape {etapeTour + 1}/9</div>
+          <div className="hidden text-xs text-slate-200 sm:block sm:text-sm">Étape {etapeTour + 1}/8</div>
         </div>
 
         <div className="order-3 hidden flex-wrap items-center gap-2 sm:flex sm:justify-end">

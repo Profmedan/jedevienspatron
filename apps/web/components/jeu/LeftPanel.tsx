@@ -8,16 +8,17 @@ import { nomCompte } from "./utils";
 // Les cartes du mini-deck logistique sont désormais fusionnées dans
 // `InvestissementPanel`, affiché dans le panneau central (MainContent).
 
+// T25.C — Nouveau cycle 8 étapes (activité puis clôture).
+// Ordre aligné sur ETAPES.* du moteur (packages/game-engine/src/types.ts).
 const STEP_NAMES = [
-  "Charges fixes",
-  "Approvisionnement",
-  "Avancement créances",
-  "Paiement commerciaux",
-  "Traitement ventes",
-  "Effets récurrents",
-  "Décisions",
-  "Événement",
-  "Bilan trimestre",
+  "Encaissements créances",    // 0 — ENCAISSEMENTS_CREANCES
+  "Paiement commerciaux",      // 1 — COMMERCIAUX
+  "Approvisionnement",         // 2 — ACHATS_STOCK
+  "Traitement ventes",         // 3 — VENTES
+  "Décisions",                 // 4 — DECISION
+  "Événement",                 // 5 — EVENEMENT
+  "Clôture du trimestre",      // 6 — CLOTURE_TRIMESTRE
+  "Bilan trimestre",           // 7 — BILAN
 ];
 
 interface JournalEntry {
@@ -514,7 +515,7 @@ export function LeftPanel({
         <div className="space-y-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-              T{tourActuel}/{nbToursMax} · Étape {etapeTour + 1}/9
+              T{tourActuel}/{nbToursMax} · Étape {etapeTour + 1}/8
             </p>
             <h2 className="mt-1 text-base font-semibold text-white">{stepName}</h2>
           </div>
@@ -661,7 +662,9 @@ export function LeftPanel({
             )}
           </div>
 
-          {etapeTour !== 1 && etapeTour !== 6 && (
+          {/* T25.C : les étapes manuelles (ACHATS_STOCK + DECISION) ont leur propre
+              panneau d'interaction — pas de bouton générique « Commencer l'étape ». */}
+          {etapeTour !== ETAPES.ACHATS_STOCK && etapeTour !== ETAPES.DECISION && (
             <button
               onClick={onLaunchStep}
               className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300"

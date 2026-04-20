@@ -710,3 +710,38 @@ J'ai livré T25.A + T25.B (changements localisés, testables) et **reporté T25.
 - **Un scope qui grossit pendant l'implémentation est un signal d'arrêt**, pas d'accélération.
 - Les "petites refontes d'ordre" sont souvent les plus toxiques : elles touchent des indexations implicites partout.
 - Documenter un report est une livraison à part entière — pas un échec.
+
+---
+
+## L51 — 2026-04-20 : Cycle 9→8 étapes — un test de parité vaut mille assertions
+
+### Symptôme
+Commit 3 de T25.C fusionne deux étapes (`CHARGES_FIXES` + `EFFETS_RECURRENTS`) en une seule (`CLOTURE_TRIMESTRE`) via une nouvelle fonction `appliquerClotureTrimestre()`. Risque latent : l'orchestration enchaînée dans l'ancien pipeline (`appliquerEtape0` puis `appliquerEffetsRecurrents` puis `appliquerSpecialiteEntreprise`) se reproduit-elle à l'identique dans la nouvelle fonction ? Un écart d'un centime, un ordre inversé, un `specialiteAppliqueeTour` qui n'incrémente plus — et la régression serait silencieuse.
+
+### Ce qui a sauvé la livraison
+Le Commit 0 (`b630856`) avait ajouté un test de **parité** dans `cycle-shape.test.ts` : « le nouveau `appliquerClotureTrimestre` doit produire exactement le même `EtatJeu` final que la séquence historique `appliquerEtape0 ∘ appliquerEffetsRecurrents ∘ appliquerSpecialiteEntreprise` ». Un seul `expect(etatNouveau).toEqual(etatHistorique)` couvre :
+- la trésorerie après charges fixes + intérêts + remboursement,
+- l'état des cartes récurrentes (compteurs `nbAppliquee`, flag `consommee`),
+- les effets de spécialité (bonus/malus + incrémentation `specialiteAppliqueeTour`),
+- l'équilibre du bilan (actif = passif + résultat),
+- le journal et les modifications attendues.
+
+Quand j'ai implémenté `appliquerClotureTrimestre()`, j'ai écrit la version "évidente" (les 3 appels enchaînés en interne) et le test a immédiatement validé que la parité tenait. Sans ce test, j'aurais dû re-vérifier manuellement 5 champs d'`EtatJeu` × 4 entreprises × plusieurs scénarios — fatigue garantie → angle mort garanti.
+
+### Règle
+Avant toute fusion/split de fonctions qui orchestrent un pipeline d'effets métiers, **écrire un test de parité comme premier livrable du refactor**. Formule :
+```
+expect(nouvelleFonction(etat)).toEqual(ancienPipelineSequentiel(etat));
+```
+Ce test doit passer sur `main` (avec l'ancienne impl) et continuer à passer après la fusion. Il rend le refactor « boring » — exactement ce qu'on veut pour un refactor.
+
+### Corollaire : `toEqual` sur un `EtatJeu` complet > 20 `toBe` ciblés
+Quand l'état testé est un objet imbriqué (joueurs, cartes, bilan, journal), `toEqual` sur la racine attrape des champs qu'on n'aurait pas pensé à assert manuellement. Coût : il faut aussi tester les cas limites (effets récurrents vides, premier tour, spécialité déjà appliquée) — mais chacun reste un simple `toEqual`.
+
+### Effet de bord bienvenu : bump `SAVE_VERSION`
+Réordonner les valeurs de `ETAPES.*` invalide toutes les saves localStorage de l'ancien cycle : les numéros d'étape stockés ne correspondent plus au même contenu. Bump `SAVE_VERSION` 1→2 dans `useGamePersistence.ts` → les saves v1 sont rejetées au chargement, les apprenants repartent sur le nouveau cycle sans bug d'hydration.
+
+### À retenir
+- Un refactor de pipeline = un test de parité d'abord, puis le refactor.
+- `toEqual` sur l'état complet capture les régressions dans les champs oubliés.
+- Toute re-signification d'un champ stocké impose un bump de version de save.

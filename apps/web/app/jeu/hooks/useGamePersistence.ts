@@ -20,8 +20,13 @@ type Phase = "setup" | "intro" | "playing" | "gameover";
  * SAVE_VERSION doit être incrémenté si la structure de EtatJeu change de façon
  * incompatible (sinon les anciennes sauvegardes seraient restaurées avec un
  * moteur incompatible et planteraient silencieusement).
+ *
+ * v2 (T25.C, 2026-04-19) — cycle 9 étapes → 8 étapes : le `etapeTour` ne
+ * désigne plus les mêmes contenus. Une sauvegarde v1 restaurée sur le nouveau
+ * moteur ferait planter le joueur sur une étape qui ne signifie plus la même
+ * chose. Bump SAVE_VERSION 1→2 → useGamePersistence.ts:52 rejette les v1.
  */
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const SAVE_TTL_MS  = 24 * 60 * 60 * 1000; // 24 h
 
 interface SavedGame {

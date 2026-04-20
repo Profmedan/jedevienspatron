@@ -12,7 +12,7 @@ Pierre a lui-même fait faillite au T6 dans une partie test. Constat : la charge
 |---|---|---|
 | **T25.A** | +2 000 € de trésorerie initiale ET +2 000 € de capitaux propres sur les 4 entreprises (bilans restent équilibrés : Belvaux/Véloce/Azura = 30 k, Synergia = 27 k). | ✅ |
 | **T25.B** | Intérêts d'emprunt décalés : pas d'intérêts à T1/T2, première facturation annuelle à T3, puis T7, T11… Le remboursement du capital (-500 €/trim.) reste inchangé dès T1. | ✅ |
-| **T25.C** | Réordonner les 9 étapes en 8 étapes ("activité puis clôture" au lieu de "payer d'abord"). | ⏸️ **reporté** — scope découvert trop large (2 copies du moteur à garder en sync + 170 lignes de contenu pédagogique `MODALES_ETAPES` / `QCM_ETAPES` à re-mapper). Nécessite une note de planning dédiée avant exécution. |
+| **T25.C** | Réordonner les 9 étapes en 8 étapes ("activité puis clôture" au lieu de "payer d'abord"). | 🟢 **Commits 0→3 livrés (2026-04-20)**. Cycle 9→8 étapes effectif (code + modales + slots + `SAVE_VERSION` 1→2). QCM neutralisés avec warning interne en attendant Commit 4. Reste : partie manuelle Phase 4 (Belvaux T1-T3 + smoke Synergia T1) → Commit 4 (refonte QCM). |
 | **T25.D** | Tests unitaires : trésorerie T1 = 10 000 €, capitaux 22 000/19 000, équilibre bilan, cadence intérêts T1/T2/T3/T4/T7, remboursement capital intact. | ✅ (12 tests passent) |
 | **T25.E** | Vérification + docs (tsc, rebuild dist/, todo.md, lessons.md). | 🚧 |
 
@@ -34,11 +34,25 @@ L'inventaire du code a révélé que réordonner les étapes impacte :
 
 Règle appliquée : **"If something goes sideways, STOP and re-plan immediately"**. Un plan dédié à T25.C sera rédigé avant exécution.
 
-### Vérification
+### Commits T25.C livrés
+| # | SHA | Message | Notes |
+|---|---|---|---|
+| 0 | `b630856` | `test(engine): caractériser le cycle actuel avant refonte` | 20 tests "shape" du cycle 9-étapes qui ont servi de filet de sécurité. Après Commit 3, la parité est garantie par le test `appliquerClotureTrimestre === appliquerEtape0 + appliquerEffetsRecurrents + spécialité`. |
+| 1 | `e276aef` + `a72aedd` | `refactor(web): déplacer le contenu pédagogique hors du legacy engine` puis `chore(engine): supprimer la copie legacy du moteur` | Contenu pédago migré vers `apps/web/lib/pedagogie/pedagogie.ts`. 5 fichiers legacy supprimés (`apps/web/lib/game-engine/`). Zéro consommateur restant. |
+| 2 | `e78cc48` | `refactor: nommer explicitement les étapes du cycle (pas de changement de valeur)` | `ETAPES.*` renommés (`CHARGES_FIXES`, `ACHATS`, `COMMERCIAUX`, `VENTES`, `EFFETS_RECURRENTS`, `INVESTISSEMENT`, `EVENEMENT`, `BILAN`). Littéraux `=== N` remplacés par `=== ETAPES.X`. Valeurs inchangées. |
+| 3 | _à créer_ | `feat(engine): Tâche 25.C — réordonnancement 9→8 étapes (activité puis clôture)` | Valeurs `ETAPES.*` réassignées : `ENCAISSEMENTS_CREANCES:0`, `COMMERCIAUX:1`, `ACHATS_STOCK:2`, `VENTES:3`, `DECISION:4`, `EVENEMENT:5`, `CLOTURE_TRIMESTRE:6`, `BILAN:7`. `appliquerClotureTrimestre()` créée (fusion charges fixes + effets récurrents + spécialité). 8 modales figées (`MODALES_ETAPES` 0→7). QCM neutralisés (warning interne). Slots dramaturgiques remappés. `HeaderJeu.tsx` + `LeftPanel.tsx` `/9 → /8`. `SAVE_VERSION` 1→2. |
+
+### Vérification Commit 3
 - `npx tsc --noEmit` (game-engine) : ✅ aucune erreur
-- `npx jest tests/tache25.test.ts` : ✅ 12/12 tests passent
-- `npx jest` (full) : ✅ 96/96 tests passent (la seule suite cassée est `engine.test.ts`, cassure pré-existante, cf. dette d8571b4)
 - `npm run build` game-engine : ✅ dist/ régénéré
+- `npx jest` (full) : ✅ 116/116 tests passent sur 6 suites — la suite `engine.test.ts` reste cassée en compilation (dette d8571b4, hors scope T25.C)
+- `cycle-shape.test.ts` : ✅ 20/20 (inclus le test de parité `appliquerClotureTrimestre`)
+- `npx tsc --noEmit` (apps/web) : ✅ 152 erreurs, strictement identique au baseline pré-T25.C — **aucune régression introduite**
+- `SAVE_VERSION 1→2` : les saves localStorage de l'ancien cycle 9-étapes sont rejetées au chargement → apprenants repartent proprement sur le nouveau cycle
+
+### Reste à faire
+- **Phase 4** : partie manuelle Belvaux T1-T3 + smoke Synergia T1 (cadré dans `tasks/plan-t25c.md` §7 prérequis)
+- **Commit 4** (session ultérieure) : refonte complète des ~50 questions QCM_ETAPES pour le nouveau cycle, après Phase 4 validée
 
 ---
 

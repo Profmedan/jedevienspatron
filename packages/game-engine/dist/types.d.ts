@@ -183,29 +183,33 @@ export interface Joueur {
      */
     choixStrategiques?: Record<string, string>;
 }
-/** Les 9 étapes d'un tour de jeu (cycle actuel — sera ramené à 8 au Commit 3 de T25.C) */
-export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 /**
- * Constantes nommées pour les étapes du tour.
+ * Les 8 étapes d'un tour de jeu (cycle T25.C — "activité puis clôture").
  *
- * Les noms correspondent à la **réalité exécutée par le moteur**, pas au nom
- * historique. Les valeurs numériques sont celles du cycle 9-étapes actuel ;
- * le Commit 3 de T25.C réassignera les valeurs et fusionnera `CHARGES_FIXES`
- * et `EFFETS_RECURRENTS` dans un nouveau `CLOTURE_TRIMESTRE`.
+ * Le cycle est ordonné de manière à ce que le trimestre commence par une
+ * action visible (encaissements), fasse apparaître la vie commerciale
+ * (commerciaux → achats → ventes → décision → événement), puis termine
+ * par la clôture qui matérialise les charges structurelles et les effets
+ * récurrents, avant le bilan de fin de trimestre.
+ */
+export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/**
+ * Constantes nommées pour les étapes du tour (8 étapes depuis le Commit 3 de T25.C).
  *
- * Utilisez ces noms plutôt que les chiffres pour que le Commit 3 n'ait
- * qu'à toucher `types.ts` + `engine.ts` (pas tous les consommateurs).
+ * Cycle « activité puis clôture » validé par Pierre 2026-04-19 :
+ * on encaisse et on vend avant d'être assommé par les charges de fin de
+ * période. Les anciennes étapes 0 (charges fixes) et 5 (effets récurrents)
+ * sont fusionnées dans `CLOTURE_TRIMESTRE`.
  */
 export declare const ETAPES: {
-    readonly CHARGES_FIXES: 0;
-    readonly ACHATS_STOCK: 1;
-    readonly ENCAISSEMENTS_CREANCES: 2;
-    readonly COMMERCIAUX: 3;
-    readonly VENTES: 4;
-    readonly EFFETS_RECURRENTS: 5;
-    readonly DECISION: 6;
-    readonly EVENEMENT: 7;
-    readonly BILAN: 8;
+    readonly ENCAISSEMENTS_CREANCES: 0;
+    readonly COMMERCIAUX: 1;
+    readonly ACHATS_STOCK: 2;
+    readonly VENTES: 3;
+    readonly DECISION: 4;
+    readonly EVENEMENT: 5;
+    readonly CLOTURE_TRIMESTRE: 6;
+    readonly BILAN: 7;
 };
 export interface EtatJeu {
     phase: "setup" | "playing" | "gameover";

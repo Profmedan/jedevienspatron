@@ -47,6 +47,7 @@ export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: numb
  * • Synergia Lab (Innovation)        : +1 produitsFinanciers, +1 trésorerie
  */
 export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: number): ResultatAction;
+export declare function appliquerClotureTrimestre(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Génère les clients bonus liés à la spécialité d'entreprise.
  * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.

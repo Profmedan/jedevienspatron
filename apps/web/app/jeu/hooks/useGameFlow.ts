@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo, useReducer } from "react";
 import {
   EtatJeu, Joueur, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate, ETAPES,
-  initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
+  initialiserJeu, avancerEtape, appliquerClotureTrimestre, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
-  appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
+  genererClientsSpecialite,
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
@@ -294,8 +294,8 @@ export function useGameFlow({
     addToJournal(next, activeStep.entries, next.etapeTour);
     const etapeAvantAvancement = next.etapeTour;
 
-    // 6a (recrutement) → 6b (investissement) sans avancer à l'étape 7
-    if (etapeAvantAvancement === 6 && decisions.subEtape6 === "recrutement") {
+    // DECISION.a (recrutement) → DECISION.b (investissement) sans avancer à l'étape suivante
+    if (etapeAvantAvancement === ETAPES.DECISION && decisions.subEtape6 === "recrutement") {
       // Capturer le label de la carte recrutée pour le snapshot trimestriel
       if (decisions.selectedDecision) {
         setLastDecisionLabel(decisions.selectedDecision.titre);
@@ -308,8 +308,8 @@ export function useGameFlow({
       return;
     }
 
-    // 6b (investissement) → retour au panneau unifié (L33 : multi-investissements)
-    if (etapeAvantAvancement === 6 && decisions.subEtape6 === "investissement") {
+    // DECISION.b (investissement) → retour au panneau unifié (L33 : multi-investissements)
+    if (etapeAvantAvancement === ETAPES.DECISION && decisions.subEtape6 === "investissement") {
       // Capturer le label de la carte investie pour le snapshot trimestriel
       if (decisions.selectedDecision) {
         setLastDecisionLabel(decisions.selectedDecision.titre);
@@ -326,15 +326,15 @@ export function useGameFlow({
     setEtat({ ...next });
     setActiveStep(null);
     setRecentModifications([]);
-    if (etapeAvantAvancement === 6) decisions.setSubEtape6("recrutement");
+    if (etapeAvantAvancement === ETAPES.DECISION) decisions.setSubEtape6("recrutement");
   }
 
   // ─── Défis du dirigeant (Tâche 24, V2) ──────────────────────────────────
   //
   // Retourne le slot dramaturgique pertinent pour l'étape courante, ou null.
-  // V2 : seuls `debut_tour` (étape CHARGES_FIXES) et `avant_decision` (étape DECISION) sont câblés.
+  // V2 : seuls `debut_tour` (étape ENCAISSEMENTS_CREANCES) et `avant_decision` (étape DECISION) sont câblés.
   function slotPourEtapeCourante(e: EtatJeu): SlotDramaturgique | null {
-    if (e.etapeTour === ETAPES.CHARGES_FIXES) return "debut_tour";
+    if (e.etapeTour === ETAPES.ENCAISSEMENTS_CREANCES) return "debut_tour";
     if (e.etapeTour === ETAPES.DECISION) return "avant_decision";
     return null;
   }
@@ -414,7 +414,7 @@ export function useGameFlow({
     if (workingEtat.defisActives) {
       // 1. Résolution des arcs différés : uniquement au tout début d'un
       //    trimestre (étape 0, premier joueur). On l'applique silencieusement.
-      if (workingEtat.etapeTour === ETAPES.CHARGES_FIXES && workingEtat.joueurActif === 0) {
+      if (workingEtat.etapeTour === ETAPES.ENCAISSEMENTS_CREANCES && workingEtat.joueurActif === 0) {
         const resolu = resoudreArcsDifferes(workingEtat);
         if (resolu !== workingEtat) {
           workingEtat = resolu;
@@ -447,12 +447,11 @@ export function useGameFlow({
     let mods: ModificationMoteur[] = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
 
-    if (next.etapeTour === ETAPES.CHARGES_FIXES) {
+    if (next.etapeTour === ETAPES.ENCAISSEMENTS_CREANCES) {
       next.joueurs[idx].clientsPerdusCeTour = 0;
     }
 
     switch (next.etapeTour) {
-      case ETAPES.CHARGES_FIXES: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
       case ETAPES.ENCAISSEMENTS_CREANCES: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
       case ETAPES.COMMERCIAUX: {
         const clients = genererClientsParCommerciaux(next.joueurs[idx]);
@@ -497,11 +496,9 @@ export function useGameFlow({
         }
         break;
       }
-      case ETAPES.EFFETS_RECURRENTS: {
-        const r = appliquerEffetsRecurrents(next, idx);
+      case ETAPES.CLOTURE_TRIMESTRE: {
+        const r = appliquerClotureTrimestre(next, idx);
         if (r.succes) mods = r.modifications as ModificationMoteur[];
-        const rSpec = appliquerSpecialiteEntreprise(next, idx);
-        if (rSpec.succes) mods = [...mods, ...(rSpec.modifications as ModificationMoteur[])];
         break;
       }
       case ETAPES.EVENEMENT: {
@@ -532,7 +529,14 @@ export function useGameFlow({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
 
-    const AUTO_ETAPES = [0, 2, 3, 4, 5];
+    // Étapes « automatiques » : flow accéléré en mode rapide (toutes écritures appliquées d'un coup).
+    // Nouveau cycle T25.C : ENCAISSEMENTS_CREANCES(0), COMMERCIAUX(1), VENTES(3), CLOTURE_TRIMESTRE(6).
+    const AUTO_ETAPES: number[] = [
+      ETAPES.ENCAISSEMENTS_CREANCES,
+      ETAPES.COMMERCIAUX,
+      ETAPES.VENTES,
+      ETAPES.CLOTURE_TRIMESTRE,
+    ];
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
       dispatchActiveStep({ type: "SET_STEP", step });
@@ -585,9 +589,9 @@ export function useGameFlow({
       const oldTour = next.tourActuel;
       if (oldTour % 4 === 0) cloturerAnnee(next);
       next.tourActuel = oldTour + 1;
-      next.etapeTour = 0;
+      next.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
       next.joueurActif = 0;
-      pedagogy.maybeShowPedagoModal(0);
+      pedagogy.maybeShowPedagoModal(ETAPES.ENCAISSEMENTS_CREANCES);
       setEtat({ ...next });
       setActiveStep(null);
       decisions.resetDecisionState();
@@ -596,8 +600,8 @@ export function useGameFlow({
     } else {
       avancerEtape(next);
       next.joueurActif = nextJoueurIdx;
-      next.etapeTour = 0;
-      pedagogy.maybeShowPedagoModal(0);
+      next.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
+      pedagogy.maybeShowPedagoModal(ETAPES.ENCAISSEMENTS_CREANCES);
       setEtat({ ...next });
       setActiveStep(null);
       decisions.resetDecisionState();

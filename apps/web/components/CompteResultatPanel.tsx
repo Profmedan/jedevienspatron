@@ -245,14 +245,13 @@ export default function CompteResultatPanel({
   const totalProduits = getTotalProduits(produits);
   const resultat      = getResultatNet(joueur);
 
-  // Le résultat est provisoire pendant toute la période « activité » du
-  // trimestre — de ACHATS_STOCK (après charges fixes initiales) jusqu'à
-  // EVENEMENT inclus. Devient définitif à l'étape BILAN (8).
+  // T25.C — Nouveau cycle 8 étapes (activité puis clôture) : le résultat est
+  // provisoire pendant toute la période d'activité et de clôture du trimestre,
+  // et devient définitif à l'étape BILAN (7). Simplification par rapport à
+  // l'ancien cycle qui avait une « étape 0 initiale » distincte.
   const isProvisoire =
     hasActiveStep === true ||
-    (etapeTour !== undefined &&
-      etapeTour >= ETAPES.ACHATS_STOCK &&
-      etapeTour <= ETAPES.EVENEMENT);
+    (etapeTour !== undefined && etapeTour !== ETAPES.BILAN);
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 flex flex-col max-h-full">

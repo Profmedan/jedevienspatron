@@ -40,62 +40,60 @@ export type ModificationMoteur = {
 // ─── ETAPE_INFO ───────────────────────────────────────────────────────────────
 // Réutilisé par useGameFlow, buildActiveStep et les composants (via re-export)
 
+// ─── T25.C — Nouveau cycle 8 étapes (activité puis clôture) ─────────────
+// Ordre : encaissements → commerciaux → achats → ventes → décision → événement → clôture → bilan
+// Contenu court pour ActiveStep + Journal. Le fond pédagogique détaillé
+// vit dans `apps/web/lib/pedagogie/pedagogie.ts` (MODALES_ETAPES).
 export const ETAPE_INFO: Record<number, {
   icone: string; titre: string; description: string; principe: string; conseil: string;
 }> = {
   0: {
-    icone: "💼", titre: "Charges fixes & Dotation aux amortissements",
-    description: "Chaque trimestre, ton entreprise paie ses charges fixes (loyer, énergie, assurances…) et constate l'usure de chaque bien immobilisé (−1 par bien). Si tu as un emprunt, les intérêts sont prélevés une fois par an.",
-    principe: "Ton entreprise paie ses charges obligatoires (loyer, énergie…) : ta trésorerie diminue. Tes équipements s'usent : leur valeur au bilan baisse, et une charge d'amortissement est enregistrée. Si tu as un emprunt, les intérêts sont aussi prélevés.",
-    conseil: "Ces charges sont obligatoires. L'amortissement n'est pas une sortie d'argent réelle, mais il réduit ton résultat — et donc tes capitaux propres à terme.",
+    icone: "⏩", titre: "Encaissements des créances clients",
+    description: "Les créances arrivées à échéance entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant.",
+    principe: "Tes clients te paient selon leur délai. La trésorerie augmente, les créances clients diminuent du même montant. Le chiffre d'affaires ne bouge pas : il avait été enregistré au moment de la vente.",
+    conseil: "Une entreprise peut être rentable et pourtant manquer de trésorerie si ses clients paient trop tard. Surveille tes délais d'encaissement.",
   },
   1: {
-    icone: "📦", titre: "Achats de marchandises",
-    description: "Tu peux acheter des stocks pour les revendre. Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
-    principe: "Tu achètes des marchandises. Si tu paies comptant, ta trésorerie baisse immédiatement. Si tu achètes à crédit, tu gardes ta trésorerie aujourd'hui mais tu crées une dette à payer au trimestre suivant.",
-    conseil: "Acheter à crédit préserve ta trésorerie, mais crée une dette à rembourser au prochain tour. Trouve le bon équilibre.",
+    icone: "👔", titre: "Paiement des commerciaux",
+    description: "Les commerciaux en poste sont payés ce trimestre et ramènent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1.",
+    principe: "Charges de personnel +, trésorerie −. C'est une charge d'exploitation courante — pas une immobilisation, même si l'effet sur les ventes est durable.",
+    conseil: "Les commerciaux coûtent avant de rapporter. Dimensionne ton équipe à ta marge prévue, pas à ton ambition.",
   },
   2: {
-    icone: "⏩", titre: "Avancement des créances clients",
-    description: "Les clients règlent à échéance : les créances à 2 trimestres passent à 1, et celles à 1 trimestre entrent en trésorerie.",
-    principe: "Tes clients te paient selon leur délai. Les créances à 1 trimestre entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant. L'argent arrive, mais avec du retard.",
-    conseil: "Un client Grand Compte est rentable mais paie en 2 trimestres. Attention au décalage : tu peux être en bénéfice et à court de cash en même temps.",
+    icone: "📦", titre: "Achats de marchandises",
+    description: "Tu achètes marchandises ou matières. Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
+    principe: "Stocks +, et soit trésorerie −, soit dettes fournisseurs +. Pas de charge à ce stade : le coût d'achat ne devient charge qu'au moment de la vente.",
+    conseil: "Le stock est de l'argent transformé en marchandises. Trop de stock immobilise la trésorerie, trop peu fait rater des ventes.",
   },
   3: {
-    icone: "👔", titre: "Paiement des commerciaux",
-    description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1.",
-    principe: "Tu verses les salaires de tes commerciaux : ta trésorerie baisse et tes charges de personnel augmentent. En contrepartie, chaque commercial te ramène de nouveaux clients.",
-    conseil: "Junior → 2 clients particuliers/trim. Senior → 2 TPE/trim. Directrice → 2 Grands Comptes/trim. Recrute via les cartes Décision à l'étape 6.",
+    icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
+    description: "Chaque carte Client déclenche 4 écritures : chiffre d'affaires, sortie de stock, coût des marchandises vendues, encaissement ou créance.",
+    principe: "Produits d'exploitation +, stocks −, trésorerie ou créances clients +. La marge brute se révèle à cette étape ; c'est elle qui conditionne la capacité à absorber les charges fixes de la clôture.",
+    conseil: "Vendre beaucoup ne suffit pas : ce qui compte, c'est ce qu'il reste quand on a retiré le coût du produit. La marge, pas le volume.",
   },
   4: {
-    icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
-    description: "Chaque vente génère plusieurs écritures simultanées. Au T1, 2 clients initiaux sont traités ici — sans commercial, c'est normal.",
-    principe: "Chaque vente déclenche 4 mouvements : ton chiffre d'affaires augmente, ton stock diminue, le coût des marchandises vendues est enregistré, et tu encaisses (comptant ou à terme). C'est la partie double en action.",
-    conseil: "C'est le cœur du jeu : une seule vente crée 4 écritures qui s'équilibrent. Plus tu as de commerciaux, plus tu vends.",
+    icone: "🎯", titre: "Carte Décision",
+    description: "Tu peux jouer une carte Décision — investissement, recrutement, emprunt, carte logistique, protection. Ce choix est OPTIONNEL.",
+    principe: "Selon la carte : immobilisation + et trésorerie − (investissement), emprunt + et trésorerie + (crédit), charges de personnel + (recrutement). Beaucoup de cartes embarquent un effet récurrent.",
+    conseil: "C'est toi qui décides : mais le marché ne te dira pas si tu as eu raison avant plusieurs trimestres. Regarde toujours la sortie de cash d'aujourd'hui ET le coût récurrent cumulé.",
   },
   5: {
-    icone: "🔄", titre: "Effets récurrents des cartes Décision",
-    description: "Effets récurrents de tes cartes actives : spécialité d'entreprise (ex. production stockée), abonnements, maintenance, intérêts…",
-    principe: "Chaque trimestre, tes cartes actives déclenchent automatiquement leurs effets. La production stockée (cpt 713) enregistre la valeur des marchandises que tu fabriques et mets en stock : c'est un produit qui augmente ton résultat, et un actif (stocks) qui augmente ton bilan. Une charge récurrente (abonnement, maintenance) fait l'inverse.",
-    conseil: "La production stockée n'est pas de la trésorerie : tu 'gagnes' sur le papier mais l'argent n'arrive que quand tu vends. Surveille le décalage entre résultat et trésorerie.",
+    icone: "🎲", titre: "Carte Événement",
+    description: "Une carte Événement est tirée automatiquement. Elle peut affecter la trésorerie, le stock, les clients, les dettes — ou plusieurs postes à la fois.",
+    principe: "Variable selon l'événement. Un incident augmente les charges exceptionnelles ou réduit un actif ; une opportunité gonfle le CA ou les produits.",
+    conseil: "Tu n'as pas choisi ce moment : ta responsabilité, c'est la lecture, pas la panique. Un coussin de trésorerie absorbe les chocs.",
   },
   6: {
-    icone: "🎯", titre: "Choix d'une carte Décision",
-    description: "Tu peux investir dans une carte Décision ce trimestre. Chaque carte a des effets immédiats et des effets récurrents. Ce choix est OPTIONNEL.",
-    principe: "Tu peux recruter un commercial (charge de personnel) ou investir dans un équipement (immobilisation). Chaque choix a un coût immédiat et des effets à long terme sur ton entreprise.",
-    conseil: "L'assurance protège des événements négatifs. La levée de fonds apporte des capitaux. Anticipe tes besoins avant d'investir.",
+    icone: "💼", titre: "Clôture du trimestre",
+    description: "Tout ce qui a permis à l'entreprise de fonctionner ce trimestre arrive dans les comptes : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents des cartes actives.",
+    principe: "La trésorerie baisse avec les paiements exigibles. Les amortissements augmentent les charges sans impacter la banque. C'est ici qu'on comprend pourquoi trésorerie et bénéfice ne racontent pas la même histoire.",
+    conseil: "Respire : c'est ici que tu vois si ta stratégie tient. Regarde d'abord ta trésorerie après clôture, puis ton résultat net.",
   },
   7: {
-    icone: "🎲", titre: "Événement aléatoire",
-    description: "Un événement imprévu affecte ton entreprise. Positif ou négatif : tu ne peux pas le refuser.",
-    principe: "Un événement imprévu touche ton entreprise. S'il est positif, ta trésorerie ou tes revenus augmentent. S'il est négatif, tu subis une charge exceptionnelle. L'assurance peut te protéger.",
-    conseil: "Avoir des réserves de trésorerie absorbe les chocs. L'assurance prévoyance annule certains événements négatifs.",
-  },
-  8: {
     icone: "✅", titre: "Bilan de fin de trimestre",
-    description: "On vérifie l'équilibre du bilan, on contrôle la solvabilité et on calcule ton score. Si c'est le dernier trimestre, on clôture l'exercice.",
-    principe: "Fin du trimestre : on calcule ton résultat (produits − charges). S'il est positif, tes capitaux propres augmentent et ta solvabilité s'améliore. S'il est négatif, attention à la faillite.",
-    conseil: "Résultat Net = Produits − Charges. Positif = tes capitaux propres montent. Négatif = ta solvabilité baisse.",
+    description: "Le résultat net du trimestre est affecté aux capitaux propres. Actif et passif sont recalés. Les indicateurs de solidité sont mis à jour.",
+    principe: "Capitaux propres +/− selon le résultat, actif et passif équilibrés par construction. Aucun flux de trésorerie à cette étape : c'est une écriture de constatation, pas de décaissement.",
+    conseil: "Regarde la tendance, pas seulement la photo. Trois bilans consécutifs montrent si la structure se consolide ou se fragilise.",
   },
 };
 

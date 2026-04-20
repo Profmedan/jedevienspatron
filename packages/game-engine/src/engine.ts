@@ -291,7 +291,7 @@ export function initialiserJeu(
   return {
     phase: "playing",
     tourActuel: 1,
-    etapeTour: ETAPES.CHARGES_FIXES,
+    etapeTour: ETAPES.ENCAISSEMENTS_CREANCES,
     joueurActif: 0,
     joueurs,
     nbJoueurs: joueurs.length,
@@ -302,12 +302,19 @@ export function initialiserJeu(
     piocheEvenements: melangerTableau([...CARTES_EVENEMENTS]),
     historiqueEvenements: [],
     messages: [
-      `Bienvenue dans JEDEVIENSPATRON ! Trimestre 1/${nbToursMax} — 3 exercices comptables de ${Math.round(nbToursMax/3)} trimestres chacun. Étape 0 : Charges fixes et amortissements.`,
+      `Bienvenue dans JEDEVIENSPATRON ! Trimestre 1/${nbToursMax} — 3 exercices comptables de ${Math.round(nbToursMax/3)} trimestres chacun. Étape 1 : encaissement des créances clients.`,
     ],
   };
 }
 
-// ─── ÉTAPE 0 : Remboursements obligatoires + charges fixes + amortissements ──
+// ─── ÉTAPE « CLÔTURE TRIMESTRE » : helpers internes (charges + amortissements) ──
+//
+// Note T25.C (2026-04-20) : `appliquerEtape0` reste exporté pour ne pas casser
+// les consommateurs (tests de caractérisation, anciens hooks). Il représente
+// désormais le *premier bloc* de la clôture trimestre (charges fixes, emprunt,
+// amortissements, agios). La fusion avec les effets récurrents et la
+// spécialité s'opère dans `appliquerClotureTrimestre` — utilisé par le
+// pipeline web et le seul moyen recommandé d'appeler la clôture côté app.
 
 export function appliquerEtape0(
   etat: EtatJeu,
@@ -813,6 +820,36 @@ export function appliquerSpecialiteEntreprise(
   return { succes: true, modifications };
 }
 
+// ─── ÉTAPE 6 : Clôture du trimestre (fusion T25.C) ───────────
+//
+// Fusion des anciennes étapes 0 (charges fixes + amortissements + emprunt)
+// et 5 (effets récurrents + spécialité). L'ordre d'application est celui
+// décidé par Pierre 2026-04-19 (plan T25.C §3 Q3) : on applique d'abord le
+// bloc structurel (charges, emprunt, amortissements) qui est le cœur
+// comptable de la fin de période, puis les effets récurrents des cartes
+// actives, puis la spécialité d'entreprise. Cet ordre reste cohérent avec
+// l'ancien pipeline (étape 0 puis étape 5) pour préserver les invariants
+// comptables déjà couverts par les tests de caractérisation.
+export function appliquerClotureTrimestre(
+  etat: EtatJeu,
+  joueurIdx: number
+): ResultatAction {
+  const resStruct = appliquerEtape0(etat, joueurIdx);
+  if (!resStruct.succes) return resStruct;
+
+  const resRecurrent = appliquerEffetsRecurrents(etat, joueurIdx);
+  const resSpecialite = appliquerSpecialiteEntreprise(etat, joueurIdx);
+
+  return {
+    succes: true,
+    modifications: [
+      ...resStruct.modifications,
+      ...(resRecurrent.succes ? resRecurrent.modifications : []),
+      ...(resSpecialite.succes ? resSpecialite.modifications : []),
+    ],
+  };
+}
+
 /**
  * Génère les clients bonus liés à la spécialité d'entreprise.
  * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.
@@ -1237,7 +1274,7 @@ export function cloturerAnnee(etat: EtatJeu): void {
   }
 
   etat.tourActuel = 1;
-  etat.etapeTour = ETAPES.CHARGES_FIXES;
+  etat.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
   etat.joueurActif = 0;
 }
 
@@ -1254,7 +1291,7 @@ export function avancerEtape(etat: EtatJeu): void {
       etat.joueurActif = 0;
       etat.tourActuel++;
     }
-    etat.etapeTour = ETAPES.CHARGES_FIXES;
+    etat.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
   }
 }
 
