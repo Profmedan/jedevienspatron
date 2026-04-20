@@ -783,4 +783,105 @@ Un test de rendu qui monte `<LeftPanel etapeTour={0} .../>` et vérifie que la d
 ### À retenir
 - L50 était juste mais incomplète : l'inventaire doit être morphologique, pas seulement par nom.
 - Deux tableaux indexés par la même structure cohabitent souvent à 10 lignes d'écart. Ne pas s'arrêter au premier.
+
+---
+
+## L53 — 2026-04-20 : `DECOUVERT_MAX` est en euros — dériver les seuils, pas les dupliquer
+
+### Symptôme
+`AlerteDecouvert.tsx` déclenchait le bandeau "FAILLITE" dès que la trésorerie passait sous `-5` (valeur brute, supposée être en "parts" ou "unités internes"). Au T2 de Belvaux, trésorerie à −380 € → bandeau FAILLITE pendant 30 s jusqu'à l'encaissement de l'étape suivante, alors que le mécanisme de faillite réel ne se déclenche qu'à la clôture (étape 6) avec un seuil de −900 €. Double erreur : (1) confusion d'unité, (2) usage d'une constante ad-hoc au lieu de `DECOUVERT_MAX` exporté par le moteur.
+
+### Cause racine
+Le moteur exporte `DECOUVERT_MAX = 900` (en euros, vérifié `engine.ts`). Le composant UI avait recopié "le chiffre 5" en pensant que c'était en parts, mais le moteur stocke la trésorerie en euros depuis le Commit 3 de T25.C. Le chiffre 5 n'avait plus aucune sémantique — artefact d'un ancien prototype jamais nettoyé.
+
+### Règle
+Quand un composant UI doit afficher un seuil lié à une règle métier, **dériver depuis la constante exportée par le moteur, jamais recopier un chiffre**. Pattern :
+```ts
+import { DECOUVERT_MAX } from "@jedevienspatron/game-engine";
+const SEUIL_ALERTE   = Math.round(DECOUVERT_MAX * 0.33); // ~300 €
+const SEUIL_DANGER   = Math.round(DECOUVERT_MAX * 0.66); // ~600 €
+const SEUIL_FAILLITE = DECOUVERT_MAX;                    // 900 €
+```
+Coût : une ligne d'import. Bénéfice : toute évolution du moteur (ajustement du découvert autorisé) se propage automatiquement à l'UI.
+
+### Corollaire — libellé défensif
+Tant que le bandeau s'affiche **avant** la clôture (donc avant que la faillite soit réelle), le titre doit rester prédictif : **"FAILLITE PRÉVISIBLE"**, pas "FAILLITE". Le mot "prévisible" préserve le contrat pédagogique : l'apprenant comprend qu'il peut encore corriger avant la fin du trimestre.
+
+### À retenir
+- Un chiffre magique dans un composant UI est un signal d'alarme : cherche la constante exportée.
+- Le moteur est la source de vérité des unités. L'UI dérive, ne redéfinit pas.
+- Les libellés qui anticipent un événement (faillite, rupture de stock, etc.) doivent se préfixer "prévisible" / "imminent" tant que l'événement n'est pas encore matérialisé dans le moteur.
+
+---
+
+## L54 — 2026-04-20 : Un composant exporté n'est pas un composant monté
+
+### Symptôme
+Pendant l'audit U3 ("rendre les modales pédago consultables"), j'allais ajouter une prop `onReviewStep` pour rouvrir les modales des étapes franchies. En parcourant le wiring `usePedagogyFlow` → `ModalEtape`, j'ai découvert que **`<ModalEtape>` n'était monté nulle part dans le JSX**. Le composant existait, était exporté, `usePedagogyFlow` exposait `modalEtapeEnAttente` + `setModalEtapeEnAttente`, `maybeShowPedagoModal` settait bien l'état à chaque première visite d'étape — mais aucun composant ne lisait cet état pour rendre la modale. La modale de première visite n'avait donc jamais été affichée aux apprenants depuis T25.C (peut-être même avant).
+
+### Cause racine
+Refactor de T25.C : déplacement du contenu pédago vers `lib/pedagogie/pedagogie.ts`, création du hook `usePedagogyFlow`, mais le mount dans `page.tsx` a été oublié dans le split de commits. Aucune erreur TypeScript : un composant React exporté et non utilisé ne déclenche ni warning TS ni warning ESLint (sauf règle `no-unused-vars` stricte qui n'est pas activée). Aucun test de rendu de `page.tsx` qui aurait attrapé "modalEtapeEnAttente set mais <ModalEtape> jamais dans l'arbre".
+
+### Règle
+Pour tout composant qui **devrait** être rendu (ModalX, OverlayY, BannerZ…), après tout refactor qui touche son propriétaire, vérifier explicitement :
+```bash
+grep -rn "<ModalEtape" apps/web/         # mount effectif dans le JSX
+grep -rn "import.*ModalEtape" apps/web/  # import côté propriétaire
+```
+Les deux doivent exister. Le test exporté-mais-pas-monté s'applique aussi aux hooks qui exposent un setter (`setModalX`) : si personne ne lit l'état via un `<ModalX>` dans le JSX, le setter est du code mort silencieux.
+
+### Corollaire — checklist "wire-up" après déplacement d'un composant
+Quand on déplace un composant de location A vers location B (ou qu'on crée un hook qui remplace une logique inline), la checklist doit être :
+1. Le composant est-il exporté correctement ? (`grep "export default"`)
+2. Le nouveau propriétaire l'importe-t-il ? (`grep "import"`)
+3. Le nouveau propriétaire le **rend**-il ? (`grep "<ComponentName"`) ← étape la plus souvent oubliée
+4. L'état qui devrait le déclencher est-il bien lu quelque part ?
+
+### À retenir
+- Exporté ≠ monté. Monté ≠ rendu visible (conditions React peuvent le masquer).
+- Un setter sans lecteur est du code mort que TS ne signale pas.
+- Après déplacement d'un composant, la question est toujours "qui le rend ?", pas "où est-il défini ?".
+
+---
+
+## L55 — 2026-04-20 : Remapper les mappings visuels, pas seulement les libellés
+
+### Symptôme
+`ModalEtape.tsx` contenait un objet `ETAPE_CONFIG` qui associait chaque numéro d'étape (0 à 8 dans l'ancien cycle) à un icône Lucide et une palette Tailwind. Après T25.C (cycle 9→8, resémantisé), j'ai remappé `MODALES_ETAPES` (contenu textuel : titres, descriptions, conseils) **mais oublié `ETAPE_CONFIG`**. Résultat, une fois la modale enfin montée (U3-B) : l'étape 0 "Encaissements des créances" affichait l'icône `Briefcase` + palette slate de l'ancienne étape 0 "Charges fixes". L'étape 6 "Clôture" affichait les couleurs teal/BarChart3 de l'ancien bilan. Modale livrée avec le thème visuel décalé de son contenu.
+
+### Cause racine
+Même famille de bug que L52 (`STEP_HELP` oublié à côté de `STEP_NAMES`) : **plusieurs structures indexées par le même numéro d'étape cohabitent**, et un refactor qui renumérote doit les remapper **toutes**, pas seulement celle(s) qu'on a en tête.
+
+Liste des structures indexées par etapeTour recensées à ce jour (à maintenir) :
+- `STEP_NAMES` (LeftPanel) — titres courts
+- `STEP_HELP` (LeftPanel) — descriptions courtes
+- `MODALES_ETAPES` (pedagogie.ts) — contenu pédago long
+- `ETAPE_CONFIG` (ModalEtape) — icône + palette
+- `QCM_ETAPES` (pedagogie.ts) — questions par étape (neutralisées jusqu'à Commit 4)
+
+### Règle
+Avant tout refactor de cycle, exécuter une recherche morphologique **exhaustive** pour recenser toutes les structures indexées :
+```bash
+grep -rnE "Record<number" apps/web/       # Record<number, X>
+grep -rnE "\[0\]:\s|\[1\]:\s" apps/web/   # objets avec clés numériques littérales
+grep -rnE "const\s+[A-Z_]+\s*[:=]\s*\[" apps/web/ | grep -iE "etape|step|tour"
+```
+Puis maintenir la liste dans `tasks/todo.md` ou dans un commentaire au-dessus de la première occurrence, pour que le prochain refactor n'en rate aucune.
+
+### Garde-fou : fallback défensif
+Pour les mappings `Record<number, X>`, toujours prévoir un **fallback** :
+```ts
+const config = ETAPE_CONFIG[etape] ?? {
+  Icon: FALLBACK_ICON,
+  bg: "from-slate-50 to-slate-100",
+  // ...
+};
+```
+Le fallback transforme "index hors borne" d'un crash runtime en rendu dégradé mais cohérent — utile si un prochain refactor oublie de remapper cette structure.
+
+### À retenir
+- Un cycle renumeroté entraîne autant de remappings qu'il y a de structures indexées.
+- Les mappings visuels (icônes, couleurs) sont aussi indexés que les libellés — et autant à risque.
+- Tenir à jour la liste des structures indexées est moins coûteux que les retrouver à chaque refactor.
+- Un fallback défensif ne remplace pas le remappage, mais évite l'effet "pire" (crash vs rendu décalé).
 - **La partie manuelle Phase 4 a capturé en 3 minutes ce que le test de parité `toEqual` sur l'EtatJeu ne voit pas** (tests moteur ≠ tests UI).

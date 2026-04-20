@@ -1241,3 +1241,40 @@ feat(defis): Vague 3 — variantes courte/longue + palette par tonalité
 
 Documente lessons.md L48 (routage archétype → variante + palette).
 ```
+
+---
+
+## 🛠️ 2026-04-20 — Ajustements UX / bugs post-T25.C (Phase 4)
+
+### Déclencheur
+
+Partie manuelle Belvaux T1→T3 + smoke Synergia T1 (Phase 4 de T25.C). 7 défauts relevés, rangés en 3 bugs (B1/B2/B3) + 4 améliorations UX (U1/D1/U2/U3). Plan validé par Pierre dans l'ordre ci-dessous.
+
+### Livraisons
+
+| # | Chantier | Nature | Fichiers touchés | Statut |
+|---|---|---|---|---|
+| B1 | Bandeau découvert — "FAILLITE" → "FAILLITE PRÉVISIBLE" + seuils sur % de `DECOUVERT_MAX` | Bug libellé + dérivation de seuils | `AlerteDecouvert.tsx` | ✅ |
+| B2 | Basculement trésorerie négative → découvert bancaire en fin de clôture (invariant : trésorerie finale ≥ 0) | Bug moteur | `engine.ts`, `useAchatFlow.ts`, `cycle-shape.test.ts`, `index.ts`, `dist/` | ✅ |
+| B3 | Libellé étape Achats : "Paiement des commerciaux" résiduel du cycle 9 étapes → description correcte | Bug libellé (séquelle L52) | `MainContent.tsx` | ✅ |
+| U1 | Nettoyage libellés 6A / 6B → "Sous-étape Recrutement / Investissement" | UX cohérence | `MainContent.tsx`, `LeftPanel.tsx`, `InvestissementPanel.tsx`, `useDecisionCards.ts` | ✅ |
+| D1 | 3 boutons Passer en amber-500/300 ring (cohérence CTA secondaire) | UX lisibilité | `MainContent.tsx`, `LeftPanel.tsx`, `CompanyIntro.tsx` | ✅ |
+| U2 | Fil d'Ariane — refonte 3 états (current cyan / done emerald / upcoming slate) + `aria-current="step"` | UX hiérarchie visuelle | `LeftPanel.tsx` | ✅ |
+| U3 | Modales pédago consultables : 1) mount `<ModalEtape>` manquant ; 2) ETAPE_CONFIG remappé 0→7 ; 3) clic sur étape franchie rouvre la modale | Bug + UX | `ModalEtape.tsx`, `page.tsx`, `LeftPanel.tsx` | ✅ |
+
+### Vérification
+
+- `npx tsc --noEmit` (apps/web) : **152 erreurs, baseline strict inchangé** (aucune régression introduite dans tout le lot)
+- `npx jest` (game-engine) : **118 tests verts** (116 baseline + 2 tests de basculement trésorerie)
+- Relecture manuelle : bandeau découvert clair, CTA visibles, fil d'Ariane lisible à distance, modales pédagogiques accessibles au clic
+
+### Reste à faire côté Pierre
+
+- [ ] Appliquer les 2 commits depuis le Mac (messages rédigés dans la session, split : B1+B2 puis B3+U1+D1+U2+U3)
+- [ ] Re-tester une partie Belvaux T1→T6 pour confirmer que le bandeau "FAILLITE PRÉVISIBLE" ne clignote plus abusivement en cours de cycle
+
+### Leçons tirées
+
+- L53 — `DECOUVERT_MAX` en euros, pas en parts : dériver les seuils visuels en % de la constante plutôt qu'en valeurs magiques
+- L54 — Un composant exporté ≠ un composant monté : après refactor, grep `<ComponentName` (ou `import ComponentName`) pour valider le wiring complet
+- L55 — Remapper les mappings visuels, pas seulement les libellés : quand on renumérote un cycle, `ETAPE_CONFIG` (icônes / couleurs) est aussi indexé par numéro — le rater laisse la modale avec le "thème" de l'ancienne étape
