@@ -11,7 +11,7 @@ import {
   HeaderJeu, LeftPanel, MainContent,
   OverlayTransition, OverlayFaillite,
   SetupScreen, CompanyIntro, JournalReplay,
-  DefiDirigeantScreen,
+  DefiDirigeantScreen, ModalEtape,
 } from "@/components/jeu";
 import { ImpactFlash } from "@/components/ImpactFlash";
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
@@ -401,6 +401,14 @@ export default function JeuPage() {
         />
       )}
 
+      {/* ─── MODALE PÉDAGOGIQUE (première visite d'une étape OU relecture via fil d'Ariane) ─── */}
+      {flow.modalEtapeEnAttente !== null && (
+        <ModalEtape
+          etape={flow.modalEtapeEnAttente}
+          onClose={() => flow.setModalEtapeEnAttente(null)}
+        />
+      )}
+
       {/* ─── HEADER ─── */}
       <HeaderJeu
         joueurs={etat.joueurs}
@@ -461,6 +469,7 @@ export default function JeuPage() {
             setModeRapide={ui.setModeRapide}
             modalEtapeEnAttente={flow.modalEtapeEnAttente}
             onCloseModal={() => flow.setModalEtapeEnAttente(null)}
+            onReviewStep={(etape) => flow.setModalEtapeEnAttente(etape)}
             onDemanderEmprunt={() => { flow.setReponseEmprunt(null); flow.setShowDemandeEmprunt(true); }}
             onInvestirPersonnel={flow.handleInvestirPersonnel}
             onLicencierCommercial={flow.handleLicencierCommercial}

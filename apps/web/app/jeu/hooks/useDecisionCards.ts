@@ -1,5 +1,5 @@
 /**
- * Sous-hook : cartes Décision (étape 6)
+ * Sous-hook : cartes Décision (étape DECISION du cycle T25.C)
  * Gère l'état, les effets React et les actions liées aux investissements,
  * recrutements, cessions et licenciements.
  */
@@ -39,9 +39,10 @@ export function useDecisionCards({
   const [subEtape6, setSubEtape6]               = useState<"recrutement" | "investissement">("recrutement");
 
   // ── Pioche d'investissement stable du tour (L32) ─────────────────────────
-  // À l'étape 6b, on tire une fois 4 cartes globales et on les conserve pendant
-  // tout le séjour sur cette sous-étape. Les cartes investies sont retirées
-  // explicitement dans `launchDecision`. Reset à null à la sortie.
+  // Sur la sous-étape Investissement, on tire une fois 4 cartes globales et on
+  // les conserve pendant tout le séjour sur cette sous-étape. Les cartes
+  // investies sont retirées explicitement dans `launchDecision`. Reset à null
+  // à la sortie.
   const [pioche6b, setPioche6b] = useState<CarteDecision[] | null>(null);
 
   // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape Décision ────
@@ -51,7 +52,7 @@ export function useDecisionCards({
     }
   }, [etat?.etapeTour, subEtape6, activeStep]);
 
-  // ── Init / reset de la pioche stable de l'étape 6b ───────────────────────
+  // ── Init / reset de la pioche stable de la sous-étape Investissement ─────
   useEffect(() => {
     if (!etat) return;
     const enInvestissement = etat.etapeTour === ETAPES.DECISION && subEtape6 === "investissement";
@@ -113,7 +114,7 @@ export function useDecisionCards({
     setRecentModifications(modsDecisionFiltres.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, mods, next, 6));
+    setActiveStep(buildActiveStep(etat, mods, next, ETAPES.DECISION));
 
     // L32 : retirer la carte achetée de la pioche stable du tour
     setPioche6b(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null);
@@ -135,7 +136,7 @@ export function useDecisionCards({
     setRecentModifications(modsFiltrés.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 6));
+    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, ETAPES.DECISION));
   }
 
   /** Vend une immobilisation d'occasion (L34 — cession). */
@@ -154,7 +155,7 @@ export function useDecisionCards({
     setRecentModifications(modsFiltres.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 6, {
+    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, ETAPES.DECISION, {
       titre: `Cession d'occasion — ${nomImmo}`,
       icone: "💸",
       description: `Vous vendez "${nomImmo}" sur le marché de l'occasion. Le prix de cession est encaissé en trésorerie, le bien sort du bilan à sa VNC, et l'écart est enregistré au CR (plus ou moins-value exceptionnelle).`,
@@ -177,7 +178,7 @@ export function useDecisionCards({
     setRecentModifications(modsFiltrés.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 6, {
+    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, ETAPES.DECISION, {
       titre: "Licenciement",
       icone: "📤",
       description: "Vous licenciez un commercial. L'indemnité légale est versée immédiatement. Ce commercial ne génèrera plus de clients ni de salaires à partir du prochain trimestre.",
@@ -185,8 +186,10 @@ export function useDecisionCards({
   }
 
   /**
-   * Skip l'étape 6 (ou bascule 6a → 6b, puis avance à l'étape 7).
-   * L33 : le passage à l'étape 7 est toujours explicite (bouton "Terminer →").
+   * Skip l'étape Décisions (ou bascule Recrutement → Investissement, puis
+   * avance à l'étape Événement).
+   * L33 : le passage à l'étape suivante est toujours explicite (bouton
+   * "Terminer →").
    */
   function skipDecision() {
     if (!etat) return;
@@ -207,7 +210,7 @@ export function useDecisionCards({
     setSubEtape6("recrutement");
   }
 
-  /** Remet à zéro l'état de l'étape 6 (appelé depuis confirmEndOfTurn). */
+  /** Remet à zéro l'état de l'étape Décisions (appelé depuis confirmEndOfTurn). */
   function resetDecisionState() {
     setSelectedDecision(null);
     setShowCartes(false);

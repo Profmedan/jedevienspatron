@@ -4,7 +4,7 @@ import { useState } from "react";
 import { getTotalActif, getTotalPassif, CarteDecision, Joueur, ETAPES } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
-// NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel à l'étape 6b.
+// NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel (sous-étape Investissement).
 // Les cartes du mini-deck logistique sont désormais fusionnées dans
 // `InvestissementPanel`, affiché dans le panneau central (MainContent).
 
@@ -61,6 +61,12 @@ interface LeftPanelProps {
   setModeRapide?: (val: boolean) => void;
   modalEtapeEnAttente?: number | null;
   onCloseModal?: () => void;
+  /**
+   * U3 — Callback invoqué quand l'utilisateur clique sur une étape franchie
+   * dans le fil d'Ariane pour en relire l'explication pédagogique.
+   * Reçoit l'index (0-7) de l'étape à rouvrir.
+   */
+  onReviewStep?: (etape: number) => void;
   onDemanderEmprunt?: () => void;
   /** @deprecated Volet 1 Tâche 11 : le mini-deck logistique est affiché dans InvestissementPanel (MainContent). Ce prop n'est plus utilisé par LeftPanel mais reste dans l'interface pour compatibilité du call site. */
   onInvestirPersonnel?: (carteId: string) => void;
@@ -108,6 +114,7 @@ export function LeftPanel({
   // onInvestirPersonnel retiré du destructuring : plus utilisé dans ce composant (voir interface)
   onLicencierCommercial,
   onApplySaleGroup,
+  onReviewStep,
   subEtape6,
 }: LeftPanelProps) {
   const [pendingConfirm, setPendingConfirm] = useState(false);
@@ -473,19 +480,52 @@ export function LeftPanel({
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 mb-3">Parcours</p>
           <div className="space-y-1.5">
-            {STEP_NAMES.map((name, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center gap-2 rounded-lg px-2 py-1 text-xs ${
-                  idx === etapeTour ? "border border-cyan-400/20 bg-cyan-500/10 text-cyan-100 font-medium"
-                  : idx < etapeTour ? "text-emerald-300"
-                  : "text-slate-400"
-                }`}
-              >
-                <span className="w-4 text-center">{idx === etapeTour ? "→" : idx < etapeTour ? "✅" : "○"}</span>
-                <span>{idx + 1}. {name}</span>
-              </div>
-            ))}
+            {STEP_NAMES.map((name, idx) => {
+              // U2 — Fil d'Ariane : hiérarchie visuelle forte.
+              // • En cours : cyan saillant (ring + bg + bordure + semibold).
+              // • Franchie : émeraude saillante (bg + bordure + medium) → distinguable au premier coup d'œil.
+              // • À venir : slate discret (bordure transparente pour que la hauteur reste uniforme).
+              // U3 — Les étapes franchies deviennent des boutons : un clic rouvre la modale
+              //      pédagogique correspondante pour relire l'explication.
+              const status: "current" | "done" | "upcoming" =
+                idx === etapeTour ? "current" : idx < etapeTour ? "done" : "upcoming";
+              const rowClass =
+                status === "current"
+                  ? "border border-cyan-400/40 bg-cyan-500/15 text-cyan-100 font-semibold ring-1 ring-cyan-400/30"
+                  : status === "done"
+                  ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-100 font-medium"
+                  : "border border-transparent text-slate-500";
+              const icon = status === "current" ? "→" : status === "done" ? "✅" : "○";
+              const baseClass = `flex items-center gap-2 rounded-lg px-2 py-1 text-xs tabular-nums transition-colors ${rowClass}`;
+
+              if (status === "done" && onReviewStep) {
+                return (
+                  <button
+                    type="button"
+                    key={idx}
+                    onClick={() => onReviewStep(idx)}
+                    aria-label={`Revoir l'explication de l'étape ${idx + 1} : ${name}`}
+                    title="Cliquer pour relire l'explication pédagogique"
+                    className={`${baseClass} w-full text-left cursor-pointer hover:bg-emerald-500/20 hover:border-emerald-400/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400`}
+                  >
+                    <span className="w-4 text-center">{icon}</span>
+                    <span>{idx + 1}. {name}</span>
+                    <span className="ml-auto text-[10px] text-emerald-300/70">↻</span>
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  key={idx}
+                  aria-current={status === "current" ? "step" : undefined}
+                  className={baseClass}
+                >
+                  <span className="w-4 text-center">{icon}</span>
+                  <span>{idx + 1}. {name}</span>
+                </div>
+              );
+            })}
           </div>
           <div className="mt-2 text-[10px] text-slate-400 pt-2 border-t border-white/10">
             {totalActif.toFixed(0)} = {totalPassif.toFixed(0)} {balanced && "✓"}
@@ -600,9 +640,9 @@ export function LeftPanel({
                   <button
                     onClick={onSkipAchat}
                     aria-label="Passer l'étape d'achat de marchandises"
-                    className="flex-1 rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/[0.08]"
+                    className="flex-1 cursor-pointer rounded-lg border border-amber-300/60 bg-amber-500 px-2 py-1.5 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-colors hover:bg-amber-400"
                   >
-                    Passer
+                    Passer cette étape →
                   </button>
                   <button
                     onClick={onLaunchAchat}
@@ -618,7 +658,7 @@ export function LeftPanel({
             {etapeTour === ETAPES.DECISION && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-300">
-                  {subEtape6 === "recrutement" ? "6a — Recrutement" : "6b — Investissement"}
+                  {subEtape6 === "recrutement" ? "Recrutement" : "Investissement"}
                 </p>
                 {selectedDecision ? (
                   <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-2">
@@ -629,8 +669,8 @@ export function LeftPanel({
                     <p className="text-xs text-cyan-100">👉 Choisis une carte dans le panneau central</p>
                   </div>
                 )}
-                {/* Mini-deck logistique déplacé vers InvestissementPanel (MainContent) à l'étape 6b */}
-                {/* Licenciement — visible à l'étape 6a si des commerciaux sont actifs */}
+                {/* Mini-deck logistique déplacé vers InvestissementPanel (MainContent) sur la sous-étape Investissement */}
+                {/* Licenciement — visible sur la sous-étape Recrutement si des commerciaux sont actifs */}
                 {subEtape6 === "recrutement" && joueur.cartesActives.some(c => c.categorie === "commercial") && (
                   <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-2 space-y-1">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-300">

@@ -238,7 +238,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
           {/* Bouton Passer — visible dès l'étape 0 */}
           <button
             onClick={onStart}
-            className="cursor-pointer shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-cyan-100 transition-colors hover:bg-white/20"
+            className="cursor-pointer shrink-0 rounded-full border border-amber-300/60 bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-colors hover:bg-amber-400"
             aria-label="Passer l'introduction et démarrer directement"
           >
             Passer →

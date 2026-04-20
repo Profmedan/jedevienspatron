@@ -192,12 +192,12 @@ export function MainContent({
         </AnimatePresence>
       </div>
 
-      {/* ─── Étape 6a — Sélection recrutement (flux classique) ─────────── */}
+      {/* ─── Sous-étape Recrutement (flux classique de l'étape Décisions) ─── */}
       {etapeTour === ETAPES.DECISION && subEtape6 === "recrutement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-              6a — Recrutement
+              Recrutement
             </p>
 
             {/* Card list */}
@@ -234,9 +234,10 @@ export function MainContent({
             <div className="flex gap-2">
               <button
                 onClick={onSkipDecision}
-                className="flex-1 rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/[0.08]"
+                aria-label="Passer la sous-étape recrutement et continuer"
+                className="flex-1 cursor-pointer rounded-lg border border-amber-300/60 bg-amber-500 px-2 py-1.5 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 transition-colors hover:bg-amber-400"
               >
-                Passer
+                Passer cette étape →
               </button>
               {selectedDecision && onLaunchDecision && (
                 <button
@@ -251,7 +252,7 @@ export function MainContent({
         </div>
       )}
 
-      {/* ─── Étape 6b — Investissement (panneau unifié catégorisé) ─────── */}
+      {/* ─── Sous-étape Investissement (panneau unifié catégorisé) ─────── */}
       {etapeTour === ETAPES.DECISION && subEtape6 === "investissement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3 max-h-[65vh] overflow-y-auto">
           <InvestissementPanel
