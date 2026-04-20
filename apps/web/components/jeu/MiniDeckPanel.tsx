@@ -1,6 +1,6 @@
 "use client";
 
-import { Joueur } from "@/lib/game-engine/types";
+import { Joueur } from "@jedevienspatron/game-engine";
 
 interface MiniDeckPanelProps {
   joueur: Joueur;
