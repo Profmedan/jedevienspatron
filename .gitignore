@@ -8,3 +8,4 @@ graphify-out/
 
 # Coverage reports
 packages/game-engine/coverage/
+.DS_Store
