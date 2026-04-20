@@ -80,7 +80,19 @@ export declare function appliquerClotureExercice(etat: EtatJeu, joueurIdx: numbe
 /**
  * Synchronise l'état après clôture de TOUS les joueurs d'un exercice.
  * À appeler UNE SEULE FOIS par tour après que chaque joueur a validé sa
- * clôture individuelle — met à jour les compteurs globaux de l'état.
+ * clôture individuelle.
+ *
+ * Tâches (B6-B, 2026-04-18) :
+ * 1) Housekeeping par joueur — hérite du comportement de l'ancien
+ *    `cloturerAnnee` (désormais supplanté par ce pipeline B6) :
+ *    a. retire les cartes tactiques/financement consommées ;
+ *    b. vide clientsATrait (reset pour le nouveau trimestre) ;
+ *    c. remet `clientsPerdusCeTour` à 0.
+ * 2) Met à jour les compteurs globaux de l'exercice.
+ *
+ * N.B. — la partie comptable (IS, réserve, affectation, reset
+ * compteResultat) est entièrement gérée par `appliquerClotureExercice`
+ * appelée par joueur AVANT `finaliserClotureExercice`.
  */
 export declare function finaliserClotureExercice(etat: EtatJeu): void;
 /**

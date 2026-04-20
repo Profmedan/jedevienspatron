@@ -35,6 +35,10 @@ interface LeftPanelProps {
   etapeTour: number;
   tourActuel: number;
   nbToursMax: number;
+  /** B6 (2026-04-20) — Numéro de l'exercice en cours (1 pour T1-T4, 2 pour T5-T8...). */
+  numeroExerciceEnCours?: number;
+  /** B6 (2026-04-20) — Dernier tour où une clôture d'exercice a eu lieu (0 tant qu'aucune). */
+  dernierTourClotureExercice?: number;
   joueur: Joueur;
   activeStep: ActiveStep | null;
   onApplyEntry: (id: string) => void;
@@ -93,6 +97,8 @@ export function LeftPanel({
   etapeTour,
   tourActuel,
   nbToursMax,
+  numeroExerciceEnCours = 1,
+  dernierTourClotureExercice = 0,
   joueur,
   activeStep,
   onApplyEntry,
@@ -558,6 +564,13 @@ export function LeftPanel({
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
               T{tourActuel}/{nbToursMax} · Étape {etapeTour + 1}/8
+            </p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-300/80">
+              Exercice N°{numeroExerciceEnCours} · T{dernierTourClotureExercice + 1}
+              {tourActuel > dernierTourClotureExercice + 1 ? `–T${tourActuel}` : ""}
+            </p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-400/80">
+              CA total partie : {joueur.compteResultatCumulePartie.produits.ventes.toLocaleString("fr-FR")} €
             </p>
             <h2 className="mt-1 text-base font-semibold text-white">{stepName}</h2>
           </div>

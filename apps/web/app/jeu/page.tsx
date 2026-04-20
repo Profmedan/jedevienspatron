@@ -12,6 +12,7 @@ import {
   OverlayTransition, OverlayFaillite,
   SetupScreen, CompanyIntro, JournalReplay,
   DefiDirigeantScreen, ModalEtape,
+  ModalClotureExercice, ModalOuvertureExercice,
 } from "@/components/jeu";
 import { ImpactFlash } from "@/components/ImpactFlash";
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
@@ -409,6 +410,27 @@ export default function JeuPage() {
         />
       )}
 
+      {/* ─── B6 : CLÔTURE D'EXERCICE (T4 / T8 / T12 / dernier tour) ─── */}
+      {flow.clotureJoueur && (
+        <ModalClotureExercice
+          joueur={flow.clotureJoueur}
+          numeroExercice={flow.clotureNumeroExercice}
+          premierTourExercice={flow.clotureTourDebut}
+          dernierTourExercice={flow.clotureTourFin}
+          onValider={flow.validerClotureExercice}
+        />
+      )}
+
+      {/* ─── B6 : OUVERTURE DU NOUVEL EXERCICE (photo de départ) ─── */}
+      {flow.ouvertureJoueur && (
+        <ModalOuvertureExercice
+          joueur={flow.ouvertureJoueur}
+          numeroExercice={flow.ouvertureNumeroExercice}
+          premierTourNouvelExercice={flow.ouverturePremierTour}
+          onValider={flow.validerOuvertureExercice}
+        />
+      )}
+
       {/* ─── HEADER ─── */}
       <HeaderJeu
         joueurs={etat.joueurs}
@@ -443,6 +465,8 @@ export default function JeuPage() {
             etapeTour={etat.etapeTour}
             tourActuel={etat.tourActuel}
             nbToursMax={etat.nbToursMax}
+            numeroExerciceEnCours={etat.numeroExerciceEnCours}
+            dernierTourClotureExercice={etat.dernierTourClotureExercice}
             joueur={displayJoueur}
             activeStep={flow.activeStep}
             onApplyEntry={flow.applyEntry}

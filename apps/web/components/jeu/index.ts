@@ -16,6 +16,9 @@ export { CompanyIntro } from "./CompanyIntro";
 export { JournalReplay } from "./JournalReplay";
 export { default as ModalEtape } from "./ModalEtape";
 export { default as QCMEtape } from "./QCMEtape";
+// B6-B (2026-04-20) — Modales de clôture et d'ouverture d'exercice (T4/T8/T12).
+export { default as ModalClotureExercice } from "./ModalClotureExercice";
+export { default as ModalOuvertureExercice } from "./ModalOuvertureExercice";
 
 // Utilitaires
 export {

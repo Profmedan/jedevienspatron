@@ -364,7 +364,104 @@ describe("appliquerClotureExercice — archive et compteurs", () => {
   });
 });
 
-// ─── 7. Calibrage des constantes ──────────────────────────────
+// ─── 7. Housekeeping via finaliserClotureExercice (B6-B) ──────
+//
+// Hérite du comportement de l'ancien `cloturerAnnee` désormais supplanté :
+// purge des cartes tactiques + financement, reset des files clients
+// trimestrielles. La partie comptable est déjà gérée par
+// `appliquerClotureExercice` appelé individuellement par joueur.
+
+// Helper : construit une CarteDecision minimale typée (effets vides).
+function carteDecision(
+  id: string,
+  categorie:
+    | "commercial"
+    | "vehicule"
+    | "investissement"
+    | "financement"
+    | "tactique"
+    | "service"
+    | "protection"
+): import("../src/types").CarteDecision {
+  return {
+    type: "decision",
+    id,
+    titre: id,
+    description: "",
+    categorie,
+    effetsImmédiats: [],
+    effetsRecurrents: [],
+  };
+}
+
+// Helper : construit une CarteClient minimale typée.
+function carteClient(id: string): import("../src/types").CarteClient {
+  return {
+    type: "client",
+    id,
+    titre: id,
+    montantVentes: 100,
+    delaiPaiement: 0,
+    consommeStocks: false,
+  };
+}
+
+describe("finaliserClotureExercice — housekeeping par joueur", () => {
+  test("Retire les cartes tactiques et financement, garde commercial + investissement + service", () => {
+    const etat = etatFrais();
+    const j = etat.joueurs[0];
+    etat.tourActuel = 4;
+
+    // On pose des cartes de chaque catégorie pour vérifier le filtre.
+    j.cartesActives = [
+      carteDecision("tac-1", "tactique"),
+      carteDecision("fin-1", "financement"),
+      carteDecision("com-1", "commercial"),
+      carteDecision("inv-1", "investissement"),
+      carteDecision("srv-1", "service"),
+    ];
+
+    appliquerClotureExercice(etat, 0, 0);
+    finaliserClotureExercice(etat);
+
+    const ids = j.cartesActives.map((c) => c.id).sort();
+    expect(ids).toEqual(["com-1", "inv-1", "srv-1"]);
+  });
+
+  test("Reset clientsATrait et clientsPerdusCeTour à 0", () => {
+    const etat = etatFrais();
+    const j = etat.joueurs[0];
+    etat.tourActuel = 4;
+
+    j.clientsATrait = [carteClient("c1")];
+    j.clientsPerdusCeTour = 3;
+
+    appliquerClotureExercice(etat, 0, 0);
+    finaliserClotureExercice(etat);
+
+    expect(j.clientsATrait).toEqual([]);
+    expect(j.clientsPerdusCeTour).toBe(0);
+  });
+
+  test("Joueur éliminé : housekeeping noop (ne touche pas ses cartes)", () => {
+    const etat = etatFrais();
+    const j = etat.joueurs[0];
+    etat.tourActuel = 4;
+
+    j.elimine = true;
+    const cartesAvant = [carteDecision("tac-1", "tactique")];
+    j.cartesActives = [...cartesAvant];
+    j.clientsPerdusCeTour = 5;
+
+    finaliserClotureExercice(etat);
+
+    // Les cartes et clientsPerdusCeTour du joueur éliminé sont intacts.
+    expect(j.cartesActives).toEqual(cartesAvant);
+    expect(j.clientsPerdusCeTour).toBe(5);
+  });
+});
+
+// ─── 8. Calibrage des constantes ──────────────────────────────
 
 describe("Constantes B6 — valeurs arbitrées par Pierre", () => {
   test("TAUX_IS = 15 %", () => {

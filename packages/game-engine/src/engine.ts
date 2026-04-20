@@ -1138,9 +1138,32 @@ export function appliquerClotureExercice(
 /**
  * Synchronise l'état après clôture de TOUS les joueurs d'un exercice.
  * À appeler UNE SEULE FOIS par tour après que chaque joueur a validé sa
- * clôture individuelle — met à jour les compteurs globaux de l'état.
+ * clôture individuelle.
+ *
+ * Tâches (B6-B, 2026-04-18) :
+ * 1) Housekeeping par joueur — hérite du comportement de l'ancien
+ *    `cloturerAnnee` (désormais supplanté par ce pipeline B6) :
+ *    a. retire les cartes tactiques/financement consommées ;
+ *    b. vide clientsATrait (reset pour le nouveau trimestre) ;
+ *    c. remet `clientsPerdusCeTour` à 0.
+ * 2) Met à jour les compteurs globaux de l'exercice.
+ *
+ * N.B. — la partie comptable (IS, réserve, affectation, reset
+ * compteResultat) est entièrement gérée par `appliquerClotureExercice`
+ * appelée par joueur AVANT `finaliserClotureExercice`.
  */
 export function finaliserClotureExercice(etat: EtatJeu): void {
+  for (const joueur of etat.joueurs) {
+    if (joueur.elimine) continue;
+    // a. Purger les cartes à usage court terme (tactique + financement).
+    //    Les commerciaux et investissements long terme restent actifs.
+    joueur.cartesActives = joueur.cartesActives.filter(
+      (c) => c.categorie !== "tactique" && c.categorie !== "financement"
+    );
+    // b. + c. Reset des files clients trimestrielles.
+    joueur.clientsATrait = [];
+    joueur.clientsPerdusCeTour = 0;
+  }
   etat.dernierTourClotureExercice = etat.tourActuel;
   etat.numeroExerciceEnCours = (etat.numeroExerciceEnCours ?? 1) + 1;
 }

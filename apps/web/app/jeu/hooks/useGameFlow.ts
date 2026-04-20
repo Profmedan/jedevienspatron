@@ -7,8 +7,10 @@ import {
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   genererClientsSpecialite,
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
-  appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
+  appliquerCarteEvenement, verifierFinTour, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
+  // ─── B6 : fin d'exercice (clôture + ouverture) ─────────────────────
+  appliquerClotureExercice, finaliserClotureExercice, estFinExercice,
   // ─── Défis du dirigeant (Tâche 24, Vague 2) ────────────────────────
   determinerSlotsActifs, piocherDefi, appliquerChoixDefi,
   resoudreConsequencesDifferees, formatContexte,
@@ -144,6 +146,26 @@ interface UseGameFlowReturn {
   contexteDefi: string;
   /** Applique le choix du joueur et libère le flow. Appelé par DefiDirigeantScreen. */
   resoudreDefi: (choixId: string | null) => void;
+
+  // ─── B6 : clôture et ouverture d'exercice ────────────────────
+  /** Joueur dont la clôture est en attente (null si pas en mode clôture). */
+  clotureJoueur: Joueur | null;
+  /** Numéro de l'exercice en cours de clôture. */
+  clotureNumeroExercice: number;
+  /** Premier trimestre de l'exercice à clôturer (inclusif). */
+  clotureTourDebut: number;
+  /** Dernier trimestre de l'exercice à clôturer (= oldTour). */
+  clotureTourFin: number;
+  /** Valide la clôture pour le joueur courant avec le % de dividendes choisi. */
+  validerClotureExercice: (pctDividendes: number) => void;
+  /** Joueur dont on affiche la photo d'ouverture (null si pas en mode ouverture). */
+  ouvertureJoueur: Joueur | null;
+  /** Numéro de l'exercice qui s'ouvre. */
+  ouvertureNumeroExercice: number;
+  /** Premier trimestre du nouvel exercice. */
+  ouverturePremierTour: number;
+  /** Valide l'ouverture et incrémente le tour. */
+  validerOuvertureExercice: () => void;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────
@@ -176,6 +198,45 @@ export function useGameFlow({
    *  `contexteDefi`  : contexte narratif déjà formaté (tokens résolus). */
   const [defiEnAttente, setDefiEnAttente] = useState<DefiDirigeant | null>(null);
   const [contexteDefi, setContexteDefi]   = useState<string>("");
+  /**
+   * ─── B6 : clôture d'exercice en cours de résolution (bloque le flow) ──
+   *
+   * Quand `confirmEndOfTurn` détecte une fin d'exercice (T4 / T8 / T12 /
+   * nbToursMax), il empile un `ClotureExerciceAttente` qui contient l'état
+   * de jeu figé + la liste des joueurs actifs restant à faire choisir leurs
+   * dividendes. La modale `ModalClotureExercice` se monte sur ce flag ; à
+   * chaque validation par un joueur, on applique `appliquerClotureExercice`
+   * et on dépile. Quand `joueursRestants` est vide, on appelle
+   * `finaliserClotureExercice` (housekeeping) puis on ouvre
+   * `ouvertureExerciceEnAttente` — sauf si c'est la fin de partie.
+   */
+  type ClotureExerciceAttente = {
+    /** Indices (dans next.joueurs[]) des joueurs non éliminés restant à clôturer. */
+    joueursRestants: number[];
+    /** État figé juste après BILAN, en attente des choix de dividendes. */
+    etatPendant: EtatJeu;
+    /** Vrai quand `tourActuel === nbToursMax` : on skip l'ouverture, on file au gameover. */
+    estFinDePartie: boolean;
+    /** Premier trimestre de l'exercice qui se clôture (pour l'affichage). */
+    tourDebutExercice: number;
+    /** Tour qui vient de finir (pour l'incrément ultérieur). */
+    oldTour: number;
+  };
+  const [clotureExerciceEtat, setClotureExerciceEtat] = useState<ClotureExerciceAttente | null>(null);
+  /**
+   * ─── B6 : modale courte d'ouverture du nouvel exercice ──────────────
+   *
+   * Empilée dès que tous les joueurs ont validé leur clôture et que ce
+   * n'est pas la fin de partie. La modale se ferme via `validerOuvertureExercice`
+   * qui incrémente enfin `tourActuel` et relance le cycle à l'étape 0.
+   */
+  type OuvertureExerciceAttente = {
+    etatPendant: EtatJeu;
+    numeroExercice: number;          // numéro de l'exercice qui S'OUVRE
+    premierTourNouvelExercice: number; // tourActuel + 1
+    oldTour: number;
+  };
+  const [ouvertureExerciceEtat, setOuvertureExerciceEtat] = useState<OuvertureExerciceAttente | null>(null);
 
   // Wrapper setActiveStep → dispatch (API publique stable)
   function setActiveStep(s: ActiveStep | null) {
@@ -573,21 +634,77 @@ export function useGameFlow({
 
     const nextJoueurIdx = (idx + 1) % next.nbJoueurs;
     if (nextJoueurIdx === 0) {
-      if (next.tourActuel >= next.nbToursMax) {
-        setEtat(next);
-        if (fin.enFaillite) setFailliteInfo({ joueurNom, raison: fin.raisonFaillite ?? "Situation financière irrécupérable" });
-        setPhase("gameover");
-        return;
-      }
+      // ─── Détection fin d'exercice (B6) ────────────────────────────────
+      // `estFinExercice` couvre T4 / T8 / T12 ET `tourActuel === nbToursMax`
+      // (dernier trimestre, exercice potentiellement partiel).
+      const finExercice = estFinExercice(next.tourActuel, next.nbToursMax);
+      const estDernierTour = next.tourActuel >= next.nbToursMax;
+
+      // Cas 1 : faillite à l'issue du bilan → overlay immédiat (priorité).
       if (fin.enFaillite) {
         setEtat({ ...next });
         setActiveStep(null);
         decisions.resetDecisionState();
         setFailliteInfo({ joueurNom, raison: fin.raisonFaillite ?? "Situation financière irrécupérable" });
+        if (estDernierTour) setPhase("gameover");
         return;
       }
+
+      // Cas 2 : fin d'exercice (T4/T8/T12 ou nbToursMax non multiple de 4)
+      //         → on empile la modale ModalClotureExercice, le flow attend
+      //         la validation de chaque joueur actif.
+      if (finExercice) {
+        const joueursActifs = next.joueurs
+          .map((j, i) => (j.elimine ? -1 : i))
+          .filter((i) => i >= 0);
+        // Si plus aucun joueur actif (tous éliminés), on skip direct la clôture.
+        if (joueursActifs.length === 0) {
+          if (estDernierTour) {
+            setEtat(next);
+            setPhase("gameover");
+            return;
+          }
+          // Rien à clôturer, on enchaîne l'incrément de tour normalement.
+          const oldTour = next.tourActuel;
+          next.tourActuel = oldTour + 1;
+          next.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
+          next.joueurActif = 0;
+          pedagogy.maybeShowPedagoModal(ETAPES.ENCAISSEMENTS_CREANCES);
+          setEtat({ ...next });
+          setActiveStep(null);
+          decisions.resetDecisionState();
+          pedagogy.prepareQCMNouveauTrimestre();
+          setTourTransition({ from: oldTour, to: next.tourActuel });
+          return;
+        }
+        const tourDebutExercice = (next.dernierTourClotureExercice ?? 0) + 1;
+        setClotureExerciceEtat({
+          joueursRestants: joueursActifs,
+          etatPendant: next,
+          estFinDePartie: estDernierTour,
+          tourDebutExercice,
+          oldTour: next.tourActuel,
+        });
+        // On pousse l'état figé tel quel dans `etat` pour que le LeftPanel
+        // reflète le bilan de fin d'exercice sous la modale. Pas
+        // d'avancement de tour : c'est `validerOuvertureExercice` qui le
+        // fera à la fin du pipeline clôture → ouverture.
+        setEtat({ ...next });
+        setActiveStep(null);
+        return;
+      }
+
+      // Cas 3 : dernier tour atteint sans être fin d'exercice (protection
+      //         défensive — avec estFinExercice ce cas ne doit jamais se
+      //         produire, mais on garde une sortie propre vers gameover).
+      if (estDernierTour) {
+        setEtat(next);
+        setPhase("gameover");
+        return;
+      }
+
+      // Cas 4 : trimestre normal (ni faillite, ni fin d'exercice).
       const oldTour = next.tourActuel;
-      if (oldTour % 4 === 0) cloturerAnnee(next);
       next.tourActuel = oldTour + 1;
       next.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
       next.joueurActif = 0;
@@ -606,6 +723,82 @@ export function useGameFlow({
       setActiveStep(null);
       decisions.resetDecisionState();
     }
+  }
+
+  // ─── B6 : validation de la clôture par le joueur courant ─────────────
+  //
+  // Chaque appel traite 1 joueur :
+  //   1. Applique `appliquerClotureExercice` avec le % de dividendes choisi.
+  //   2. Si d'autres joueurs restent à clôturer : on reste en mode clôture.
+  //   3. Sinon : on appelle `finaliserClotureExercice` (housekeeping), on met
+  //      à jour `numeroExerciceEnCours` + `dernierTourClotureExercice`, puis :
+  //      · fin de partie → setPhase("gameover")
+  //      · sinon → on empile `ouvertureExerciceEtat` (modale courte).
+  function validerClotureExercice(pctDividendes: number) {
+    const state = clotureExerciceEtat;
+    if (!state) return;
+    if (state.joueursRestants.length === 0) return;
+
+    const joueurIdx = state.joueursRestants[0];
+    const reste = state.joueursRestants.slice(1);
+
+    // `appliquerClotureExercice` mute `etatPendant` en place : on reprend
+    // la même référence sans cloner (L40 n'est pas concerné ici — on est
+    // dans un état transitoire avant l'ouverture du nouvel exercice).
+    const res = appliquerClotureExercice(state.etatPendant, joueurIdx, pctDividendes);
+    if (!res.succes) {
+      console.error("Clôture d'exercice échouée :", res.messageErreur);
+      // Par sécurité on ne bloque pas : on skip ce joueur pour ne pas laisser
+      // la modale en impasse. Un bug éventuel remontera dans la console.
+    }
+
+    if (reste.length > 0) {
+      // Il reste des joueurs à faire choisir.
+      setClotureExerciceEtat({ ...state, joueursRestants: reste });
+      setEtat({ ...state.etatPendant });
+      return;
+    }
+
+    // Tous les joueurs ont clôturé : housekeeping + compteurs globaux.
+    finaliserClotureExercice(state.etatPendant);
+
+    if (state.estFinDePartie) {
+      // Fin de partie : pas de modale d'ouverture, on file au gameover.
+      setClotureExerciceEtat(null);
+      setEtat({ ...state.etatPendant });
+      setPhase("gameover");
+      return;
+    }
+
+    // Ouverture du nouvel exercice : on empile la modale courte.
+    const nouveauNumero = state.etatPendant.numeroExerciceEnCours ?? (state.oldTour >= 4 ? 2 : 1);
+    setClotureExerciceEtat(null);
+    setOuvertureExerciceEtat({
+      etatPendant: state.etatPendant,
+      numeroExercice: nouveauNumero,
+      premierTourNouvelExercice: state.oldTour + 1,
+      oldTour: state.oldTour,
+    });
+    setEtat({ ...state.etatPendant });
+  }
+
+  // ─── B6 : validation de l'ouverture → incrément du tour ───────────────
+  function validerOuvertureExercice() {
+    const state = ouvertureExerciceEtat;
+    if (!state) return;
+
+    const next = state.etatPendant;
+    const oldTour = state.oldTour;
+    next.tourActuel = oldTour + 1;
+    next.etapeTour = ETAPES.ENCAISSEMENTS_CREANCES;
+    next.joueurActif = 0;
+    pedagogy.maybeShowPedagoModal(ETAPES.ENCAISSEMENTS_CREANCES);
+    setEtat({ ...next });
+    setActiveStep(null);
+    decisions.resetDecisionState();
+    pedagogy.prepareQCMNouveauTrimestre();
+    setTourTransition({ from: oldTour, to: next.tourActuel });
+    setOuvertureExerciceEtat(null);
   }
 
   // ─ Retour ─────────────────────────────────────────────────────────────────
@@ -677,5 +870,20 @@ export function useGameFlow({
     defiEnAttente,
     contexteDefi,
     resoudreDefi,
+
+    // ─── B6 : clôture et ouverture d'exercice ────────────────
+    clotureJoueur: clotureExerciceEtat
+      ? clotureExerciceEtat.etatPendant.joueurs[clotureExerciceEtat.joueursRestants[0]]
+      : null,
+    clotureNumeroExercice: clotureExerciceEtat?.etatPendant.numeroExerciceEnCours ?? 1,
+    clotureTourDebut: clotureExerciceEtat?.tourDebutExercice ?? 1,
+    clotureTourFin: clotureExerciceEtat?.oldTour ?? 1,
+    validerClotureExercice,
+    ouvertureJoueur: ouvertureExerciceEtat
+      ? ouvertureExerciceEtat.etatPendant.joueurs[0]
+      : null,
+    ouvertureNumeroExercice: ouvertureExerciceEtat?.numeroExercice ?? 1,
+    ouverturePremierTour: ouvertureExerciceEtat?.premierTourNouvelExercice ?? 1,
+    validerOuvertureExercice,
   };
 }
