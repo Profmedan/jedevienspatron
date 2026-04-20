@@ -884,4 +884,52 @@ Le fallback transforme "index hors borne" d'un crash runtime en rendu dégradé 
 - Les mappings visuels (icônes, couleurs) sont aussi indexés que les libellés — et autant à risque.
 - Tenir à jour la liste des structures indexées est moins coûteux que les retrouver à chaque refactor.
 - Un fallback défensif ne remplace pas le remappage, mais évite l'effet "pire" (crash vs rendu décalé).
+
+---
+
+## L56 — 2026-04-20 : Ne pas hardcoder `cd <répertoire>` sans vérifier la cwd actuelle
+
+### Symptôme
+Commande shell proposée à l'utilisateur après 3 commits faits depuis le VM :
+```
+cd jedevienspatron-github
+git pull --ff-only      # récupère les 3 commits du VM
+git push origin main
+```
+L'utilisateur était déjà dans le répertoire (prompt shell : `ph@iMac-de-ph jedevienspatron-github %`). Résultat : `cd: no such file or directory: jedevienspatron-github`, puis `fatal: '#' does not appear to be a git repository` (le `#` absorbé comme argument par `git pull --ff-only`). Deux lignes perdues. L'utilisateur a rattrapé en refaisant juste `git push origin main`.
+
+### Cause racine
+Commande générée sans lire l'état visible du prompt shell. Le `cd jedevienspatron-github` ne marche que si la cwd de départ est le *parent* du répertoire cible — condition non satisfaite ici. Bonus : les commentaires `#` sur la même ligne qu'une commande `git pull` chaînée sont interprétés comme arguments, pas comme commentaires, parce que `git` les absorbe via son parser avant que le shell ne les voie comme fin de ligne.
+
+### Règle
+1. Lire le prompt shell visible (`user@host cwd %`) avant toute commande shell destinée à l'utilisateur. Si la bonne cwd est déjà active, ne pas injecter `cd`.
+2. Ne jamais inliner un commentaire `#` sur la même ligne qu'une commande git chaînée. Mettre les commentaires sur une ligne séparée ou formuler « depuis ton clone du repo » et laisser l'utilisateur gérer son contexte.
+
+### À retenir
+- Prompt shell = source de vérité sur la cwd actuelle. L'exploiter avant de supposer.
+- `#` n'est pas universellement un commentaire dans une commande chaînée — un parser d'arguments peut l'absorber.
+- « Depuis ton clone du repo » est plus robuste qu'un `cd` hardcodé.
+- Tester mentalement la cwd supposée avant de proposer une commande à copier-coller.
+
+---
+
+## L57 — 2026-04-20 : Invoquer les subagents et skills du CLAUDE.md en amont, pas après coup
+
+### Symptôme
+Session de 7 chantiers (20 fichiers modifiés, nouvelle logique métier dans `appliquerClotureTrimestre`, refonte UX transverse) exécutée sans déclencher un seul subagent ni un seul skill, malgré les triggers définis dans `CLAUDE.md` du projet : « > 2 fichiers » → `writing-plans` ; « bug / comportement inattendu » → `systematic-debugging` ; « avant d'affirmer c'est fait » → `verification-before-completion`. Découverte tardive en U3 : `<ModalEtape>` n'était montée nulle part dans le JSX, et `ETAPE_CONFIG` conservait le mapping de l'ancien cycle 9 étapes. Récidive directe de L52 (l'inventaire morphologique doit précéder le code).
+
+### Cause racine
+Confiance excessive dans la compréhension intuitive du problème, alors que les skills du `CLAUDE.md` existent précisément pour éviter que je juge seul si mon travail est « suffisamment compris » ou « suffisamment vérifié ». Phase d'Explore/Plan sautée parce qu'elle paraissait « évidente » — exactement la situation où les garde-fous externes ont le plus de valeur.
+
+### Règle
+Pour toute tâche touchant plus de 2 fichiers ou introduisant une nouvelle logique métier, déléguer en amont une phase d'Explore/Plan à un subagent : grep morphologique des `Record<number>`, `<ComponentName`, imports sans consommateur, indexations par même clé. Invoquer explicitement :
+- `writing-plans` avant de coder
+- `systematic-debugging` sur les bugs à reproduire
+- `verification-before-completion` avant d'affirmer qu'une correction est livrée
+
+### À retenir
+- Subagents de research et skills de vérification sont complémentaires, pas substituables — les deux doivent être actifs.
+- L'inventaire morphologique précède le code, toujours. Aucune exception, même sur des tâches « évidentes ».
+- Les skills du `CLAUDE.md` sont un garde-fou externe : les invoquer évite une auto-évaluation biaisée.
+- Découvrir un piège après coup = preuve que la phase d'Explore a manqué. Ne pas laisser passer.
 - **La partie manuelle Phase 4 a capturé en 3 minutes ce que le test de parité `toEqual` sur l'EtatJeu ne voit pas** (tests moteur ≠ tests UI).
