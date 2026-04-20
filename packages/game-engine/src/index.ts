@@ -39,6 +39,7 @@ export {
   appliquerEffetsRecurrents,
   appliquerSpecialiteEntreprise,
   appliquerClotureTrimestre,
+  basculerTresorerieSiNegative,
   genererClientsSpecialite,
   genererClientsParCommerciaux,
   tirerCartesDecision,

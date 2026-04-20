@@ -470,17 +470,12 @@ export function appliquerEtape0(
     );
   }
 
-  // Vérifier si trésorerie négative → découvert automatique
-  const treso = getTresorerie(joueur);
-  if (treso < 0) {
-    const montantDecouvert = Math.abs(treso);
-    push("tresorerie", montantDecouvert, "Trésorerie ramenée à 0");
-    push(
-      "decouvert",
-      montantDecouvert,
-      `Découvert bancaire automatique — ta trésorerie était négative, la banque couvre le déficit mais tu paies des agios (+${montantDecouvert})`
-    );
-  }
+  // Rebascule trésorerie négative → découvert (idempotente, voir helper plus bas).
+  // Placée à la fin du bloc structurel (agios, intérêts, charges fixes, amorts…).
+  // Une seconde passe identique est exécutée en fin de `appliquerClotureTrimestre`
+  // pour capter les replongées induites par les effets récurrents / la spécialité.
+  const resRebasculeEtape0 = basculerTresorerieSiNegative(etat, joueurIdx);
+  modifications.push(...resRebasculeEtape0.modifications);
 
   // Vérification immédiate : si le découvert dépasse le maximum → faillite
   if (joueur.bilan.decouvert > DECOUVERT_MAX) {
@@ -492,6 +487,38 @@ export function appliquerEtape0(
       nouvelleValeur: joueur.bilan.decouvert,
       explication: `⛔ FAILLITE — Découvert bancaire (${joueur.bilan.decouvert} €) dépasse le maximum autorisé (${DECOUVERT_MAX} €). Cessation de paiement.`,
     });
+  }
+
+  return { succes: true, modifications };
+}
+
+/**
+ * Rebascule toute trésorerie négative vers le découvert bancaire.
+ * Idempotent : si la trésorerie est déjà ≥ 0, aucune modification émise.
+ *
+ * T25.C bugfix (2026-04-20) : appelé à la fois à la fin d'`appliquerEtape0`
+ * (clôture structurelle) ET à la fin d'`appliquerClotureTrimestre` (après
+ * effets récurrents + spécialité). Sans cette seconde passe, un effet
+ * récurrent négatif sur la trésorerie (ou un effet passif de spécialité)
+ * laissait la trésorerie en négatif à l'étape Bilan.
+ */
+export function basculerTresorerieSiNegative(
+  etat: EtatJeu,
+  joueurIdx: number
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+  const push = makePush(joueur, modifications);
+
+  const treso = getTresorerie(joueur);
+  if (treso < 0) {
+    const montantDecouvert = Math.abs(treso);
+    push("tresorerie", montantDecouvert, "Trésorerie ramenée à 0");
+    push(
+      "decouvert",
+      montantDecouvert,
+      `Découvert bancaire automatique — ta trésorerie était négative, la banque couvre le déficit mais tu paies des agios (+${montantDecouvert} €)`
+    );
   }
 
   return { succes: true, modifications };
@@ -840,12 +867,32 @@ export function appliquerClotureTrimestre(
   const resRecurrent = appliquerEffetsRecurrents(etat, joueurIdx);
   const resSpecialite = appliquerSpecialiteEntreprise(etat, joueurIdx);
 
+  // T25.C bugfix (2026-04-20) : rebascule finale — les effets récurrents et
+  // la spécialité d'entreprise peuvent replonger la trésorerie en négatif
+  // APRÈS le bloc de bascule d'`appliquerEtape0`. Cette seconde passe
+  // garantit que la clôture s'achève toujours sur trésorerie ≥ 0.
+  const resRebasculeFinale = basculerTresorerieSiNegative(etat, joueurIdx);
+
+  // Refaire la vérification de faillite sur l'état final (découvert post-rebascule).
+  const joueur = etat.joueurs[joueurIdx];
+  if (joueur.bilan.decouvert > DECOUVERT_MAX && !joueur.elimine) {
+    joueur.elimine = true;
+    resRebasculeFinale.modifications.push({
+      joueurId: joueur.id,
+      poste: "decouvert",
+      ancienneValeur: joueur.bilan.decouvert,
+      nouvelleValeur: joueur.bilan.decouvert,
+      explication: `⛔ FAILLITE — Découvert bancaire (${joueur.bilan.decouvert} €) dépasse le maximum autorisé (${DECOUVERT_MAX} €). Cessation de paiement.`,
+    });
+  }
+
   return {
     succes: true,
     modifications: [
       ...resStruct.modifications,
       ...(resRecurrent.succes ? resRecurrent.modifications : []),
       ...(resSpecialite.succes ? resSpecialite.modifications : []),
+      ...resRebasculeFinale.modifications,
     ],
   };
 }

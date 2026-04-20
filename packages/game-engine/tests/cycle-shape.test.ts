@@ -33,6 +33,7 @@ import {
   appliquerEffetsRecurrents,
   appliquerSpecialiteEntreprise,
   appliquerClotureTrimestre,
+  basculerTresorerieSiNegative,
   appliquerCarteEvenement,
   verifierFinTour,
   getTotalActif,
@@ -272,14 +273,21 @@ describe("Caractérisation C — L'invariant Actif = Passif tient sur un T1 comp
     // a : clôture fusionnée
     appliquerClotureTrimestre(a, 0);
 
-    // b : anciens appels individuels dans l'ordre Commit 2
+    // b : anciens appels individuels dans l'ordre Commit 2 + rebascule finale
+    // (alignée sur le bugfix T25.C du 2026-04-20 : la clôture doit toujours
+    // s'achever sur trésorerie ≥ 0, donc on applique la même rebascule).
     appliquerEtape0(b, 0);
     appliquerEffetsRecurrents(b, 0);
     appliquerSpecialiteEntreprise(b, 0);
+    basculerTresorerieSiNegative(b, 0);
 
     expect(getTresorerie(a.joueurs[0])).toBe(getTresorerie(b.joueurs[0]));
     expect(getTotalActif(a.joueurs[0])).toBe(getTotalActif(b.joueurs[0]));
     expect(getTotalPassif(a.joueurs[0])).toBe(getTotalPassif(b.joueurs[0]));
     expect(getResultatNet(a.joueurs[0])).toBe(getResultatNet(b.joueurs[0]));
+
+    // Invariant fort post-clôture : la trésorerie ne doit jamais rester
+    // négative à l'issue d'appliquerClotureTrimestre.
+    expect(getTresorerie(a.joueurs[0])).toBeGreaterThanOrEqual(0);
   });
 });

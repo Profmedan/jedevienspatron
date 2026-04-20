@@ -6,6 +6,17 @@ export declare function initialiserJeu(joueursDefs: Array<{
 customTemplates?: EntrepriseTemplate[]): EtatJeu;
 export declare function appliquerEtape0(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
+ * Rebascule toute trésorerie négative vers le découvert bancaire.
+ * Idempotent : si la trésorerie est déjà ≥ 0, aucune modification émise.
+ *
+ * T25.C bugfix (2026-04-20) : appelé à la fois à la fin d'`appliquerEtape0`
+ * (clôture structurelle) ET à la fin d'`appliquerClotureTrimestre` (après
+ * effets récurrents + spécialité). Sans cette seconde passe, un effet
+ * récurrent négatif sur la trésorerie (ou un effet passif de spécialité)
+ * laissait la trésorerie en négatif à l'étape Bilan.
+ */
+export declare function basculerTresorerieSiNegative(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
  * Vérifie l'invariant comptable ACTIF = PASSIF + RÉSULTAT après chaque étape.
  * En développement, log un avertissement si l'équilibre est rompu (tolérance ±1€ pour arrondis).
  * Ne lève pas d'erreur pour ne pas bloquer le jeu en production.

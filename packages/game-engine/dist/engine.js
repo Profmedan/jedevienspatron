@@ -7,6 +7,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initialiserJeu = initialiserJeu;
 exports.appliquerEtape0 = appliquerEtape0;
+exports.basculerTresorerieSiNegative = basculerTresorerieSiNegative;
 exports.verifierEquilibreComptable = verifierEquilibreComptable;
 exports.appliquerAchatMarchandises = appliquerAchatMarchandises;
 exports.appliquerAvancementCreances = appliquerAvancementCreances;
@@ -352,13 +353,12 @@ function appliquerEtape0(etat, joueurIdx) {
         // Enregistrer la dotation = total des amortissements (règle de la partie double)
         push("dotationsAmortissements", totalDotation, `Dotation aux amortissements : +${totalDotation} (1 000 € par bien, ${immoAmortissables.length} bien(s) amortissable(s))`);
     }
-    // Vérifier si trésorerie négative → découvert automatique
-    const treso = (0, calculators_1.getTresorerie)(joueur);
-    if (treso < 0) {
-        const montantDecouvert = Math.abs(treso);
-        push("tresorerie", montantDecouvert, "Trésorerie ramenée à 0");
-        push("decouvert", montantDecouvert, `Découvert bancaire automatique — ta trésorerie était négative, la banque couvre le déficit mais tu paies des agios (+${montantDecouvert})`);
-    }
+    // Rebascule trésorerie négative → découvert (idempotente, voir helper plus bas).
+    // Placée à la fin du bloc structurel (agios, intérêts, charges fixes, amorts…).
+    // Une seconde passe identique est exécutée en fin de `appliquerClotureTrimestre`
+    // pour capter les replongées induites par les effets récurrents / la spécialité.
+    const resRebasculeEtape0 = basculerTresorerieSiNegative(etat, joueurIdx);
+    modifications.push(...resRebasculeEtape0.modifications);
     // Vérification immédiate : si le découvert dépasse le maximum → faillite
     if (joueur.bilan.decouvert > types_1.DECOUVERT_MAX) {
         joueur.elimine = true;
@@ -369,6 +369,28 @@ function appliquerEtape0(etat, joueurIdx) {
             nouvelleValeur: joueur.bilan.decouvert,
             explication: `⛔ FAILLITE — Découvert bancaire (${joueur.bilan.decouvert} €) dépasse le maximum autorisé (${types_1.DECOUVERT_MAX} €). Cessation de paiement.`,
         });
+    }
+    return { succes: true, modifications };
+}
+/**
+ * Rebascule toute trésorerie négative vers le découvert bancaire.
+ * Idempotent : si la trésorerie est déjà ≥ 0, aucune modification émise.
+ *
+ * T25.C bugfix (2026-04-20) : appelé à la fois à la fin d'`appliquerEtape0`
+ * (clôture structurelle) ET à la fin d'`appliquerClotureTrimestre` (après
+ * effets récurrents + spécialité). Sans cette seconde passe, un effet
+ * récurrent négatif sur la trésorerie (ou un effet passif de spécialité)
+ * laissait la trésorerie en négatif à l'étape Bilan.
+ */
+function basculerTresorerieSiNegative(etat, joueurIdx) {
+    const joueur = etat.joueurs[joueurIdx];
+    const modifications = [];
+    const push = makePush(joueur, modifications);
+    const treso = (0, calculators_1.getTresorerie)(joueur);
+    if (treso < 0) {
+        const montantDecouvert = Math.abs(treso);
+        push("tresorerie", montantDecouvert, "Trésorerie ramenée à 0");
+        push("decouvert", montantDecouvert, `Découvert bancaire automatique — ta trésorerie était négative, la banque couvre le déficit mais tu paies des agios (+${montantDecouvert} €)`);
     }
     return { succes: true, modifications };
 }
@@ -636,12 +658,30 @@ function appliquerClotureTrimestre(etat, joueurIdx) {
         return resStruct;
     const resRecurrent = appliquerEffetsRecurrents(etat, joueurIdx);
     const resSpecialite = appliquerSpecialiteEntreprise(etat, joueurIdx);
+    // T25.C bugfix (2026-04-20) : rebascule finale — les effets récurrents et
+    // la spécialité d'entreprise peuvent replonger la trésorerie en négatif
+    // APRÈS le bloc de bascule d'`appliquerEtape0`. Cette seconde passe
+    // garantit que la clôture s'achève toujours sur trésorerie ≥ 0.
+    const resRebasculeFinale = basculerTresorerieSiNegative(etat, joueurIdx);
+    // Refaire la vérification de faillite sur l'état final (découvert post-rebascule).
+    const joueur = etat.joueurs[joueurIdx];
+    if (joueur.bilan.decouvert > types_1.DECOUVERT_MAX && !joueur.elimine) {
+        joueur.elimine = true;
+        resRebasculeFinale.modifications.push({
+            joueurId: joueur.id,
+            poste: "decouvert",
+            ancienneValeur: joueur.bilan.decouvert,
+            nouvelleValeur: joueur.bilan.decouvert,
+            explication: `⛔ FAILLITE — Découvert bancaire (${joueur.bilan.decouvert} €) dépasse le maximum autorisé (${types_1.DECOUVERT_MAX} €). Cessation de paiement.`,
+        });
+    }
     return {
         succes: true,
         modifications: [
             ...resStruct.modifications,
             ...(resRecurrent.succes ? resRecurrent.modifications : []),
             ...(resSpecialite.succes ? resSpecialite.modifications : []),
+            ...resRebasculeFinale.modifications,
         ],
     };
 }
