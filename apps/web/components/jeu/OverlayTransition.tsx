@@ -5,7 +5,7 @@ import { Joueur, calculerIndicateurs } from "@jedevienspatron/game-engine";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 import IndicateursPanel from "@/components/IndicateursPanel";
-import { QuestionQCM } from "@/lib/game-engine/data/pedagogie";
+import { QuestionQCM } from "@/lib/pedagogie/pedagogie";
 
 interface TransitionInfo {
   from: number;

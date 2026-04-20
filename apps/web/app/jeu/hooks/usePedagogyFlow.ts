@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { EtatJeu } from "@jedevienspatron/game-engine";
-import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
+import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/pedagogie/pedagogie";
 import { cloneEtat } from "./gameFlowUtils";
 
 // ─── Paramètres ────────────────────────────────────────────────────────────────

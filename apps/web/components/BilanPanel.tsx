@@ -1,6 +1,6 @@
 "use client";
 import { Joueur, DECOUVERT_MAX, REMBOURSEMENT_EMPRUNT_PAR_TOUR, getTotalActif, getTotalPassif, getResultatNet } from "@jedevienspatron/game-engine";
-import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
+import { isBonPourEntreprise } from "@/lib/pedagogie/poste-helpers";
 import { useState, useRef, useEffect } from "react";
 
 type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };

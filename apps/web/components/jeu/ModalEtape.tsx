@@ -6,7 +6,7 @@ import {
   Briefcase, Landmark, Package, Mail, Handshake,
   DollarSign, Target, Dice6, BarChart3, LucideIcon
 } from "lucide-react";
-import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
+import { MODALES_ETAPES } from "@/lib/pedagogie/pedagogie";
 
 interface Props {
   etape: number;

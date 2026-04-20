@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { QCM_ETAPES } from "@/lib/game-engine/data/pedagogie";
+import { QCM_ETAPES } from "@/lib/pedagogie/pedagogie";
 
 interface Props {
   etape: number;

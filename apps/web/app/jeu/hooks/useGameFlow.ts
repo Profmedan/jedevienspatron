@@ -19,7 +19,7 @@ import {
   type PlayerSetup, type ActiveStep,
   getSens, getPosteValue, applyDeltaToJoueur,
 } from "@/components/jeu";
-import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/game-engine/data/pedagogie";
+import { tirerQuestionsTrimestriel, QuestionQCM } from "@/lib/pedagogie/pedagogie";
 import { activeStepReducer, type ActiveStepAction } from "./useActiveStepReducer";
 import { ETAPE_INFO, cloneEtat, buildActiveStep, buildTrimSnapshot, buildLiveState, type ModificationMoteur } from "./gameFlowUtils";
 import { usePedagogyFlow } from "./usePedagogyFlow";

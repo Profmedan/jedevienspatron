@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
+import { isBonPourEntreprise } from "@/lib/pedagogie/poste-helpers";
 
 import {
   getDocument,

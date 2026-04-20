@@ -14,7 +14,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { getDocumentType, nomCompte } from "./jeu/utils";
-import { isBonPourEntreprise } from "@/lib/game-engine/poste-helpers";
+import { isBonPourEntreprise } from "@/lib/pedagogie/poste-helpers";
 
 export interface FlashData {
   poste: string;
