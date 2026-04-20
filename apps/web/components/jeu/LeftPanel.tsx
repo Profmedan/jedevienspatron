@@ -69,16 +69,18 @@ interface LeftPanelProps {
   onApplySaleGroup?: (saleGroupId: string) => void;
 }
 
+// T25.C — Nouveau cycle 8 étapes (activité puis clôture).
+// Indexé par ETAPES.* (même ordre que STEP_NAMES ci-dessus).
+// Override spécial sur COMMERCIAUX dans le corps du composant (présence de commerciaux).
 const STEP_HELP = [
-  "Charges fixes obligatoires payées depuis la trésorerie.",
-  "Achat de stocks (optionnel)",
-  "Vos créances clients avancent et sont encaissées.",
-  "Salaires versés. Nouveaux clients générés.",
-  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.",
-  "Effets de vos cartes de décision à appliquer.",
-  "Sélection de carte de recrutement ou investissement",
-  "Une carte Événement sera piochée.",
-  "Vérification du bilan. Fin du trimestre.",
+  "Vos créances clients avancent d'un trimestre : celles qui arrivent à échéance entrent en trésorerie.", // 0 — ENCAISSEMENTS_CREANCES
+  "Salaires versés. Nouveaux clients générés.",                                                           // 1 — COMMERCIAUX (override en bas)
+  "Achat de stocks (optionnel).",                                                                         // 2 — ACHATS_STOCK
+  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.", // 3 — VENTES
+  "Sélection d'une carte de recrutement, d'investissement ou d'emprunt (optionnel).",                     // 4 — DECISION
+  "Une carte Événement sera piochée.",                                                                     // 5 — EVENEMENT
+  "Clôture : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents appliqués. Le résultat net se révèle.", // 6 — CLOTURE_TRIMESTRE
+  "Vérification du bilan. Fin du trimestre.",                                                              // 7 — BILAN
 ];
 
 export function LeftPanel({
@@ -116,7 +118,7 @@ export function LeftPanel({
     etapeTour === ETAPES.COMMERCIAUX
       ? hasCommerciaux
         ? "Les salaires de vos commerciaux seront versés et de nouveaux clients seront générés."
-        : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape 6 pour générer de nouveaux clients."
+        : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape 5 (Décision) pour générer de nouveaux clients."
       : STEP_HELP[etapeTour] || "";
   const totalActif = getTotalActif(joueur);
   const totalPassif = getTotalPassif(joueur);

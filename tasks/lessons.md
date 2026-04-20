@@ -745,3 +745,42 @@ Réordonner les valeurs de `ETAPES.*` invalide toutes les saves localStorage de 
 - Un refactor de pipeline = un test de parité d'abord, puis le refactor.
 - `toEqual` sur l'état complet capture les régressions dans les champs oubliés.
 - Toute re-signification d'un champ stocké impose un bump de version de save.
+
+---
+
+## L52 — 2026-04-20 : L50 confirmée en conditions réelles — il manquait un tableau indexé
+
+### Symptôme
+Partie manuelle Phase 4 du T25.C, Belvaux, T1. Le titre du bandeau supérieur et le titre de l'encart gauche étaient corrects (cycle 8 étapes, *"Encaissements des créances clients"* à l'étape 1/8). Mais la **description sous le titre** affichait *"Charges fixes obligatoires payées depuis la trésorerie."* — texte de l'ancienne étape 0. Même symptôme croisé à l'étape 3/8 (*"Achats de marchandises"*) qui affichait *"Vos créances clients avancent et sont encaissées."*. Deux contenus pédagogiques décalés.
+
+### Cause racine
+Dans `apps/web/components/jeu/LeftPanel.tsx`, il existe **deux** tableaux indexés par numéro d'étape :
+- `STEP_NAMES` (ligne 13) — titres courts, **remappé correctement** en Commit 3.
+- `STEP_HELP` (ligne 72) — descriptions sous le titre, **oublié**, toujours dans l'ordre 9 étapes de l'ancien cycle.
+
+Les 9 entrées dans l'ancien ordre + indexation par `etapeTour` du nouveau cycle = rotation silencieuse des textes :
+- `etapeTour === 0` (ENCAISSEMENTS) lisait `STEP_HELP[0]` = ancienne entrée "Charges fixes"
+- `etapeTour === 2` (ACHATS) lisait `STEP_HELP[2]` = ancienne entrée "Encaissements"
+
+Aucune erreur TypeScript : le tableau reste un `string[]` valide, l'indexation marche, TS ne sait pas que la sémantique est cassée.
+
+### Pourquoi L50 n'a pas suffi à éviter ça
+L50 dit : "avant toute refonte d'une structure transversale, faire un inventaire des données indexées par cette structure". J'ai fait cet inventaire et j'ai trouvé `MODALES_ETAPES` et `QCM_ETAPES`. J'ai raté `STEP_HELP` et `STEP_NAMES` (inventaire incomplet) — ma recherche a cherché `MODALES_ETAPES[N]` et `QCM_ETAPES[N]` mais pas le pattern plus générique "tableau de N strings à côté d'un autre tableau de N strings indexé par `etapeTour`".
+
+J'ai heureusement remappé `STEP_NAMES` parce que Pierre voyait *"Encaissements créances"* à l'étape 1/8 et me l'avait pointé. Mais j'ai raté `STEP_HELP` 10 lignes plus bas.
+
+### Règle renforcée
+Pour tout refactor d'une structure transversale, l'inventaire doit inclure une recherche **morphologique** (pas juste par nom connu) :
+```
+grep -rn "= \[$" <composants UI>   # tableaux littéraux suivis d'entrées
+grep -rn "const.*NAMES\|const.*HELP\|const.*INFO\|const.*LABELS"
+```
+Et vérifier **à l'intérieur de chaque fichier touché** si d'autres tableaux du même type vivent à proximité. Un fichier qui a un tableau indexé par étape en contient souvent d'autres juste à côté.
+
+### Ce qui aurait attrapé le bug avant la prod
+Un test de rendu qui monte `<LeftPanel etapeTour={0} .../>` et vérifie que la description contient bien "créance" ou "encaisse" aurait sauté. Mais le premier filet reste la **partie manuelle** — exactement celle que Pierre vient de faire. Phase 4 vient de prouver qu'elle n'est pas optionnelle.
+
+### À retenir
+- L50 était juste mais incomplète : l'inventaire doit être morphologique, pas seulement par nom.
+- Deux tableaux indexés par la même structure cohabitent souvent à 10 lignes d'écart. Ne pas s'arrêter au premier.
+- **La partie manuelle Phase 4 a capturé en 3 minutes ce que le test de parité `toEqual` sur l'EtatJeu ne voit pas** (tests moteur ≠ tests UI).
