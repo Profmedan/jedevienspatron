@@ -406,3 +406,43 @@ Business model corrigé : 1 crédit = 1 code unique = 1 apprenant = 1 partie. Un
 - `apps/web/app/jeu/hooks/useGamePersistence.ts` — complet rewrite
 - `apps/web/app/api/sessions/[code]/start/route.ts` — nouveau (POST + PATCH)
 - `apps/web/app/jeu/page.tsx` — useEffect restauration + écrans blocked/loading
+
+---
+
+## Session 2026-04-21 — T25.C-RESTART (réordonnancement 9→8 étapes)
+
+### L-T25R-1 — Ne jamais faire confiance aveuglément au rapport d'un subagent Explore
+
+**Erreur** : lors du diagnostic initial de T25.C, un subagent `Explore` a rapporté que le réordonnancement 9→8 étapes était déjà en place sur `main` (union `EtapeTour = 0..7`, switch à 8 entrées dans le nouvel ordre). Les tâches T25.C Commit 2 (#19) et Commit 3 (#20) ont été marquées *completed* sur la base de ce rapport. En réalité, le code était dans un **état mixte** : `ETAPES` renommé (nouveaux noms) mais union et switch encore à 9 entrées dans l'ordre legacy, ce qui rendait `ETAPES.COMMERCIAUX = 2` incohérent avec `useGameFlow.ts` qui câblait l'index 2 sur `appliquerAvancementCreances`. Pierre a découvert le problème lors d'une partie manuelle — le jeu semblait fonctionner mais l'ordre pédagogique était faux.
+
+**Cause** : un subagent Explore est configuré pour la synthèse rapide, pas pour la vérification byte-à-byte. Quand la question porte sur **l'état exact d'un fichier** (présence littérale d'une constante, nombre d'entrées dans un type union, ordre précis dans un switch), il peut extrapoler à partir de commentaires, de noms de fichiers ou de patterns partiels.
+
+**Règle** : pour tout diagnostic où l'état binaire d'un fichier (X est-il présent ? Y a-t-il N entrées ?) conditionne une décision de workflow (marquer une tâche complétée, commit, bump de version), **lire le fichier directement avec `Read` ou `Grep` avec un pattern littéral**. Les subagents Explore restent parfaits pour cartographier une architecture ou chercher des usages, pas pour attester la présence exacte d'un symbole.
+
+### L-T25R-2 — Ne jamais faire confiance à un statut *completed* sans vérifier le commit correspondant sur `main`
+
+**Erreur** : T25.C Commit 2 et Commit 3 étaient marqués *completed* dans la todo-list, mais aucune ligne du diff T25.C réordonnancement n'avait atterri sur `main`. La cohérence du statut todo ↔ code réel n'était pas garantie.
+
+**Cause** : le statut *completed* dans la todo-list reflète une intention (« j'ai terminé ce travail ») mais pas nécessairement un commit. Il peut être marqué à la fin d'une session, alors qu'aucun `git commit` n'a eu lieu côté VM (Pierre pousse depuis le Mac).
+
+**Règle** : avant de construire sur le travail d'une tâche marquée *completed* — surtout quand la tâche suivante dépend directement de son état — **vérifier avec `git log --oneline -- <fichier>` ou `git show HEAD:<fichier>` que le code cible est bien présent sur `main`**. Sinon, relire le fichier en direct et rouvrir la tâche (suffixer `-RESTART`) si l'état ne correspond pas.
+
+### L-T25R-3 — Un bump de `SAVE_VERSION` invalide les parties en cours — le documenter
+
+**Erreur potentielle** : passer `SAVE_VERSION` de 1 à 2 dans `useGamePersistence.ts` sans prévenir les apprenants en cours de partie peut leur faire perdre leur progression au prochain chargement de page.
+
+**Règle** : quand on change l'ordre/la sémantique des étapes et qu'on ne peut pas écrire un mappeur v1→v2 fidèle, bumper `SAVE_VERSION` ET l'indiquer dans le message de commit + dans `tasks/todo.md` + mentionner à Pierre qu'il doit **attendre qu'aucune partie ne soit en cours** avant de pousser en prod, ou accepter que les parties en cours redémarrent à zéro. La route `/api/sessions/[code]/start` PATCH peut aussi être utilisée pour « réinitialiser » une session côté DB si nécessaire.
+
+### L-T25R-4 — Rebuild `dist/` est obligatoire après modification du game-engine
+
+**Erreur** : après avoir ajouté `appliquerClotureTrimestre` dans `packages/game-engine/src/engine.ts` et l'export dans `index.ts`, `npx tsc --noEmit` dans `apps/web` a échoué avec `Module '"@jedevienspatron/game-engine"' has no exported member 'appliquerClotureTrimestre'`.
+
+**Cause** : `apps/web` importe depuis `@jedevienspatron/game-engine` qui est résolu par npm workspaces via `packages/game-engine/package.json` → `main: "dist/index.js"` + `types: "dist/index.d.ts"`. Les sources `.ts` du package ne sont pas lues directement ; seule la build `dist/` compte.
+
+**Règle** : après chaque modification des exports de `packages/game-engine`, exécuter `npm run build --workspace=packages/game-engine` avant de relancer `tsc` dans `apps/web`. Cette règle est valable pour tout ajout/suppression/renommage d'export, pas seulement les nouvelles fonctions.
+
+### L-T25R-5 — Laisser le dead code en place pour garder un commit focalisé
+
+**Constat** : `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` contiennent encore l'ancienne union `EtapeTour = 0..8` et un vieil `ETAPE_INFO` 9 entrées. Aucun code ne les importe — `grep "from.*lib/game-engine/types"` et `grep "from.*jeu/etape-info"` retournent 0.
+
+**Règle** : quand un refactor a la tentation de supprimer du dead code adjacent, **évaluer si ça appartient au même commit logique**. Pour T25.C-RESTART (réordonnancement du cycle), supprimer 2 fichiers non importés = pollution de diff. Créer une tâche de nettoyage séparée (« Supprimer les fichiers legacy `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` non importés ») et la sortir du commit principal.

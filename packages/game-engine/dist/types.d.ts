@@ -177,19 +177,32 @@ export interface Joueur {
     /** Mini-deck logistique personnel — cartes disponibles à l'investissement */
     piochePersonnelle: CarteDecision[];
 }
-/** Les 9 étapes d'un tour de jeu */
-export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-/** Constantes nommées pour les étapes du tour — utilisez ces noms plutôt que les chiffres */
+/**
+ * Les 8 étapes d'un trimestre (cycle T25.C — « activité puis clôture »).
+ *
+ * Ordre pédagogique : on commence par encaisser ce qui est dû, on paie
+ * les commerciaux qui ramènent de nouveaux clients, on s'approvisionne,
+ * on vend, on prend éventuellement une décision, un événement survient,
+ * on clôture (charges fixes + amortissements + effets récurrents +
+ * remboursement emprunt + intérêts), et on vérifie enfin l'équilibre
+ * du bilan.
+ */
+export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/**
+ * Constantes nommées pour les étapes du trimestre — utilisez ces noms
+ * plutôt que les chiffres. Les index correspondent à l'ordre T25.C :
+ * ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION →
+ * EVENEMENT → CLOTURE_TRIMESTRE → BILAN.
+ */
 export declare const ETAPES: {
-    readonly INIT: 0;
-    readonly ACHATS: 1;
-    readonly COMMERCIAUX: 2;
+    readonly ENCAISSEMENTS: 0;
+    readonly COMMERCIAUX: 1;
+    readonly ACHATS_STOCK: 2;
     readonly VENTES: 3;
-    readonly CHARGES: 4;
-    readonly BILAN: 5;
-    readonly INVESTISSEMENT: 6;
-    readonly EVENEMENT: 7;
-    readonly CLOTURE: 8;
+    readonly DECISION: 4;
+    readonly EVENEMENT: 5;
+    readonly CLOTURE_TRIMESTRE: 6;
+    readonly BILAN: 7;
 };
 export interface EtatJeu {
     phase: "setup" | "playing" | "gameover";

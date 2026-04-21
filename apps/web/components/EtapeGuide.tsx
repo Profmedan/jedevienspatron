@@ -72,7 +72,7 @@ const ETAPES: EtapeData[] = [
       { label: "Salaires commerciaux", debit: "Charges personnel +N", credit: "Trésorerie −N",
         note: "N = total des coûts salariaux de tes commerciaux actifs" },
     ],
-    conseil: "🤝 Un Junior ramène 2 particuliers par trimestre (paiement cash). Un Senior ramène 2 TPE (paiement en 1 trimestre). Une Directrice ramène 2 Grands Comptes (paiement en 2 trimestres). Pour recruter, c’est à l’étape 6.",
+    conseil: "🤝 Un Junior ramène 2 particuliers par trimestre (paiement cash). Un Senior ramène 2 TPE (paiement en 1 trimestre). Une Directrice ramène 2 Grands Comptes (paiement en 2 trimestres). Pour recruter, c’est à l’étape 5.",
   },
 
   /* ── 4 ─ Traitement des ventes (Cartes Client) ── */

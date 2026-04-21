@@ -1,4 +1,84 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-14
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-21
+
+---
+
+## T25.C-RESTART — Réordonnancement 9→8 étapes (RÉELLEMENT cette fois) — 2026-04-21 🚧
+
+### Contexte
+Les tâches T25.C Commit 2 (renommage `ETAPES`) et Commit 3 (réordonnancement 9→8 étapes) sont marquées *completed* dans la todo-list historique, mais **le code `main` ne reflète aucune de ces deux refontes** :
+
+- `packages/game-engine/src/types.ts:253` : commentaire `"Les 9 étapes d'un tour de jeu"` + union `EtapeTour = 0..8` + constantes `ETAPES = { INIT, ACHATS, COMMERCIAUX, VENTES, CHARGES, BILAN, INVESTISSEMENT, EVENEMENT, CLOTURE }` — noms **cibles T25.C** mais **ordre legacy** (incohérents entre eux : `ETAPES.COMMERCIAUX = 2` pointe vers `appliquerAvancementCreances` dans `useGameFlow.ts`).
+- `engine.ts:1238` : `maxEtape = 8` (donc 9 étapes).
+- `useGameFlow.ts:322-390` : switch sur 0..8 dans l'ordre legacy (charges / achats / créances / commerciaux / ventes / effets / décision / événement / bilan).
+- `gameFlowUtils.ts:ETAPE_INFO` : 9 entrées legacy.
+- `LeftPanel.tsx:STEP_NAMES/STEP_HELP` : 9 entrées legacy + `/9` ligne 517.
+- `HeaderJeu.tsx:67,72` : `/9`.
+- `useDecisionCards.ts` + `MainContent.tsx` : `etapeTour === 6` pour Décision.
+- `useGamePersistence.ts:24` : `SAVE_VERSION = 1`.
+
+Diagnostic signalé par Pierre ; confirmé par lecture directe (pas subagent — le subagent Explore a halluciné un état déjà migré, voir L-T25R-1).
+
+### Ordre cible T25.C (CLAUDE.md)
+`ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION → EVENEMENT → CLOTURE_TRIMESTRE → BILAN`
+
+### Table de correspondance ancien→nouveau
+| Ancien idx | Ancien rôle (fonction moteur) | Nouvel idx | Nouveau nom |
+|---|---|---|---|
+| 0 | charges fixes + amortissements + emprunt (`appliquerEtape0`) | **6 (fusion)** | CLOTURE_TRIMESTRE |
+| 1 | achats (user-driven) | 2 | ACHATS_STOCK |
+| 2 | avancement créances (`appliquerAvancementCreances`) | 0 | ENCAISSEMENTS |
+| 3 | paiement commerciaux + génération clients | 1 | COMMERCIAUX |
+| 4 | cartes client / ventes (`appliquerCarteClient`) | 3 | VENTES |
+| 5 | effets récurrents + spécialité | **6 (fusion)** | CLOTURE_TRIMESTRE |
+| 6 | décision (sub-phases 6a/6b) | 4 | DECISION |
+| 7 | événement | 5 | EVENEMENT |
+| 8 | bilan fin de tour | 7 | BILAN |
+
+Fusion 0 (ancien charges fixes) + 5 (ancien effets récurrents) → nouvelle fonction `appliquerClotureTrimestre()` qui orchestre `appliquerEtape0` + `appliquerEffetsRecurrents` + `appliquerSpecialiteEntreprise` en **un seul appel avec un seul groupe de modifications**.
+
+### Fichiers à modifier
+- [x] `packages/game-engine/src/types.ts` — union 0..7, commentaire "8 étapes", `ETAPES` réordonné
+- [x] `packages/game-engine/src/engine.ts` — nouvelle fonction `appliquerClotureTrimestre()`, `maxEtape = 7`, ré-export de `creerJoueur` + `calculerCoutCommerciaux` (perdus lors du refactor graphify)
+- [x] `packages/game-engine/src/index.ts` — export `appliquerClotureTrimestre`
+- [x] `apps/web/app/jeu/hooks/useGameFlow.ts` — switch remappé (0..7), `AUTO_ETAPES = [0,1,3,5,6]`, skip-auto étapes 0 et 1 quand sans modifications, reset `clientsPerdusCeTour` déplacé au BILAN (étape 7)
+- [x] `apps/web/app/jeu/hooks/useDecisionCards.ts` — `etapeTour === 4` pour DECISION
+- [x] `apps/web/app/jeu/hooks/useAchatFlow.ts` — aucun changement (déclenché par bouton)
+- [x] `apps/web/app/jeu/hooks/useGamePersistence.ts` — `SAVE_VERSION = 2` → invalide les saves v1 (pas de mappage)
+- [x] `apps/web/app/jeu/hooks/gameFlowUtils.ts` — `ETAPE_INFO` 0..7 remappé
+- [x] `apps/web/components/jeu/MainContent.tsx` — `etapeTour === 4` pour Décision
+- [x] `apps/web/components/jeu/LeftPanel.tsx` — `STEP_NAMES` + `STEP_HELP` 8 entrées, `/8`, `=== 4` Décision, `=== 3` ventes, `=== 2` Achats, libellés 6a/6b → 4a/4b
+- [x] `apps/web/components/jeu/HeaderJeu.tsx` — `/8`
+- [x] `apps/web/components/jeu/EntryPanel.tsx` — `isSalesStep = etapeTour === 3`
+- [x] `apps/web/components/jeu/ModalEtape.tsx` — `ETAPE_CONFIG` 8 entrées remappées, import `Briefcase` retiré
+- [x] `apps/web/components/jeu/pedagogicalMessages.ts` — indexes remappés + libellé 6a → 4a
+- [x] `apps/web/components/CompteResultatPanel.tsx` — conseil "étape 6 → 5" + condition `isProvisoire` remappée 0..6
+- [x] `apps/web/components/EtapeGuide.tsx` — conseil "étape 6 → 5"
+- [x] `apps/web/lib/game-engine/data/pedagogie.ts` — `MODALES_ETAPES` 0..7 remappées ; nouvelle étape 6 CLOTURE_TRIMESTRE avec contenu fusionné (charges fixes + effets récurrents) ; `QCM_ETAPES` inchangé (le pool est aplati, les clés n'influent pas sur le gameplay — cf. #22 T25.C Commit 4 pour la refonte QCM)
+- [ ] `apps/web/lib/game-engine/types.ts` + `apps/web/app/jeu/etape-info.ts` — laissés tels quels (fichiers morts, zéro import, dead code à supprimer dans une tâche de nettoyage ultérieure)
+- [ ] `packages/game-engine/tests/engine.test.ts` — tests `ETAPES` et `creerJoueur`/`calculerCoutCommerciaux` passent (exports restaurés). 2 échecs sémantiques pré-existants sur `calculerCoutCommerciaux Junior` et `genererClientsParCommerciaux` non liés au réordonnancement → tâche #45 (B8-D).
+
+### Validation
+- [x] `npx tsc --noEmit` sur `packages/game-engine` → 0 erreur (EXIT=0)
+- [x] `npx tsc --noEmit` sur `apps/web` → 0 erreur (EXIT=0)
+- [x] `npm test --workspace=packages/game-engine` → **37/39 verts**. Les 2 échecs sont **pré-existants sur `main`** (ils bloquaient déjà la compilation des tests avant T25.C-RESTART via TS2459 sur `creerJoueur` et `calculerCoutCommerciaux`) et sont de nature sémantique sur le modèle commercial (Junior → 1 vs 2 clients/tour, salaire récurrent ≠ 0). Ils relèvent de la tâche #45 B8-D « Tests moteur adaptés + couverture par mode » en cours.
+- [x] `dist/` reconstruit via `npm run build --workspace=packages/game-engine`
+- [ ] Partie solo manuelle T1 complète : ENCAISSEMENTS → COMMERCIAUX → ACHATS → VENTES → DECISION → EVENEMENT → CLOTURE → BILAN avec bilan équilibré en fin de T1 → **différée tâche #21 Phase 4**
+
+### Review — 2026-04-21
+
+**État avant** : les commits T25.C #14, #19, #20 étaient marqués *completed* dans la todo-list mais le code sur `main` était dans un état mixte : `ETAPES` renommé mais non réordonné, union `EtapeTour = 0..8`, switch `useGameFlow` à 9 entrées en ordre legacy. Diagnostic confirmé par lecture directe (un subagent Explore avait halluciné un état déjà migré — voir L-T25R-1).
+
+**Ce qui a été fait** : réordonnancement complet et cohérent du cycle de 9 → 8 étapes dans l'ordre pédagogique « activité puis clôture » (ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION → EVENEMENT → CLOTURE_TRIMESTRE → BILAN). Fusion des anciennes étapes 0 (charges fixes + amortissements + emprunt) et 5 (effets récurrents + spécialité entreprise) dans la nouvelle étape 6 CLOTURE_TRIMESTRE via une fonction `appliquerClotureTrimestre()` qui orchestre les trois blocs en une seule passe.
+
+**Garde-fou saves** : `SAVE_VERSION` passé à `2` dans `useGamePersistence.ts` → toutes les sauvegardes v1 (ordre incohérent ancien/cible) sont invalidées automatiquement au chargement, ce qui évite la corruption d'une partie en cours lors de la mise à jour.
+
+**Sous-phases DECISION** : 6a (recrutement) + 6b (investissement) renommées 4a / 4b partout (LeftPanel, MainContent, pedagogicalMessages).
+
+**Tests** : les tests qui encodaient l'ordre ancien n'existaient pas — le suite n'encode pas d'assertion sur l'index numérique d'une étape au-delà du nommage `ETAPES.*`. Les 2 échecs restants (`calculerCoutCommerciaux = 0` et `Junior génère 1 client`) sont antérieurs à T25.C-RESTART : avant cette tâche les tests ne compilaient même pas (TS2459 sur `creerJoueur` / `calculerCoutCommerciaux`). La restauration des exports a permis aux tests de tourner et a révélé ces 2 divergences sémantiques sur le modèle commercial, qui appartiennent à la tâche #45 B8-D en cours.
+
+**Nettoyage deferred** : les deux fichiers legacy `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` contiennent encore le vieil `EtapeTour = 0..8` et un vieil `ETAPE_INFO` 9 entrées, mais aucun code ne les importe (dead code). À supprimer dans une tâche de nettoyage séparée pour garder ce commit focalisé sur le réordonnancement.
+
+**Partie manuelle** : à exécuter dans la tâche #21 Phase 4 (smoke Belvaux T1–T3 + Synergia T1) par Pierre — non bloquant pour le commit car tous les indices numériques ont été vérifiés par `tsc`.
 
 ---
 

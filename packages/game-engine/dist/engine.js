@@ -5,17 +5,20 @@
 // Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.creerJoueur = creerJoueur;
 exports.initialiserJeu = initialiserJeu;
 exports.appliquerEtape0 = appliquerEtape0;
 exports.verifierEquilibreComptable = verifierEquilibreComptable;
 exports.appliquerAchatMarchandises = appliquerAchatMarchandises;
 exports.appliquerAvancementCreances = appliquerAvancementCreances;
+exports.calculerCoutCommerciaux = calculerCoutCommerciaux;
 exports.appliquerPaiementCommerciaux = appliquerPaiementCommerciaux;
 exports.licencierCommercial = licencierCommercial;
 exports.appliquerCarteClient = appliquerCarteClient;
 exports.appliquerEffetsRecurrents = appliquerEffetsRecurrents;
 exports.appliquerSpecialiteEntreprise = appliquerSpecialiteEntreprise;
 exports.genererClientsSpecialite = genererClientsSpecialite;
+exports.appliquerClotureTrimestre = appliquerClotureTrimestre;
 exports.obtenirCarteRecrutement = obtenirCarteRecrutement;
 exports.tirerCartesDecision = tirerCartesDecision;
 exports.acheterCarteDecision = acheterCarteDecision;
@@ -619,7 +622,42 @@ function genererClientsSpecialite(joueur) {
     }
     return [];
 }
-// ─── ÉTAPE 6 : Recrutement garanti (toujours disponible) ────
+// ─── ÉTAPE 6 (T25.C) : Clôture du trimestre ─────────────────
+/**
+ * Étape de clôture du trimestre (cycle T25.C, index 6).
+ *
+ * Fusionne les trois blocs qui, dans l'ancien cycle à 9 étapes, étaient
+ * dispersés entre l'étape 0 (charges fixes + amortissements + remboursement
+ * emprunt + intérêts) et l'étape 5 (effets récurrents des cartes actives +
+ * spécialité d'entreprise). Pédagogiquement, « activité puis clôture » :
+ * on a encaissé, payé les commerciaux, acheté, vendu, décidé, subi un
+ * événement → on ferme la porte en appliquant charges fixes, amortissements,
+ * effets récurrents, remboursement d'emprunt et intérêts ; puis le BILAN
+ * (étape 7) vérifie l'équilibre et calcule le résultat net.
+ *
+ * Retourne un ResultatAction unique dont `modifications` concatène
+ * celles des trois fonctions sous-jacentes, dans l'ordre d'application.
+ */
+function appliquerClotureTrimestre(etat, joueurIdx) {
+    const modifications = [];
+    // 1. Charges fixes + amortissements + remboursement emprunt (+ intérêts T3+)
+    const rEtape0 = appliquerEtape0(etat, joueurIdx);
+    if (!rEtape0.succes)
+        return rEtape0;
+    modifications.push(...rEtape0.modifications);
+    // 2. Effets récurrents des cartes Décision actives (abonnements, maintenance…)
+    const rEffets = appliquerEffetsRecurrents(etat, joueurIdx);
+    if (!rEffets.succes)
+        return rEffets;
+    modifications.push(...rEffets.modifications);
+    // 3. Spécialité d'entreprise (productionStockée Belvaux, produitsFinanciers Synergia…)
+    const rSpec = appliquerSpecialiteEntreprise(etat, joueurIdx);
+    if (!rSpec.succes)
+        return rSpec;
+    modifications.push(...rSpec.modifications);
+    return { succes: true, modifications };
+}
+// ─── ÉTAPE 4 (T25.C) : Recrutement garanti (toujours disponible) ────
 /**
  * Retourne les cartes commerciales que le joueur peut encore recruter.
  * Aucun commercial n'est distribué automatiquement — le joueur choisit librement.
@@ -629,7 +667,7 @@ function genererClientsSpecialite(joueur) {
 function obtenirCarteRecrutement(_etat, _joueurIdx) {
     return cartes_1.CARTES_DECISION.filter((c) => c.categorie === "commercial");
 }
-// ─── ÉTAPE 6 : Pioche Décision (hors commerciaux) ───────────
+// ─── ÉTAPE 4 (T25.C) : Pioche Décision (hors commerciaux) ───
 /**
  * Tire nb cartes de la pioche (les cartes commerciales sont exclues :
  * elles passent par obtenirCarteRecrutement ci-dessus).
@@ -935,7 +973,8 @@ function cloturerAnnee(etat) {
 }
 // ─── AVANCEMENT DU TOUR ─────────────────────────────────────
 function avancerEtape(etat) {
-    const maxEtape = 8;
+    // T25.C : cycle à 8 étapes (0..7). BILAN = 7 est la dernière.
+    const maxEtape = 7;
     if (etat.etapeTour < maxEtape) {
         etat.etapeTour = (etat.etapeTour + 1);
     }

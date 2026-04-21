@@ -250,29 +250,41 @@ export interface Joueur {
 
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
 
-/** Les 9 étapes d'un tour de jeu */
+/**
+ * Les 8 étapes d'un trimestre (cycle T25.C — « activité puis clôture »).
+ *
+ * Ordre pédagogique : on commence par encaisser ce qui est dû, on paie
+ * les commerciaux qui ramènent de nouveaux clients, on s'approvisionne,
+ * on vend, on prend éventuellement une décision, un événement survient,
+ * on clôture (charges fixes + amortissements + effets récurrents +
+ * remboursement emprunt + intérêts), et on vérifie enfin l'équilibre
+ * du bilan.
+ */
 export type EtapeTour =
-  | 0 // Remboursements obligatoires + charges fixes + amortissements
-  | 1 // Achats de marchandises (optionnel)
-  | 2 // Avancement des créances
-  | 3 // Paiement des commerciaux (+ quiz pédagogique)
-  | 4 // Traitement des cartes Client
-  | 5 // Application des effets récurrents des cartes Décision
-  | 6 // 6a Recrutement commercial (optionnel) + 6b Carte Décision (optionnel)
-  | 7 // Pioche de la carte Événement
-  | 8; // Vérification de l'équilibre + fin de tour
+  | 0 // ENCAISSEMENTS — créances clients à échéance encaissées, C+2 → C+1
+  | 1 // COMMERCIAUX — paiement salaires + génération de nouveaux clients
+  | 2 // ACHATS_STOCK — achats de marchandises (optionnel, user-driven)
+  | 3 // VENTES — traitement des cartes Client
+  | 4 // DECISION — recrutement (4a) + investissement (4b), optionnel
+  | 5 // EVENEMENT — pioche d'une carte Événement
+  | 6 // CLOTURE_TRIMESTRE — charges fixes + amortissements + effets récurrents + emprunt
+  | 7; // BILAN — vérification de l'équilibre + fin de trimestre
 
-/** Constantes nommées pour les étapes du tour — utilisez ces noms plutôt que les chiffres */
+/**
+ * Constantes nommées pour les étapes du trimestre — utilisez ces noms
+ * plutôt que les chiffres. Les index correspondent à l'ordre T25.C :
+ * ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION →
+ * EVENEMENT → CLOTURE_TRIMESTRE → BILAN.
+ */
 export const ETAPES = {
-  INIT: 0,
-  ACHATS: 1,
-  COMMERCIAUX: 2,
+  ENCAISSEMENTS: 0,
+  COMMERCIAUX: 1,
+  ACHATS_STOCK: 2,
   VENTES: 3,
-  CHARGES: 4,
-  BILAN: 5,
-  INVESTISSEMENT: 6,
-  EVENEMENT: 7,
-  CLOTURE: 8,
+  DECISION: 4,
+  EVENEMENT: 5,
+  CLOTURE_TRIMESTRE: 6,
+  BILAN: 7,
 } as const satisfies Record<string, EtapeTour>;
 
 export interface EtatJeu {

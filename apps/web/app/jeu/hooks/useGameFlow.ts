@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo, useReducer } from "react";
 import {
   EtatJeu, Joueur, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate,
-  initialiserJeu, avancerEtape, appliquerEtape0, appliquerAchatMarchandises,
+  initialiserJeu, avancerEtape, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
-  appliquerEffetsRecurrents, appliquerSpecialiteEntreprise, genererClientsSpecialite,
+  appliquerClotureTrimestre, genererClientsSpecialite,
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, cloturerAnnee, genererClientsParCommerciaux,
   obtenirCarteRecrutement, demanderEmprunt, ResultatFinTour, calculerCapaciteLogistique,
@@ -276,8 +276,8 @@ export function useGameFlow({
     addToJournal(next, activeStep.entries, next.etapeTour);
     const etapeAvantAvancement = next.etapeTour;
 
-    // 6a (recrutement) → 6b (investissement) sans avancer à l'étape 7
-    if (etapeAvantAvancement === 6 && decisions.subEtape6 === "recrutement") {
+    // 4a (recrutement) → 4b (investissement) sans avancer à l'étape 5
+    if (etapeAvantAvancement === 4 && decisions.subEtape6 === "recrutement") {
       // Capturer le label de la carte recrutée pour le snapshot trimestriel
       if (decisions.selectedDecision) {
         setLastDecisionLabel(decisions.selectedDecision.titre);
@@ -290,8 +290,8 @@ export function useGameFlow({
       return;
     }
 
-    // 6b (investissement) → retour au panneau unifié (L33 : multi-investissements)
-    if (etapeAvantAvancement === 6 && decisions.subEtape6 === "investissement") {
+    // 4b (investissement) → retour au panneau unifié (L33 : multi-investissements)
+    if (etapeAvantAvancement === 4 && decisions.subEtape6 === "investissement") {
       // Capturer le label de la carte investie pour le snapshot trimestriel
       if (decisions.selectedDecision) {
         setLastDecisionLabel(decisions.selectedDecision.titre);
@@ -308,7 +308,7 @@ export function useGameFlow({
     setEtat({ ...next });
     setActiveStep(null);
     setRecentModifications([]);
-    if (etapeAvantAvancement === 6) decisions.setSubEtape6("recrutement");
+    if (etapeAvantAvancement === 4) decisions.setSubEtape6("recrutement");
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -319,14 +319,19 @@ export function useGameFlow({
     let mods: ModificationMoteur[] = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
 
+    // Début de trimestre = étape 0 (ENCAISSEMENTS, T25.C) : on remet à zéro
+    // le compteur de clients perdus accumulés au trimestre précédent.
     if (next.etapeTour === 0) {
       next.joueurs[idx].clientsPerdusCeTour = 0;
     }
 
+    // Switch T25.C — cycle 0..7
+    //   0 ENCAISSEMENTS · 1 COMMERCIAUX · 2 ACHATS_STOCK (user-driven, pas de case)
+    //   3 VENTES       · 4 DECISION (user-driven, pas de case) · 5 EVENEMENT
+    //   6 CLOTURE_TRIMESTRE · 7 BILAN
     switch (next.etapeTour) {
-      case 0: { const r = appliquerEtape0(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
-      case 2: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
-      case 3: {
+      case 0: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
+      case 1: {
         const clients = genererClientsParCommerciaux(next.joueurs[idx]);
         const clientsSpecialite = genererClientsSpecialite(next.joueurs[idx]);
         next.joueurs[idx].clientsATrait = [...next.joueurs[idx].clientsATrait, ...clients, ...clientsSpecialite];
@@ -334,7 +339,7 @@ export function useGameFlow({
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
-      case 4: {
+      case 3: {
         const joueur = next.joueurs[idx];
         const capacite = calculerCapaciteLogistique(joueur);
         const clientsAtrait = joueur.clientsATrait;
@@ -370,13 +375,6 @@ export function useGameFlow({
         break;
       }
       case 5: {
-        const r = appliquerEffetsRecurrents(next, idx);
-        if (r.succes) mods = r.modifications as ModificationMoteur[];
-        const rSpec = appliquerSpecialiteEntreprise(next, idx);
-        if (rSpec.succes) mods = [...mods, ...(rSpec.modifications as ModificationMoteur[])];
-        break;
-      }
-      case 7: {
         if (next.piocheEvenements.length > 0) {
           const carte = next.piocheEvenements[0];
           evenementCapture = { titre: carte.titre, description: carte.description };
@@ -386,13 +384,22 @@ export function useGameFlow({
         }
         break;
       }
-      case 8: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
+      case 6: {
+        // CLOTURE_TRIMESTRE — charges fixes + amortissements + remboursement
+        // emprunt (+ intérêts T3+) + effets récurrents + spécialité entreprise.
+        const r = appliquerClotureTrimestre(next, idx);
+        if (r.succes) mods = r.modifications as ModificationMoteur[];
+        break;
+      }
+      case 7: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
       default: break;
     }
 
     const etapeActuelle = next.etapeTour;
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    if ((etapeActuelle === 2 || etapeActuelle === 3) && modsFiltrees.length === 0) {
+    // Skip auto des étapes sans impact : ENCAISSEMENTS (0) si aucune créance
+    // ne vient à échéance, et COMMERCIAUX (1) si aucun commercial n'est actif.
+    if ((etapeActuelle === 0 || etapeActuelle === 1) && modsFiltrees.length === 0) {
       avancerEtape(next);
       pedagogy.maybeShowPedagoModal(next.etapeTour);
       setEtat({ ...next });
@@ -404,7 +411,10 @@ export function useGameFlow({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
 
-    const AUTO_ETAPES = [0, 2, 3, 4, 5];
+    // Étapes éligibles au mode rapide (auto-cochage de toutes les écritures) :
+    // toutes celles qui ne demandent aucun input utilisateur.
+    //   0 ENCAISSEMENTS · 1 COMMERCIAUX · 3 VENTES · 5 EVENEMENT · 6 CLOTURE_TRIMESTRE
+    const AUTO_ETAPES = [0, 1, 3, 5, 6];
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
       dispatchActiveStep({ type: "SET_STEP", step });

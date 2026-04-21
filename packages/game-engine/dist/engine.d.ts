@@ -1,4 +1,5 @@
 import { EtatJeu, Joueur, CarteDecision, CarteClient, CarteEvenement, NomEntreprise, ResultatAction, ResultatDemandePret, EntrepriseTemplate } from "./types";
+export declare function creerJoueur(id: number, pseudo: string, nomEntreprise: NomEntreprise, customTemplates?: EntrepriseTemplate[]): Joueur;
 export declare function initialiserJeu(joueursDefs: Array<{
     pseudo: string;
     nomEntreprise: NomEntreprise;
@@ -13,6 +14,7 @@ export declare function appliquerEtape0(etat: EtatJeu, joueurIdx: number): Resul
 export declare function verifierEquilibreComptable(joueur: Joueur, contexte: string): void;
 export declare function appliquerAchatMarchandises(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
 export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: number): ResultatAction;
+export declare function calculerCoutCommerciaux(joueur: Joueur): number;
 export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Licencie un commercial actif :
@@ -54,6 +56,22 @@ export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: 
  * • Azura Commerce : +1 client Particulier automatique par tour
  */
 export declare function genererClientsSpecialite(joueur: Joueur): CarteClient[];
+/**
+ * Étape de clôture du trimestre (cycle T25.C, index 6).
+ *
+ * Fusionne les trois blocs qui, dans l'ancien cycle à 9 étapes, étaient
+ * dispersés entre l'étape 0 (charges fixes + amortissements + remboursement
+ * emprunt + intérêts) et l'étape 5 (effets récurrents des cartes actives +
+ * spécialité d'entreprise). Pédagogiquement, « activité puis clôture » :
+ * on a encaissé, payé les commerciaux, acheté, vendu, décidé, subi un
+ * événement → on ferme la porte en appliquant charges fixes, amortissements,
+ * effets récurrents, remboursement d'emprunt et intérêts ; puis le BILAN
+ * (étape 7) vérifie l'équilibre et calcule le résultat net.
+ *
+ * Retourne un ResultatAction unique dont `modifications` concatène
+ * celles des trois fonctions sous-jacentes, dans l'ordre d'application.
+ */
+export declare function appliquerClotureTrimestre(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Retourne les cartes commerciales que le joueur peut encore recruter.
  * Aucun commercial n'est distribué automatiquement — le joueur choisit librement.

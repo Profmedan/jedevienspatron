@@ -206,7 +206,7 @@ function appliquerDeltaPoste(
 
 // ─── CRÉATION DE L'ÉTAT INITIAL ──────────────────────────────
 
-function creerJoueur(
+export function creerJoueur(
   id: number,
   pseudo: string,
   nomEntreprise: NomEntreprise,
@@ -583,7 +583,7 @@ export function appliquerAvancementCreances(
 
 // ─── ÉTAPE 3 : Paiement des commerciaux ──────────────────────
 
-function calculerCoutCommerciaux(joueur: Joueur): number {
+export function calculerCoutCommerciaux(joueur: Joueur): number {
   // Les cartes commerciales ont effetsRecurrents: [] (vide par design).
   // Le salaire récurrent est identique au coût d'embauche initial,
   // stocké dans effetsImmédiats.chargesPersonnel.
@@ -818,7 +818,48 @@ export function genererClientsSpecialite(joueur: Joueur): CarteClient[] {
   return [];
 }
 
-// ─── ÉTAPE 6 : Recrutement garanti (toujours disponible) ────
+// ─── ÉTAPE 6 (T25.C) : Clôture du trimestre ─────────────────
+
+/**
+ * Étape de clôture du trimestre (cycle T25.C, index 6).
+ *
+ * Fusionne les trois blocs qui, dans l'ancien cycle à 9 étapes, étaient
+ * dispersés entre l'étape 0 (charges fixes + amortissements + remboursement
+ * emprunt + intérêts) et l'étape 5 (effets récurrents des cartes actives +
+ * spécialité d'entreprise). Pédagogiquement, « activité puis clôture » :
+ * on a encaissé, payé les commerciaux, acheté, vendu, décidé, subi un
+ * événement → on ferme la porte en appliquant charges fixes, amortissements,
+ * effets récurrents, remboursement d'emprunt et intérêts ; puis le BILAN
+ * (étape 7) vérifie l'équilibre et calcule le résultat net.
+ *
+ * Retourne un ResultatAction unique dont `modifications` concatène
+ * celles des trois fonctions sous-jacentes, dans l'ordre d'application.
+ */
+export function appliquerClotureTrimestre(
+  etat: EtatJeu,
+  joueurIdx: number
+): ResultatAction {
+  const modifications: ResultatAction["modifications"] = [];
+
+  // 1. Charges fixes + amortissements + remboursement emprunt (+ intérêts T3+)
+  const rEtape0 = appliquerEtape0(etat, joueurIdx);
+  if (!rEtape0.succes) return rEtape0;
+  modifications.push(...rEtape0.modifications);
+
+  // 2. Effets récurrents des cartes Décision actives (abonnements, maintenance…)
+  const rEffets = appliquerEffetsRecurrents(etat, joueurIdx);
+  if (!rEffets.succes) return rEffets;
+  modifications.push(...rEffets.modifications);
+
+  // 3. Spécialité d'entreprise (productionStockée Belvaux, produitsFinanciers Synergia…)
+  const rSpec = appliquerSpecialiteEntreprise(etat, joueurIdx);
+  if (!rSpec.succes) return rSpec;
+  modifications.push(...rSpec.modifications);
+
+  return { succes: true, modifications };
+}
+
+// ─── ÉTAPE 4 (T25.C) : Recrutement garanti (toujours disponible) ────
 
 /**
  * Retourne les cartes commerciales que le joueur peut encore recruter.
@@ -830,7 +871,7 @@ export function obtenirCarteRecrutement(_etat: EtatJeu, _joueurIdx: number): Car
   return CARTES_DECISION.filter((c) => c.categorie === "commercial");
 }
 
-// ─── ÉTAPE 6 : Pioche Décision (hors commerciaux) ───────────
+// ─── ÉTAPE 4 (T25.C) : Pioche Décision (hors commerciaux) ───
 
 /**
  * Tire nb cartes de la pioche (les cartes commerciales sont exclues :
@@ -1235,7 +1276,8 @@ export function cloturerAnnee(etat: EtatJeu): void {
 // ─── AVANCEMENT DU TOUR ─────────────────────────────────────
 
 export function avancerEtape(etat: EtatJeu): void {
-  const maxEtape = 8;
+  // T25.C : cycle à 8 étapes (0..7). BILAN = 7 est la dernière.
+  const maxEtape = 7;
   if (etat.etapeTour < maxEtape) {
     etat.etapeTour = (etat.etapeTour + 1) as EtapeTour;
   } else {

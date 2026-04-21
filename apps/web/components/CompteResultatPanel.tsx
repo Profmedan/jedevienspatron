@@ -180,7 +180,7 @@ function CRAnalyse({ joueur }: { joueur: Joueur }) {
   const points: Array<{ niveau: "rouge" | "jaune" | "vert"; texte: string }> = [];
 
   if (ca === 0) {
-    points.push({ niveau: "rouge", texte: "Aucune vente enregistrée ce trimestre. Recrutez un commercial dès l'étape 6 pour générer du chiffre d'affaires." });
+    points.push({ niveau: "rouge", texte: "Aucune vente enregistrée ce trimestre. Recrutez un commercial dès l'étape 5 pour générer du chiffre d'affaires." });
   } else {
     const tauxMarge = Math.round((resultat / ca) * 100);
     if (tauxMarge < -20) points.push({ niveau: "rouge", texte: `Taux de marge nette très négatif (${tauxMarge}%). Vos charges sont disproportionnées par rapport à votre CA (${ca}). Priorité : augmenter les ventes.` });
@@ -245,9 +245,11 @@ export default function CompteResultatPanel({
   const totalProduits = getTotalProduits(produits);
   const resultat      = getResultatNet(joueur);
 
+  // Cycle T25.C (8 étapes, 0..7) : CR est provisoire pendant toute l'activité
+  // du trimestre et devient définitif au BILAN (étape 7).
   const isProvisoire =
     hasActiveStep === true ||
-    (etapeTour !== undefined && etapeTour >= 1 && etapeTour <= 7);
+    (etapeTour !== undefined && etapeTour >= 0 && etapeTour <= 6);
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 flex flex-col max-h-full">

@@ -46,7 +46,7 @@ export function useDecisionCards({
 
   // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape 6 ───────────
   useEffect(() => {
-    if (etat?.etapeTour === 6 && !activeStep) {
+    if (etat?.etapeTour === 4 && !activeStep) {
       setShowCartes(true);
     }
   }, [etat?.etapeTour, subEtape6, activeStep]);
@@ -54,7 +54,7 @@ export function useDecisionCards({
   // ── Init / reset de la pioche stable de l'étape 6b ───────────────────────
   useEffect(() => {
     if (!etat) return;
-    const enInvestissement = etat.etapeTour === 6 && subEtape6 === "investissement";
+    const enInvestissement = etat.etapeTour === 4 && subEtape6 === "investissement";
     if (enInvestissement && pioche6b === null) {
       setPioche6b(tirerCartesDecision(cloneEtat(etat), 4));
     } else if (!enInvestissement && pioche6b !== null) {
@@ -65,7 +65,7 @@ export function useDecisionCards({
 
   // ── Cartes disponibles (computed) ────────────────────────────────────────
   const cartesDisponibles: CarteDecision[] = etat
-    ? (etat.etapeTour === 6 && subEtape6 === "investissement"
+    ? (etat.etapeTour === 4 && subEtape6 === "investissement"
         ? (pioche6b ?? [])
         : tirerCartesDecision(cloneEtat(etat), 4))
     : [];
@@ -113,7 +113,7 @@ export function useDecisionCards({
     setRecentModifications(modsDecisionFiltres.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, mods, next, 6));
+    setActiveStep(buildActiveStep(etat, mods, next, 4));
 
     // L32 : retirer la carte achetée de la pioche stable du tour
     setPioche6b(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null);
@@ -135,7 +135,7 @@ export function useDecisionCards({
     setRecentModifications(modsFiltrés.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 6));
+    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 4));
   }
 
   /** Vend une immobilisation d'occasion (L34 — cession). */
@@ -154,7 +154,7 @@ export function useDecisionCards({
     setRecentModifications(modsFiltres.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 6, {
+    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 4, {
       titre: `Cession d'occasion — ${nomImmo}`,
       icone: "💸",
       description: `Vous vendez "${nomImmo}" sur le marché de l'occasion. Le prix de cession est encaissé en trésorerie, le bien sort du bilan à sa VNC, et l'écart est enregistré au CR (plus ou moins-value exceptionnelle).`,
@@ -177,7 +177,7 @@ export function useDecisionCards({
     setRecentModifications(modsFiltrés.map(m => ({
       poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
     })));
-    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 6, {
+    setActiveStep(buildActiveStep(etat, result.modifications as ModificationMoteur[], next, 4, {
       titre: "Licenciement",
       icone: "📤",
       description: "Vous licenciez un commercial. L'indemnité légale est versée immédiatement. Ce commercial ne génèrera plus de clients ni de salaires à partir du prochain trimestre.",
@@ -190,7 +190,7 @@ export function useDecisionCards({
    */
   function skipDecision() {
     if (!etat) return;
-    if (etat.etapeTour === 6 && subEtape6 === "recrutement") {
+    if (etat.etapeTour === 4 && subEtape6 === "recrutement") {
       setSubEtape6("investissement");
       setShowCartes(false);
       setSelectedDecision(null);
