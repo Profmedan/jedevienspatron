@@ -933,3 +933,32 @@ Pour toute tâche touchant plus de 2 fichiers ou introduisant une nouvelle logiq
 - Les skills du `CLAUDE.md` sont un garde-fou externe : les invoquer évite une auto-évaluation biaisée.
 - Découvrir un piège après coup = preuve que la phase d'Explore a manqué. Ne pas laisser passer.
 - **La partie manuelle Phase 4 a capturé en 3 minutes ce que le test de parité `toEqual` sur l'EtatJeu ne voit pas** (tests moteur ≠ tests UI).
+
+---
+
+## Session 2026-04-21 (B7 — bugs post test-play)
+
+### L-B7-A — Un poste bloqué silencieusement à 0 en aval masque un bug « le bouton ne fait rien »
+**Cas concret** : Pierre clique sur « Investir » pour la relance client → rien ne se passe. Le moteur (`acheterCarteDecision` engine.ts L1224) refuse les doublons non-commerciaux et renvoie `messageErreur`, mais l'UI n'affiche pas l'erreur — résultat : silent fail.
+**Règle** :
+- Quand une action utilisateur peut échouer silencieusement côté moteur, filtrer EN AMONT dans l'UI pour que l'option ne soit pas cliquable (défense en profondeur).
+- Chaque fois qu'un `messageErreur` sort d'un handler moteur, vérifier qu'un canal UI le rend visible (toast, bannière). Sinon, prévenir la condition en aval.
+
+### L-B7-B — Le bouton « Annuler » doit libérer TOUT l'état de l'étape, pas juste la modale locale
+**Cas concret** : Annuler une décision fermait la modale de confirmation mais laissait `selectedDecision` + `activeStep` intacts → le joueur retombait sur « Vérifier et confirmer » au prochain clic.
+**Règle** : pour toute action `onCancel` d'une étape multi-état, enchaîner systématiquement les resets : `setPendingConfirm(false)` → `setSelectedDecision(null)` → `onCancelStep()` (vide `activeStep`). Tout reset partiel est un bug latent.
+
+### L-B7-C — `appliquerDeltaPoste` plafonne les passifs à 0 (`Math.max(0, old + delta)`) — inadapté aux capitaux propres lors d'une perte massive
+**Cas concret** : Pierre observe un bilan déséquilibré après clôture d'exercice avec une grosse perte. Cause : `push("capitaux", deltaCapitaux)` passe par `appliquerDeltaPoste` qui écrase `capitaux` à 0 quand `old + delta < 0`. La partie non imputée crée un écart `|perte| − capitaux_initial` exactement égal à l'écart Actif/Passif observé.
+**Règle** :
+- Les capitaux propres PEUVENT et DOIVENT pouvoir devenir négatifs (réalité comptable : procédure d'alerte art. L.223-42 Code de commerce).
+- Ne jamais router une mutation « affectation du résultat » via `appliquerDeltaPoste` tel quel : il est calibré pour des deltas d'exploitation (jamais négatifs au-delà du solde). Pour les postes structurels (capitaux propres, comptes courants d'associés, subventions d'investissement en consommation), muter directement avec contrepartie explicite en `modifications`.
+- Test de reproduction obligatoire pour tout invariant comptable : `Actif = Passif` doit tenir aussi sur le cas limite (|perte| > capitaux_initial). Le test `"Perte 3 000 € / Synergia 19k"` passait par chance parce que 3 < 19.
+- **Mantra** : un test qui passe parce qu'on n'a pas testé le cas qui casse = test inutile. Penser « cas limite > cas moyen ».
+
+### L-B7-D — Documenter l'ambivalence des postes (positif/négatif) dans le glossaire
+**Règle** : tout poste comptable pouvant prendre les deux signes doit avoir une entrée glossaire qui explicite (a) ce que ça signifie économiquement, (b) le traitement comptable, (c) les conséquences légales/stratégiques. Le joueur apprend en rencontrant le cas limite, pas dans un manuel abstrait.
+
+### Meta — Ne pas se laisser convaincre par un diagnostic erroné d'un subagent
+**Cas concret** : un subagent Explore a prétendu que le bug 3 venait du reset de `compteResultat` qui « efface » la perte du passif. Vérification mathématique manuelle : faux. Le résultat net dans `getTotalPassif` est dynamique, le reset compense exactement le push capitaux.
+**Règle** : chaque diagnostic de subagent doit être vérifié numériquement avant implémentation d'un fix. Un test de reproduction qui REPRODUIT avant le fix et PASSE après est la seule preuve acceptable.

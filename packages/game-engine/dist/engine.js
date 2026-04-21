@@ -841,16 +841,36 @@ function appliquerClotureExercice(etat, joueurIdx, pctDividendes) {
     // Logique : le résultat (positif ou négatif) est transféré vers les capitaux
     // propres. Sur bénéfice, on ajoute (réserve + report) aux capitaux ; on paie
     // les dividendes en trésorerie. Sur perte, on diminue les capitaux propres
-    // de |résultatApresIS|. On utilise appliquerDeltaPoste directement sur le
-    // passif "capitaux" pour bumper la première ligne trouvée (celle du template).
+    // de |résultatApresIS|.
+    //
+    // B7-C (2026-04-21) — On NE passe PAS par `push("capitaux", …)` parce que
+    // `appliquerDeltaPoste` plafonne les passifs à 0 (`Math.max(0, …)`). Or en
+    // cas de perte supérieure aux capitaux propres initiaux, le report à nouveau
+    // négatif doit pouvoir tirer les capitaux sous zéro (situation de crise :
+    // comptes négatifs → procédure d'alerte, apports à prévoir). On mute donc
+    // directement la première ligne "capitaux" du bilan, et on alimente
+    // manuellement la liste des modifications.
     const reportANouveau = resultatApresIS - reserveLegale - dividendesVerses;
     const deltaCapitaux = reserveLegale + reportANouveau; // = resultatApresIS − dividendesVerses
     if (deltaCapitaux !== 0) {
         const explicationCapitaux = deltaCapitaux > 0
             ? `Affectation du résultat aux capitaux propres : +${deltaCapitaux} € ` +
                 `(réserve légale ${reserveLegale} € + report à nouveau ${reportANouveau} €).`
-            : `Imputation de la perte sur les capitaux propres : ${deltaCapitaux} €.`;
-        push("capitaux", deltaCapitaux, explicationCapitaux);
+            : `Imputation de la perte sur les capitaux propres : ${deltaCapitaux} € ` +
+                `(report à nouveau négatif). Les capitaux propres peuvent devenir ` +
+                `négatifs quand la perte dépasse leur montant initial.`;
+        const capitauxLine = joueur.bilan.passifs.find((p) => p.categorie === "capitaux");
+        if (capitauxLine) {
+            const ancienneValeur = capitauxLine.valeur;
+            capitauxLine.valeur = ancienneValeur + deltaCapitaux; // pas de floor — cf. B7-C
+            modifications.push({
+                joueurId: joueur.id,
+                poste: "capitaux",
+                ancienneValeur,
+                nouvelleValeur: capitauxLine.valeur,
+                explication: explicationCapitaux,
+            });
+        }
     }
     if (dividendesVerses > 0) {
         push("tresorerie", -dividendesVerses, `Versement des dividendes (${(pctDividendes * 100).toFixed(0)} % du résultat distribuable) : −${dividendesVerses} €`);

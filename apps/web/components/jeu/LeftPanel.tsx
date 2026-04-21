@@ -103,6 +103,7 @@ export function LeftPanel({
   activeStep,
   onApplyEntry,
   onConfirmStep,
+  onCancelStep,
   achatQte,
   setAchatQte,
   achatMode,
@@ -221,7 +222,19 @@ export function LeftPanel({
               {/* Boutons */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPendingConfirm(false)}
+                  onClick={() => {
+                    // B7-B (2026-04-21) — Annuler doit libérer l'état de la
+                    // décision en entier, pas juste la modale locale :
+                    //  1) cacher la modale de confirmation,
+                    //  2) dé-sélectionner la carte décision (useDecisionCards),
+                    //  3) vider la file d'EntryCard (activeStep → null).
+                    // Sans (2) et (3), l'utilisateur se retrouvait coincé sur
+                    // l'écran « Écriture 1/x — Vérifier et confirmer » sans
+                    // moyen de revenir au choix de carte.
+                    setPendingConfirm(false);
+                    setSelectedDecision?.(null);
+                    onCancelStep();
+                  }}
                   className="flex-1 cursor-pointer py-3 border border-white/10 rounded-xl text-slate-400 text-sm hover:bg-white/5 transition-colors font-medium"
                 >
                   ← Annuler

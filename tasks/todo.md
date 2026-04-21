@@ -1278,3 +1278,39 @@ Partie manuelle Belvaux T1→T3 + smoke Synergia T1 (Phase 4 de T25.C). 7 défau
 - L53 — `DECOUVERT_MAX` en euros, pas en parts : dériver les seuils visuels en % de la constante plutôt qu'en valeurs magiques
 - L54 — Un composant exporté ≠ un composant monté : après refactor, grep `<ComponentName` (ou `import ComponentName`) pour valider le wiring complet
 - L55 — Remapper les mappings visuels, pas seulement les libellés : quand on renumérote un cycle, `ETAPE_CONFIG` (icônes / couleurs) est aussi indexé par numéro — le rater laisse la modale avec le "thème" de l'ancienne étape
+
+---
+
+## 🛠️ 2026-04-21 — Bugs post test-play B6 (Pierre a testé une partie complète)
+
+### Déclencheur
+
+Après push de B6-B (commit `ed5f88b` — UI fin d'exercice livrée), Pierre a fait une partie test et remonté 3 bugs + 1 demande pédagogique. Traitement direct (pas de re-planification demandée par Pierre : « non traite les 3 directement »).
+
+### Livraisons
+
+| # | Chantier | Nature | Fichiers touchés | Statut |
+|---|---|---|---|---|
+| B7-A | Bouton « Investir » relance client silent fail → filtrage anti-doublon côté UI pour les cartes non-commerciales déjà actives | Bug UI (silent fail) | `apps/web/app/jeu/hooks/useDecisionCards.ts` | ✅ |
+| B7-B | Bouton « Annuler » ne libère pas l'état complet de la décision → chaîner setPendingConfirm(false) + setSelectedDecision(null) + onCancelStep() | Bug UI | `apps/web/components/jeu/LeftPanel.tsx` | ✅ |
+| B7-C | Bilan déséquilibré après clôture avec perte massive : `appliquerDeltaPoste` plafonne capitaux à 0 (`Math.max(0, …)`). Fix : mutation directe de `capitaux.valeur` dans `appliquerClotureExercice`, sans plancher. | Bug moteur (invariant Actif=Passif) | `packages/game-engine/src/engine.ts`, `packages/game-engine/tests/clotureExercice.test.ts`, `dist/` | ✅ |
+| B7-D | Glossaire — entrée « Report à nouveau » expliquant créditeur vs débiteur, avec rappel art. L.223-42 Code de commerce (procédure d'alerte) | UX pédagogique | `apps/web/components/GlossairePanel.tsx` | ✅ |
+
+### Vérification
+
+- `npx jest` (game-engine) : **148 tests verts** (27/27 clôture exercice, dont le nouveau test `Perte > capitaux propres initiaux` qui reproduisait B7-C sans le fix)
+- `npx tsc --noEmit` (apps/web) : baseline TS2786 inchangée (erreurs pré-existantes React 18/19 + lucide-react/recharts non liées à B7)
+- `npm run build` (game-engine) : dist/ recompilé sans erreur
+- Test de reproduction B7-C ajouté AVANT le fix : écart observé 3 000 € = (|perte 22 000| − capitaux_initial 19 000), exactement la signature du bug. Après fix : 0 € d'écart, capitaux propres = −3 000 € comme attendu.
+
+### Reste à faire côté Pierre
+
+- [ ] Pull + push des commits depuis le Mac (pas depuis le VM)
+- [ ] Rejouer une partie jusqu'au premier exercice clos pour confirmer que (1) Investir est cliquable une seule fois par carte non-commerciale, (2) Annuler ramène au choix de cartes, (3) bilan équilibré même en cas de grosse perte, (4) la nouvelle entrée « Report à nouveau » s'affiche dans le glossaire
+
+### Leçons tirées
+
+- L-B7-A — Silent fail moteur = bug UI : si un handler renvoie `messageErreur` invisible, filtrer en amont pour rendre l'option non cliquable
+- L-B7-B — Tout `onCancel` doit libérer TOUT l'état de l'étape, pas seulement une modale locale
+- L-B7-C — `appliquerDeltaPoste` plafonne les passifs à 0 : inadapté aux capitaux propres en situation de crise. Muter directement pour les postes structurels avec contrepartie explicite dans `modifications`
+- Meta — Un subagent peut se tromper de diagnostic. Vérification numérique manuelle obligatoire + test de reproduction qui PASSE seulement après le fix

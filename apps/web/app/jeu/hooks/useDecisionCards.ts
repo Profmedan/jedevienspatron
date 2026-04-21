@@ -65,11 +65,28 @@ export function useDecisionCards({
   }, [etat?.etapeTour, etat?.tourActuel, etat?.joueurActif, subEtape6]);
 
   // ── Cartes disponibles (computed) ────────────────────────────────────────
-  const cartesDisponibles: CarteDecision[] = etat
+  // B7-A (2026-04-21) — Filtrage anti-doublon pour les cartes non-commerciales.
+  // `acheterCarteDecision` (moteur, engine.ts L1224) refuse déjà les doublons
+  // mais renvoie un `messageErreur` invisible côté UI : le bouton « Investir »
+  // semblait ne rien faire. On masque donc en amont les cartes non-commerciales
+  // déjà présentes dans `joueur.cartesActives`. Les cartes commerciales ne sont
+  // PAS filtrées : recruter plusieurs fois le même type est permis (juniors,
+  // seniors…).
+  const cartesDisponiblesRaw: CarteDecision[] = etat
     ? (etat.etapeTour === ETAPES.DECISION && subEtape6 === "investissement"
         ? (pioche6b ?? [])
         : tirerCartesDecision(cloneEtat(etat), 4))
     : [];
+  const idsActifsNonCommercial = new Set(
+    etat
+      ? etat.joueurs[etat.joueurActif].cartesActives
+          .filter((c) => c.categorie !== "commercial")
+          .map((c) => c.id)
+      : []
+  );
+  const cartesDisponibles: CarteDecision[] = cartesDisponiblesRaw.filter(
+    (c) => c.categorie === "commercial" || !idsActifsNonCommercial.has(c.id)
+  );
   const cartesRecrutement = etat ? obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif) : [];
 
   // ─ Actions ─────────────────────────────────────────────────────────────────

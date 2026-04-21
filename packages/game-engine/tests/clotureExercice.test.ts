@@ -280,6 +280,38 @@ describe("appliquerClotureExercice — invariant Actif = Passif", () => {
       expect(Math.abs(actif - passif)).toBeLessThanOrEqual(1);
     }
   );
+
+  // B7-C (2026-04-21) — Régression Pierre : bilan déséquilibré sur report à
+  // nouveau très négatif. Quand |perte| > capitaux propres initiaux, la
+  // fonction interne `appliquerDeltaPoste` plafonnait le passif "capitaux" à 0
+  // (Math.max(0, …)) ; la partie non imputée créait un écart Actif≠Passif
+  // exactement égal à (|perte| − capitaux_initial).
+  test("Perte > capitaux propres initiaux : report à nouveau très négatif, bilan reste équilibré", () => {
+    const etat = etatFrais(); // Synergia Lab : capitaux 19 000 €
+    etat.tourActuel = 4;
+    const j = etat.joueurs[0];
+
+    // Perte de 22 000 € : le report à nouveau tire les capitaux propres à
+    // −3 000 € (scénario de crise : apports à faire, procédure d'alerte…).
+    forcePerte(etat, 22000);
+
+    const actifAvant = getTotalActif(j);
+    const passifAvant = getTotalPassif(j);
+    expect(Math.abs(actifAvant - passifAvant)).toBeLessThanOrEqual(1); // sanité
+
+    appliquerClotureExercice(etat, 0, 0);
+
+    const actif = getTotalActif(j);
+    const passif = getTotalPassif(j);
+    expect(Math.abs(actif - passif)).toBeLessThanOrEqual(1);
+
+    // Les capitaux propres peuvent (et doivent) devenir négatifs.
+    // Capitaux = 19 000 (initial) + deltaCapitaux (-22 000) = −3 000.
+    expect(capitauxPropres(j)).toBe(-3000);
+
+    // Le report à nouveau archivé reflète la perte intégrale, pas tronquée.
+    expect(j.historiqueExercices![0].reportANouveau).toBe(-22000);
+  });
 });
 
 // ─── 5. Reset compteResultat + cumul compteResultatCumulePartie ───

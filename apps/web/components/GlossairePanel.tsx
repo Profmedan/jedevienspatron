@@ -970,6 +970,34 @@ const TERMES: TermeGlossaire[] = [
     ),
   },
   {
+    id: "report-a-nouveau",
+    terme: "Report à nouveau",
+    categorie: "compta",
+    court: "Bénéfice non distribué ou perte non apurée, reporté sur l’exercice suivant",
+    contenu: (
+      <div className="space-y-2 text-xs text-gray-300 leading-relaxed">
+        <p>Le <strong className="text-gray-100">report à nouveau</strong> est le reliquat du résultat de l’exercice après affectation à la réserve légale et versement des dividendes. Il s’inscrit dans les capitaux propres et se transmet d’un exercice à l’autre.</p>
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-2 font-mono text-[10px] space-y-0.5">
+          <div><span className="text-emerald-300">Résultat après IS</span></div>
+          <div><span className="text-gray-400">− </span><span className="text-blue-300">Réserve légale</span></div>
+          <div><span className="text-gray-400">− </span><span className="text-orange-300">Dividendes</span></div>
+          <div className="border-t border-gray-600 pt-0.5 font-bold"><span className="text-indigo-300">= Report à nouveau</span></div>
+        </div>
+        <div className="space-y-1.5">
+          <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2 text-[11px] text-emerald-200">
+            <div className="font-bold text-emerald-300 mb-0.5">✅ Report à nouveau &gt; 0 (créditeur)</div>
+            <div>Bénéfice conservé dans l’entreprise. Renforce les capitaux propres, finance la croissance et constitue une réserve pour absorber d’éventuelles pertes futures.</div>
+          </div>
+          <div className="bg-red-950/30 border border-red-800/40 rounded-lg p-2 text-[11px] text-red-200">
+            <div className="font-bold text-red-300 mb-0.5">⚠️ Report à nouveau &lt; 0 (débiteur)</div>
+            <div>Perte de l’exercice non absorbée. Vient diminuer les capitaux propres. Si la perte cumulée rend les capitaux propres &lt; moitié du capital social, l’assemblée doit statuer sur la poursuite d’activité (procédure d’alerte — art. L.223-42 Code de commerce).</div>
+          </div>
+        </div>
+        <p className="text-[11px]">Dans le jeu : chaque clôture d’exercice (T4, T8, T12) calcule le report à nouveau et l’impute aux capitaux propres. Les capitaux peuvent devenir négatifs si les pertes cumulées dépassent l’apport initial.</p>
+      </div>
+    ),
+  },
+  {
     id: "resultat-exploit",
     terme: "Résultat d’exploitation",
     categorie: "cr",
