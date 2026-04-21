@@ -592,6 +592,22 @@ export function LeftPanel({
             <p className="text-sm text-slate-300">{stepHelp}</p>
 
             {etapeTour === ETAPES.ACHATS_STOCK && (
+              joueur.entreprise.secteurActivite === "service" ? (
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                    <p className="text-xs leading-relaxed text-sky-100">
+                      💡 Votre entreprise commercialise des services. Vous n'avez pas de stocks de marchandises à constituer !
+                    </p>
+                  </div>
+                  <button
+                    onClick={onSkipAchat}
+                    autoFocus
+                    className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300 transition-colors"
+                  >
+                    Passer cette étape →
+                  </button>
+                </div>
+              ) : (
               <div className="space-y-2">
                 <div>
                   <label htmlFor="qty" className="block text-xs font-semibold text-white mb-1">
@@ -679,6 +695,7 @@ export function LeftPanel({
                   </button>
                 </div>
               </div>
+              )
             )}
 
             {etapeTour === ETAPES.DECISION && (

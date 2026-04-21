@@ -39,6 +39,10 @@ import {
   RESERVE_LEGALE_MONTANT,
   RESERVE_LEGALE_SEUIL_CAPITAUX,
   TAUX_DIVIDENDES_AUTORISES,
+  SecteurActivite,
+  ModeleValeurEntreprise,
+  FluxClientsEntreprise,
+  TypeClientEntreprise,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
@@ -157,7 +161,14 @@ function appliquerDeltaPoste(
   // Compte de résultat — produits
   if (poste in produits) {
     const old = produits[poste];
-    produits[poste] = Math.max(0, old + delta); // Plancher 0 : un produit ne peut pas être négatif
+    // `productionStockee` représente la VARIATION nette des stocks de produits finis
+    // sur la période : elle peut être négative (déstockage) en PCG. Les autres produits
+    // (ventes, produitsFinanciers, revenusExceptionnels) conservent le plancher 0.
+    if (poste === "productionStockee") {
+      produits[poste] = old + delta;
+    } else {
+      produits[poste] = Math.max(0, old + delta);
+    }
     return { ancienneValeur: old, nouvelleValeur: produits[poste] };
   }
 
@@ -212,7 +223,10 @@ function appliquerDeltaPoste(
 
 // ─── CRÉATION DE L'ÉTAT INITIAL ──────────────────────────────
 
-function creerJoueur(
+// Exporté (B8-D) pour que `tests/engine.test.ts` puisse instancier un
+// joueur unique sans passer par initialiserJeu. Utilisé également en
+// interne par initialiserJeu.
+export function creerJoueur(
   id: number,
   pseudo: string,
   nomEntreprise: NomEntreprise,
@@ -256,9 +270,13 @@ function creerJoueur(
       couleur: template.couleur,
       icon: template.icon,
       type: template.type,
+      secteurActivite: template.secteurActivite,
       specialite: template.specialite,
+      ...(template.capaciteBase !== undefined ? { capaciteBase: template.capaciteBase } : {}),
       ...(template.reducDelaiPaiement ? { reducDelaiPaiement: true } : {}),
       ...(template.clientGratuitParTour ? { clientGratuitParTour: true } : {}),
+      ...(template.clientsPassifsParTour ? { clientsPassifsParTour: template.clientsPassifsParTour } : {}),
+      ...(template.modeleValeur ? { modeleValeur: template.modeleValeur } : {}),
       ref: {
         actifs: template.actifs.map((a) => a.valeur),
         passifs: template.passifs.map((p) => p.valeur),
@@ -569,6 +587,17 @@ export function appliquerAchatMarchandises(
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
 
+  // Blocage sur le mode "service" : le coût variable est un flux de
+  // services extérieurs (acte 4 de la vente), pas un stock reconstituable.
+  const modeleAchat = getModeleValeurEntreprise(joueur.entreprise);
+  if (modeleAchat.mode === "service") {
+    return {
+      succes: false,
+      messageErreur: "Votre entreprise commercialise des services. Vous n'avez pas besoin d'acheter de marchandises.",
+      modifications: [],
+    };
+  }
+
   if (quantite <= 0) return { succes: true, modifications };
   const push = makePush(joueur, modifications);
 
@@ -639,7 +668,9 @@ export function appliquerAvancementCreances(
 
 // ─── ÉTAPE 3 : Paiement des commerciaux ──────────────────────
 
-function calculerCoutCommerciaux(joueur: Joueur): number {
+// Exporté (B8-D) pour les tests unitaires qui vérifient la somme des
+// salaires commerciaux attendue en fonction des recrutements.
+export function calculerCoutCommerciaux(joueur: Joueur): number {
   // Les cartes commerciales ont effetsRecurrents: [] (vide par design).
   // Le salaire récurrent est identique au coût d'embauche initial,
   // stocké dans effetsImmédiats.chargesPersonnel.
@@ -717,14 +748,108 @@ export function licencierCommercial(
   return { succes: true, modifications };
 }
 
+// ─── HELPERS B8 — Modèle de valeur par secteur ───────────────
+//
+// Palier 1 moteurs métier (Tâche B8). Trois modes de réalisation de la
+// marge brute, chacun avec son couple "sortie physique + contrepartie" :
+//   • négoce      → stocks −  / achats +            (CMV classique)
+//   • production  → stocks −  / productionStockee − (déstockage produit fini,
+//                                                    Option A validée par Pierre)
+//   • service     → servicesExterieurs + / dettes + (coût variable réel :
+//                                                    sous-traitance, carburant,
+//                                                    consommables techniques)
+//
+// Les libellés pédagogiques (ceQueJeVends / dOuVientLaValeur / goulotPrincipal)
+// sont repris dans l'UI par CompanyIntro (B8-E). Tant qu'une entreprise ne
+// déclare pas son `modeleValeur` explicitement, `getModeleValeurEntreprise`
+// retombe sur ce défaut par secteur, pour garantir la rétrocompatibilité
+// des parties sauvegardées.
+// ────────────────────────────────────────────────────────────
+
+const MODELE_DEFAUT_PAR_SECTEUR: Record<SecteurActivite, ModeleValeurEntreprise> = {
+  negoce: {
+    mode: "negoce",
+    ceQueJeVends: "Des marchandises revendues en l'état",
+    dOuVientLaValeur: "L'écart entre le prix d'achat et le prix de vente",
+    goulotPrincipal: "Réassort des stocks et rotation des marchandises",
+    coutVariable: PRIX_UNITAIRE_MARCHANDISE,
+    libelleExecution: "Marchandise livrée au client",
+    libelleContrepartie: "Coût de la marchandise vendue (CMV) enregistré en charges",
+  },
+  production: {
+    mode: "production",
+    ceQueJeVends: "Des produits finis fabriqués en interne",
+    dOuVientLaValeur: "La transformation des matières premières en produits finis",
+    goulotPrincipal: "Capacité de production et stock de produits finis",
+    coutVariable: PRIX_UNITAIRE_MARCHANDISE,
+    libelleExecution: "Produit fini livré au client",
+    libelleContrepartie: "Déstockage du produit fini (baisse de production stockée)",
+  },
+  service: {
+    mode: "service",
+    ceQueJeVends: "Une prestation de service",
+    dOuVientLaValeur: "Le temps et les ressources mobilisés pour exécuter la mission",
+    goulotPrincipal: "Capacité d'exécution (équipe, sous-traitants, matériel)",
+    coutVariable: PRIX_UNITAIRE_MARCHANDISE,
+    libelleExecution: "Ressources mobilisées pour exécuter la prestation",
+    libelleContrepartie: "Facture fournisseur à régler au prochain trimestre",
+  },
+};
+
+/**
+ * Retourne le modèle de valeur applicable à une entreprise.
+ * - Si le template/joueur expose un `modeleValeur`, on l'utilise tel quel.
+ * - Sinon, on retombe sur le défaut du secteur (rétrocompat saves avant B8).
+ */
+export function getModeleValeurEntreprise(
+  entreprise: Pick<Joueur["entreprise"], "modeleValeur" | "secteurActivite">
+): ModeleValeurEntreprise {
+  if (entreprise.modeleValeur) return entreprise.modeleValeur;
+  return MODELE_DEFAUT_PAR_SECTEUR[entreprise.secteurActivite];
+}
+
+/**
+ * Convertit une liste de FluxClientsEntreprise en cartes Client concrètes
+ * à ajouter dans `clientsATrait`. Utilisé pour `clientsPassifsParTour`
+ * (demande récurrente hors commerciaux).
+ *
+ * Chaque flux `{ typeClient, nbParTour, source }` produit `nbParTour`
+ * cartes correspondant au type (Particulier / TPE / Grand Compte). Si un
+ * type n'est pas présent dans le catalogue (`CARTES_CLIENTS`), il est
+ * ignoré silencieusement.
+ */
+export function genererClientsDepuisFlux(flux: FluxClientsEntreprise[] | undefined): CarteClient[] {
+  if (!flux || flux.length === 0) return [];
+  const MAPPING: Record<TypeClientEntreprise, string> = {
+    particulier: "client-particulier",
+    tpe: "client-tpe",
+    grand_compte: "client-grand-compte",
+  };
+  const clients: CarteClient[] = [];
+  for (const f of flux) {
+    const idCarte = MAPPING[f.typeClient];
+    const modele = CARTES_CLIENTS.find((c) => c.id === idCarte);
+    if (!modele) continue;
+    for (let i = 0; i < f.nbParTour; i++) {
+      clients.push(modele);
+    }
+  }
+  return clients;
+}
+
 // ─── ÉTAPE 4 : Traitement carte Client ───────────────────────
 /**
  * Comptabilisation en 4 écritures (partie double complète).
  * Ordre narratif optimisé pour la pédagogie :
  *   Acte 1 — Encaissement (Trésorerie/Créances) : le plus tangible
  *   Acte 2 — Chiffre d'affaires (Ventes)         : la contrepartie produit
- *   Acte 3 — Livraison (Stocks −1 unité)          : la sortie physique
- *   Acte 4 — Coût de revient (Achats/CMV)         : la contrepartie charge
+ *   Acte 3 — Exécution (sortie stock ou ressource): la réalisation de la valeur
+ *   Acte 4 — Contrepartie (charge / dette)        : le coût variable enregistré
+ *
+ * L'acte 3 et l'acte 4 dépendent du `modeleValeur.mode` :
+ *   • négoce      → stocks −  / achats +
+ *   • production  → stocks −  / productionStockee −  (Option A)
+ *   • service     → servicesExterieurs + / dettes +
  *
  * Chaque modification porte un saleGroupId + saleClientLabel + saleActIndex
  * pour permettre à l'UI de regrouper et narrer les ventes.
@@ -739,14 +864,22 @@ export function appliquerCarteClient(
   const modifications: ResultatAction["modifications"] = [];
   const push = makePush(joueur, modifications);
 
-  const stocks = getTotalStocks(joueur);
-  if (stocks < PRIX_UNITAIRE_MARCHANDISE) {
-    return {
-      succes: false,
-      messageErreur:
-        "Stock insuffisant ! Vous devez acheter des marchandises (étape 1) avant de vendre.",
-      modifications,
-    };
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  const coutVar = modele.coutVariable;
+
+  // Vérification préalable : seuls les modes qui consomment un stock physique
+  // (négoce, production) peuvent refuser la vente faute de stock.
+  if (modele.mode === "negoce" || modele.mode === "production") {
+    const stocks = getTotalStocks(joueur);
+    if (stocks < coutVar) {
+      return {
+        succes: false,
+        messageErreur: modele.mode === "negoce"
+          ? "Stock insuffisant ! Vous devez acheter des marchandises (étape 1) avant de vendre."
+          : "Stock de produits finis insuffisant ! Votre production ne couvre pas la demande.",
+        modifications,
+      };
+    }
   }
 
   const montant = carteClient.montantVentes;
@@ -776,11 +909,20 @@ export function appliquerCarteClient(
   // ACTE 2 — Chiffre d'affaires (Ventes)
   push("ventes", montant, `Vente enregistrée au chiffre d'affaires : +${montant} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 2 });
 
-  // ACTE 3 — Sortie du stock (livraison de la marchandise)
-  push("stocks", -PRIX_UNITAIRE_MARCHANDISE, `Marchandise livrée au client : −${PRIX_UNITAIRE_MARCHANDISE} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
-
-  // ACTE 4 — Coût de la marchandise vendue (CMV)
-  push("achats", PRIX_UNITAIRE_MARCHANDISE, `Coût de la marchandise vendue (CMV) enregistré en charges : +${PRIX_UNITAIRE_MARCHANDISE} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
+  // ACTE 3 & 4 — Réalisation de la valeur selon le modèle
+  if (modele.mode === "negoce") {
+    push("stocks", -coutVar, `${modele.libelleExecution} : −${coutVar} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+    push("achats", coutVar, `${modele.libelleContrepartie} : +${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
+  } else if (modele.mode === "production") {
+    push("stocks", -coutVar, `${modele.libelleExecution} : −${coutVar} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+    push("productionStockee", -coutVar, `${modele.libelleContrepartie} : −${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
+  } else if (modele.mode === "service") {
+    // Le service ne consomme pas de stock physique mais mobilise des
+    // ressources (sous-traitance, carburant, consommables techniques) :
+    // on enregistre un coût variable réel au lieu d'une marge brute 100 %.
+    push("servicesExterieurs", coutVar, `${modele.libelleExecution} : +${coutVar} € de services extérieurs`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+    push("dettes", coutVar, `${modele.libelleContrepartie} : +${coutVar} € de dettes fournisseurs`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
+  }
 
   return { succes: true, modifications };
 }
@@ -1192,14 +1334,26 @@ export function finaliserClotureExercice(etat: EtatJeu): void {
  * Génère les clients bonus liés à la spécialité d'entreprise.
  * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.
  *
- * • Azura Commerce : +1 client Particulier automatique par tour
+ * Deux sources cumulatives :
+ *   1) `clientGratuitParTour` (historique) : +1 client Particulier par tour
+ *      (Azura — spécialité "attire les particuliers"). Gardé pour
+ *      rétrocompat des parties sauvegardées avant B8.
+ *   2) `clientsPassifsParTour` (B8)       : demande récurrente hors
+ *      commerciaux, déclarée sous forme de FluxClientsEntreprise dans le
+ *      template — typiquement le trafic boutique/web, la maintenance
+ *      récurrente ou le pipeline de licences.
+ *
+ * Les deux sources s'additionnent : Azura peut déclarer
+ * `clientsPassifsParTour` ET conserver son client gratuit historique.
  */
 export function genererClientsSpecialite(joueur: Joueur): CarteClient[] {
+  const clients: CarteClient[] = [];
   if (joueur.entreprise.clientGratuitParTour) {
     const clientParticulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
-    return clientParticulier ? [clientParticulier] : [];
+    if (clientParticulier) clients.push(clientParticulier);
   }
-  return [];
+  clients.push(...genererClientsDepuisFlux(joueur.entreprise.clientsPassifsParTour));
+  return clients;
 }
 
 // ─── ÉTAPE 6 : Recrutement garanti (toujours disponible) ────
@@ -1676,7 +1830,7 @@ export function demanderEmprunt(
  * On identifie les immobilisations via les cartes actives du joueur.
  */
 export function calculerCapaciteLogistique(joueur: Joueur): number {
-  let capacite = CAPACITE_BASE;
+  let capacite = joueur.entreprise.capaciteBase ?? CAPACITE_BASE;
   const nomEntreprise = joueur.entreprise.nom;
 
   for (const carte of joueur.cartesActives) {

@@ -53,6 +53,49 @@ export interface CompteResultat {
 export type DefaultEntreprise = "Manufacture Belvaux" | "Véloce Transports" | "Azura Commerce" | "Synergia Lab";
 /** Accepte les 4 défauts + tout nom custom (string) avec autocomplétion */
 export type NomEntreprise = DefaultEntreprise | (string & {});
+export type SecteurActivite = "negoce" | "service" | "production";
+export type TypeClientEntreprise = "particulier" | "tpe" | "grand_compte";
+/**
+ * Flux de clients récurrent ou initial, attaché à une entreprise.
+ * Utilisé pour :
+ *   - clientsPassifsParTour : demande récurrente hors commerciaux (ex : trafic boutique d'Azura)
+ *   - clientsDeDepart       : carnet de commandes matérialisé au T1 (désactivé côté main)
+ */
+export interface FluxClientsEntreprise {
+    typeClient: TypeClientEntreprise;
+    nbParTour: number;
+    /** Libellé pédagogique affiché dans l'UI ("Flux boutique et web", "Maintenance"…) */
+    source: string;
+}
+/**
+ * Modèle de création de valeur d'une entreprise (palier 1 — Tâche B8).
+ * Pilote le comportement comptable de `appliquerCarteClient` et les libellés pédagogiques.
+ *
+ * Trois modes supportés :
+ *   • "negoce"     : stocks − / achats + (CMV classique — Azura)
+ *   • "production" : stocks − / productionStockee − (déstockage de produit fini — Belvaux)
+ *   • "service"    : servicesExterieurs + / dettes + (coût variable de prestation — Véloce, Synergia)
+ *
+ * Les champs textuels (`ceQueJeVends`, `dOuVientLaValeur`, `goulotPrincipal`,
+ * `libelleExecution`, `libelleContrepartie`) alimentent l'intro d'entreprise et
+ * les explications attachées aux écritures de l'acte 3 / acte 4.
+ */
+export interface ModeleValeurEntreprise {
+    /** Famille économique principale */
+    mode: "negoce" | "production" | "service";
+    /** Ce que l'entreprise vend réellement */
+    ceQueJeVends: string;
+    /** Ce qui crée la valeur avant la vente */
+    dOuVientLaValeur: string;
+    /** Ressource critique / goulot de croissance */
+    goulotPrincipal: string;
+    /** Coût variable unitaire par vente (utilisé pour la vérification de stock et les écritures) */
+    coutVariable: number;
+    /** Libellé pédagogique de l'acte 3 (sortie physique / réalisation) */
+    libelleExecution: string;
+    /** Libellé pédagogique de l'acte 4 (contrepartie charge / dette) */
+    libelleContrepartie: string;
+}
 export interface EntrepriseTemplate {
     nom: NomEntreprise;
     /** Couleur thématique */
@@ -61,13 +104,23 @@ export interface EntrepriseTemplate {
     icon: string;
     /** Type d'activité affiché */
     type: string;
+    /** Le secteur dicte la façon dont la marge brute est réalisée (avec ou sans stock) */
+    secteurActivite: SecteurActivite;
     specialite: string;
+    /** Surcharge de la capacité logistique de base (défaut: 4). Utile pour brider les services. */
+    capaciteBase?: number;
     /** Réduit le délai de paiement client de 1 trimestre (spécialité Véloce Transports) */
     reducDelaiPaiement?: boolean;
     /** Génère automatiquement 1 client particulier par tour (spécialité Azura Commerce) */
     clientGratuitParTour?: boolean;
     /** Effets passifs appliqués automatiquement à chaque tour (spécialité entreprise) */
     effetsPassifs?: EffetCarte[];
+    /** Demande récurrente générée hors commerciaux (Tâche B8) */
+    clientsPassifsParTour?: FluxClientsEntreprise[];
+    /** Clients déjà présents au démarrage (champ gardé pour usage futur — vide en main) */
+    clientsDeDepart?: FluxClientsEntreprise[];
+    /** Ce que l'entreprise vend et comment la valeur est créée (Tâche B8) */
+    modeleValeur?: ModeleValeurEntreprise;
     /** Bilan de départ (Actif = Passif = 16 toujours) */
     actifs: Omit<PosteActif, "categorie">[];
     passifs: Omit<PostePassif, "categorie">[];
@@ -152,11 +205,17 @@ export interface Joueur {
         couleur: string;
         icon: string;
         type: string;
+        secteurActivite: SecteurActivite;
         specialite: string;
+        capaciteBase?: number;
         /** Réduit le délai de paiement client de 1 trimestre */
         reducDelaiPaiement?: boolean;
         /** Génère automatiquement 1 client particulier par tour */
         clientGratuitParTour?: boolean;
+        /** Demande récurrente hors commerciaux (Tâche B8) */
+        clientsPassifsParTour?: FluxClientsEntreprise[];
+        /** Moteur de création de valeur de l'entreprise (Tâche B8) */
+        modeleValeur?: ModeleValeurEntreprise;
         /** Valeurs de référence initiales (pour la phase de configuration) */
         ref: {
             actifs: number[];

@@ -44,6 +44,8 @@ export {
   basculerTresorerieSiNegative,
   genererClientsSpecialite,
   genererClientsParCommerciaux,
+  getModeleValeurEntreprise,
+  genererClientsDepuisFlux,
   tirerCartesDecision,
   acheterCarteDecision,
   investirCartePersonnelle,

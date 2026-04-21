@@ -1,4 +1,5 @@
-import { EtatJeu, Joueur, CarteDecision, CarteClient, CarteEvenement, NomEntreprise, ResultatAction, ResultatDemandePret, EntrepriseTemplate } from "./types";
+import { EtatJeu, Joueur, CarteDecision, CarteClient, CarteEvenement, NomEntreprise, ResultatAction, ResultatDemandePret, EntrepriseTemplate, ModeleValeurEntreprise, FluxClientsEntreprise } from "./types";
+export declare function creerJoueur(id: number, pseudo: string, nomEntreprise: NomEntreprise, customTemplates?: EntrepriseTemplate[]): Joueur;
 export declare function initialiserJeu(joueursDefs: Array<{
     pseudo: string;
     nomEntreprise: NomEntreprise;
@@ -24,6 +25,7 @@ export declare function basculerTresorerieSiNegative(etat: EtatJeu, joueurIdx: n
 export declare function verifierEquilibreComptable(joueur: Joueur, contexte: string): void;
 export declare function appliquerAchatMarchandises(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
 export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: number): ResultatAction;
+export declare function calculerCoutCommerciaux(joueur: Joueur): number;
 export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Licencie un commercial actif :
@@ -35,12 +37,34 @@ export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: n
  */
 export declare function licencierCommercial(etat: EtatJeu, joueurIdx: number, carteId: string): ResultatAction;
 /**
+ * Retourne le modèle de valeur applicable à une entreprise.
+ * - Si le template/joueur expose un `modeleValeur`, on l'utilise tel quel.
+ * - Sinon, on retombe sur le défaut du secteur (rétrocompat saves avant B8).
+ */
+export declare function getModeleValeurEntreprise(entreprise: Pick<Joueur["entreprise"], "modeleValeur" | "secteurActivite">): ModeleValeurEntreprise;
+/**
+ * Convertit une liste de FluxClientsEntreprise en cartes Client concrètes
+ * à ajouter dans `clientsATrait`. Utilisé pour `clientsPassifsParTour`
+ * (demande récurrente hors commerciaux).
+ *
+ * Chaque flux `{ typeClient, nbParTour, source }` produit `nbParTour`
+ * cartes correspondant au type (Particulier / TPE / Grand Compte). Si un
+ * type n'est pas présent dans le catalogue (`CARTES_CLIENTS`), il est
+ * ignoré silencieusement.
+ */
+export declare function genererClientsDepuisFlux(flux: FluxClientsEntreprise[] | undefined): CarteClient[];
+/**
  * Comptabilisation en 4 écritures (partie double complète).
  * Ordre narratif optimisé pour la pédagogie :
  *   Acte 1 — Encaissement (Trésorerie/Créances) : le plus tangible
  *   Acte 2 — Chiffre d'affaires (Ventes)         : la contrepartie produit
- *   Acte 3 — Livraison (Stocks −1 unité)          : la sortie physique
- *   Acte 4 — Coût de revient (Achats/CMV)         : la contrepartie charge
+ *   Acte 3 — Exécution (sortie stock ou ressource): la réalisation de la valeur
+ *   Acte 4 — Contrepartie (charge / dette)        : le coût variable enregistré
+ *
+ * L'acte 3 et l'acte 4 dépendent du `modeleValeur.mode` :
+ *   • négoce      → stocks −  / achats +
+ *   • production  → stocks −  / productionStockee −  (Option A)
+ *   • service     → servicesExterieurs + / dettes +
  *
  * Chaque modification porte un saleGroupId + saleClientLabel + saleActIndex
  * pour permettre à l'UI de regrouper et narrer les ventes.
@@ -99,7 +123,17 @@ export declare function finaliserClotureExercice(etat: EtatJeu): void;
  * Génère les clients bonus liés à la spécialité d'entreprise.
  * Appelé à l'étape 3, en même temps que genererClientsParCommerciaux.
  *
- * • Azura Commerce : +1 client Particulier automatique par tour
+ * Deux sources cumulatives :
+ *   1) `clientGratuitParTour` (historique) : +1 client Particulier par tour
+ *      (Azura — spécialité "attire les particuliers"). Gardé pour
+ *      rétrocompat des parties sauvegardées avant B8.
+ *   2) `clientsPassifsParTour` (B8)       : demande récurrente hors
+ *      commerciaux, déclarée sous forme de FluxClientsEntreprise dans le
+ *      template — typiquement le trafic boutique/web, la maintenance
+ *      récurrente ou le pipeline de licences.
+ *
+ * Les deux sources s'additionnent : Azura peut déclarer
+ * `clientsPassifsParTour` ET conserver son client gratuit historique.
  */
 export declare function genererClientsSpecialite(joueur: Joueur): CarteClient[];
 /**

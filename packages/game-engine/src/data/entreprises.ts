@@ -24,16 +24,39 @@
 // Chaque bien immobilisé perd -1 par trimestre (durée de vie = valeur initiale).
 // Dotation aux amortissements = somme des amortissements de chaque bien.
 // Durées de vie indicatives (en trimestres de jeu) :
-//   • Entrepôt (machine industrielle)       : 8T  ≈ 2 ans
-//   • Camionnette (véhicule utilitaire)  : 8T  ≈ 2 ans
-//   • Camion (poids lourd)               : 10T ≈ 2,5 ans
-//   • Machine (manutention)              : 6T  ≈ 1,5 an
-//   • Showroom (agencement commercial)   : 8T  ≈ 2 ans
-//   • Voiture (démonstration)            : 8T  ≈ 2 ans
-//   • Brevet (propriété intellectuelle)  : 8T  ≈ 2 ans (simplifié)
-//   • Matériel informatique              : 5T  ≈ 1,25 an (simplifié)
+//   • Entrepôt (bâtiment industriel)         : 8T  ≈ 2 ans
+//   • Machine de production (outil Belvaux)  : 8T  ≈ 2 ans  (ex-Camionnette, B8-C)
+//   • Camion (poids lourd Véloce)            : 10T ≈ 2,5 ans
+//   • Machine (manutention Véloce)           : 6T  ≈ 1,5 an
+//   • Showroom (agencement commercial)       : 8T  ≈ 2 ans
+//   • Voiture (démonstration Azura)          : 8T  ≈ 2 ans
+//   • Brevet (propriété intellectuelle)      : 8T  ≈ 2 ans (simplifié)
+//   • Matériel informatique                  : 5T  ≈ 1,25 an (simplifié)
 // L'item "Autres Immobilisations" démarre à 0 — il reçoit les investissements
 // achetés via les Cartes Décision et commence alors à s'amortir.
+//
+// ── Modèle de valeur (B8-C) ────────────────────────────────
+// Chaque entreprise déclare un `modeleValeur` qui pilote la comptabilisation
+// de la vente dans appliquerCarteClient (acte 3 et acte 4) :
+//   • Belvaux  (production) : stocks − / productionStockee −
+//   • Véloce   (service)    : servicesExterieurs + / dettes +
+//   • Azura    (négoce)     : stocks − / achats +
+//   • Synergia (service)    : servicesExterieurs + / dettes +
+// Les libellés pédagogiques (ceQueJeVends / dOuVientLaValeur / goulotPrincipal)
+// alimentent CompanyIntro (B8-E).
+//
+// ── Demande passive (B8-C) ─────────────────────────────────
+// `clientsPassifsParTour` modélise la demande récurrente hors commerciaux :
+// trafic boutique/web, livraisons de proximité, abonnements individuels.
+// Volontairement modeste (1 Particulier/tour = 2 000 € brut) pour ne pas
+// dévaloriser le recrutement de commerciaux.
+//   • Belvaux  : aucun flux passif (la production ne se vend pas toute seule)
+//   • Véloce   : 1 Particulier/tour — Livraisons courtes récurrentes
+//   • Azura    : 1 Particulier/tour — Trafic boutique et web
+//                (migration propre de clientGratuitParTour → clientsPassifsParTour)
+//   • Synergia : 1 Particulier/tour — Abonnements individuels
+// Les anciennes saves avec `clientGratuitParTour: true` restent compatibles :
+// `genererClientsSpecialite` cumule les deux sources.
 //
 // ── Financement ─────────────────────────────────────────────
 // Emprunts = 8 pour toutes les entreprises (remboursement -500/tour)
@@ -56,18 +79,31 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#e8751a",
     icon: "🏭",
     type: "Production",
+    secteurActivite: "production",
     specialite: "⚡ Produit à chaque tour",
     // Spécialité active : +1 000 € productionStockée, +1 000 € stocks par trimestre
     effetsPassifs: [
       { poste: "productionStockee", delta: 1000 },
       { poste: "stocks", delta: 1000 },
     ],
+    // B8-C — Modèle de valeur : producteur industriel
+    modeleValeur: {
+      mode: "production",
+      ceQueJeVends: "Des pièces métalliques fabriquées à la commande",
+      dOuVientLaValeur: "La transformation de matières premières en produits finis à l'atelier",
+      goulotPrincipal: "Capacité de production et stock de produits finis",
+      coutVariable: 1000,
+      libelleExecution: "Produit fini livré au client",
+      libelleContrepartie: "Déstockage du produit fini (baisse de production stockée)",
+    },
     actifs: [
       // IMMOBILISATIONS
-      // Entrepôt : matériel industriel → vie 8T (≈ 2 ans)
+      // Entrepôt : bâtiment industriel → vie 8T (≈ 2 ans)
       { nom: "Entrepôt", valeur: 8000 },
-      // Camionnette : véhicule utilitaire → vie 8T (≈ 2 ans)
-      { nom: "Camionnette", valeur: 8000 },
+      // Machine de production : outil industriel cœur du métier → vie 8T
+      // (renommée depuis "Camionnette" en B8-C — une camionnette utilitaire
+      //  n'avait pas de sens comptable pour un pur producteur)
+      { nom: "Machine de production", valeur: 8000 },
       // Autres : réservé aux investissements via Cartes Décision
       { nom: "Autres Immobilisations", valeur: 0 },
       // STOCKS
@@ -96,8 +132,23 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#7b2d8b",
     icon: "🚚",
     type: "Logistique",
+    secteurActivite: "service",
     specialite: "🚀 Livraison rapide",
     reducDelaiPaiement: true, // Spécialité : délai d'encaissement réduit de 1 (TPE → immédiat, Grand Compte → C+1)
+    // B8-C — Modèle de valeur : prestataire de transport
+    modeleValeur: {
+      mode: "service",
+      ceQueJeVends: "Des prestations de transport et de livraison",
+      dOuVientLaValeur: "Le temps de conduite, le carburant et le tri des colis",
+      goulotPrincipal: "Capacité de la flotte et disponibilité des chauffeurs",
+      coutVariable: 1000,
+      libelleExecution: "Carburant et sous-traitance mobilisés pour la course",
+      libelleContrepartie: "Facture transporteur / carburant à régler au prochain trimestre",
+    },
+    // B8-C — Demande passive : flux récurrent de livraisons courtes
+    clientsPassifsParTour: [
+      { typeClient: "particulier", nbParTour: 1, source: "Livraisons courtes récurrentes" },
+    ],
     actifs: [
       // IMMOBILISATIONS
       // Camion : poids lourd → vie 10T (≈ 2,5 ans)
@@ -106,7 +157,9 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Machine", valeur: 6000 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
-      // STOCKS
+      // STOCKS — buffer de consommables (carburant, petites pièces). En mode
+      // service, ce poste n'est pas consommé par le cycle de vente (coût
+      // variable = servicesExterieurs/dettes).
       { nom: "Stocks", valeur: 4000 },
       // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
       { nom: "Trésorerie", valeur: 10000 },
@@ -130,8 +183,25 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#1565c0",
     icon: "🏪",
     type: "Commerce",
+    secteurActivite: "negoce",
     specialite: "👥 Attire les particuliers",
-    clientGratuitParTour: true, // Spécialité : +1 client Particulier automatique par tour
+    // B8-C — Modèle de valeur : négoce classique
+    modeleValeur: {
+      mode: "negoce",
+      ceQueJeVends: "Des marchandises revendues en boutique et en ligne",
+      dOuVientLaValeur: "L'écart entre le prix d'achat fournisseur et le prix de vente",
+      goulotPrincipal: "Réassort des stocks et rotation du linéaire",
+      coutVariable: 1000,
+      libelleExecution: "Marchandise livrée au client",
+      libelleContrepartie: "Coût de la marchandise vendue (CMV) enregistré en charges",
+    },
+    // B8-C — Demande passive : trafic boutique & web.
+    // Migration propre de `clientGratuitParTour` vers le mécanisme unifié.
+    // Les anciennes parties sauvegardées avec `clientGratuitParTour: true`
+    // restent compatibles : `genererClientsSpecialite` cumule les deux sources.
+    clientsPassifsParTour: [
+      { typeClient: "particulier", nbParTour: 1, source: "Trafic boutique et web" },
+    ],
     actifs: [
       // IMMOBILISATIONS
       // Showroom : agencement commercial → vie 8T (≈ 2 ans)
@@ -165,11 +235,26 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#2e7d32",
     icon: "💡",
     type: "Innovation",
+    secteurActivite: "service",
     specialite: "💎 Revenus de licence",
     // Spécialité active : +1 000 € produitsFinanciers, +1 000 € trésorerie par trimestre
     effetsPassifs: [
       { poste: "produitsFinanciers", delta: 1000 },
       { poste: "tresorerie", delta: 1000 },
+    ],
+    // B8-C — Modèle de valeur : prestataire de services d'innovation
+    modeleValeur: {
+      mode: "service",
+      ceQueJeVends: "Des missions de conseil et des licences logicielles",
+      dOuVientLaValeur: "Le savoir-faire de l'équipe et la propriété intellectuelle (brevets)",
+      goulotPrincipal: "Disponibilité des ingénieurs et qualité du portefeuille de brevets",
+      coutVariable: 1000,
+      libelleExecution: "Temps ingénieur et infrastructure cloud mobilisés pour la mission",
+      libelleContrepartie: "Facture sous-traitance / cloud à régler au prochain trimestre",
+    },
+    // B8-C — Demande passive : abonnements individuels (particuliers payants)
+    clientsPassifsParTour: [
+      { typeClient: "particulier", nbParTour: 1, source: "Abonnements individuels" },
     ],
     actifs: [
       // IMMOBILISATIONS
@@ -179,7 +264,8 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Matériel informatique", valeur: 5000 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
-      // STOCKS
+      // STOCKS — buffer de consommables. En mode service, ce poste n'est
+      // pas consommé par le cycle de vente (coût variable = servicesExterieurs/dettes).
       { nom: "Stocks", valeur: 4000 },
       // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
       { nom: "Trésorerie", valeur: 10000 },

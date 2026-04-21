@@ -15,6 +15,10 @@ import {
   investirCartePersonnelle,
   calculerCapaciteLogistique,
   vendreImmobilisation,
+  // B8-D : helpers B8 pour les tests par mode + flux passifs
+  getModeleValeurEntreprise,
+  genererClientsDepuisFlux,
+  genererClientsSpecialite,
 } from "../src/engine";
 import {
   verifierEquilibre,
@@ -41,7 +45,8 @@ describe("Création joueur", () => {
     const joueur = joueurOrange();
     const { equilibre, totalActif } = verifierEquilibre(joueur);
     // Tâche 25 : trésorerie +2 000 € (8 000 → 10 000) → total 30 000 €
-    // Belvaux : Entrepôt(8000) + Camionnette(8000) + Stocks(4000) + Tréso(10000) = 30000
+    // Belvaux : Entrepôt(8000) + Machine de production(8000) + Stocks(4000) + Tréso(10000) = 30000
+    // (Camionnette renommée en "Machine de production" en B8-C)
     expect(totalActif).toBe(30000);
     expect(equilibre).toBe(true);
   });
@@ -115,7 +120,10 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
 
 describe("Vente — Client Particulier (paiement immédiat)", () => {
   test("4 écritures correctes : Ventes+2000, Stocks−1000, CMV+1000, Tréso+2000", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // B8-D : passé de "Manufacture Belvaux" (production) → "Azura Commerce"
+    // (négoce) pour préserver le sens comptable du test (CMV via `achats`).
+    // En production, la contrepartie est `productionStockée −`, pas `achats +`.
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
 
@@ -136,7 +144,8 @@ describe("Vente — Client Particulier (paiement immédiat)", () => {
 
 describe("Vente — Client TPE (paiement différé C+1)", () => {
   test("4 écritures correctes : Ventes+3000, Stocks−1000, CMV+1000, Créances C+1 +3000", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // B8-D : Azura (négoce) pour tester explicitement la branche CMV via `achats`.
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-tpe")!;
 
@@ -153,7 +162,8 @@ describe("Vente — Client TPE (paiement différé C+1)", () => {
 
 describe("Vente — Client Grand Compte (paiement différé C+2)", () => {
   test("4 écritures : Ventes+4000, Stocks−1000, CMV+1000, Créances C+2 +4000", () => {
-    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // B8-D : Azura (négoce) pour tester explicitement la branche CMV via `achats`.
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
     const joueur = etat.joueurs[0];
     const client = CARTES_CLIENTS.find((c) => c.id === "client-grand-compte")!;
 
@@ -196,24 +206,41 @@ describe("Avancement des créances", () => {
 // ─── 7. PAIEMENT COMMERCIAUX ─────────────────────────────────
 
 describe("Paiement des commerciaux", () => {
-  test("calculerCoutCommerciaux = 0 pour Commercial Junior (salaire prélevé à l'embauche via effetsImmédiats)", () => {
+  test("calculerCoutCommerciaux = 1000 pour un joueur avec le Commercial Junior par défaut", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
-    // commercial-junior-dec a effetsRecurrents: [] — le salaire est prélevé une seule fois
-    // via effetsImmédiats lors du recrutement, pas chaque trimestre via calculerCoutCommerciaux
+    // B8-D : `creerJoueur` embauche par défaut un Commercial Junior (cf. engine.ts ligne 288).
+    // `calculerCoutCommerciaux` additionne les `effetsImmédiats.chargesPersonnel` de
+    // chaque carte commerciale active — Junior = 1 000 € / trim.
     const cout = calculerCoutCommerciaux(joueur);
-    expect(cout).toBe(0);
+    expect(cout).toBe(1000);
+  });
+
+  test("calculerCoutCommerciaux = 0 si aucun commercial actif", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    // Retirer tous les commerciaux actifs → coût 0
+    joueur.cartesActives = joueur.cartesActives.filter((c) => c.categorie !== "commercial");
+    expect(calculerCoutCommerciaux(joueur)).toBe(0);
   });
 });
 
 // ─── 8. GÉNÉRATION CLIENTS PAR COMMERCIAUX ───────────────────
 
 describe("Génération clients par commerciaux", () => {
-  test("Un Commercial Junior génère 1 Client Particulier par tour", () => {
+  test("Un Commercial Junior génère 2 Clients Particuliers par tour (nbClientsParTour = 2)", () => {
+    // B8-D : `creerJoueur` embauche un Junior par défaut (cf. engine.ts ligne 288) ;
+    // la carte `commercial-junior-dec` a `nbClientsParTour: 2` (cf. data/cartes.ts).
     const joueur = joueurOrange();
     const clients = genererClientsParCommerciaux(joueur);
-    expect(clients.length).toBe(1);
-    expect(clients[0].id).toBe("client-particulier");
+    expect(clients).toHaveLength(2);
+    expect(clients.every((c) => c.id === "client-particulier")).toBe(true);
+  });
+
+  test("Sans commercial actif, aucun client n'est généré", () => {
+    const joueur = joueurOrange();
+    joueur.cartesActives = joueur.cartesActives.filter((c) => c.categorie !== "commercial");
+    expect(genererClientsParCommerciaux(joueur)).toHaveLength(0);
   });
 });
 
@@ -373,15 +400,15 @@ describe("investirCartePersonnelle — prérequis", () => {
 describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", () => {
   test("Plus-value : prix de cession > VNC → +revenusExceptionnels", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
-    // Belvaux : Camionnette VNC = 8 000 €
-    const result = vendreImmobilisation(etat, 0, "Camionnette", 10000);
+    // Belvaux : Machine de production VNC = 8 000 € (renommée en B8-C, ex-« Camionnette »)
+    const result = vendreImmobilisation(etat, 0, "Machine de production", 10000);
     expect(result.succes).toBe(true);
 
     const joueur = etat.joueurs[0];
     // Tâche 25 : trésorerie initiale 10 000 € + cession 10 000 € = 20 000 €
     expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(20000);
-    // Camionnette retirée du bilan
-    expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
+    // Machine de production retirée du bilan
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Machine de production")).toBeUndefined();
     // Plus-value de 2 000 € en revenus exceptionnels
     expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(2000);
     expect(joueur.compteResultat.charges.chargesExceptionnelles).toBe(0);
@@ -405,13 +432,13 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
 
   test("Cession à la VNC exacte : aucune plus ni moins-value", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
-    const result = vendreImmobilisation(etat, 0, "Camionnette", 8000);
+    const result = vendreImmobilisation(etat, 0, "Machine de production", 8000);
     expect(result.succes).toBe(true);
 
     const joueur = etat.joueurs[0];
     expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(0);
     expect(joueur.compteResultat.charges.chargesExceptionnelles).toBe(0);
-    expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Machine de production")).toBeUndefined();
   });
 
   test("Refuse la vente de \"Autres Immobilisations\" (poste agrégé)", () => {
@@ -430,7 +457,7 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
 
   test("Refuse un prix de cession négatif", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
-    const result = vendreImmobilisation(etat, 0, "Camionnette", -1000);
+    const result = vendreImmobilisation(etat, 0, "Machine de production", -1000);
     expect(result.succes).toBe(false);
     expect(result.messageErreur).toContain("positif");
   });
@@ -439,14 +466,163 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     // Forcer la VNC à zéro (simulation amortissement total)
-    const camionnette = joueur.bilan.actifs.find((a) => a.nom === "Camionnette")!;
-    camionnette.valeur = 0;
+    const machine = joueur.bilan.actifs.find((a) => a.nom === "Machine de production")!;
+    machine.valeur = 0;
     const tresoAvant = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
 
-    const result = vendreImmobilisation(etat, 0, "Camionnette", 1500);
+    const result = vendreImmobilisation(etat, 0, "Machine de production", 1500);
     expect(result.succes).toBe(true);
     expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant + 1500);
     expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(1500);
-    expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Machine de production")).toBeUndefined();
+  });
+});
+
+// ─── 12. APPLIQUER CARTE CLIENT — COUVERTURE PAR MODE (B8-D) ─
+// Vérifie que chaque mode (négoce / production / service) enregistre
+// les écritures comptables attendues. Source : engine.ts — branches
+// "ACTE 3 & 4 — Réalisation de la valeur selon le modèle".
+
+describe("appliquerCarteClient — couverture par modèle de valeur", () => {
+  const CLIENT_PARTICULIER = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
+
+  test("Négoce (Azura) : stocks − / achats + du coût variable", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const joueur = etat.joueurs[0];
+    const modele = getModeleValeurEntreprise(joueur.entreprise);
+    expect(modele.mode).toBe("negoce");
+
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur;
+    const achatsAvant = joueur.compteResultat.charges.achats;
+    const productionStockeeAvant = joueur.compteResultat.produits.productionStockee;
+    const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
+
+    const result = appliquerCarteClient(etat, 0, CLIENT_PARTICULIER);
+    expect(result.succes).toBe(true);
+
+    // Acte 3 : stocks − coutVariable
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur).toBe(stocksAvant - modele.coutVariable);
+    // Acte 4 : achats (CMV) + coutVariable
+    expect(joueur.compteResultat.charges.achats).toBe(achatsAvant + modele.coutVariable);
+    // Les autres branches (production, service) ne sont PAS empruntées
+    expect(joueur.compteResultat.produits.productionStockee).toBe(productionStockeeAvant);
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant);
+  });
+
+  test("Production (Belvaux) : stocks − / productionStockée − (Option A, PCG)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    const modele = getModeleValeurEntreprise(joueur.entreprise);
+    expect(modele.mode).toBe("production");
+
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur;
+    const productionStockeeAvant = joueur.compteResultat.produits.productionStockee;
+    const achatsAvant = joueur.compteResultat.charges.achats;
+    const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
+
+    const result = appliquerCarteClient(etat, 0, CLIENT_PARTICULIER);
+    expect(result.succes).toBe(true);
+
+    // Acte 3 : stocks − coutVariable (déstockage du produit fini)
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur).toBe(stocksAvant - modele.coutVariable);
+    // Acte 4 : productionStockée − coutVariable (variation négative, produit signé)
+    expect(joueur.compteResultat.produits.productionStockee).toBe(productionStockeeAvant - modele.coutVariable);
+    // Les autres branches (négoce achats, service) ne sont PAS empruntées
+    expect(joueur.compteResultat.charges.achats).toBe(achatsAvant);
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant);
+  });
+
+  test("Service (Synergia) : servicesExterieurs + / dettes + du coût variable", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    const modele = getModeleValeurEntreprise(joueur.entreprise);
+    expect(modele.mode).toBe("service");
+
+    const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
+    const dettesAvant = joueur.bilan.dettes;
+    const stocksActif = joueur.bilan.actifs.find((a) => a.nom === "Stocks");
+    const stocksAvant = stocksActif ? stocksActif.valeur : 0;
+    const achatsAvant = joueur.compteResultat.charges.achats;
+    const productionStockeeAvant = joueur.compteResultat.produits.productionStockee;
+
+    const result = appliquerCarteClient(etat, 0, CLIENT_PARTICULIER);
+    expect(result.succes).toBe(true);
+
+    // Acte 3 : servicesExterieurs + coutVariable (sous-traitance, consommables, etc.)
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant + modele.coutVariable);
+    // Acte 4 : dettes + coutVariable (facture fournisseur à régler)
+    expect(joueur.bilan.dettes).toBe(dettesAvant + modele.coutVariable);
+    // Les autres branches (stocks, achats, productionStockée) ne sont PAS empruntées
+    const stocksActifApres = joueur.bilan.actifs.find((a) => a.nom === "Stocks");
+    expect(stocksActifApres ? stocksActifApres.valeur : 0).toBe(stocksAvant);
+    expect(joueur.compteResultat.charges.achats).toBe(achatsAvant);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(productionStockeeAvant);
+  });
+
+  test("Service (Synergia) : la marge brute n'est plus 100 % (régression bug B8)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    const modele = getModeleValeurEntreprise(joueur.entreprise);
+
+    const result = appliquerCarteClient(etat, 0, CLIENT_PARTICULIER);
+    expect(result.succes).toBe(true);
+
+    // Avant B8 : ventes +2000 / aucun coût → marge = 100 %.
+    // Après B8 : ventes +2000 / servicesExterieurs +coutVariable → marge < 100 %.
+    const ventes = joueur.compteResultat.produits.ventes;
+    const cout = joueur.compteResultat.charges.servicesExterieurs;
+    expect(ventes).toBeGreaterThan(0);
+    expect(cout).toBe(modele.coutVariable);
+    expect(cout).toBeGreaterThan(0);
+    expect(cout / ventes).toBeLessThan(1);
+  });
+});
+
+// ─── 13. FLUX CLIENTS PASSIFS (clientsPassifsParTour) — B8-D ──
+// Vérifie que le nouveau mécanisme unifié `clientsPassifsParTour`
+// est correctement câblé via `genererClientsDepuisFlux` et qu'il
+// remplace proprement l'ancien flag `clientGratuitParTour` côté Azura.
+
+describe("genererClientsDepuisFlux & clientsPassifsParTour", () => {
+  test("genererClientsDepuisFlux retourne [] pour un flux undefined ou vide", () => {
+    expect(genererClientsDepuisFlux(undefined)).toEqual([]);
+    expect(genererClientsDepuisFlux([])).toEqual([]);
+  });
+
+  test("genererClientsDepuisFlux mappe chaque type vers la bonne carte CARTES_CLIENTS", () => {
+    const clients = genererClientsDepuisFlux([
+      { typeClient: "particulier", nbParTour: 2, source: "test" },
+      { typeClient: "tpe", nbParTour: 1, source: "test" },
+      { typeClient: "grand_compte", nbParTour: 1, source: "test" },
+    ]);
+    expect(clients).toHaveLength(4);
+    expect(clients.filter((c) => c.id === "client-particulier")).toHaveLength(2);
+    expect(clients.filter((c) => c.id === "client-tpe")).toHaveLength(1);
+    expect(clients.filter((c) => c.id === "client-grand-compte")).toHaveLength(1);
+  });
+
+  test("Azura : 1 Particulier/tour via clientsPassifsParTour (migration propre de clientGratuitParTour)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const clients = genererClientsSpecialite(etat.joueurs[0]);
+    const particuliers = clients.filter((c) => c.id === "client-particulier");
+    expect(particuliers).toHaveLength(1);
+  });
+
+  test("Véloce : 1 Particulier/tour via clientsPassifsParTour (livraisons courtes récurrentes)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const clients = genererClientsSpecialite(etat.joueurs[0]);
+    expect(clients.filter((c) => c.id === "client-particulier")).toHaveLength(1);
+  });
+
+  test("Synergia : 1 Particulier/tour via clientsPassifsParTour (abonnements individuels)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const clients = genererClientsSpecialite(etat.joueurs[0]);
+    expect(clients.filter((c) => c.id === "client-particulier")).toHaveLength(1);
+  });
+
+  test("Belvaux : aucun flux passif (la production ne capte pas de demande sans action)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const clients = genererClientsSpecialite(etat.joueurs[0]);
+    expect(clients).toHaveLength(0);
   });
 });

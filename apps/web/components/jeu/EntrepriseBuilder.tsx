@@ -171,6 +171,9 @@ export default function EntrepriseBuilder({
     const template: EntrepriseTemplate = {
       nom: nomEntreprise.trim(),
       type: selectedTemplate.type,
+      // B8-A : `secteurActivite` est obligatoire — on le propage du template source
+      // pour que le builder custom conserve la sémantique métier (négoce / production / service).
+      secteurActivite: selectedTemplate.secteurActivite,
       couleur: couleur || selectedTemplate.couleur,
       icon: icon || selectedTemplate.icon,
       specialite: specialite || selectedTemplate.specialite,
@@ -180,6 +183,15 @@ export default function EntrepriseBuilder({
       cartesLogistiquesDepart: selectedTemplate.cartesLogistiquesDepart,
       cartesLogistiquesDisponibles:
         selectedTemplate.cartesLogistiquesDisponibles,
+      // B8-C : propager modeleValeur + clientsPassifsParTour si le template source
+      // les définit — sinon les helpers moteur (getModeleValeurEntreprise) retombent
+      // sur le défaut par secteur.
+      ...(selectedTemplate.modeleValeur
+        ? { modeleValeur: selectedTemplate.modeleValeur }
+        : {}),
+      ...(selectedTemplate.clientsPassifsParTour
+        ? { clientsPassifsParTour: selectedTemplate.clientsPassifsParTour }
+        : {}),
       actifs: [
         { nom: immo1Nom, valeur: immo1Valeur * 1000 },
         { nom: immo2Nom, valeur: immo2Valeur * 1000 },

@@ -1,4 +1,66 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-19
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-21
+
+---
+
+## Tâche B8 : Palier 1 moteurs métier — fusion codex + main — 2026-04-21 🚧
+
+### Déclencheur
+Après test-play post-B7, Pierre a diagnostiqué que le moteur confond **demande / capacité / réalisation de valeur** : les 4 entreprises restent cosmétiques autour d'un cycle unique « commerciaux → clients → stock 1000 € ». Les services (Véloce, Synergia) sortent à marge brute 100 % faute de coût variable, ce qui fausse la pédagogie.
+
+### Comparaison avec le repo `jedevienspatron-codex` (Tâche 23, déjà implémentée là-bas)
+Le codex a déjà introduit `ModeleValeurEntreprise` + `FluxClientsEntreprise` + branchement stock/service dans `appliquerCarteClient`. Mais il ne contient pas les améliorations main : T25 (capital +2 k), structure 8 étapes, fin d'exercice B6, fixes B7-A/B/C/D.
+
+**Décision Pierre 2026-04-21 :** fusion « meilleur des 2 ».
+
+### Trois arbitrages clés tranchés par Pierre
+| # | Question | Décision |
+|---|---|---|
+| 1 | Comptabilité vente **Production** (Belvaux) | **Option A** — `stocks − / productionStockee −` (PCG industriel juste). Pas de CMV via achats. |
+| 2 | Noms d'immos (Machine de production / Plateforme de dispatch / e-commerce / logicielle) | **Oui**, avec capacité inchangée (le matching `CAPACITE_IMMOBILISATION` est par id de carte, pas par nom d'immo — donc migration transparente). |
+| 3 | Carnet de commandes T1 (`clientsDeDepart`) | **Non réactivé** — champ et helper gardés dans le code, mais tableaux vides dans `entreprises.ts` et fallback vide dans `creerJoueur`. Évite de regonfler le T1 artificiellement. |
+
+### Ce qu'on prend de codex
+- Types `ModeleValeurEntreprise` (étendu à 3 modes) + `FluxClientsEntreprise`.
+- Helpers `getModeleValeurEntreprise` (avec fallback safe) + `genererClientsDepuisFlux`.
+- Réécriture `appliquerCarteClient` avec switch à 3 modes.
+- `clientsPassifsParTour` (demande récurrente hors commerciaux) sur Azura / Véloce / Synergia — **pas Belvaux** (Belvaux a déjà sa spécialité +1000 productionStockee/stocks, pas besoin de demande passive).
+- Noms d'immos pédagogiques + libellés d'écriture personnalisés par entreprise.
+
+### Ce qu'on conserve de main
+- Bilans 30/30/30/27 (T25 vérifiée).
+- Structure 8 étapes (T25.C).
+- Fin d'exercice B6 (IS + réserve + dividendes).
+- Fixes B7-A (anti-doublon), B7-B (Annuler), B7-C (bilan équilibré si perte > capitaux), B7-D (glossaire report à nouveau).
+- Les 148/148 tests moteur existants.
+
+### Sous-tâches
+| # | Contenu | Statut |
+|---|---|---|
+| **B8-A** | types.ts — `ModeleValeurEntreprise` (3 modes), `FluxClientsEntreprise`, champs optionnels sur `EntrepriseTemplate` + `Joueur.entreprise`. | ✅ |
+| **B8-B** | engine.ts — helpers + `appliquerCarteClient` switch 3 branches + `genererClientsSpecialite` lit `clientsPassifsParTour` + `creerJoueur` expose `modeleValeur` + fallback `clientsATrait = []`. | 🟡 _Partiel_ : switch 3 modes dans `appliquerCarteClient` + service bloque `appliquerAchatMarchandises` + propagation `secteurActivite` / `capaciteBase` dans `creerJoueur`. Reste : helpers `getModeleValeurEntreprise` / `genererClientsDepuisFlux` + lecture de `clientsPassifsParTour` dans `genererClientsSpecialite`. |
+| **B8-C** | data/entreprises.ts — peupler `modeleValeur` + `clientsPassifsParTour` + renommer 2e immos (bilans inchangés). | 🟡 _Partiel_ : `secteurActivite` ajouté sur les 4 (production / service / negoce / service). Reste : `modeleValeur`, `clientsPassifsParTour`, rename immos. Les bilans main (30/30/30/27) ont été restaurés pour préserver T25. |
+| **B8-D** | Tests moteur — adapter les 2 tests vendreImmobilisation ("Camionnette" → "Machine de production") + 1 test par mode. | ✅ _2026-04-21_ : 5 refs "Camionnette" dans `vendreImmobilisation` renommées en "Machine de production". `creerJoueur` et `calculerCoutCommerciaux` ré-exportés (dette depuis `d8571b4` refermée). 3 tests par mode pour `appliquerCarteClient` (négoce / production / service). Test régression "marge brute service < 100 %". 6 tests pour `clientsPassifsParTour` (mapping + câblage via `genererClientsSpecialite` pour Azura / Véloce / Synergia ; absence pour Belvaux). Adaptations : tests "4 écritures" passés à Azura (négoce) pour préserver la sémantique CMV ; tests commerciaux mis à jour (coût Junior = 1 000 €, nbClients = 2). **199 / 199 tests verts.** |
+| **B8-E** | UI CompanyIntro — ajouter les 4 nouveaux noms dans `IMMO_DESCRIPTIONS`, afficher `modeleValeur.ceQueJeVends` / `dOuVientLaValeur` / `goulotPrincipal`. Bandeau "pas besoin d'acheter" pour mode service dans `LeftPanel` étape Achats. | 🟡 _Partiel_ : bandeau service ajouté dans `LeftPanel`. Reste : `IMMO_DESCRIPTIONS` (dépend du rename immos en B8-C) + pitch métier dans CompanyIntro. |
+| **B8-F** | Vérif finale : `npx tsc --noEmit`, `npm test`, rebuild dist/, update lessons.md, commit signé Pierre. | ✅ _2026-04-21_ : `tsc` vert sur `packages/game-engine/src`. `jest --runInBand` → **199 / 199**. Dist reconstruit. 2 régressions TS non-TS2786 corrigées dans `apps/web` (secteurActivite manquant dans `EntrepriseBuilder.tsx` et `useGamePersistence.ts`) — conséquences directes de B8-A passées inaperçues à cause de `ignoreBuildErrors: true`. Cf. L-B8-F. Commit prêt (signé Pierre, push depuis le Mac). |
+
+#### Fixes collatéraux B8-A
+- **productionStockee peut être négatif** (PCG : variation nette des produits finis). Plancher 0 supprimé spécifiquement pour ce poste dans `appliquerDeltaPoste` (les autres produits gardent le plancher). Cela débloque la vente en mode production (Belvaux) sans casser `ventes`, `produitsFinanciers`, `revenusExceptionnels`.
+- **`appliquerCarteClient` 3 branches** : négoce (`stocks − / achats +`), production (`stocks − / productionStockee −`, Option A), service (no-op sur le stock/achats, marge brute 100 % tant que B8-B n'implémente pas `servicesExterieurs + / dettes +`).
+- **T25 préservé** : Véloce et Synergia conservent Stocks 4 000 € / Tréso 10 000 € (buffer de consommables non consommé par le cycle). Le test `tache25.test.ts` reste vert.
+
+#### Résultats B8-A
+- `npx tsc --noEmit` → exit 0.
+- `npm test --runInBand` → **148 / 148 tests passent**. Seule `engine.test.ts` échoue à la compilation, mais il s'agit de la dette de typage pré-existante depuis le commit `d8571b4` (`creerJoueur` retiré de l'API publique — documenté dans `tache25.test.ts` ligne 18). Hors scope B8-A, sera traité en B8-D.
+
+### Impacts identifiés (grep "Camionnette|Voiture|Machine|Matériel informatique")
+- `apps/web/components/jeu/CompanyIntro.tsx` — registre `IMMO_DESCRIPTIONS` à étendre.
+- `packages/game-engine/tests/engine.test.ts` — 2 tests `vendreImmobilisation("Camionnette"…)` à migrer vers "Machine de production".
+- `packages/game-engine/src/data/cartes.ts` — mention "Camionnette" dans la description de la **carte Décision** id `camionnette` → **ne pas toucher** (c'est la carte d'investissement, distincte de l'immo de départ de Belvaux).
+
+### Ce qu'on ne fait PAS dans ce palier
+- Réécriture du pipeline en étapes métier séparées.
+- Modification de la mécanique de capacité logistique (décision Pierre : « on pourra refondre plus tard la notion de capacité logistique en capacité opérationnelle, mais pas dans ce merge »).
+- Réactivation des 2 clients de départ par entreprise.
 
 ---
 

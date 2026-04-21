@@ -6,10 +6,25 @@ import {
   EtatJeu,
   TrimSnapshot,
   EntrepriseTemplate,
+  SecteurActivite,
   calculerIndicateurs,
   calculerScore,
   getTresorerie,
 } from "@jedevienspatron/game-engine";
+
+// B8-F : mapping `type` (libellé UI de l'entreprise de base) → `secteurActivite`
+// (clé technique du moteur). Utilisé uniquement pour les templates custom
+// persistés en base (Supabase) qui ne stockent pas encore `secteur_activite`.
+// Fallback "service" (le plus conservateur : marge non nulle, pas de blocage stock).
+function _deduireSecteurActivite(baseType: string | undefined): SecteurActivite {
+  switch (baseType) {
+    case "Production": return "production";
+    case "Commerce":   return "negoce";
+    case "Logistique": return "service";
+    case "Innovation": return "service";
+    default:           return "service";
+  }
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -354,6 +369,11 @@ function _convertTemplates(templates: Array<Record<string, unknown>>): Entrepris
   return templates.map((t: Record<string, unknown>) => ({
     nom: t.name as string,
     type: t.base_enterprise as string,
+    // B8-F : `secteurActivite` est obligatoire sur `EntrepriseTemplate` depuis B8-A.
+    // La table Supabase ne stocke pas encore ce champ → on le dérive du `base_enterprise`.
+    // `modeleValeur` / `clientsPassifsParTour` restent absents ici : les helpers moteur
+    // (`getModeleValeurEntreprise`) retombent sur le défaut par secteur.
+    secteurActivite: _deduireSecteurActivite(t.base_enterprise as string | undefined),
     couleur: t.couleur as string,
     icon: t.icon as string,
     specialite: (t.specialite_label as string) || "",

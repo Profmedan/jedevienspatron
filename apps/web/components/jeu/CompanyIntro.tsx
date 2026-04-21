@@ -2,26 +2,38 @@
 
 import { useState } from "react";
 import {
-  Download, Upload, Lightbulb, Layers, Package, Wallet,
+  Download, Upload, Lightbulb, Layers, Package, Wallet, Target,
 } from "lucide-react";
-import { Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron/game-engine";
+import {
+  Joueur,
+  getTotalActif,
+  getTotalPassif,
+  getModeleValeurEntreprise,
+} from "@jedevienspatron/game-engine";
 
 interface CompanyIntroProps {
   joueurs: Joueur[];
   onStart: () => void;
 }
 
-/** Descriptions pédagogiques par nom d'immobilisation (durée de vie en trimestres) */
+/**
+ * Descriptions pédagogiques par nom d'immobilisation (durée de vie en trimestres).
+ * Mis à jour en B8-E pour refléter les renommages de B8-C :
+ *   • "Machine de production" (Belvaux) remplace "Camionnette"
+ * Les clés "Camionnette" etc. restent présentes pour la rétrocompatibilité
+ * des saves antérieures (ancien bilan Belvaux ou autres entreprises exotiques).
+ */
 const IMMO_DESCRIPTIONS: Record<string, { description: string; duree: number; icon: string }> = {
-  "Entrepôt":               { description: "Outil de production industrielle",       duree: 6, icon: "🏭" },
-  "Camionnette":            { description: "Véhicule de livraison utilitaire",        duree: 2, icon: "🚐" },
-  "Camion":                 { description: "Poids lourd de transport logistique",     duree: 6, icon: "🚛" },
-  "Machine":                { description: "Équipement de manutention intensif",      duree: 2, icon: "⚙️" },
-  "Showroom":               { description: "Agencement de l'espace commercial",       duree: 5, icon: "🏪" },
-  "Voiture":                { description: "Véhicule de démonstration client",        duree: 3, icon: "🚗" },
-  "Brevet":                 { description: "Propriété intellectuelle (art. 39 CGI)",  duree: 5, icon: "💡" },
-  "Matériel informatique":  { description: "Serveurs et postes de travail",           duree: 3, icon: "💻" },
-  "Autres Immobilisations": { description: "Investissements futurs via Cartes Décision", duree: 0, icon: "📦" },
+  "Entrepôt":               { description: "Bâtiment industriel où sont stockés les produits finis", duree: 8, icon: "🏭" },
+  "Machine de production":  { description: "Outil de fabrication cœur de l'atelier Belvaux",         duree: 8, icon: "⚙️" },
+  "Camionnette":            { description: "Véhicule de livraison utilitaire",                        duree: 8, icon: "🚐" },
+  "Camion":                 { description: "Poids lourd de transport logistique",                     duree: 10, icon: "🚛" },
+  "Machine":                { description: "Équipement de manutention pour le tri des colis",         duree: 6, icon: "⚙️" },
+  "Showroom":               { description: "Agencement de l'espace commercial Azura",                 duree: 8, icon: "🏪" },
+  "Voiture":                { description: "Véhicule de démonstration client",                        duree: 8, icon: "🚗" },
+  "Brevet":                 { description: "Propriété intellectuelle protégeant l'innovation",        duree: 8, icon: "💡" },
+  "Matériel informatique":  { description: "Serveurs et postes de travail de l'équipe d'ingénieurs",  duree: 5, icon: "💻" },
+  "Autres Immobilisations": { description: "Investissements futurs via Cartes Décision",              duree: 0, icon: "📦" },
 };
 
 // ── Couleurs sémantiques (palette officielle) ──────────────────────────────
@@ -55,6 +67,16 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const stocks      = j.bilan.actifs.filter((a) => a.categorie === "stocks");
   const immos       = j.bilan.actifs.filter((a) => a.categorie === "immobilisations" && a.valeur > 0);
   const totalImmos  = immos.reduce((s, a) => s + a.valeur, 0);
+
+  // B8-E — Pitch métier : lecture du modèle de valeur (triptyque pédagogique).
+  // Fallback par secteur si l'entreprise n'expose pas de `modeleValeur` explicite
+  // (rétrocompat saves antérieures à B8).
+  const modeleValeur = getModeleValeurEntreprise(j.entreprise);
+  const MODE_LABEL: Record<typeof modeleValeur.mode, string> = {
+    negoce: "Négoce",
+    production: "Production",
+    service: "Service",
+  };
 
   const steps = [
     /* ── Étape 0 : D'où vient l'argent ── */
@@ -219,6 +241,79 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
         </div>
       </div>
     </div>,
+
+    /* ── Étape 2 : Mon métier — Pitch métier issu du modeleValeur (B8-E) ── */
+    <div key={2} className="space-y-4">
+      <h2 className="flex items-center gap-2 font-semibold text-white text-base">
+        <Target className="h-4 w-4 shrink-0" aria-hidden="true" />
+        Mon métier
+      </h2>
+      <p className="text-slate-300 text-sm leading-relaxed">
+        Avant de commencer, un rappel sur ce que votre entreprise
+        <span className="font-semibold text-white"> vend réellement</span> et
+        d&apos;où vient sa <span className="font-semibold text-white">marge brute</span>.
+        Chaque mode de création de valeur impacte la comptabilisation des ventes
+        différemment.
+      </p>
+
+      {/* Bloc MÉTIER */}
+      <div className="rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: C.capitaux }}>
+            <Target className="h-3 w-3" aria-hidden="true" />
+            Modèle de création de valeur
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider rounded-full border border-white/15 px-2 py-0.5 text-slate-300">
+            Mode : {MODE_LABEL[modeleValeur.mode]}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Ce que je vends</div>
+            <div className="text-sm text-white mt-0.5">{modeleValeur.ceQueJeVends}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">D&apos;où vient la valeur</div>
+            <div className="text-sm text-white mt-0.5">{modeleValeur.dOuVientLaValeur}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Mon goulot principal</div>
+            <div className="text-sm text-white mt-0.5">{modeleValeur.goulotPrincipal}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Note pédagogique — impact comptable par mode */}
+      <div className="rounded-xl border border-white/10 px-4 py-3 text-xs text-slate-300 leading-relaxed space-y-1"
+           style={{ backgroundColor: "rgba(242,206,92,0.06)" }}>
+        <div className="flex items-center gap-1.5 font-semibold" style={{ color: C.capitaux }}>
+          <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
+          Impact sur votre compte de résultat
+        </div>
+        {modeleValeur.mode === "negoce" && (
+          <p>
+            À chaque vente : <strong className="text-white">Stocks −{fmt(modeleValeur.coutVariable)}</strong> et
+            <strong className="text-white"> Achats (CMV) +{fmt(modeleValeur.coutVariable)}</strong>.
+            Votre marge brute dépend de votre capacité à négocier un prix d&apos;achat bas.
+          </p>
+        )}
+        {modeleValeur.mode === "production" && (
+          <p>
+            À chaque vente : <strong className="text-white">Stocks −{fmt(modeleValeur.coutVariable)}</strong> et
+            <strong className="text-white"> Production stockée −{fmt(modeleValeur.coutVariable)}</strong>.
+            Vous vendez ce que vous avez produit : gérer la capacité de production est vital.
+          </p>
+        )}
+        {modeleValeur.mode === "service" && (
+          <p>
+            À chaque vente : <strong className="text-white">Services extérieurs +{fmt(modeleValeur.coutVariable)}</strong> et
+            <strong className="text-white"> Dettes fournisseurs +{fmt(modeleValeur.coutVariable)}</strong>.
+            Vous mobilisez du carburant, de la sous-traitance ou du cloud pour exécuter la mission.
+          </p>
+        )}
+      </div>
+    </div>,
   ];
 
   return (
@@ -247,7 +342,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
 
         {/* Indicateur de progression */}
         <div className="flex gap-2 justify-center p-3 border-b border-white/10 bg-slate-950/50">
-          {[0, 1].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div
               key={i}
               className={`h-1.5 w-8 rounded-full transition-all ${
