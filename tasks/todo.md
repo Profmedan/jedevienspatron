@@ -1,4 +1,4 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-21
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-23
 
 ---
 
@@ -79,6 +79,213 @@ Fusion 0 (ancien charges fixes) + 5 (ancien effets récurrents) → nouvelle fon
 **Nettoyage deferred** : les deux fichiers legacy `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` contiennent encore le vieil `EtapeTour = 0..8` et un vieil `ETAPE_INFO` 9 entrées, mais aucun code ne les importe (dead code). À supprimer dans une tâche de nettoyage séparée pour garder ce commit focalisé sur le réordonnancement.
 
 **Partie manuelle** : à exécuter dans la tâche #21 Phase 4 (smoke Belvaux T1–T3 + Synergia T1) par Pierre — non bloquant pour le commit car tous les indices numériques ont été vérifiés par `tsc`.
+
+---
+
+## Tâche 24 : Refonte concrète des 4 entreprises + 8 étapes métier (B9) — 2026-04-23 🚧
+
+### Contexte
+Le chantier B8 a commencé à différencier les entreprises au niveau de la vente et de la présentation métier, mais le cycle de trimestre reste encore trop homogène. En particulier :
+- l'étape « achats de marchandises » ne raconte pas juste le métier de Véloce et Synergia ;
+- Belvaux ne vit pas encore clairement le sous-cycle **matière → production → stock → vente** ;
+- les commerciaux restent perçus comme le moteur universel, alors qu'ils ne devraient être qu'un levier de demande parmi d'autres.
+
+Pierre veut une refonte **concrète** des 4 entreprises et des 8 étapes visibles du jeu, sans simple renommage cosmétique.
+
+### Vérification pré-B9 (2026-04-23) — constat
+Après T25.C-RESTART, un `grep` systématique a confirmé que **toutes les tâches B8 marquées `completed` dans la todo-list n'ont JAMAIS été committées sur `main`** : `modeleValeur`, `ModeleValeurEntreprise`, `FluxClientsEntreprise`, `clientsPassifsParTour` retournent **zéro résultat** dans `packages/` et `apps/web/`. `appliquerCarteClient` utilise encore `PRIX_UNITAIRE_MARCHANDISE` en dur (CMV uniforme pour toutes les entreprises). `CompanyIntro.tsx` ne mentionne aucun des 4 noms d'entreprises.
+
+Conséquence : B9 absorbe l'intégralité des B8-A/B/C/E (types + polymorphisme vente + data entreprises + UI CompanyIntro) en plus de la refonte du cycle. Cf. leçon L-T25R-2 (statut *completed* ≠ commit sur `main`).
+
+### Décisions prises (2026-04-23, validées par Pierre)
+
+1. **Option B retenue** : on renumérote le cycle en 8 étapes visibles B9 (insertion de « Réalisation métier » en position 3, décalage VENTES→4 DECISION→5 EVENEMENT→6, fusion narrative CLOTURE+BILAN en étape 7). Coût assumé : deuxième migration, `SAVE_VERSION 2→3`, remap `useGameFlow` + modales + tests. Motif : Belvaux DOIT avoir une étape visible de fabrication avant vente ; sinon dette pédagogique permanente.
+2. **Moteur clôture/bilan séparés** : `appliquerClotureTrimestre()` reste distinct de la vérification d'équilibre final. Côté UI, étape 7 narrée comme « deux temps pédagogiques » (clôture puis bilan) mais moteur fait deux passes séquentielles. L'invariant d'équilibre est vérifié APRÈS toutes les écritures de clôture, jamais pendant.
+3. **B9-E absorbe le polymorphisme vente complet** (B8-A + B8-B + B8-C absents de `main`).
+4. **Azura étape 3 a une vraie écriture comptable** — pas de checkpoint muet. Choix pédagogique de Pierre : l'écriture est le cœur de l'apprentissage. Format retenu : coût de canal / distribution / mise en vente, **montant fixe 300 €/trimestre** (≈ 15 % de la marge brute moyenne Azura).
+5. **B9-B découpé V1/V2** : V1 = renommage « Développement commercial » + texte pédagogique (zéro mécanique) ; V2 = vraies sources de demande (trafic, contrats, réputation) sur une session distincte.
+6. **Belvaux étape 3 — double écriture assumée** : consommation matière (D `achats` / C `stocks` matière) enchaînée avec constat de production (D `stocks` produits finis / C `productionStockee`). Densité comptable accrue mais fidélité PCG préservée.
+7. **Véloce & Synergia — en-cours de production de services** : à l'étape 3, la prestation crée un actif « en-cours » (réutilisation de la catégorie `stocks` avec un nom dédié) contre-partie `productionStockee`. À l'étape 4, l'en-cours est extourné au moment de la facturation. Cela préserve le principe de partie double à toutes les étapes et enseigne la notion d'en-cours de production (compte PCG 34 simplifié).
+
+### Principe de partie double — invariant non négociable
+Chaque action métier = au moins une écriture Débit + une écriture Crédit de montants égaux. Aucune étape ne doit produire un mouvement unilatéral. Le bilan est vérifié équilibré (Actif = Passif) après chaque étape complète. C'est le cœur de l'apprentissage et l'argument N°1 pour rejeter toute simplification qui casserait cet invariant.
+
+### Cycle cible B9 (Option B, renumérotation confirmée)
+
+| Idx | Nom visible (UI) | Polymorphe ? | Moteur |
+|---|---|---|---|
+| 0 | Encaissements & règlements | non | commun (avancement créances + échéances dettes) |
+| 1 | Développement commercial | V1 non / V2 oui | commun V1 (paiement commerciaux + clients générés) ; V2 multi-sources |
+| 2 | Ressources & préparation | **OUI** | branche par `modeEconomique` |
+| 3 | Réalisation métier | **OUI** | branche par `modeEconomique` |
+| 4 | Facturation & ventes | **OUI** | branche par `modeEconomique` |
+| 5 | Décision du dirigeant | non | commun (recrutement 5a + investissement 5b) |
+| 6 | Événement & ajustement | non | commun (pioche événement + application) |
+| 7 | Clôture & bilan | non | 2 passes moteur : (7a) `appliquerClotureTrimestre` puis (7b) vérif équilibre + affectation résultat + IS |
+
+### B9-A.1 — Tableau d'écritures cibles (4 entreprises × 3 étapes polymorphes)
+
+**Légende** :
+- D = Débit (emploi) / C = Crédit (ressource)
+- M, V, Q, P, S, R, T, E, D_canal = montants à calibrer dans les sous-tâches B9-C/D (pas dans ce tableau)
+- Tous les postes listés existent déjà dans les types moteur — aucun ajout de poste comptable requis
+
+| Entreprise | Étape 2 — Ressources & préparation | Étape 3 — Réalisation métier | Étape 4 — Facturation & ventes |
+|---|---|---|---|
+| **Belvaux** (production) | **Achat matière première (1 écriture double)**<br>D `stocks` (Matière 1ère) +M<br>C `tresorerie` −M *(ou `dettes` +M si crédit fournisseur)* | **Production du fini (2 écritures doubles enchaînées)**<br>**a.** D `achats` (consommation matière) +M′<br>     C `stocks` (Matière 1ère) −M′<br>**b.** D `stocks` (Produits finis) +V<br>     C `productionStockee` +V | **Vente produit fabriqué (2 écritures doubles enchaînées)**<br>**a.** D `tresorerie`/`creancesPlus1`/`creancesPlus2` +P<br>     C `ventes` +P<br>**b.** D `productionStockee` −V (extourne)<br>     C `stocks` (Produits finis) −V |
+| **Azura** (négoce) | **Réassort marchandises (1 écriture double)**<br>D `stocks` (Marchandises) +Q<br>C `tresorerie` −Q *(ou `dettes` +Q si crédit fournisseur)* | **Coût de canal / mise en vente (1 écriture double)**<br>D `servicesExterieurs` (animation, plateforme, PLV) **+300 €**<br>C `tresorerie` **−300 €** *(ou `dettes` +300 € si crédit prestataire)*<br><br>*Calibrage : 300 € fixe = ~15 % de la marge brute moyenne Azura (~2 000 €/tour). Ordre de grandeur cohérent avec `REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500`. À confirmer en B9-C.* | **Vente marchandise (2 écritures doubles enchaînées = modèle CMV actuel)**<br>**a.** D `tresorerie`/`creancesPlus1`/`creancesPlus2` +P<br>     C `ventes` +P<br>**b.** D `achats` (CMV) +Q′<br>     C `stocks` (Marchandises) −Q′ |
+| **Véloce** (services logistiques) | **Préparation tournée (1 écriture double)**<br>D `servicesExterieurs` (carburant, péages, sous-traitance) +T<br>C `tresorerie` −T *(ou `dettes` +T)* | **Exécution prestation + constat en-cours (2 écritures doubles enchaînées)**<br>**a.** D `chargesPersonnel` (heures chauffeur) +E<br>     C `tresorerie` −E *(ou `dettes` +E)*<br>**b.** D `stocks` (En-cours tournée Véloce) +V_svc<br>     C `productionStockee` +V_svc<br><br>*Constat comptable : la production de service (compte PCG 34 en-cours) est valorisée au coût de production. `productionStockee` réutilisé comme compte produit contre-partie (simplification jeu).* | **Facturation + extourne en-cours (2 écritures doubles enchaînées)**<br>**a.** D `tresorerie`/`creancesPlus1`/`creancesPlus2` +P<br>     C `ventes` +P<br>**b.** D `productionStockee` −V_svc (extourne)<br>     C `stocks` (En-cours tournée Véloce) −V_svc<br><br>*L'en-cours créé à l'étape 3 est soldé au moment de la facturation : la production de service passe en vente facturée.* |
+| **Synergia** (missions + licences) | **Staffing / cadrage mission (1 écriture double)**<br>D `chargesPersonnel` (heures cadrage) +S<br>C `tresorerie` −S *(ou `dettes` +S)* | **Réalisation mission + constat en-cours (2 écritures doubles enchaînées)**<br>**a.** D `chargesPersonnel` (heures exécution) +R<br>     C `tresorerie` −R *(ou `dettes` +R)*<br>**b.** D `stocks` (En-cours mission Synergia) +V_svc<br>     C `productionStockee` +V_svc<br><br>*Même principe que Véloce : en-cours de production de services valorisé au coût direct.* | **Facturation + extourne en-cours (2 écritures doubles enchaînées)**<br>**a.** D `tresorerie`/`creancesPlus1`/`creancesPlus2` +P<br>     C `ventes` +P<br>**b.** D `productionStockee` −V_svc (extourne)<br>     C `stocks` (En-cours mission Synergia) −V_svc<br><br>**Licences (optionnel, si carte licence active)** :<br>D `tresorerie` +L<br>C `produitsFinanciers` +L *(déjà géré par `appliquerSpecialiteEntreprise`)* |
+
+**Invariants vérifiables par test unitaire**
+- À la fin de chaque étape k : Σ(Débits) == Σ(Crédits) dans les modifications appliquées
+- Après étape complète : `verifierEquilibreComptable(joueur)` → true
+- Belvaux : après production d'une unité, `stocks` (matière) diminue ET `stocks` (produits finis) augmente ET `productionStockee` est créditée → triple cohérence
+- Azura : chaque vente laisse `ventes` ≥ `achats` (marge positive normale, hors stock mort) ; étape 3 consomme 300 € fixes en `servicesExterieurs`
+- Véloce / Synergia : après étape 3, `stocks` (En-cours) augmente ET `productionStockee` est créditée. Après étape 4 : `stocks` (En-cours) redescend à 0 ET `productionStockee` est extournée. Cycle complet à `productionStockee` nette = 0 à la fin du trimestre (si toutes les prestations sont facturées sur le même trimestre — sinon l'en-cours traverse la clôture, ce qui est correct en PCG).
+
+**Postes comptables utilisés — tous existants dans `packages/game-engine/src/types.ts`**
+- Actifs : `tresorerie`, `stocks` (discriminé par le champ `nom` du `PosteActif`, y compris les en-cours de services), `creancesPlus1`, `creancesPlus2`, `immobilisations`
+- Passifs : `dettes`, `capitaux`, `emprunts`, `dettesD2`, `dettesFiscales`, `decouvert`
+- CR charges : `achats`, `servicesExterieurs`, `chargesPersonnel`, `chargesInteret`, `chargesExceptionnelles`, `dotationsAmortissements`, `impotsTaxes`
+- CR produits : `ventes`, `productionStockee` *(utilisé à la fois pour les produits finis Belvaux ET comme compte contre-partie des en-cours de services Véloce/Synergia — simplification PCG)*, `produitsFinanciers`, `revenusExceptionnels`
+
+**Discrimination des stocks par nom** (pas de refactor moteur)
+- Un `PosteActif` de catégorie `stocks` avec `nom` distinct → le moteur traite chaque ligne indépendamment via `find((a) => a.nom === ...)`. Aucun ajout de type requis.
+- **Belvaux** démarre avec deux lignes `stocks` : `"Matière première Belvaux"` (init 0 ou faible) et `"Produits finis Belvaux"` (init 0). L'étape 2 alimente la Matière 1ère ; l'étape 3 transfère vers Produits finis ; l'étape 4 extourne les Produits finis.
+- **Azura** démarre avec une ligne `stocks` : `"Marchandises Azura"` (init selon bilan cible).
+- **Véloce** démarre avec une ligne `stocks` : `"En-cours tournée Véloce"` (init 0). Étape 3 alimente, étape 4 extourne.
+- **Synergia** démarre avec une ligne `stocks` : `"En-cours mission Synergia"` (init 0). Étape 3 alimente, étape 4 extourne.
+
+**Branchement moteur requis** (à implémenter en B9-C, B9-D, B9-E)
+```ts
+// Nouveau champ dans EntrepriseTemplate + Joueur
+type ModeEconomique = "production" | "négoce" | "logistique" | "conseil";
+
+// Dispatch par étape polymorphe
+function appliquerEtape2(etat, j): ResultatAction {
+  switch (etat.joueurs[j].modeEconomique) {
+    case "production": return appliquerEtape2Belvaux(etat, j);
+    case "négoce":     return appliquerEtape2Azura(etat, j);
+    case "logistique": return appliquerEtape2Veloce(etat, j);
+    case "conseil":    return appliquerEtape2Synergia(etat, j);
+  }
+}
+// Idem appliquerEtape3, appliquerCarteClient (étape 4)
+```
+
+**Hors périmètre B9-A.1** — traité en sous-tâches dédiées
+- Calibrage exact des montants M, V, Q, P, S, R, T, E, V_svc (→ B9-C/D). **D_canal Azura tranché à 300 € fixe.**
+- Tests unitaires moteur par entreprise (→ B9-H)
+- Libellés pédagogiques et UI contextualisée (→ B9-G)
+- Sources multi-demande (→ B9-B V2)
+
+### Étapes cibles B9 — tableau simplifié (reprise)
+
+| Étape | Nom cible | Intention commune | Polymorphe ? |
+|---|---|---|---|
+| 0 | Encaissements & règlements | Cash qui rentre, créances qui mûrissent, dettes échues qui sortent | non |
+| 1 | Développement commercial | Demande, trafic, contrats, réputation | V1 non / V2 oui |
+| 2 | Ressources & préparation | Ce qu'il faut mobiliser avant de délivrer | **oui** |
+| 3 | Réalisation métier | Production, exécution, mission, tournée | **oui** |
+| 4 | Facturation & ventes | Vente / facturation → CA + contrepartie | **oui** |
+| 5 | Décision du dirigeant | Recrutement, investissement, financement | non |
+| 6 | Événement & ajustement | Choc externe ou opportunité | non |
+| 7 | Clôture & bilan | Charges, amortissements, résultat, bilan | non (moteur 2 passes) |
+
+### Périmètre B9 V1
+- [ ] Renommer les 8 étapes côté moteur, flow, modales et UI (avec renumérotation Option B)
+- [ ] Rendre les étapes 2, 3 et 4 réellement polymorphes selon `modeEconomique`
+- [ ] Sortir définitivement Véloce et Synergia du faux récit « achat de marchandises »
+- [ ] Donner à Belvaux une étape de production explicite ressentie en jeu
+- [ ] Conserver Azura comme modèle de négoce lisible et stable, avec une étape 3 à écriture réelle (coût de canal)
+- [ ] Rééquilibrer la génération de demande (B9-B V1 : texte ; V2 : mécanique)
+- [ ] Adapter les textes pédagogiques de chaque étape au métier de l'entreprise
+- [ ] Ajouter les tests moteur et smoke tests couvrant le nouveau cycle
+- [ ] `SAVE_VERSION 2→3` + invalidation des saves v2
+
+### Plan d'implémentation
+
+#### B9-A — Socle de vocabulaire commun + renumérotation Option B
+- [x] B9-A.1 : Tableau d'écritures cibles (ci-dessus)
+- [ ] Renommer les étapes dans `packages/game-engine/src/types.ts` (union `EtapeTour = 0..7` avec nouveaux commentaires ; `ETAPES` renumérotées)
+- [ ] `packages/game-engine/src/engine.ts` : `maxEtape = 7` (inchangé) ; `appliquerClotureTrimestre` déplacé à l'étape 7 (pré-bilan)
+- [ ] `apps/web/app/jeu/hooks/useGameFlow.ts` : switch remappé selon nouveau cycle B9 ; sous-étapes 5a/5b (était 4a/4b DECISION)
+- [ ] `apps/web/app/jeu/hooks/gameFlowUtils.ts` : `ETAPE_INFO` 0..7 remappé
+- [ ] `apps/web/lib/game-engine/data/pedagogie.ts` : `MODALES_ETAPES` remappées
+- [ ] `apps/web/components/jeu/ModalEtape.tsx` : `ETAPE_CONFIG` 0..7 (couleurs + icônes à ajuster pour nouvelle étape 3 « Réalisation métier »)
+- [ ] `apps/web/app/jeu/hooks/useGamePersistence.ts` : `SAVE_VERSION = 3`
+- [ ] `apps/web/components/jeu/LeftPanel.tsx`, `HeaderJeu.tsx`, `EntryPanel.tsx`, `MainContent.tsx`, `pedagogicalMessages.ts`, `CompteResultatPanel.tsx`, `EtapeGuide.tsx`, `useDecisionCards.ts` : indices remappés
+- [ ] `npx tsc --noEmit` sur `packages/game-engine` et `apps/web` → 0 erreur
+- [ ] Rebuild `dist/`
+
+#### B9-B — Étape 1 : Développement commercial (V1 texte, V2 mécanique différée)
+- [ ] **V1** (ce chantier) : renommer « Paiement des commerciaux » → « Développement commercial » dans MODALES, LeftPanel, pedagogicalMessages. Texte pédagogique qui explique que les commerciaux sont UN levier parmi d'autres (trafic, contrats, réputation). Zéro mécanique nouvelle — les commerciaux génèrent encore les clients comme aujourd'hui.
+- [ ] **V2** (session ultérieure) : sources de demande multiples (trafic passif, contrats récurrents, réputation). Nouvelles données dans `Joueur`, nouvelles règles de génération, nouvelle UI.
+
+#### B9-C — Étape 2 : Ressources & préparation (polymorphe)
+- [ ] Ajouter `modeEconomique: "production" | "négoce" | "logistique" | "conseil"` sur `EntrepriseTemplate` + `Joueur` dans `packages/game-engine/src/types.ts`
+- [ ] Peupler `modeEconomique` dans `packages/game-engine/src/data/entreprises.ts` pour les 4 entreprises
+- [ ] Discriminer `stocks` Belvaux par nom : ajouter 2 lignes « Matière première Belvaux » (init 0) et « Produits finis Belvaux » (init 0) ; migrer l'ancienne ligne stocks Belvaux vers l'un des deux (à décider en fonction du bilan initial cible)
+- [ ] Implémenter `appliquerEtape2Belvaux` (achat matière), `appliquerEtape2Azura` (réassort), `appliquerEtape2Veloce` (préparation tournée), `appliquerEtape2Synergia` (staffing) selon B9-A.1
+- [ ] Dispatch `appliquerEtape2(etat, j)` qui route par `modeEconomique`
+- [ ] Libellés pédagogiques par entreprise dans MODALES_ETAPES
+
+#### B9-D — Étape 3 : Réalisation métier (polymorphe)
+- [ ] `appliquerEtape3Belvaux` : production (consommation matière + constat production stockée) — **2 écritures doubles enchaînées**
+- [ ] `appliquerEtape3Azura` : coût de canal / distribution — **1 écriture double** (pas de checkpoint muet)
+- [ ] `appliquerEtape3Veloce` : exécution prestation (charges de personnel variables)
+- [ ] `appliquerEtape3Synergia` : réalisation mission (charges de personnel exécution)
+- [ ] Dispatch `appliquerEtape3(etat, j)`
+- [ ] UI : chaque entreprise a un libellé et une narration distincte dans LeftPanel et ModalEtape
+
+#### B9-E — Étape 4 : Facturation & ventes (polymorphe, refonte `appliquerCarteClient`)
+- [ ] Refactor `appliquerCarteClient` pour brancher par `modeEconomique` :
+  - production → 2 écritures (vente + extourne `productionStockee` contre `stocks` produits finis)
+  - négoce → 2 écritures (vente + CMV) — modèle actuel conservé
+  - logistique / conseil → 1 écriture unique (vente, pas d'extourne)
+- [ ] Mettre à jour `SaleGroupCard.tsx` pour afficher les écritures correctes selon le mode (2 actes pour prod/négoce, 1 acte pour services)
+- [ ] Libellés de vente et récit UI adaptés par entreprise
+- [ ] Vérifier que la marge lue dans `SaleGroupCard` reste cohérente (CA − CMV ou CA − charges exécution cumulées)
+
+#### B9-F — Étapes 5, 6 et 7
+- [ ] Étape 5 : décisions du dirigeant — alignement des cartes recrutement/investissement sur le goulot de chaque entreprise (ex. licence Synergia, entrepôt Belvaux, flotte Véloce, canal Azura)
+- [ ] Étape 6 : événements rédigés selon le métier
+- [ ] Étape 7 : moteur = 2 passes (`appliquerClotureTrimestre` + vérif équilibre/affectation) ; UI raconte « deux temps pédagogiques » mais reste une seule étape numérotée
+
+#### B9-G — UI & pédagogie (absorbe B8-E absent de main)
+- [ ] `SetupScreen` : afficher clairement ce que vend chaque entreprise, d'où vient la valeur, son goulot
+- [ ] `CompanyIntro` : décrire le cycle métier réel (pitch par entreprise — non présent sur `main`)
+- [ ] `LeftPanel` : aides contextuelles spécifiques à l'étape ET à l'entreprise
+- [ ] `SaleGroupCard` : récit d'exécution cohérent selon le mode économique
+
+#### B9-H — Validation
+- [ ] Tests unitaires moteur : pour chaque entreprise × chaque étape polymorphe, vérifier Σ(Débits) == Σ(Crédits) et `verifierEquilibreComptable` après application
+- [ ] `npm test -- --runInBand` dans `packages/game-engine` → tous verts (y compris les 2 tests `calculerCoutCommerciaux` / `Junior` qui seront adressés en #45 B8-D en parallèle)
+- [ ] `npm run build` dans `packages/game-engine`
+- [ ] `npx tsc --noEmit` dans `apps/web`
+- [ ] Smoke test manuel 1 trimestre × 4 entreprises
+- [ ] Smoke test manuel 6 trimestres × Belvaux et Véloce
+- [ ] Relecture pédagogique : le vocabulaire enseigne juste sans « renommer mentalement »
+
+### Ordre d'attaque recommandé
+1. **B9-A** (vocabulaire + renumérotation) — le plus petit en risque, débloque tout le reste
+2. **B9-C** (ressources polymorphes) — introduit `modeEconomique` et les 4 branches
+3. **B9-D** (réalisation polymorphe) — ajoute l'écriture réelle partout, y compris Azura
+4. **B9-E** (facturation polymorphe + refactor `appliquerCarteClient`) — absorbe B8-B
+5. **B9-B V1** (texte + renommage uniquement) — rapide, peut se faire en parallèle
+6. **B9-F** (étapes 5/6/7 moteur)
+7. **B9-G** (UI métier — absorbe B8-E)
+8. **B9-H** (validation complète + commit)
+
+### Critères de réussite
+- [ ] Belvaux sent qu'il fabrique avant de vendre (étape 3 visible et écriture distincte)
+- [ ] Azura sent qu'il achète/revend et gère sa rotation de stock, avec un coût de canal à l'étape 3
+- [ ] Véloce ne voit plus d'étape « achat de marchandises » incohérente avec son métier
+- [ ] Synergia ressent une capacité experte / mission, pas un commerce à stock déguisé
+- [ ] Les commerciaux sont un levier de demande parmi d'autres, pas le cœur universel du moteur
+- [ ] Le principe de partie double est respecté sur toutes les écritures des 4 × 3 = 12 chemins
+- [ ] Le vocabulaire des 8 étapes est juste pédagogiquement pour les 4 entreprises
 
 ---
 
