@@ -67,14 +67,14 @@ export const MODALES_ETAPES: Record<number, ModalEtape> = {
     impactComptes: `Belvaux : 2 actes — consommation matière (débit achats / crédit stocks matière) puis constat de production (débit stocks produits finis / crédit production stockée). Azura : 1 acte — coût de canal 300 € fixe (débit services extérieurs / crédit trésorerie ou dettes). Véloce/Synergia : 2 actes — charges d'exécution (débit charges personnel / crédit trésorerie ou dettes) puis constat d'en-cours (débit stocks en-cours / crédit production stockée).`,
     conseil: `Belvaux : ne produis que ce que tu peux vendre — la production stockée gonfle le bilan mais ne rapporte du cash que si elle se transforme en vente. Azura : le canal coûte que tu vendes ou non, c'est un coût fixe à couvrir. Véloce/Synergia : l'en-cours est de l'argent déjà dépensé mais pas encore facturé — reste prudent sur le volume.`,
   },
-  // ── étape 4 B9 : Facturation & ventes ─────────────────────────────────────
+  // ── étape 4 B9 : Facturation & ventes (polymorphe par modeEconomique, B9-E) ──
   4: {
     etape: 4,
     titre: `Tu factures tes clients`,
-    ceQuiSePasse: `Tu factures les clients servis ce trimestre. Chaque vente génère plusieurs écritures simultanées adaptées à ton métier : CA encaissé ou créancé, et contrepartie comptable (déstockage, extourne d'en-cours, ou rien du tout selon le modèle).`,
-    pourquoi: `C'est le moment où tes efforts des étapes précédentes se transforment en revenus réels. Les règles d'écriture diffèrent par métier — un fabricant extourne sa production stockée, un négociant débite son CMV, un prestataire solde son en-cours. Tous respectent la partie double.`,
-    impactComptes: `Le chiffre d'affaires augmente (produit). Ton stock / en-cours diminue selon ton métier. Tes créances clients montent (si crédit) ou ta trésorerie augmente (si comptant).`,
-    conseil: `Plus tu factures, plus tu couvres tes charges fixes et plus ton résultat monte. Une capacité dépassée = clients perdus : anticipe tes ressources à l'étape 2.`,
+    ceQuiSePasse: `Tu factures les clients servis ce trimestre. Chaque vente génère 4 écritures simultanées adaptées à ton métier : encaissement (trésorerie ou créance selon le délai), chiffre d'affaires, puis 2 écritures de contrepartie qui varient selon ton modèle économique.`,
+    pourquoi: `C'est le moment où tes efforts des étapes précédentes se transforment en revenus réels. Les règles d'écriture diffèrent par métier — un fabricant extourne sa production stockée, un négociant débite son CMV sur les marchandises, un prestataire solde son en-cours de production. Tous respectent le principe de partie double.`,
+    impactComptes: `Belvaux : extourne productionStockee et sortie des Produits finis (ou CMV fallback pour les produits finis initiaux sans production stockée). Azura : modèle CMV classique — débit achats / crédit Marchandises. Véloce : extourne productionStockee / crédit En-cours tournée. Synergia : symétrique Véloce avec En-cours mission. Tous : débit Trésorerie ou Créance / crédit Ventes en contrepartie encaissement/CA.`,
+    conseil: `Véloce et Synergia ne peuvent facturer que ce qu'ils ont exécuté ou livré à l'étape 3 — sans en-cours, pas de facturation (client perdu). Belvaux peut vendre ses produits finis initiaux sans production stockée (fallback CMV), mais la production régulière permet de distinguer clairement ce qui vient du stock initial de ce qui est fabriqué.`,
   },
   // ── étape 5 B9 : Décision du dirigeant (5a recrutement + 5b investissement) ─
   5: {

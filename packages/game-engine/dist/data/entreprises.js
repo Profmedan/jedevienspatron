@@ -3,18 +3,18 @@
 // JEDEVIENSPATRON — Données des 4 entreprises
 // Source : JEDEVIENSPATRON_v2.html — Pierre Médan
 //
-// ── Bilans initiaux équilibrés (Actif = Passif) ─────────────
+// ── Bilans initiaux équilibrés (Actif = Passif) — B9-D ──────
 //   • Manufacture Belvaux : Actif = Passif = 28
-//       Immos (8+8) + Stocks 4 + Tréso 8 = 28
+//       Immos (8+8) + Produits finis 3 + Matière 1 + Tréso 8 = 28
 //       Capitaux 20 + Emprunts 8 = 28
 //   • Véloce Transports   : Actif = Passif = 28
-//       Immos (10+6) + Stocks 4 + Tréso 8 = 28
+//       Immos (10+6) + Stocks 4 + En-cours 0 + Tréso 8 = 28
 //       Capitaux 20 + Emprunts 8 = 28
 //   • Azura Commerce      : Actif = Passif = 28
-//       Immos (8+8) + Stocks 4 + Tréso 8 = 28
+//       Immos (8+8) + Marchandises 4 + Tréso 8 = 28
 //       Capitaux 20 + Emprunts 8 = 28
 //   • Synergia Lab        : Actif = Passif = 25
-//       Immos (8+5) + Stocks 4 + Tréso 8 = 25
+//       Immos (8+5) + Stocks 4 + En-cours 0 + Tréso 8 = 25
 //       Capitaux 17 + Emprunts 8 = 25
 //
 // ── Logique d'amortissement (PCG) ──────────────────────────

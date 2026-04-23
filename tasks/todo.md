@@ -273,14 +273,30 @@ function appliquerEtape2(etat, j): ResultatAction {
 - [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
 - [x] Rebuild `dist/`
 
-#### B9-E — Étape 4 : Facturation & ventes (polymorphe, refonte `appliquerCarteClient`)
-- [ ] Refactor `appliquerCarteClient` pour brancher par `modeEconomique` :
-  - production → 2 écritures (vente + extourne `productionStockee` contre `stocks` produits finis)
-  - négoce → 2 écritures (vente + CMV) — modèle actuel conservé
-  - logistique / conseil → 1 écriture unique (vente, pas d'extourne)
-- [ ] Mettre à jour `SaleGroupCard.tsx` pour afficher les écritures correctes selon le mode (2 actes pour prod/négoce, 1 acte pour services)
-- [ ] Libellés de vente et récit UI adaptés par entreprise
-- [ ] Vérifier que la marge lue dans `SaleGroupCard` reste cohérente (CA − CMV ou CA − charges exécution cumulées)
+#### B9-E — Étape 4 : Facturation & ventes (polymorphe, refonte `appliquerCarteClient`) — 2026-04-23 ✅
+- [x] `mutateActifByName` étendue avec paramètre optionnel `extras` (saleGroupId / saleClientLabel / saleActIndex) pour tracer les écritures polymorphes dans l'UI de regroupement par vente
+- [x] Refactor `appliquerCarteClient` pour brancher par `modeEconomique` — les actes 1 (encaissement) et 2 (chiffre d'affaires) restent communs, les actes 3 et 4 varient :
+  - **production** (Belvaux) : D `productionStockee` −1000 / C stocks[Produits finis Belvaux] −1000. **Fallback CMV** si `productionStockee` courant < PRIX_UNITAIRE (cas des produits finis initiaux de l'inventaire, jamais passés en production stockée) : D `achats` / C stocks[Produits finis Belvaux]. Préserve la partie double sans pousser productionStockee en négatif.
+  - **négoce** (Azura) : modèle CMV classique inchangé — D `achats` / C stocks[Marchandises Azura].
+  - **logistique** (Véloce) : D `productionStockee` −1000 / C stocks[En-cours tournée Véloce] −1000 — la facturation solde l'en-cours constaté à l'étape 3.
+  - **conseil** (Synergia) : symétrique Véloce avec En-cours mission Synergia.
+  - **default** : fallback négoce pour templates custom sans `modeEconomique`.
+- [x] Garde-fou `stockDispo` polymorphe : Belvaux vérifie « Produits finis Belvaux » uniquement (la matière première n'est pas vendable), Azura vérifie « Marchandises Azura », Véloce/Synergia vérifient leurs en-cours respectifs. Messages d'erreur adaptés par métier.
+- [x] Libellés d'écritures contextualisés (« Produits finis Belvaux livrés », « Tournée Véloce facturée », « Mission Synergia facturée »).
+- [x] MODALES_ETAPES[4] + ETAPE_INFO[4] mises à jour : description des 4 branches avec écritures exactes, conseils adaptés par métier (ex. « Véloce/Synergia sans en-cours = client perdu »).
+- [x] Tests unitaires : 8 nouveaux cas dans `describe("appliquerCarteClient — polymorphisme vente par modeEconomique (B9-E)")` couvrant :
+  - Belvaux T1 sans production : fallback CMV sur produits finis initiaux
+  - Belvaux après production : extourne productionStockee + sortie Produits finis
+  - Azura : modèle CMV sur Marchandises Azura
+  - Véloce T1 sans en-cours : vente refusée (pédagogique)
+  - Véloce après exécution : extourne en-cours + productionStockee
+  - Synergia après mission : symétrique Véloce
+  - Invariant partie double : 4 mods par vente pour les 4 métiers
+  - Belvaux : stockDispo calculé sur Produits finis uniquement (matière 1ère non vendable)
+- [x] **59/61 tests verts** (les 2 échecs restants sont toujours les pré-existants #45 B8-D Junior, non liés à B9-E).
+- [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
+- [x] Rebuild `dist/`
+- [ ] `SaleGroupCard.tsx` : les 4 écritures polymorphes sont déjà transmises via les extras saleGroupId/saleActIndex — le composant affichera automatiquement la nouvelle narration. Vérification visuelle à faire par Pierre (tâche #21 Phase 4).
 
 #### B9-F — Étapes 5, 6 et 7
 - [ ] Étape 5 : décisions du dirigeant — alignement des cartes recrutement/investissement sur le goulot de chaque entreprise (ex. licence Synergia, entrepôt Belvaux, flotte Véloce, canal Azura)

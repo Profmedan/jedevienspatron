@@ -678,3 +678,137 @@ describe("appliquerRealisationMetier — polymorphie par modeEconomique (B9-D)",
     expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(finisAvant);
   });
 });
+
+// ─── B9-E : Étape 4 polymorphe (Facturation & ventes) ────────────────────
+
+describe("appliquerCarteClient — polymorphisme vente par modeEconomique (B9-E)", () => {
+  const particulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
+  const grandCompte = CARTES_CLIENTS.find((c) => c.id === "client-grand-compte")!;
+
+  test("Belvaux T1 — produits finis initiaux (pas de productionStockee) : fallback CMV", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    // État initial : productionStockee = 0, Produits finis = 3000
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    const finisAvant = joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur;
+
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+
+    expect(r.succes).toBe(true);
+    // Fallback CMV : achats +1000 (pas d'extourne productionStockee)
+    expect(joueur.compteResultat.charges.achats).toBe(1000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    // Produits finis baissent de 1000
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(finisAvant - 1000);
+  });
+
+  test("Belvaux après production : extourne productionStockee (pas de CMV supplémentaire à la vente)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    // Produire 1 unité à l'étape 3 : Matière 1000 → Produits finis 4000, productionStockee 1000
+    // + achats 1000 (consommation matière à l'étape 3)
+    const rProd = appliquerRealisationMetier(etat, 0, 1);
+    expect(rProd.succes).toBe(true);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(1000);
+    const achatsAvantVente = joueur.compteResultat.charges.achats;
+    expect(achatsAvantVente).toBe(1000); // consommation matière à l'étape 3
+    const finisAvant = joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur;
+
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+
+    expect(r.succes).toBe(true);
+    // Extourne productionStockee : 1000 → 0
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    // Pas de CMV supplémentaire à la vente (achats inchangé depuis l'étape 3 — l'extourne a remplacé le CMV)
+    expect(joueur.compteResultat.charges.achats).toBe(achatsAvantVente);
+    // Produits finis baissent de 1000
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(finisAvant - 1000);
+  });
+
+  test("Azura : modèle CMV sur « Marchandises Azura » (pas d'extourne productionStockee)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const joueur = etat.joueurs[0];
+    const marchAvant = joueur.bilan.actifs.find((a) => a.nom === "Marchandises Azura")!.valeur;
+
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+
+    expect(r.succes).toBe(true);
+    expect(joueur.compteResultat.charges.achats).toBe(1000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Marchandises Azura")!.valeur).toBe(marchAvant - 1000);
+  });
+
+  test("Véloce T1 sans en-cours : vente refusée (pédagogique)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const joueur = etat.joueurs[0];
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur).toBe(0);
+
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+
+    expect(r.succes).toBe(false);
+    expect(r.messageErreur).toContain("en-cours de tournée");
+    expect(r.modifications.length).toBe(0);
+  });
+
+  test("Véloce après exécution : extourne en-cours + productionStockee à la facturation", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const joueur = etat.joueurs[0];
+    // Étape 3 : exécuter 1 tournée
+    appliquerRealisationMetier(etat, 0, 1, "tresorerie");
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur).toBe(1000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(1000);
+
+    // Facturer 1 vente
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+
+    expect(r.succes).toBe(true);
+    // L'en-cours s'efface
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur).toBe(0);
+    // productionStockee extournée
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    // Pas de CMV pour un service
+    expect(joueur.compteResultat.charges.achats).toBe(0);
+  });
+
+  test("Synergia après mission : extourne en-cours + productionStockee (symétrique Véloce)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    appliquerRealisationMetier(etat, 0, 1, "tresorerie");
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")!.valeur).toBe(1000);
+
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+
+    expect(r.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")!.valeur).toBe(0);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    expect(joueur.compteResultat.charges.achats).toBe(0);
+  });
+
+  test("Invariant partie double : 4 mods par vente (1 recette + 1 CA + 2 contreparties métier)", () => {
+    const cas: Array<"Manufacture Belvaux" | "Azura Commerce" | "Véloce Transports" | "Synergia Lab"> = [
+      "Manufacture Belvaux", "Azura Commerce", "Véloce Transports", "Synergia Lab"
+    ];
+    for (const nom of cas) {
+      const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: nom }]);
+      // Préparer un en-cours pour les services
+      if (nom === "Véloce Transports" || nom === "Synergia Lab") {
+        appliquerRealisationMetier(etat, 0, 1, "tresorerie");
+      }
+      const r = appliquerCarteClient(etat, 0, grandCompte, 0);
+      expect(r.succes).toBe(true);
+      expect(r.modifications.length).toBe(4);
+    }
+  });
+
+  test("Belvaux : stockDispo calculé sur Produits finis uniquement (matière 1ère non vendable)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    // Vider les produits finis, laisser la matière à 1000
+    const finis = joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!;
+    finis.valeur = 0;
+    // La matière première (1000 €) ne compte PAS comme stock vendable
+    const r = appliquerCarteClient(etat, 0, particulier, 0);
+    expect(r.succes).toBe(false);
+    expect(r.messageErreur).toContain("Produits finis insuffisants");
+  });
+});

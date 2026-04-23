@@ -148,6 +148,11 @@ function mutateActifByName(
   nomActif: string,
   delta: number,
   explication: string,
+  extras?: {
+    saleGroupId?: string;
+    saleClientLabel?: string;
+    saleActIndex?: number;
+  },
 ): boolean {
   const actif = joueur.bilan.actifs.find((a) => a.nom === nomActif);
   if (!actif) return false;
@@ -169,6 +174,7 @@ function mutateActifByName(
     ancienneValeur,
     nouvelleValeur,
     explication,
+    ...extras,
   });
   return true;
 }
@@ -1067,15 +1073,45 @@ export function appliquerCarteClient(
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
   const push = makePush(joueur, modifications);
+  const mode = joueur.entreprise.modeEconomique;
 
-  const stocks = getTotalStocks(joueur);
-  if (stocks < PRIX_UNITAIRE_MARCHANDISE) {
-    return {
-      succes: false,
-      messageErreur:
-        "Stock insuffisant ! Vous devez acheter des marchandises (étape 1) avant de vendre.",
-      modifications,
-    };
+  // ── B9-E : garde-fou polymorphe — le « stock vendable » dépend du métier.
+  //    production : Produits finis Belvaux ; négoce : Marchandises Azura ;
+  //    logistique/conseil : en-cours de tournée/mission.
+  const stockDispo = (() => {
+    switch (mode) {
+      case "production":
+        return joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")?.valeur
+          ?? getTotalStocks(joueur);
+      case "négoce":
+        return joueur.bilan.actifs.find((a) => a.nom === "Marchandises Azura")?.valeur
+          ?? getTotalStocks(joueur);
+      case "logistique":
+        return joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")?.valeur
+          ?? 0;
+      case "conseil":
+        return joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")?.valeur
+          ?? 0;
+      default:
+        return getTotalStocks(joueur);
+    }
+  })();
+
+  if (stockDispo < PRIX_UNITAIRE_MARCHANDISE) {
+    const raison = (() => {
+      switch (mode) {
+        case "production":
+          return "Produits finis insuffisants ! Fabrique à l'étape 3 avant de facturer.";
+        case "logistique":
+          return "Aucun en-cours de tournée à facturer ! Exécute tes tournées à l'étape 3.";
+        case "conseil":
+          return "Aucun en-cours de mission à facturer ! Livre tes missions à l'étape 3.";
+        case "négoce":
+        default:
+          return "Stock insuffisant ! Tu dois réassortir tes marchandises (étape 2) avant de vendre.";
+      }
+    })();
+    return { succes: false, messageErreur: raison, modifications };
   }
 
   const montant = carteClient.montantVentes;
@@ -1087,7 +1123,7 @@ export function appliquerCarteClient(
     ? Math.max(0, carteClient.delaiPaiement - 1) as 0 | 1 | 2
     : carteClient.delaiPaiement;
 
-  // ACTE 1 — Encaissement selon délai (le plus tangible)
+  // ACTE 1 — Encaissement selon délai (commun à tous les métiers)
   if (delaiEffectif === 0) {
     const label = carteClient.delaiPaiement > 0 && joueur.entreprise.reducDelaiPaiement
       ? `🚀 Livraison rapide — encaissement accéléré : +${montant} € en caisse`
@@ -1102,14 +1138,84 @@ export function appliquerCarteClient(
     push("creancesPlus2", montant, `Le client paiera dans 2 trimestres : +${montant} € en créance C+2`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 1 });
   }
 
-  // ACTE 2 — Chiffre d'affaires (Ventes)
+  // ACTE 2 — Chiffre d'affaires (commun à tous les métiers)
   push("ventes", montant, `Vente enregistrée au chiffre d'affaires : +${montant} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 2 });
 
-  // ACTE 3 — Sortie du stock (livraison de la marchandise)
-  push("stocks", -PRIX_UNITAIRE_MARCHANDISE, `Marchandise livrée au client : −${PRIX_UNITAIRE_MARCHANDISE} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+  // ACTE 3 + 4 — B9-E : contrepartie polymorphe selon modeEconomique
+  const extrasActe3 = { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 };
+  const extrasActe4 = { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 };
 
-  // ACTE 4 — Coût de la marchandise vendue (CMV)
-  push("achats", PRIX_UNITAIRE_MARCHANDISE, `Coût de la marchandise vendue (CMV) enregistré en charges : +${PRIX_UNITAIRE_MARCHANDISE} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
+  switch (mode) {
+    case "production": {
+      // Belvaux : extourne de la production stockée contre sortie produits finis.
+      // Fallback CMV si la production stockée disponible est insuffisante
+      // (cas des produits finis issus de l'inventaire initial, non produits) —
+      // préserve la partie double sans pousser productionStockee en négatif.
+      const productionStockeeDispo = joueur.compteResultat.produits.productionStockee;
+      if (productionStockeeDispo >= PRIX_UNITAIRE_MARCHANDISE) {
+        push("productionStockee", -PRIX_UNITAIRE_MARCHANDISE,
+          `Extourne de la production stockée : −${PRIX_UNITAIRE_MARCHANDISE} € (le produit fini quitte le stock et annule sa valeur stockée)`,
+          extrasActe3);
+        mutateActifByName(joueur, modifications, "Produits finis Belvaux",
+          -PRIX_UNITAIRE_MARCHANDISE,
+          `Produits finis Belvaux livrés au client : −${PRIX_UNITAIRE_MARCHANDISE} €`,
+          extrasActe4);
+      } else {
+        // Fallback CMV : pour les produits finis de l'inventaire initial
+        // qui n'ont jamais été stockés via productionStockee.
+        push("achats", PRIX_UNITAIRE_MARCHANDISE,
+          `Coût de la marchandise vendue (CMV — produits finis initiaux) : +${PRIX_UNITAIRE_MARCHANDISE} € en charges`,
+          extrasActe3);
+        mutateActifByName(joueur, modifications, "Produits finis Belvaux",
+          -PRIX_UNITAIRE_MARCHANDISE,
+          `Produits finis Belvaux livrés au client : −${PRIX_UNITAIRE_MARCHANDISE} €`,
+          extrasActe4);
+      }
+      break;
+    }
+    case "négoce": {
+      // Azura : modèle CMV classique (débit achats / crédit stocks marchandises).
+      push("achats", PRIX_UNITAIRE_MARCHANDISE,
+        `Coût de la marchandise vendue (CMV) : +${PRIX_UNITAIRE_MARCHANDISE} € en charges`,
+        extrasActe3);
+      push("stocks", -PRIX_UNITAIRE_MARCHANDISE,
+        `Marchandise Azura livrée au client : −${PRIX_UNITAIRE_MARCHANDISE} € de stock`,
+        extrasActe4);
+      break;
+    }
+    case "logistique": {
+      // Véloce : extourne de l'en-cours de tournée contre production stockée.
+      // Le service facturé annule l'en-cours constaté à l'étape 3.
+      push("productionStockee", -PRIX_UNITAIRE_MARCHANDISE,
+        `Extourne de la production de services : −${PRIX_UNITAIRE_MARCHANDISE} € (la tournée facturée n'est plus un en-cours)`,
+        extrasActe3);
+      mutateActifByName(joueur, modifications, "En-cours tournée Véloce",
+        -PRIX_UNITAIRE_MARCHANDISE,
+        `Tournée Véloce facturée : −${PRIX_UNITAIRE_MARCHANDISE} € d'en-cours`,
+        extrasActe4);
+      break;
+    }
+    case "conseil": {
+      // Synergia : symétrique Véloce avec l'en-cours mission.
+      push("productionStockee", -PRIX_UNITAIRE_MARCHANDISE,
+        `Extourne de la production de services : −${PRIX_UNITAIRE_MARCHANDISE} € (la mission facturée n'est plus un en-cours)`,
+        extrasActe3);
+      mutateActifByName(joueur, modifications, "En-cours mission Synergia",
+        -PRIX_UNITAIRE_MARCHANDISE,
+        `Mission Synergia facturée : −${PRIX_UNITAIRE_MARCHANDISE} € d'en-cours`,
+        extrasActe4);
+      break;
+    }
+    default: {
+      // Fallback négoce pour les templates custom sans modeEconomique.
+      push("achats", PRIX_UNITAIRE_MARCHANDISE,
+        `Coût de la marchandise vendue : +${PRIX_UNITAIRE_MARCHANDISE} € en charges`,
+        extrasActe3);
+      push("stocks", -PRIX_UNITAIRE_MARCHANDISE,
+        `Marchandise livrée : −${PRIX_UNITAIRE_MARCHANDISE} €`,
+        extrasActe4);
+    }
+  }
 
   return { succes: true, modifications };
 }

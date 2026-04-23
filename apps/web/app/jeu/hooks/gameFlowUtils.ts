@@ -64,9 +64,9 @@ export const ETAPE_INFO: Record<number, {
   },
   4: {
     icone: "🤝", titre: "Facturation & ventes",
-    description: "Tu factures les clients servis ce trimestre. Chaque vente génère plusieurs écritures simultanées adaptées à ton métier : CA encaissé ou créancé, et contrepartie stock / production stockée / charges selon le cas.",
-    principe: "Chaque vente déclenche plusieurs mouvements : ton chiffre d'affaires augmente ET ta contrepartie comptable s'ajuste. En négoce, ton stock baisse et le CMV monte. En production, tu extournes la production stockée. En service, tu ne déstockes rien.",
-    conseil: "C'est le moment où tes efforts des étapes précédentes se transforment en revenus réels. Une vente mal servie (capacité dépassée) = client perdu. Anticipe ta capacité.",
+    description: "Tu factures les clients servis ce trimestre. 4 écritures par vente : encaissement (trésorerie ou créance selon délai), chiffre d'affaires, puis 2 écritures de contrepartie adaptées à ton métier.",
+    principe: "Belvaux : extourne productionStockee + sortie Produits finis (fallback CMV pour les produits finis initiaux sans production). Azura : CMV classique sur Marchandises. Véloce et Synergia : extourne productionStockee + En-cours (la facturation solde l'en-cours constaté à l'étape 3).",
+    conseil: "Véloce et Synergia ne peuvent facturer que ce qu'ils ont exécuté à l'étape 3 — sans en-cours, client perdu. Belvaux peut vendre son inventaire initial en fallback CMV, mais la vraie production remplit sa productionStockee qui sera extournée à la vente.",
   },
   5: {
     icone: "🎯", titre: "Décision du dirigeant",
