@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import {
-  Download, Upload, Lightbulb, Layers, Package, Wallet,
+  Download, Upload, Lightbulb, Layers, Package, Wallet, Briefcase,
 } from "lucide-react";
 import { Joueur, getTotalActif, getTotalPassif } from "@jedevienspatron/game-engine";
+import { getPitchMetier } from "@/lib/game-engine/data/pitchs-metier";
 
 interface CompanyIntroProps {
   joueurs: Joueur[];
@@ -56,8 +57,74 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   const immos       = j.bilan.actifs.filter((a) => a.categorie === "immobilisations" && a.valeur > 0);
   const totalImmos  = immos.reduce((s, a) => s + a.valeur, 0);
 
+  const pitch = getPitchMetier(j.entreprise.modeEconomique);
+
   const steps = [
-    /* ── Étape 0 : D'où vient l'argent ── */
+    /* ── Étape 0 (B9-G) : Pitch métier de l'entreprise ── */
+    <div key="pitch" className="space-y-4">
+      <h2 className="flex items-center gap-2 font-semibold text-white text-base">
+        <Briefcase className="h-4 w-4 shrink-0" aria-hidden="true" />
+        Voici ton entreprise : {j.entreprise.nom}
+      </h2>
+      <p className="text-slate-300 text-sm leading-relaxed">
+        Avant de plonger dans les chiffres, prends une minute pour comprendre
+        <strong className="text-white"> ce que fait ton entreprise</strong> et
+        <strong className="text-white"> d&apos;où vient sa valeur</strong>. Chaque
+        métier a sa propre logique — les étapes du trimestre sont les mêmes
+        pour tous les joueurs, mais les écritures comptables varient selon
+        ton modèle économique.
+      </p>
+
+      <div
+        className="rounded-2xl border border-white/10 bg-slate-950/75 p-4 space-y-3"
+        style={{ borderLeftWidth: "4px", borderLeftColor: pitch.couleurAccent }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-2xl" aria-hidden="true">{j.entreprise.icon}</span>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              Modèle économique
+            </p>
+            <p className="text-sm font-semibold text-white">{pitch.modele}</p>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            Ce que tu vends
+          </p>
+          <p className="text-sm text-slate-200 mt-1 leading-snug">{pitch.offre}</p>
+        </div>
+
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            D&apos;où vient la valeur
+          </p>
+          <p className="text-sm text-slate-300 mt-1 leading-snug">{pitch.sourceValeur}</p>
+        </div>
+
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-400/80">
+            ⚠️ Point de vigilance
+          </p>
+          <p className="text-sm text-amber-200/90 mt-1 leading-snug">{pitch.goulot}</p>
+        </div>
+
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400/80">
+            🔄 Ton cycle métier pendant le trimestre
+          </p>
+          <p className="text-sm text-cyan-100/90 mt-1 leading-snug">{pitch.cycleType}</p>
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-500 italic leading-relaxed">
+        Spécialité active : <span className="text-slate-300">{j.entreprise.specialite}</span>.
+        Elle se déclenche automatiquement à chaque clôture de trimestre.
+      </p>
+    </div>,
+
+    /* ── Étape 1 : D'où vient l'argent ── */
     <div key={0} className="space-y-4">
       <h2 className="flex items-center gap-2 font-semibold text-white text-base">
         <Download className="h-4 w-4 shrink-0" aria-hidden="true" />

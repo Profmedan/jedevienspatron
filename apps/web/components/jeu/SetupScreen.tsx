@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Users, Building2, Clock3, Check } from "lucide-react";
 import { NomEntreprise, ENTREPRISES, EntrepriseTemplate } from "@jedevienspatron/game-engine";
 import EntrepriseBuilder from "./EntrepriseBuilder";
+import { getPitchMetier } from "@/lib/game-engine/data/pitchs-metier";
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Types
@@ -599,12 +600,52 @@ function StepEntreprises({
                 </option>
               </select>
 
-              {entreprise && (
-                <p className="mt-3 text-xs leading-5 text-slate-500">
-                  <strong className="text-slate-300">{entreprise.type}</strong> ·{" "}
-                  {entreprise.specialite}
-                </p>
-              )}
+              {entreprise && (() => {
+                const pitch = getPitchMetier(entreprise.modeEconomique);
+                return (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs leading-5 text-slate-500">
+                      <strong className="text-slate-300">{entreprise.type}</strong> ·{" "}
+                      {entreprise.specialite}
+                    </p>
+                    <div
+                      className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2.5"
+                      style={{ borderLeftWidth: "3px", borderLeftColor: pitch.couleurAccent }}
+                    >
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                          Modèle
+                        </p>
+                        <p className="text-xs text-white mt-0.5">{pitch.modele}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                          Ce que tu vends
+                        </p>
+                        <p className="text-xs text-slate-200 mt-0.5 leading-snug">{pitch.offre}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                          D&apos;où vient la valeur
+                        </p>
+                        <p className="text-xs text-slate-300 mt-0.5 leading-snug">{pitch.sourceValeur}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-400/80">
+                          ⚠️ Point de vigilance
+                        </p>
+                        <p className="text-xs text-amber-200/90 mt-0.5 leading-snug">{pitch.goulot}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400/80">
+                          🔄 Cycle métier (étapes 2→3→4)
+                        </p>
+                        <p className="text-xs text-cyan-100/90 mt-0.5 leading-snug">{pitch.cycleType}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

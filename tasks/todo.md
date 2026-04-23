@@ -308,11 +308,14 @@ function appliquerEtape2(etat, j): ResultatAction {
 - [x] Tests unitaires : 5 nouveaux cas dans `describe("B9-F — cycle complet par entreprise (bout-en-bout)")` couvrant Belvaux/Azura/Véloce/Synergia cycles complets T1 + régression amortissement 4 entreprises. **64/66 tests verts** (les 2 pré-existants #45 B8-D Junior persistent).
 - [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
 
-#### B9-G — UI & pédagogie (absorbe B8-E absent de main)
-- [ ] `SetupScreen` : afficher clairement ce que vend chaque entreprise, d'où vient la valeur, son goulot
-- [ ] `CompanyIntro` : décrire le cycle métier réel (pitch par entreprise — non présent sur `main`)
-- [ ] `LeftPanel` : aides contextuelles spécifiques à l'étape ET à l'entreprise
-- [ ] `SaleGroupCard` : récit d'exécution cohérent selon le mode économique
+#### B9-G — UI & pédagogie (absorbe B8-E absent de main) — 2026-04-23 ✅
+- [x] Nouveau fichier `apps/web/lib/game-engine/data/pitchs-metier.ts` avec 4 pitchs structurés (modele / offre / sourceValeur / goulot / cycleType / couleurAccent), indexés par `ModeEconomique`. Helper `getPitchMetier(mode)` avec fallback "négoce" pour les templates custom.
+- [x] `SetupScreen` : bloc pitch enrichi sous le sélecteur d'entreprise — affiche Modèle, Ce que tu vends, D'où vient la valeur, Point de vigilance, Cycle métier (étapes 2→3→4). Bordure gauche colorée par entreprise (couleurAccent).
+- [x] `CompanyIntro` : nouvelle étape 0 « pitch métier » au début du tour pédagogique, AVANT les explications du bilan comptable. Le joueur voit son entreprise, son modèle économique, son cycle métier et sa spécialité dans un bloc structuré en 5 sections.
+- [x] `LeftPanel` : déjà couvert en B9-C (helper `ressourcePreparationLabels`) et B9-D (helper `realisationMetierLabels`) — les aides contextuelles par étape ET par entreprise sont actives.
+- [ ] `SaleGroupCard` : récit cohérent reposant sur les explications `saleActIndex` portées par `mutateActifByName` via les extras (B9-E). Les 4 actes polymorphes par métier s'affichent avec leurs libellés narratifs — adaptation UI fine du SaleGroupCard différée (structure transverse déjà OK).
+- [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
+- [x] Tests unitaires : 64/66 tests passent (les 2 échecs restants sont toujours pré-existants #45 B8-D)
 
 #### B9-H — Validation
 - [ ] Tests unitaires moteur : pour chaque entreprise × chaque étape polymorphe, vérifier Σ(Débits) == Σ(Crédits) et `verifierEquilibreComptable` après application
