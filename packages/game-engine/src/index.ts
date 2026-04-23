@@ -33,6 +33,7 @@ export {
   avancerEtape,
   appliquerEtape0,
   appliquerAchatMarchandises,
+  appliquerRessourcesPreparation,
   appliquerAvancementCreances,
   appliquerPaiementCommerciaux,
   appliquerCarteClient,

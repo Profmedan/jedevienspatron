@@ -12,6 +12,16 @@ export declare function appliquerEtape0(etat: EtatJeu, joueurIdx: number): Resul
  * Ne lève pas d'erreur pour ne pas bloquer le jeu en production.
  */
 export declare function verifierEquilibreComptable(joueur: Joueur, contexte: string): void;
+/**
+ * Dispatcher polymorphe B9-C — route vers la branche adaptée au modèle
+ * économique du joueur actif. Invariant : chaque branche applique une
+ * écriture double parfaitement équilibrée (1 débit = 1 crédit = `montant`).
+ */
+export declare function appliquerRessourcesPreparation(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
+/**
+ * @deprecated B9-C : alias rétro-compatible vers `appliquerRessourcesPreparation`.
+ * À retirer quand tous les call sites auront migré.
+ */
 export declare function appliquerAchatMarchandises(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
 export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: number): ResultatAction;
 export declare function calculerCoutCommerciaux(joueur: Joueur): number;

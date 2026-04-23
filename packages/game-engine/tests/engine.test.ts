@@ -15,6 +15,7 @@ import {
   investirCartePersonnelle,
   calculerCapaciteLogistique,
   vendreImmobilisation,
+  appliquerRessourcesPreparation,
 } from "../src/engine";
 import {
   verifierEquilibre,
@@ -446,5 +447,100 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
     expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant + 1500);
     expect(joueur.compteResultat.produits.revenusExceptionnels).toBe(1500);
     expect(joueur.bilan.actifs.find((a) => a.nom === "Camionnette")).toBeUndefined();
+  });
+});
+
+// ─── B9-C : Étape 2 polymorphe (Ressources & préparation) ────────────────
+
+describe("appliquerRessourcesPreparation — polymorphie par modeEconomique (B9-C)", () => {
+  test("Production (Belvaux) : achat matière → +stocks / −trésorerie, partie double", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur;
+    const tresoAvant  = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+
+    const r = appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
+
+    expect(r.succes).toBe(true);
+    expect(joueur.entreprise.modeEconomique).toBe("production");
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksAvant + 2000);
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant - 2000);
+    // Charges CR inchangées (pas de flux via CR pour la production en étape 2)
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(0);
+    expect(joueur.compteResultat.charges.chargesPersonnel).toBe(0);
+  });
+
+  test("Négoce (Azura) : réassort à crédit → +stocks / +dettes", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const joueur = etat.joueurs[0];
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur;
+    const dettesAvant = joueur.bilan.dettes;
+
+    const r = appliquerRessourcesPreparation(etat, 0, 3, "dettes");
+
+    expect(r.succes).toBe(true);
+    expect(joueur.entreprise.modeEconomique).toBe("négoce");
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksAvant + 3000);
+    expect(joueur.bilan.dettes).toBe(dettesAvant + 3000);
+  });
+
+  test("Logistique (Véloce) : préparation tournée → +servicesExterieurs / −trésorerie (PAS de stock)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const joueur = etat.joueurs[0];
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur;
+    const tresoAvant  = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+
+    const r = appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
+
+    expect(r.succes).toBe(true);
+    expect(joueur.entreprise.modeEconomique).toBe("logistique");
+    // Invariant clé : le stock N'EST PAS impacté pour un service
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksAvant);
+    // Le débit passe par servicesExterieurs (CR)
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(2000);
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant - 2000);
+  });
+
+  test("Conseil (Synergia) : staffing mission → +chargesPersonnel / −trésorerie (PAS de stock)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur;
+    const tresoAvant  = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+
+    const r = appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
+
+    expect(r.succes).toBe(true);
+    expect(joueur.entreprise.modeEconomique).toBe("conseil");
+    // Invariant clé : le stock N'EST PAS impacté pour une mission
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksAvant);
+    // Le débit passe par chargesPersonnel (CR)
+    expect(joueur.compteResultat.charges.chargesPersonnel).toBe(2000);
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant - 2000);
+  });
+
+  test("Invariant partie double : somme des deltas de chaque modification = 0 (4 entreprises)", () => {
+    const nomsEntreprises: Array<"Manufacture Belvaux" | "Azura Commerce" | "Véloce Transports" | "Synergia Lab"> = [
+      "Manufacture Belvaux", "Azura Commerce", "Véloce Transports", "Synergia Lab"
+    ];
+    for (const nom of nomsEntreprises) {
+      const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: nom }]);
+      const r = appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
+      expect(r.succes).toBe(true);
+      expect(r.modifications.length).toBe(2); // 1 débit + 1 crédit
+      // Somme des |delta| débit === somme |delta| crédit
+      const sommeDelta = r.modifications.reduce(
+        (s: number, m: { ancienneValeur: number; nouvelleValeur: number }) =>
+          s + Math.abs(m.nouvelleValeur - m.ancienneValeur),
+        0,
+      );
+      expect(sommeDelta).toBe(4000); // 2 × 2000 (débit + crédit)
+    }
+  });
+
+  test("Quantité nulle : aucune modification, succès", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const r = appliquerRessourcesPreparation(etat, 0, 0, "tresorerie");
+    expect(r.succes).toBe(true);
+    expect(r.modifications.length).toBe(0);
   });
 });

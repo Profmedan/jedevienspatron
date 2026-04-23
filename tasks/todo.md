@@ -234,13 +234,21 @@ function appliquerEtape2(etat, j): ResultatAction {
 - [ ] **V1** (ce chantier) : renommer « Paiement des commerciaux » → « Développement commercial » dans MODALES, LeftPanel, pedagogicalMessages. Texte pédagogique qui explique que les commerciaux sont UN levier parmi d'autres (trafic, contrats, réputation). Zéro mécanique nouvelle — les commerciaux génèrent encore les clients comme aujourd'hui.
 - [ ] **V2** (session ultérieure) : sources de demande multiples (trafic passif, contrats récurrents, réputation). Nouvelles données dans `Joueur`, nouvelles règles de génération, nouvelle UI.
 
-#### B9-C — Étape 2 : Ressources & préparation (polymorphe)
-- [ ] Ajouter `modeEconomique: "production" | "négoce" | "logistique" | "conseil"` sur `EntrepriseTemplate` + `Joueur` dans `packages/game-engine/src/types.ts`
-- [ ] Peupler `modeEconomique` dans `packages/game-engine/src/data/entreprises.ts` pour les 4 entreprises
-- [ ] Discriminer `stocks` Belvaux par nom : ajouter 2 lignes « Matière première Belvaux » (init 0) et « Produits finis Belvaux » (init 0) ; migrer l'ancienne ligne stocks Belvaux vers l'un des deux (à décider en fonction du bilan initial cible)
-- [ ] Implémenter `appliquerEtape2Belvaux` (achat matière), `appliquerEtape2Azura` (réassort), `appliquerEtape2Veloce` (préparation tournée), `appliquerEtape2Synergia` (staffing) selon B9-A.1
-- [ ] Dispatch `appliquerEtape2(etat, j)` qui route par `modeEconomique`
-- [ ] Libellés pédagogiques par entreprise dans MODALES_ETAPES
+#### B9-C — Étape 2 : Ressources & préparation (polymorphe) — 2026-04-23 ✅
+- [x] Ajouter `ModeEconomique = "production" | "négoce" | "logistique" | "conseil"` comme type exporté dans `packages/game-engine/src/types.ts`
+- [x] Champ `modeEconomique?: ModeEconomique` sur `EntrepriseTemplate` (optionnel pour compat avec templates custom créés via EntrepriseBuilder — fallback "négoce" dans `creerJoueur`)
+- [x] Champ `modeEconomique: ModeEconomique` sur `Joueur.entreprise` (requis — cloné par `creerJoueur` depuis le template, avec fallback)
+- [x] Peupler `modeEconomique` dans `data/entreprises.ts` pour les 4 entreprises (Belvaux=production, Véloce=logistique, Azura=négoce, Synergia=conseil)
+- [x] Implémenter 4 fonctions branchées : `appliquerRessourcesBelvaux` (D stocks / C tréso ou dettes, libellés matière), `appliquerRessourcesAzura` (D stocks / C tréso ou dettes, libellés réassort), `appliquerRessourcesVeloce` (D servicesExterieurs / C tréso ou dettes, libellés tournée), `appliquerRessourcesSynergia` (D chargesPersonnel / C tréso ou dettes, libellés staffing)
+- [x] Dispatcher public `appliquerRessourcesPreparation(etat, idx, qte, mode)` qui route par `modeEconomique` — exhaustif via `never` sur le switch
+- [x] Alias rétro-compatible `appliquerAchatMarchandises` qui délègue au dispatcher (deprecated, à retirer quand tous les call sites auront migré)
+- [x] Export dans `packages/game-engine/src/index.ts`
+- [x] Câblage `useAchatFlow.ts` : bascule vers `appliquerRessourcesPreparation` + correction bug historique `buildActiveStep(..., 1)` → `..., 2` (étape RESSOURCES_PREPARATION)
+- [x] UI polymorphe `LeftPanel.tsx` : helper `ressourcePreparationLabels(mode)` qui fournit titre court + 3 aria-labels adaptés par métier ; sous-titre cyan au-dessus du stepper à l'étape 2
+- [x] **Décision assumée V1 B9-C — bilans de départ inchangés** : en V1, la ligne `Stocks` des 4 entreprises garde son nom et sa valeur de 4000 € (pas de discrimination Matière/Produits finis pour Belvaux ni de renommage pour Véloce/Synergia). La polymorphie V1 opère uniquement sur les ÉCRITURES (quel poste est débité). La discrimination des stocks par nom et l'ajout des lignes « En-cours » arrivera en B9-D quand ces lignes deviendront réellement utilisées. Justification : zéro risque de régression sur les tests existants et l'équilibre de jeu, focus 100% sur la polymorphie comptable.
+- [x] Tests unitaires : 6 nouveaux cas dans `describe("appliquerRessourcesPreparation — polymorphie par modeEconomique (B9-C)")` couvrant les 4 entreprises, l'invariant partie double (somme absolue des deltas = 2 × montant), et le cas quantité nulle. **43/45 tests verts** (les 2 échecs pré-existants restent sur #45 B8-D commercial Junior).
+- [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
+- [x] Rebuild `dist/`
 
 #### B9-D — Étape 3 : Réalisation métier (polymorphe)
 - [ ] `appliquerEtape3Belvaux` : production (consommation matière + constat production stockée) — **2 écritures doubles enchaînées**

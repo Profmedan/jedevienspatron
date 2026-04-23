@@ -53,14 +53,42 @@ export interface CompteResultat {
 export type DefaultEntreprise = "Manufacture Belvaux" | "Véloce Transports" | "Azura Commerce" | "Synergia Lab";
 /** Accepte les 4 défauts + tout nom custom (string) avec autocomplétion */
 export type NomEntreprise = DefaultEntreprise | (string & {});
+/**
+ * Mode économique d'une entreprise — utilisé par le dispatcher B9 pour
+ * brancher les étapes polymorphes 2 (RESSOURCES_PREPARATION), 3
+ * (REALISATION_METIER, B9-D) et 4 (FACTURATION_VENTES, B9-E).
+ *
+ * Mapping par entreprise de base :
+ *   - "production" : Manufacture Belvaux (fabrique à partir de matière 1ère)
+ *   - "négoce"     : Azura Commerce (achat-revente de marchandises)
+ *   - "logistique" : Véloce Transports (prestation de service)
+ *   - "conseil"    : Synergia Lab (mission + licences)
+ *
+ * Étape 2 — écritures polymorphes (B9-C) :
+ *   - production → D stocks (matière) / C trésorerie ou dettes
+ *   - négoce     → D stocks (marchandises) / C trésorerie ou dettes
+ *   - logistique → D servicesExterieurs / C trésorerie ou dettes
+ *   - conseil    → D chargesPersonnel / C trésorerie ou dettes
+ */
+export type ModeEconomique = "production" | "négoce" | "logistique" | "conseil";
 export interface EntrepriseTemplate {
     nom: NomEntreprise;
     /** Couleur thématique */
     couleur: string;
     /** Emoji icône */
     icon: string;
-    /** Type d'activité affiché */
+    /** Type d'activité affiché (narratif UI — peut différer de `modeEconomique`) */
     type: string;
+    /**
+     * Mode économique (identifiant technique pour le dispatcher polymorphe
+     * des étapes 2/3/4 du cycle B9). Optionnel pour compatibilité avec les
+     * templates custom créés par un formateur via `EntrepriseBuilder` : si
+     * absent, `creerJoueur` retombe sur "négoce" (le modèle le plus proche
+     * du comportement historique uniforme).
+     * Les 4 entreprises canoniques (Belvaux, Azura, Véloce, Synergia)
+     * l'ont toujours renseigné explicitement dans `data/entreprises.ts`.
+     */
+    modeEconomique?: ModeEconomique;
     specialite: string;
     /** Réduit le délai de paiement client de 1 trimestre (spécialité Véloce Transports) */
     reducDelaiPaiement?: boolean;
@@ -153,6 +181,11 @@ export interface Joueur {
         icon: string;
         type: string;
         specialite: string;
+        /**
+         * Mode économique — cloné depuis `EntrepriseTemplate.modeEconomique`
+         * par `creerJoueur`. Utilisé par le dispatcher B9 (étapes 2/3/4).
+         */
+        modeEconomique: ModeEconomique;
         /** Réduit le délai de paiement client de 1 trimestre */
         reducDelaiPaiement?: boolean;
         /** Génère automatiquement 1 client particulier par tour */

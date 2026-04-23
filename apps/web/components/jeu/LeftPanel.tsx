@@ -8,6 +8,53 @@ import { nomCompte } from "./utils";
 // Les cartes du mini-deck logistique sont désormais fusionnées dans
 // `InvestissementPanel`, affiché dans le panneau central (MainContent).
 
+// B9-C — Libellés polymorphes pour l'étape 2 (RESSOURCES_PREPARATION)
+// selon le mode économique de l'entreprise. Utilisé par LeftPanel pour
+// afficher le bon récit UI et par les aria-labels.
+function ressourcePreparationLabels(mode: string): {
+  titreCourt: string;
+  ariaAction: string;
+  ariaSkip: string;
+  ariaLaunch: string;
+  ariaQuantite: string;
+} {
+  switch (mode) {
+    case "production":
+      return {
+        titreCourt: "Achat de matière première",
+        ariaAction: "achat de matière première",
+        ariaSkip: "Passer l'étape d'achat de matière première",
+        ariaLaunch: "Lancer l'achat de matière première",
+        ariaQuantite: "Quantité de matière première à acheter",
+      };
+    case "logistique":
+      return {
+        titreCourt: "Préparation de tournée",
+        ariaAction: "préparation de tournée",
+        ariaSkip: "Passer l'étape de préparation de tournée",
+        ariaLaunch: "Lancer la préparation de tournée",
+        ariaQuantite: "Nombre de tournées à préparer",
+      };
+    case "conseil":
+      return {
+        titreCourt: "Staffing de mission",
+        ariaAction: "staffing de mission",
+        ariaSkip: "Passer l'étape de staffing",
+        ariaLaunch: "Lancer le staffing de mission",
+        ariaQuantite: "Nombre de missions à cadrer",
+      };
+    case "négoce":
+    default:
+      return {
+        titreCourt: "Réassort de marchandises",
+        ariaAction: "réassort de marchandises",
+        ariaSkip: "Passer l'étape de réassort",
+        ariaLaunch: "Lancer le réassort de marchandises",
+        ariaQuantite: "Quantité de marchandises à réassortir",
+      };
+  }
+}
+
 // B9 — cycle 8 étapes : ENCAISSEMENTS → DEVELOPPEMENT_COMMERCIAL
 //      → RESSOURCES_PREPARATION → REALISATION_METIER → FACTURATION_VENTES
 //      → DECISION → EVENEMENT → CLOTURE_BILAN
@@ -524,8 +571,13 @@ export function LeftPanel({
           <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <p className="text-sm text-slate-300">{stepHelp}</p>
 
-            {etapeTour === 2 && (
+            {etapeTour === 2 && (() => {
+              const labels = ressourcePreparationLabels(joueur.entreprise.modeEconomique);
+              return (
               <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-300/80">
+                  {labels.titreCourt}
+                </p>
                 <div>
                   <label htmlFor="qty" className="block text-xs font-semibold text-white mb-1">
                     Quantité <span className="text-slate-400 font-normal">(1 unité = 1 000 €)</span>
@@ -550,7 +602,7 @@ export function LeftPanel({
                         const v = parseInt(e.target.value) || 0;
                         setAchatQte(Math.max(0, Math.min(10, v)));
                       }}
-                      aria-label="Quantité de marchandises à acheter"
+                      aria-label={labels.ariaQuantite}
                       className="w-14 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400/20"
                     />
                     <button
@@ -598,21 +650,22 @@ export function LeftPanel({
                 <div className="flex gap-2">
                   <button
                     onClick={onSkipAchat}
-                    aria-label="Passer l'étape d'achat de marchandises"
+                    aria-label={labels.ariaSkip}
                     className="flex-1 rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/[0.08]"
                   >
                     Passer
                   </button>
                   <button
                     onClick={onLaunchAchat}
-                    aria-label="Lancer l'achat de marchandises"
+                    aria-label={labels.ariaLaunch}
                     className="flex-1 rounded-lg bg-cyan-400 px-2 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-300"
                   >
                     Lancer
                   </button>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {etapeTour === 5 && (
               <div className="space-y-2">

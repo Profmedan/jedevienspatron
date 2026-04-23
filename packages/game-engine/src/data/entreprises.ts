@@ -51,6 +51,7 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#e8751a",
     icon: "🏭",
     type: "Production",
+    modeEconomique: "production",
     specialite: "⚡ Produit à chaque tour",
     // Spécialité active : +1 000 € productionStockée, +1 000 € stocks par trimestre
     effetsPassifs: [
@@ -91,6 +92,7 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#7b2d8b",
     icon: "🚚",
     type: "Logistique",
+    modeEconomique: "logistique",
     specialite: "🚀 Livraison rapide",
     reducDelaiPaiement: true, // Spécialité : délai d'encaissement réduit de 1 (TPE → immédiat, Grand Compte → C+1)
     actifs: [
@@ -125,6 +127,7 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#1565c0",
     icon: "🏪",
     type: "Commerce",
+    modeEconomique: "négoce",
     specialite: "👥 Attire les particuliers",
     clientGratuitParTour: true, // Spécialité : +1 client Particulier automatique par tour
     actifs: [
@@ -160,6 +163,7 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#2e7d32",
     icon: "💡",
     type: "Innovation",
+    modeEconomique: "conseil",
     specialite: "💎 Revenus de licence",
     // Spécialité active : +1 000 € produitsFinanciers, +1 000 € trésorerie par trimestre
     effetsPassifs: [

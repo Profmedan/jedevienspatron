@@ -251,6 +251,10 @@ export function creerJoueur(
       icon: template.icon,
       type: template.type,
       specialite: template.specialite,
+      // B9-C : mode économique cloné depuis le template. Si un template
+      // custom n'en fournit pas, on retombe sur "négoce" (le modèle le plus
+      // proche du comportement historique uniforme).
+      modeEconomique: template.modeEconomique ?? "négoce",
       ...(template.reducDelaiPaiement ? { reducDelaiPaiement: true } : {}),
       ...(template.clientGratuitParTour ? { clientGratuitParTour: true } : {}),
       ref: {
@@ -504,11 +508,22 @@ export function verifierEquilibreComptable(joueur: Joueur, contexte: string): vo
   }
 }
 
-// ─── ÉTAPE 2 (B9) : Ressources & préparation — achats de marchandises ────────
-// Polymorphie future B9-C : cette fonction deviendra un cas particulier
-// (négoce Azura + production Belvaux matière 1ère).
+// ─── ÉTAPE 2 (B9) : Ressources & préparation — polymorphe par modeEconomique ─
+// B9-C : la fonction publique `appliquerRessourcesPreparation` route vers
+// 4 implémentations distinctes selon `joueur.entreprise.modeEconomique`.
+// Chaque branche respecte la partie double : 1 débit + 1 crédit de montants
+// égaux. La contrepartie (crédit) est toujours `tresorerie` (comptant) ou
+// `dettes` fournisseurs (à crédit) — choisi par l'utilisateur via l'UI.
+//
+// Mode       | Débit                  | Narration
+// -----------|------------------------|-------------------------------------
+// production | stocks                 | Achat matière première Belvaux
+// négoce     | stocks                 | Réassort marchandises Azura
+// logistique | servicesExterieurs     | Préparation tournée Véloce (carburant, péages, sous-traitance)
+// conseil    | chargesPersonnel       | Staffing / cadrage mission Synergia
 
-export function appliquerAchatMarchandises(
+/** Branche "production" — Manufacture Belvaux : achat de matière première. */
+function appliquerRessourcesBelvaux(
   etat: EtatJeu,
   joueurIdx: number,
   quantite: number,
@@ -516,24 +531,132 @@ export function appliquerAchatMarchandises(
 ): ResultatAction {
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
-
   if (quantite <= 0) return { succes: true, modifications };
   const push = makePush(joueur, modifications);
-
-  // 1 unité physique de marchandise = PRIX_UNITAIRE_MARCHANDISE (1 000 €) de valeur comptable
   const montant = quantite * PRIX_UNITAIRE_MARCHANDISE;
 
-  // DÉBIT 37 Stocks de marchandises (Actif +)
-  push("stocks", montant, `Achat de ${quantite} unité(s) de marchandises (${montant} €)`);
+  // DÉBIT : Stocks (matière première) — sera discriminé par nom en B9-D
+  push("stocks", montant, `Achat de ${quantite} unité(s) de matière première Belvaux (${montant} €)`);
 
   // CRÉDIT : trésorerie (comptant) ou dettes fournisseurs (à crédit)
   if (modePaiement === "tresorerie") {
     push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
   } else {
-    push("dettes", montant, `Achat à crédit : dette fournisseur +${montant} €`);
+    push("dettes", montant, `Achat matière à crédit : dette fournisseur +${montant} €`);
   }
-
   return { succes: true, modifications };
+}
+
+/** Branche "négoce" — Azura Commerce : réassort de marchandises. */
+function appliquerRessourcesAzura(
+  etat: EtatJeu,
+  joueurIdx: number,
+  quantite: number,
+  modePaiement: "tresorerie" | "dettes"
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+  if (quantite <= 0) return { succes: true, modifications };
+  const push = makePush(joueur, modifications);
+  const montant = quantite * PRIX_UNITAIRE_MARCHANDISE;
+
+  // DÉBIT 37 Stocks de marchandises
+  push("stocks", montant, `Réassort de ${quantite} unité(s) de marchandises Azura (${montant} €)`);
+
+  if (modePaiement === "tresorerie") {
+    push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
+  } else {
+    push("dettes", montant, `Réassort à crédit : dette fournisseur +${montant} €`);
+  }
+  return { succes: true, modifications };
+}
+
+/** Branche "logistique" — Véloce Transports : préparation de tournée (pas de stock, charges externes). */
+function appliquerRessourcesVeloce(
+  etat: EtatJeu,
+  joueurIdx: number,
+  quantite: number,
+  modePaiement: "tresorerie" | "dettes"
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+  if (quantite <= 0) return { succes: true, modifications };
+  const push = makePush(joueur, modifications);
+  const montant = quantite * PRIX_UNITAIRE_MARCHANDISE;
+
+  // DÉBIT 61 Services extérieurs — carburant, péages, sous-traitance transport
+  push("servicesExterieurs", montant, `Préparation de ${quantite} tournée(s) Véloce — carburant, péages, sous-traitance (${montant} €)`);
+
+  if (modePaiement === "tresorerie") {
+    push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
+  } else {
+    push("dettes", montant, `Préparation à crédit : dette fournisseur +${montant} €`);
+  }
+  return { succes: true, modifications };
+}
+
+/** Branche "conseil" — Synergia Lab : staffing et cadrage de mission. */
+function appliquerRessourcesSynergia(
+  etat: EtatJeu,
+  joueurIdx: number,
+  quantite: number,
+  modePaiement: "tresorerie" | "dettes"
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+  if (quantite <= 0) return { succes: true, modifications };
+  const push = makePush(joueur, modifications);
+  const montant = quantite * PRIX_UNITAIRE_MARCHANDISE;
+
+  // DÉBIT 64 Charges de personnel — heures d'experts affectées au cadrage
+  push("chargesPersonnel", montant, `Staffing et cadrage de ${quantite} mission(s) Synergia — heures expertes affectées (${montant} €)`);
+
+  if (modePaiement === "tresorerie") {
+    push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
+  } else {
+    push("dettes", montant, `Staffing à crédit : dette fournisseur +${montant} €`);
+  }
+  return { succes: true, modifications };
+}
+
+/**
+ * Dispatcher polymorphe B9-C — route vers la branche adaptée au modèle
+ * économique du joueur actif. Invariant : chaque branche applique une
+ * écriture double parfaitement équilibrée (1 débit = 1 crédit = `montant`).
+ */
+export function appliquerRessourcesPreparation(
+  etat: EtatJeu,
+  joueurIdx: number,
+  quantite: number,
+  modePaiement: "tresorerie" | "dettes"
+): ResultatAction {
+  const mode = etat.joueurs[joueurIdx].entreprise.modeEconomique;
+  switch (mode) {
+    case "production": return appliquerRessourcesBelvaux(etat, joueurIdx, quantite, modePaiement);
+    case "négoce":     return appliquerRessourcesAzura(etat, joueurIdx, quantite, modePaiement);
+    case "logistique": return appliquerRessourcesVeloce(etat, joueurIdx, quantite, modePaiement);
+    case "conseil":    return appliquerRessourcesSynergia(etat, joueurIdx, quantite, modePaiement);
+    default: {
+      // Cas impossible en pratique — garde-fou si une entreprise custom
+      // arrive sans modeEconomique valide.
+      const _exhaustive: never = mode;
+      void _exhaustive;
+      return appliquerRessourcesAzura(etat, joueurIdx, quantite, modePaiement);
+    }
+  }
+}
+
+/**
+ * @deprecated B9-C : alias rétro-compatible vers `appliquerRessourcesPreparation`.
+ * À retirer quand tous les call sites auront migré.
+ */
+export function appliquerAchatMarchandises(
+  etat: EtatJeu,
+  joueurIdx: number,
+  quantite: number,
+  modePaiement: "tresorerie" | "dettes"
+): ResultatAction {
+  return appliquerRessourcesPreparation(etat, joueurIdx, quantite, modePaiement);
 }
 
 // ─── ÉTAPE 0 (B9) : Encaissements — avancement des créances ──────────────────
