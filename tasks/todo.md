@@ -250,13 +250,28 @@ function appliquerEtape2(etat, j): ResultatAction {
 - [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
 - [x] Rebuild `dist/`
 
-#### B9-D — Étape 3 : Réalisation métier (polymorphe)
-- [ ] `appliquerEtape3Belvaux` : production (consommation matière + constat production stockée) — **2 écritures doubles enchaînées**
-- [ ] `appliquerEtape3Azura` : coût de canal / distribution — **1 écriture double** (pas de checkpoint muet)
-- [ ] `appliquerEtape3Veloce` : exécution prestation (charges de personnel variables)
-- [ ] `appliquerEtape3Synergia` : réalisation mission (charges de personnel exécution)
-- [ ] Dispatch `appliquerEtape3(etat, j)`
-- [ ] UI : chaque entreprise a un libellé et une narration distincte dans LeftPanel et ModalEtape
+#### B9-D — Étape 3 : Réalisation métier (polymorphe) — 2026-04-23 ✅
+- [x] Constante `COUT_CANAL_AZURA_PAR_TOUR = 300` dans `types.ts`
+- [x] Helper interne `mutateActifByName` dans `engine.ts` pour cibler un actif par nom exact (partie double préservée)
+- [x] Data `entreprises.ts` : Belvaux split stocks en 2 lignes (« Produits finis Belvaux » 3000 EN PREMIER + « Matière première Belvaux » 1000) ; Azura renommée en « Marchandises Azura » ; Véloce et Synergia gagnent une 2e ligne stocks « En-cours tournée/mission » initialisée à 0 (totaux bilan inchangés)
+- [x] `creerJoueur` : reconnaissance élargie pour la catégorie `stocks` (ajout des mots-clés `matière`, `produits finis`, `marchandise`, `en-cours`, `en cours`) — indispensable pour que les nouvelles lignes stocks soient correctement catégorisées
+- [x] Refactor `appliquerRessourcesBelvaux` (B9-C) : cible maintenant « Matière première Belvaux » via `mutateActifByName` (ne pollue plus les Produits finis)
+- [x] `appliquerRealisationBelvaux` : 2 écritures doubles enchaînées — (a) D achats +M / C Matière première −M ; (b) D Produits finis +V / C productionStockee +V. Garde-fou : refus si matière insuffisante
+- [x] `appliquerRealisationAzura` : 1 écriture double — D servicesExterieurs +300 / C trésorerie ou dettes −300
+- [x] `appliquerRealisationVeloce` : 2 écritures doubles — (a) D chargesPersonnel +E / C trésorerie ou dettes −E ; (b) D En-cours tournée +V_svc / C productionStockee +V_svc
+- [x] `appliquerRealisationSynergia` : symétrique Véloce avec « En-cours mission Synergia »
+- [x] Dispatcher public `appliquerRealisationMetier(etat, idx, qte, mode)` avec switch exhaustif (garde-fou `never`)
+- [x] Export dans `packages/game-engine/src/index.ts`
+- [x] Nouveau hook `useRealisationFlow` (similaire à `useAchatFlow`) : state `realisationQte`/`realisationMode`/`realisationError`, actions `launchRealisation`/`skipRealisation`
+- [x] `useGameFlow.ts` : intégration du hook, retrait de l'index 3 de la condition skip-auto (étape 3 désormais user-driven comme l'étape 2), mise à jour `AUTO_ETAPES = [0, 1, 4, 6, 7]`, expose les props au niveau retour typé
+- [x] UI LeftPanel : helper `realisationMetierLabels(mode, joueur)` pour titre/stepper/mode/récit adaptés ; nouveau bloc étape 3 avec stepper borné (Belvaux : matière disponible ; Véloce/Synergia : 0-10 ; Azura : pas de stepper, montant fixe 300 €) ; radios comptant/crédit affichées selon le métier ; bouton Lancer désactivé si quantité nulle
+- [x] `page.tsx` : passage des nouveaux props `realisationQte`, `setRealisationQte`, `realisationMode`, `setRealisationMode`, `onLaunchRealisation`, `onSkipRealisation`, `realisationError` à LeftPanel
+- [x] Masquage du bouton « Lancer » principal quand `etapeTour === 3` (étape user-driven)
+- [x] `MODALES_ETAPES[3]` mise à jour : retrait de la mention « polymorphie à venir B9-D », description des 4 branches avec écritures exactes
+- [x] `ETAPE_INFO[3]` mise à jour : même principe que la modale
+- [x] Tests unitaires : 8 nouveaux cas dans `describe("appliquerRealisationMetier — polymorphie par modeEconomique (B9-D)")` couvrant production Belvaux (+ garde-fou matière insuffisante), négoce Azura (coût canal fixe à crédit), logistique Véloce, conseil Synergia, invariant partie double 4 entreprises, quantité nulle, et régression Belvaux étape 2 ciblage matière. **51/53 tests verts** (les 2 échecs sont toujours les pré-existants #45 B8-D Junior).
+- [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
+- [x] Rebuild `dist/`
 
 #### B9-E — Étape 4 : Facturation & ventes (polymorphe, refonte `appliquerCarteClient`)
 - [ ] Refactor `appliquerCarteClient` pour brancher par `modeEconomique` :

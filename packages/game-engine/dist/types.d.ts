@@ -308,6 +308,12 @@ export declare const DECOUVERT_MAX = 8000;
 export declare const CHARGES_FIXES_PAR_TOUR = 2000;
 /** Prix unitaire d'une marchandise : 1 unité physique = 1 000 € de valeur comptable (achat & CMV) */
 export declare const PRIX_UNITAIRE_MARCHANDISE = 1000;
+/**
+ * B9-D : coût fixe de canal / distribution pour Azura à l'étape 3
+ * REALISATION_METIER (animation PLV, plateforme e-commerce, fidélisation).
+ * Calibré à ~15 % de la marge brute moyenne Azura (~2 000 €/tour).
+ */
+export declare const COUT_CANAL_AZURA_PAR_TOUR = 300;
 /** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
 export declare const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */

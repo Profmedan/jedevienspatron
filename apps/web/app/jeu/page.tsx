@@ -415,6 +415,13 @@ export default function JeuPage() {
             setAchatMode={flow.setAchatMode}
             onLaunchAchat={flow.launchAchat}
             onSkipAchat={flow.skipAchat}
+            realisationQte={flow.realisationQte}
+            setRealisationQte={flow.setRealisationQte}
+            realisationMode={flow.realisationMode}
+            setRealisationMode={flow.setRealisationMode}
+            onLaunchRealisation={flow.launchRealisation}
+            onSkipRealisation={flow.skipRealisation}
+            realisationError={flow.realisationError}
             selectedDecision={flow.selectedDecision}
             setSelectedDecision={flow.setSelectedDecision}
             cartesDisponibles={flow.cartesDisponibles}

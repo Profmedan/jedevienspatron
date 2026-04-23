@@ -58,14 +58,14 @@ export const MODALES_ETAPES: Record<number, ModalEtape> = {
     impactComptes: `Augmentation de stock, de charges externes, ou de charges de personnel selon l'entreprise. Contrepartie : trésorerie qui baisse (paiement comptant) ou dettes fournisseurs qui augmentent (paiement à crédit).`,
     conseil: `Dimensionne tes ressources en fonction de la demande que tu peux raisonnablement servir. Acheter à crédit préserve la trésorerie mais crée une dette à rembourser rapidement.`,
   },
-  // ── étape 3 B9 : Réalisation métier ───────────────────────────────────────
+  // ── étape 3 B9 : Réalisation métier (polymorphe par modeEconomique) ───────
   3: {
     etape: 3,
     titre: `Tu fabriques, prépares, exécutes, livres`,
-    ceQuiSePasse: `C'est l'instant où ton entreprise crée vraiment de la valeur. La forme varie selon ton modèle économique : Belvaux fabrique un produit fini, Azura met la marchandise en vente (canal / animation), Véloce exécute la tournée, Synergia livre la mission. L'écriture comptable suit la logique métier.`,
-    pourquoi: `C'est LE cœur métier de ton entreprise — ce qui différencie vraiment un fabricant d'un distributeur, d'un logisticien, d'un cabinet de conseil. Sans cette étape visible, l'apprentissage aplatirait les métiers à un seul modèle « achat-vente » qui ment sur ce que font vraiment ces entreprises.`,
-    impactComptes: `En production : consommation de matière + constat de la production stockée (2 écritures doubles). En négoce : coût de canal / distribution (charges externes). En service : charges d'exécution + constat d'en-cours de production. Le principe de partie double reste l'invariant non négociable.`,
-    conseil: `Cette étape est polymorphe et sera pleinement active dès que la branche par entreprise sera câblée (sous-tâche B9-D). En V1 B9-A elle passe automatiquement, mais elle est bien dans le cycle pour que tu comprennes qu'elle arrive.`,
+    ceQuiSePasse: `C'est l'instant où ton entreprise crée vraiment de la valeur. La forme varie selon ton modèle économique : Belvaux fabrique des produits finis à partir de sa matière première, Azura paie son canal de distribution (animation, plateforme), Véloce exécute ses tournées (heures chauffeur + en-cours de production), Synergia livre ses missions (heures expertes + en-cours). L'écriture comptable suit la logique métier.`,
+    pourquoi: `C'est LE cœur métier de ton entreprise — ce qui différencie vraiment un fabricant d'un distributeur, d'un logisticien, d'un cabinet de conseil. Chaque métier a sa double écriture propre, mais le principe de partie double reste l'invariant commun.`,
+    impactComptes: `Belvaux : 2 actes — consommation matière (débit achats / crédit stocks matière) puis constat de production (débit stocks produits finis / crédit production stockée). Azura : 1 acte — coût de canal 300 € fixe (débit services extérieurs / crédit trésorerie ou dettes). Véloce/Synergia : 2 actes — charges d'exécution (débit charges personnel / crédit trésorerie ou dettes) puis constat d'en-cours (débit stocks en-cours / crédit production stockée).`,
+    conseil: `Belvaux : ne produis que ce que tu peux vendre — la production stockée gonfle le bilan mais ne rapporte du cash que si elle se transforme en vente. Azura : le canal coûte que tu vendes ou non, c'est un coût fixe à couvrir. Véloce/Synergia : l'en-cours est de l'argent déjà dépensé mais pas encore facturé — reste prudent sur le volume.`,
   },
   // ── étape 4 B9 : Facturation & ventes ─────────────────────────────────────
   4: {

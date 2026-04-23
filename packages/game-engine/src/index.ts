@@ -34,6 +34,7 @@ export {
   appliquerEtape0,
   appliquerAchatMarchandises,
   appliquerRessourcesPreparation,
+  appliquerRealisationMetier,
   appliquerAvancementCreances,
   appliquerPaiementCommerciaux,
   appliquerCarteClient,

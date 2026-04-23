@@ -20,6 +20,7 @@ import { ETAPE_INFO, cloneEtat, buildActiveStep, buildTrimSnapshot, buildLiveSta
 import { usePedagogyFlow } from "./usePedagogyFlow";
 import { useLoansFlow } from "./useLoansFlow";
 import { useAchatFlow } from "./useAchatFlow";
+import { useRealisationFlow } from "./useRealisationFlow";
 import { useDecisionCards } from "./useDecisionCards";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -82,6 +83,10 @@ interface UseGameFlowReturn {
   setAchatQte: (v: number) => void;
   achatMode: "tresorerie" | "dettes";
   setAchatMode: (v: "tresorerie" | "dettes") => void;
+  realisationQte: number;
+  setRealisationQte: (v: number) => void;
+  realisationMode: "tresorerie" | "dettes";
+  setRealisationMode: (v: "tresorerie" | "dettes") => void;
   selectedDecision: CarteDecision | null;
   setSelectedDecision: (v: CarteDecision | null) => void;
   showCartes: boolean;
@@ -126,6 +131,9 @@ interface UseGameFlowReturn {
   handleDemanderEmprunt: () => void;
   launchAchat: () => void;
   skipAchat: () => void;
+  launchRealisation: () => void;
+  skipRealisation: () => void;
+  realisationError: string | null;
   launchDecision: (carteArg?: CarteDecision) => void;
   skipDecision: () => void;
   handleInvestirPersonnel: (carteId: string) => void;
@@ -178,6 +186,13 @@ export function useGameFlow({
   });
 
   const achat = useAchatFlow({
+    etat, setEtat,
+    setRecentModifications,
+    setActiveStep,
+    maybeShowPedagoModal: pedagogy.maybeShowPedagoModal,
+  });
+
+  const realisation = useRealisationFlow({
     etat, setEtat,
     setRecentModifications,
     setActiveStep,
@@ -418,10 +433,12 @@ export function useGameFlow({
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
     // Skip auto des étapes sans impact :
     //   - 0 ENCAISSEMENTS si aucune créance ne vient à échéance,
-    //   - 1 DEVELOPPEMENT_COMMERCIAL si aucun commercial n'est actif,
-    //   - 3 REALISATION_METIER (placeholder V1 B9-A, toujours sans modification
-    //     tant que la polymorphie par `modeEconomique` n'est pas branchée en B9-D).
-    if ((etapeActuelle === 0 || etapeActuelle === 1 || etapeActuelle === 3) && modsFiltrees.length === 0) {
+    //   - 1 DEVELOPPEMENT_COMMERCIAL si aucun commercial n'est actif.
+    // B9-D : l'étape 3 REALISATION_METIER n'est plus dans la liste —
+    // elle est désormais user-driven (comme l'étape 2), avec son propre
+    // bloc UI + hook `useRealisationFlow`. Un joueur qui ne veut rien
+    // réaliser ce trimestre clique explicitement « Passer ».
+    if ((etapeActuelle === 0 || etapeActuelle === 1) && modsFiltrees.length === 0) {
       avancerEtape(next);
       pedagogy.maybeShowPedagoModal(next.etapeTour);
       setEtat({ ...next });
@@ -435,9 +452,11 @@ export function useGameFlow({
 
     // Étapes éligibles au mode rapide (auto-cochage de toutes les écritures) :
     // toutes celles qui ne demandent aucun input utilisateur.
-    //   0 ENCAISSEMENTS · 1 DEVELOPPEMENT_COMMERCIAL · 3 REALISATION_METIER
-    //   4 FACTURATION_VENTES · 6 EVENEMENT · 7 CLOTURE_BILAN
-    const AUTO_ETAPES = [0, 1, 3, 4, 6, 7];
+    //   0 ENCAISSEMENTS · 1 DEVELOPPEMENT_COMMERCIAL · 4 FACTURATION_VENTES
+    //   6 EVENEMENT · 7 CLOTURE_BILAN
+    // B9-D : étape 3 REALISATION_METIER retirée de la liste — elle est
+    // user-driven (stepper quantité) comme l'étape 2 ACHATS_STOCK.
+    const AUTO_ETAPES = [0, 1, 4, 6, 7];
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
       dispatchActiveStep({ type: "SET_STEP", step });
@@ -522,8 +541,11 @@ export function useGameFlow({
     tourTransition, setTourTransition,
     failliteInfo, setFailliteInfo,
 
-    // ─ Sous-hook : achats
+    // ─ Sous-hook : achats (étape 2)
     ...achat,
+
+    // ─ Sous-hook : réalisation métier (étape 3)
+    ...realisation,
 
     // ─ Sous-hook : cartes décision
     selectedDecision: decisions.selectedDecision,
@@ -568,6 +590,9 @@ export function useGameFlow({
     handleDemanderEmprunt: loans.handleDemanderEmprunt,
     launchAchat: achat.launchAchat,
     skipAchat: achat.skipAchat,
+    launchRealisation: realisation.launchRealisation,
+    skipRealisation: realisation.skipRealisation,
+    realisationError: realisation.realisationError,
     launchDecision: decisions.launchDecision,
     skipDecision: decisions.skipDecision,
     handleInvestirPersonnel: decisions.handleInvestirPersonnel,

@@ -66,8 +66,13 @@ exports.ENTREPRISES = [
             { nom: "Camionnette", valeur: 8000 },
             // Autres : réservé aux investissements via Cartes Décision
             { nom: "Autres Immobilisations", valeur: 0 },
-            // STOCKS
-            { nom: "Stocks", valeur: 4000 },
+            // STOCKS — B9-D : discrimination par nom. Produits finis EN PREMIER
+            // pour que `appliquerCarteClient` (étape 4) déstocke les bons à la
+            // vente via `push("stocks", -X)` (qui prend le premier actif de
+            // catégorie "stocks"). Matière première EN DEUXIÈME, ciblée par
+            // nom via `pushByName` à l'étape 2 (achat) et 3 (consommation).
+            { nom: "Produits finis Belvaux", valeur: 3000 }, // 3 unités prêtes à vendre au T1
+            { nom: "Matière première Belvaux", valeur: 1000 }, // 1 unité de matière au T1
             // TRÉSORERIE
             { nom: "Trésorerie", valeur: 8000 },
         ],
@@ -102,8 +107,14 @@ exports.ENTREPRISES = [
             { nom: "Machine", valeur: 6000 },
             // Autres : réservé aux investissements
             { nom: "Autres Immobilisations", valeur: 0 },
-            // STOCKS
+            // STOCKS — "Stocks" générique (fournitures, consommables) conservé
+            // en première position pour compat V1 avec `appliquerCarteClient`.
+            // Le vrai nettoyage "services ne déstockent pas" arrive en B9-E.
             { nom: "Stocks", valeur: 4000 },
+            // EN-COURS — B9-D : compte PCG 34 simplifié. Alimenté par
+            // `appliquerRealisationVeloce` (étape 3) et extourné par la vente
+            // (étape 4, B9-E). En V1 B9-D, l'extourne reste manuelle/déférée.
+            { nom: "En-cours tournée Véloce", valeur: 0 },
             // TRÉSORERIE
             { nom: "Trésorerie", valeur: 8000 },
         ],
@@ -136,8 +147,8 @@ exports.ENTREPRISES = [
             { nom: "Voiture", valeur: 8000 },
             // Autres : réservé aux investissements
             { nom: "Autres Immobilisations", valeur: 0 },
-            // STOCKS
-            { nom: "Stocks", valeur: 4000 },
+            // STOCKS — B9-D : renommée "Marchandises Azura" (négoce)
+            { nom: "Marchandises Azura", valeur: 4000 },
             // TRÉSORERIE
             { nom: "Trésorerie", valeur: 8000 },
         ],
@@ -175,8 +186,13 @@ exports.ENTREPRISES = [
             { nom: "Matériel informatique", valeur: 5000 },
             // Autres : réservé aux investissements
             { nom: "Autres Immobilisations", valeur: 0 },
-            // STOCKS
+            // STOCKS — "Stocks" générique (matériel de support, licences) conservé
+            // en première position pour compat V1 avec `appliquerCarteClient`.
             { nom: "Stocks", valeur: 4000 },
+            // EN-COURS — B9-D : compte PCG 34 simplifié. Alimenté par
+            // `appliquerRealisationSynergia` (étape 3) ; extourne à la
+            // facturation déférée en B9-E.
+            { nom: "En-cours mission Synergia", valeur: 0 },
             // TRÉSORERIE
             { nom: "Trésorerie", valeur: 8000 },
         ],

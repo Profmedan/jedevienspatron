@@ -11,6 +11,7 @@ exports.appliquerEtape0 = appliquerEtape0;
 exports.verifierEquilibreComptable = verifierEquilibreComptable;
 exports.appliquerRessourcesPreparation = appliquerRessourcesPreparation;
 exports.appliquerAchatMarchandises = appliquerAchatMarchandises;
+exports.appliquerRealisationMetier = appliquerRealisationMetier;
 exports.appliquerAvancementCreances = appliquerAvancementCreances;
 exports.calculerCoutCommerciaux = calculerCoutCommerciaux;
 exports.appliquerPaiementCommerciaux = appliquerPaiementCommerciaux;
@@ -102,6 +103,43 @@ function makePush(joueur, modifications) {
         });
     };
 }
+/**
+ * B9-D : cible un actif PRÉCIS par son nom exact (pas par catégorie) et
+ * applique un delta. Utile quand plusieurs actifs partagent la même
+ * catégorie `stocks` (ex. Belvaux avec « Matière première » et « Produits
+ * finis ») et qu'on veut pousser sur l'un sans toucher l'autre.
+ *
+ * Le poste enregistré dans la modification est `stocks` (ou la catégorie
+ * de l'actif ciblé) pour que la lecture CR/Bilan reste cohérente.
+ *
+ * Retourne `true` si l'actif a été trouvé et modifié, `false` sinon
+ * (l'appelant peut alors décider de fallback ou de lever une erreur).
+ */
+function mutateActifByName(joueur, modifications, nomActif, delta, explication) {
+    const actif = joueur.bilan.actifs.find((a) => a.nom === nomActif);
+    if (!actif)
+        return false;
+    const ancienneValeur = actif.valeur;
+    // Pas de plancher à 0 pour la trésorerie (peut passer en découvert),
+    // mais les stocks et en-cours doivent rester ≥ 0.
+    const categorie = actif.categorie;
+    const nouvelleValeur = categorie === "tresorerie"
+        ? ancienneValeur + delta
+        : Math.max(0, ancienneValeur + delta);
+    actif.valeur = nouvelleValeur;
+    // Cast nécessaire : `PosteActif.categorie` inclut "creances" (legacy)
+    // qui n'est pas dans `EffetCarte["poste"]`. En pratique on ne cible
+    // jamais une ligne de créance via ce helper (les créances sont gérées
+    // par `creancesPlus1`/`creancesPlus2` comme postes scalaires du Bilan).
+    modifications.push({
+        joueurId: joueur.id,
+        poste: categorie,
+        ancienneValeur,
+        nouvelleValeur,
+        explication,
+    });
+    return true;
+}
 /** Applique un delta sur le poste d'un joueur et retourne l'ancienne valeur */
 function appliquerDeltaPoste(joueur, poste, delta) {
     const charges = joueur.compteResultat.charges;
@@ -174,13 +212,19 @@ function creerJoueur(id, pseudo, nomEntreprise, customTemplates) {
     if (!template)
         throw new Error(`Entreprise inconnue : ${nomEntreprise}`);
     const bilan = creerBilanVierge();
-    // Actifs avec catégories
+    // Actifs avec catégories — B9-D : reconnaissance élargie pour les noms
+    // polymorphes (matière première, produits finis, marchandises, en-cours).
+    const STOCK_KEYWORDS = ["stock", "matière", "produits finis", "marchandise", "en-cours", "en cours"];
+    const estLigneStock = (nom) => {
+        const n = nom.toLowerCase();
+        return STOCK_KEYWORDS.some((kw) => n.includes(kw));
+    };
     bilan.actifs = template.actifs.map((a) => ({
         nom: a.nom,
         valeur: a.valeur,
         categorie: a.nom.toLowerCase().includes("trésorerie")
             ? "tresorerie"
-            : a.nom.toLowerCase().includes("stock")
+            : estLigneStock(a.nom)
                 ? "stocks"
                 : "immobilisations",
     }));
@@ -409,8 +453,13 @@ function appliquerRessourcesBelvaux(etat, joueurIdx, quantite, modePaiement) {
         return { succes: true, modifications };
     const push = makePush(joueur, modifications);
     const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE;
-    // DÉBIT : Stocks (matière première) — sera discriminé par nom en B9-D
-    push("stocks", montant, `Achat de ${quantite} unité(s) de matière première Belvaux (${montant} €)`);
+    // DÉBIT : Stocks — ciblage précis "Matière première Belvaux" via pushByName
+    // (B9-D) pour ne pas polluer les Produits finis. Fallback sur la catégorie
+    // "stocks" générique si la ligne nommée n'existe pas (template custom).
+    const cibleMatiere = mutateActifByName(joueur, modifications, "Matière première Belvaux", montant, `Achat de ${quantite} unité(s) de matière première Belvaux (+${montant} €)`);
+    if (!cibleMatiere) {
+        push("stocks", montant, `Achat de ${quantite} unité(s) de matière première Belvaux (${montant} €)`);
+    }
     // CRÉDIT : trésorerie (comptant) ou dettes fournisseurs (à crédit)
     if (modePaiement === "tresorerie") {
         push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
@@ -501,6 +550,152 @@ function appliquerRessourcesPreparation(etat, joueurIdx, quantite, modePaiement)
  */
 function appliquerAchatMarchandises(etat, joueurIdx, quantite, modePaiement) {
     return appliquerRessourcesPreparation(etat, joueurIdx, quantite, modePaiement);
+}
+// ─── ÉTAPE 3 (B9) : Réalisation métier — polymorphe par modeEconomique ───────
+// B9-D : la fonction publique `appliquerRealisationMetier` route vers
+// 4 implémentations distinctes selon `joueur.entreprise.modeEconomique`.
+// Chaque branche respecte la partie double : les écritures s'équilibrent
+// parfaitement par acte (1 débit = 1 crédit).
+//
+// Mode       | Écritures                                 | Narration
+// -----------|-------------------------------------------|----------------------------
+// production | 2 actes : (a) consommation matière +M     | Belvaux fabrique des produits
+//            |            C stocks[Matière] −M           | finis à partir de sa matière
+//            |           (b) stocks[Produits finis] +V   | première. Production stockée
+//            |            C productionStockee +V         | visible en produit CR.
+// négoce     | 1 acte  : D servicesExterieurs +300       | Azura paie son canal fixe
+//            |           C tresorerie (ou dettes) −300   | (animation / plateforme).
+// logistique | 2 actes : (a) D chargesPersonnel +E       | Véloce exécute sa tournée :
+//            |            C tresorerie −E                | heures chauffeur consommées,
+//            |           (b) D stocks[En-cours Véloce]+V | en-cours de production de
+//            |            C productionStockee +V         | services constaté (PCG 34).
+// conseil    | 2 actes : (a) D chargesPersonnel +R       | Synergia livre la mission :
+//            |            C tresorerie −R                | heures expertes consommées,
+//            |           (b) D stocks[En-cours Mission]+V| en-cours de production de
+//            |            C productionStockee +V         | services constaté.
+/** Branche "production" — Belvaux fabrique à partir de sa matière première. */
+function appliquerRealisationBelvaux(etat, joueurIdx, quantite) {
+    const joueur = etat.joueurs[joueurIdx];
+    const modifications = [];
+    if (quantite <= 0)
+        return { succes: true, modifications };
+    const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE;
+    // Garde-fou : ne pas transformer plus que la matière disponible
+    const matiere = joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux");
+    if (!matiere) {
+        return { succes: false, messageErreur: "Ligne « Matière première Belvaux » introuvable au bilan — vérifiez la configuration de l'entreprise.", modifications: [] };
+    }
+    if (matiere.valeur < montant) {
+        return {
+            succes: false,
+            messageErreur: `Matière première insuffisante : ${matiere.valeur} € disponibles, ${montant} € demandés. Achetez davantage de matière à l'étape 2 avant de produire.`,
+            modifications: [],
+        };
+    }
+    const push = makePush(joueur, modifications);
+    // ── Acte (a) : consommation de la matière première ────────────────────
+    // D achats +M : la matière consommée devient une charge d'exploitation
+    push("achats", montant, `Consommation de ${quantite} unité(s) de matière première Belvaux (+${montant} €)`);
+    // C stocks (Matière première) −M : le stock de matière diminue
+    mutateActifByName(joueur, modifications, "Matière première Belvaux", -montant, `Sortie de ${quantite} unité(s) de matière première Belvaux (−${montant} €)`);
+    // ── Acte (b) : constat de la production stockée ───────────────────────
+    // D stocks (Produits finis) +V : les produits fabriqués entrent au stock
+    mutateActifByName(joueur, modifications, "Produits finis Belvaux", montant, `Production de ${quantite} unité(s) de produits finis Belvaux (+${montant} €)`);
+    // C productionStockee +V : compte de produit contre-partie (classe 7)
+    push("productionStockee", montant, `Production stockée Belvaux constatée au compte de résultat (+${montant} €)`);
+    return { succes: true, modifications };
+}
+/** Branche "négoce" — Azura paie son coût de canal fixe. */
+function appliquerRealisationAzura(etat, joueurIdx, modePaiement = "tresorerie") {
+    const joueur = etat.joueurs[joueurIdx];
+    const modifications = [];
+    const push = makePush(joueur, modifications);
+    const montant = types_1.COUT_CANAL_AZURA_PAR_TOUR;
+    // DÉBIT : services extérieurs (canal / distribution / PLV)
+    push("servicesExterieurs", montant, `Coût de canal Azura — animation, plateforme e-commerce, PLV (+${montant} €)`);
+    // CRÉDIT : trésorerie ou dettes
+    if (modePaiement === "tresorerie") {
+        push("tresorerie", -montant, `Paiement comptant du canal : −${montant} €`);
+    }
+    else {
+        push("dettes", montant, `Canal à crédit : dette fournisseur +${montant} €`);
+    }
+    return { succes: true, modifications };
+}
+/** Branche "logistique" — Véloce exécute ses tournées et constate l'en-cours. */
+function appliquerRealisationVeloce(etat, joueurIdx, quantite, modePaiement) {
+    const joueur = etat.joueurs[joueurIdx];
+    const modifications = [];
+    if (quantite <= 0)
+        return { succes: true, modifications };
+    const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE;
+    const push = makePush(joueur, modifications);
+    // ── Acte (a) : charges d'exécution (heures chauffeur) ─────────────────
+    push("chargesPersonnel", montant, `Heures chauffeur exécution ${quantite} tournée(s) Véloce (+${montant} €)`);
+    if (modePaiement === "tresorerie") {
+        push("tresorerie", -montant, `Paiement comptant heures chauffeur : −${montant} €`);
+    }
+    else {
+        push("dettes", montant, `Heures chauffeur à crédit : dette fournisseur +${montant} €`);
+    }
+    // ── Acte (b) : constat de l'en-cours de production de services ────────
+    // Réutilisation de `productionStockee` comme compte produit contre-partie
+    // (simplification PCG — voir B9-A.1 décision 7).
+    mutateActifByName(joueur, modifications, "En-cours tournée Véloce", montant, `En-cours de production — ${quantite} tournée(s) Véloce non facturée(s) (+${montant} €)`);
+    push("productionStockee", montant, `Production de services Véloce constatée en en-cours (+${montant} €)`);
+    return { succes: true, modifications };
+}
+/** Branche "conseil" — Synergia réalise ses missions et constate l'en-cours. */
+function appliquerRealisationSynergia(etat, joueurIdx, quantite, modePaiement) {
+    const joueur = etat.joueurs[joueurIdx];
+    const modifications = [];
+    if (quantite <= 0)
+        return { succes: true, modifications };
+    const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE;
+    const push = makePush(joueur, modifications);
+    // ── Acte (a) : charges d'exécution (heures expertes) ──────────────────
+    push("chargesPersonnel", montant, `Heures expertes réalisation ${quantite} mission(s) Synergia (+${montant} €)`);
+    if (modePaiement === "tresorerie") {
+        push("tresorerie", -montant, `Paiement comptant heures expertes : −${montant} €`);
+    }
+    else {
+        push("dettes", montant, `Heures expertes à crédit : dette fournisseur +${montant} €`);
+    }
+    // ── Acte (b) : constat de l'en-cours de production de services ────────
+    mutateActifByName(joueur, modifications, "En-cours mission Synergia", montant, `En-cours de production — ${quantite} mission(s) Synergia non facturée(s) (+${montant} €)`);
+    push("productionStockee", montant, `Production de services Synergia constatée en en-cours (+${montant} €)`);
+    return { succes: true, modifications };
+}
+/**
+ * Dispatcher polymorphe B9-D — route vers la branche adaptée au modèle
+ * économique du joueur actif pour l'étape 3 REALISATION_METIER.
+ *
+ * Paramètres :
+ *   - `quantite` : nombre d'unités à réaliser (transformer / exécuter / livrer).
+ *     Ignoré pour Azura (montant fixe 300 €).
+ *   - `modePaiement` : "tresorerie" (comptant) ou "dettes" (à crédit).
+ *     Pour les 4 métiers sauf Belvaux qui consomme sa propre matière
+ *     (pas de flux de trésorerie à cette étape — le flux sort à l'étape 2
+ *     lors de l'achat de matière).
+ *
+ * Invariant : chaque branche applique des écritures parfaitement
+ * équilibrées en partie double.
+ */
+function appliquerRealisationMetier(etat, joueurIdx, quantite, modePaiement = "tresorerie") {
+    const mode = etat.joueurs[joueurIdx].entreprise.modeEconomique;
+    switch (mode) {
+        case "production": return appliquerRealisationBelvaux(etat, joueurIdx, quantite);
+        case "négoce": return appliquerRealisationAzura(etat, joueurIdx, modePaiement);
+        case "logistique": return appliquerRealisationVeloce(etat, joueurIdx, quantite, modePaiement);
+        case "conseil": return appliquerRealisationSynergia(etat, joueurIdx, quantite, modePaiement);
+        default: {
+            const _exhaustive = mode;
+            void _exhaustive;
+            // Fallback : comportement négoce (coût canal fixe) — couvre les
+            // templates custom sans modeEconomique défini.
+            return appliquerRealisationAzura(etat, joueurIdx, modePaiement);
+        }
+    }
 }
 // ─── ÉTAPE 0 (B9) : Encaissements — avancement des créances ──────────────────
 function appliquerAvancementCreances(etat, joueurIdx) {

@@ -58,9 +58,9 @@ export const ETAPE_INFO: Record<number, {
   },
   3: {
     icone: "🛠️", titre: "Réalisation métier",
-    description: "C'est le moment où ton entreprise crée vraiment de la valeur : production d'un bien, mise en vente d'un produit, exécution d'une prestation, livraison d'une mission. L'écriture comptable varie selon ton modèle économique.",
-    principe: "Cette étape matérialise la valeur ajoutée de ton entreprise. Elle est polymorphe selon ton mode économique (production, négoce, logistique, conseil). L'activation de cette polymorphie arrive avec la sous-tâche B9-D.",
-    conseil: "En V1 B9-A, cette étape passe automatiquement : elle sera pleinement active dès que la polymorphie par entreprise sera branchée (B9-D). Le principe de partie double sera respecté sur toutes les écritures.",
+    description: "C'est le moment où ton entreprise crée vraiment de la valeur : Belvaux fabrique, Azura paie son canal, Véloce exécute ses tournées, Synergia livre ses missions. Les écritures comptables varient selon ton modèle économique mais le principe de partie double reste l'invariant.",
+    principe: "Belvaux consomme sa matière première et constate une production stockée (2 écritures doubles). Azura paie un coût de canal fixe de 300 € (1 écriture double). Véloce et Synergia consomment des heures et constatent un en-cours de production (2 écritures doubles).",
+    conseil: "Ne réalise que ce que tu peux absorber : trop produire gonfle les stocks sans générer de cash ; trop en-cours immobilise des charges non facturées. Pour Belvaux : produis en fonction de tes ventes attendues ; tu es borné par la matière achetée à l'étape 2.",
   },
   4: {
     icone: "🤝", titre: "Facturation & ventes",

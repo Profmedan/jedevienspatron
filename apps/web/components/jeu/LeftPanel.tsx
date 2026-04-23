@@ -55,6 +55,70 @@ function ressourcePreparationLabels(mode: string): {
   }
 }
 
+// B9-D — Libellés polymorphes pour l'étape 3 (REALISATION_METIER).
+// Retourne les informations nécessaires à l'UI : titre, stepper (borne max),
+// mode paiement (pertinent ou non), et un récit de l'écriture résumé.
+function realisationMetierLabels(
+  mode: string,
+  joueur: Joueur,
+): {
+  titreCourt: string;
+  afficheStepper: boolean;
+  qteMax: number;
+  afficheMode: boolean;
+  recitCourt: string;
+  ariaAction: string;
+  ariaLaunch: string;
+} {
+  switch (mode) {
+    case "production": {
+      // Belvaux : stepper borné par la matière première disponible.
+      const matiere = joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")?.valeur ?? 0;
+      const maxUnites = Math.floor(matiere / 1000);
+      return {
+        titreCourt: "Production de produits finis",
+        afficheStepper: true,
+        qteMax: Math.min(10, maxUnites),
+        afficheMode: false, // pas de flux externe — transformation interne
+        recitCourt: `Transforme ta matière première en produits finis (max ${maxUnites} unité${maxUnites > 1 ? "s" : ""} ce trimestre).`,
+        ariaAction: "production de produits finis",
+        ariaLaunch: "Lancer la production de produits finis Belvaux",
+      };
+    }
+    case "logistique":
+      return {
+        titreCourt: "Exécution de tournée",
+        afficheStepper: true,
+        qteMax: 10,
+        afficheMode: true,
+        recitCourt: "Exécute tes tournées : heures chauffeur consommées + en-cours de production constaté.",
+        ariaAction: "exécution de tournée",
+        ariaLaunch: "Lancer l'exécution des tournées Véloce",
+      };
+    case "conseil":
+      return {
+        titreCourt: "Réalisation de mission",
+        afficheStepper: true,
+        qteMax: 10,
+        afficheMode: true,
+        recitCourt: "Livre tes missions : heures expertes consommées + en-cours de production constaté.",
+        ariaAction: "réalisation de mission",
+        ariaLaunch: "Lancer la réalisation des missions Synergia",
+      };
+    case "négoce":
+    default:
+      return {
+        titreCourt: "Coût de canal (300 € fixe)",
+        afficheStepper: false,
+        qteMax: 0,
+        afficheMode: true,
+        recitCourt: "Paie ton canal de distribution — animation, plateforme e-commerce, fidélisation.",
+        ariaAction: "paiement du coût de canal",
+        ariaLaunch: "Lancer le paiement du coût de canal Azura",
+      };
+  }
+}
+
 // B9 — cycle 8 étapes : ENCAISSEMENTS → DEVELOPPEMENT_COMMERCIAL
 //      → RESSOURCES_PREPARATION → REALISATION_METIER → FACTURATION_VENTES
 //      → DECISION → EVENEMENT → CLOTURE_BILAN
@@ -95,6 +159,14 @@ interface LeftPanelProps {
   setAchatMode: (val: "tresorerie" | "dettes") => void;
   onLaunchAchat: () => void;
   onSkipAchat: () => void;
+  // B9-D : Réalisation métier (étape 3, polymorphe par modeEconomique)
+  realisationQte: number;
+  setRealisationQte: (val: number) => void;
+  realisationMode: "tresorerie" | "dettes";
+  setRealisationMode: (val: "tresorerie" | "dettes") => void;
+  onLaunchRealisation: () => void;
+  onSkipRealisation: () => void;
+  realisationError?: string | null;
   selectedDecision: CarteDecision | null;
   setSelectedDecision?: (val: CarteDecision | null) => void;
   cartesDisponibles?: CarteDecision[];
@@ -143,6 +215,13 @@ export function LeftPanel({
   setAchatMode,
   onLaunchAchat,
   onSkipAchat,
+  realisationQte,
+  setRealisationQte,
+  realisationMode,
+  setRealisationMode,
+  onLaunchRealisation,
+  onSkipRealisation,
+  realisationError,
   selectedDecision,
   setSelectedDecision,
   cartesDisponibles = [],
@@ -667,6 +746,131 @@ export function LeftPanel({
               );
             })()}
 
+            {etapeTour === 3 && (() => {
+              const rlabels = realisationMetierLabels(joueur.entreprise.modeEconomique, joueur);
+              const qteEffective = rlabels.afficheStepper
+                ? Math.min(realisationQte, rlabels.qteMax)
+                : 0;
+              const montantAffiche = rlabels.afficheStepper
+                ? qteEffective * 1000
+                : 300; // Azura : coût canal fixe
+              return (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-violet-300/80">
+                  {rlabels.titreCourt}
+                </p>
+                <p className="text-xs text-slate-400 leading-snug">
+                  {rlabels.recitCourt}
+                </p>
+                {rlabels.afficheStepper && (
+                  <div>
+                    <label htmlFor="realQty" className="block text-xs font-semibold text-white mb-1">
+                      Quantité <span className="text-slate-400 font-normal">(1 unité = 1 000 €)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Retirer une unité"
+                        onClick={() => setRealisationQte(Math.max(0, realisationQte - 1))}
+                        disabled={realisationQte <= 0}
+                        className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 text-lg font-bold text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        −
+                      </button>
+                      <input
+                        id="realQty"
+                        type="number"
+                        min="0"
+                        max={rlabels.qteMax}
+                        value={realisationQte}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value) || 0;
+                          setRealisationQte(Math.max(0, Math.min(rlabels.qteMax, v)));
+                        }}
+                        aria-label={`Quantité pour ${rlabels.ariaAction}`}
+                        className="w-14 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-center text-sm text-white focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400/20"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Ajouter une unité"
+                        onClick={() => setRealisationQte(Math.min(rlabels.qteMax, realisationQte + 1))}
+                        disabled={realisationQte >= rlabels.qteMax}
+                        className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 text-lg font-bold text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <p
+                      className="mt-2 text-xs font-semibold text-violet-200"
+                      aria-live="polite"
+                    >
+                      Montant : {montantAffiche.toLocaleString("fr-FR")} €
+                    </p>
+                  </div>
+                )}
+                {!rlabels.afficheStepper && (
+                  <div className="rounded-lg border border-violet-400/20 bg-violet-500/10 px-3 py-2">
+                    <p className="text-xs font-semibold text-violet-100">
+                      Montant fixe : 300 €
+                    </p>
+                    <p className="text-[10px] text-violet-200/70 mt-0.5">
+                      Non modifiable — coût de canal standard par trimestre
+                    </p>
+                  </div>
+                )}
+                {rlabels.afficheMode && (
+                  <div>
+                    <p className="text-xs font-semibold text-white mb-1">Mode</p>
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="realMode"
+                          checked={realisationMode === "tresorerie"}
+                          onChange={() => setRealisationMode("tresorerie")}
+                          className="w-3 h-3"
+                        />
+                        <span className="text-xs text-slate-300">Comptant</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="realMode"
+                          checked={realisationMode === "dettes"}
+                          onChange={() => setRealisationMode("dettes")}
+                          className="w-3 h-3"
+                        />
+                        <span className="text-xs text-slate-300">À crédit</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+                {realisationError && (
+                  <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-2 py-1.5">
+                    <p className="text-[11px] text-rose-200">{realisationError}</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={onSkipRealisation}
+                    aria-label={`Passer l'étape de ${rlabels.ariaAction}`}
+                    className="flex-1 rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/[0.08]"
+                  >
+                    Passer
+                  </button>
+                  <button
+                    onClick={onLaunchRealisation}
+                    aria-label={rlabels.ariaLaunch}
+                    disabled={rlabels.afficheStepper && qteEffective === 0}
+                    className="flex-1 rounded-lg bg-violet-500 px-2 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Lancer
+                  </button>
+                </div>
+              </div>
+              );
+            })()}
+
             {etapeTour === 5 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-300">
@@ -716,7 +920,7 @@ export function LeftPanel({
             )}
           </div>
 
-          {etapeTour !== 2 && etapeTour !== 5 && (
+          {etapeTour !== 2 && etapeTour !== 3 && etapeTour !== 5 && (
             <button
               onClick={onLaunchStep}
               className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300"

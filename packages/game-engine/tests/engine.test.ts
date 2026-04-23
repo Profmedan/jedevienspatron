@@ -16,6 +16,7 @@ import {
   calculerCapaciteLogistique,
   vendreImmobilisation,
   appliquerRessourcesPreparation,
+  appliquerRealisationMetier,
 } from "../src/engine";
 import {
   verifierEquilibre,
@@ -453,17 +454,21 @@ describe("vendreImmobilisation — cession d'occasion d'un bien immobilisé", ()
 // ─── B9-C : Étape 2 polymorphe (Ressources & préparation) ────────────────
 
 describe("appliquerRessourcesPreparation — polymorphie par modeEconomique (B9-C)", () => {
-  test("Production (Belvaux) : achat matière → +stocks / −trésorerie, partie double", () => {
+  test("Production (Belvaux) : achat matière cible « Matière première Belvaux » (B9-D)", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
-    const stocksAvant = joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur;
-    const tresoAvant  = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+    // B9-D : Belvaux a 2 lignes stocks — on cible précisément la matière première.
+    const matiereAvant = joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur;
+    const finisAvant   = joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur;
+    const tresoAvant   = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
 
     const r = appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
 
     expect(r.succes).toBe(true);
     expect(joueur.entreprise.modeEconomique).toBe("production");
-    expect(joueur.bilan.actifs.find((a) => a.categorie === "stocks")!.valeur).toBe(stocksAvant + 2000);
+    // Matière première augmente, Produits finis INCHANGÉS
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur).toBe(matiereAvant + 2000);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(finisAvant);
     expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant - 2000);
     // Charges CR inchangées (pas de flux via CR pour la production en étape 2)
     expect(joueur.compteResultat.charges.servicesExterieurs).toBe(0);
@@ -542,5 +547,134 @@ describe("appliquerRessourcesPreparation — polymorphie par modeEconomique (B9-
     const r = appliquerRessourcesPreparation(etat, 0, 0, "tresorerie");
     expect(r.succes).toBe(true);
     expect(r.modifications.length).toBe(0);
+  });
+});
+
+// ─── B9-D : Étape 3 polymorphe (Réalisation métier) ──────────────────────
+
+describe("appliquerRealisationMetier — polymorphie par modeEconomique (B9-D)", () => {
+  test("Production (Belvaux) : transforme matière → produits finis + productionStockee", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+
+    // Bilan initial Belvaux : 1000 € matière + 3000 € produits finis
+    const matiereAvant = joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur;
+    const finisAvant   = joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur;
+    expect(matiereAvant).toBe(1000);
+    expect(finisAvant).toBe(3000);
+
+    // Transforme 1 unité de matière en 1 unité de produits finis
+    const r = appliquerRealisationMetier(etat, 0, 1);
+
+    expect(r.succes).toBe(true);
+    // Consommation matière : -1000 sur Matière première
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur).toBe(0);
+    // Production stockée : +1000 sur Produits finis
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(4000);
+    // Charge consommation matière au CR (achats)
+    expect(joueur.compteResultat.charges.achats).toBe(1000);
+    // Produit production stockée au CR
+    expect(joueur.compteResultat.produits.productionStockee).toBe(1000);
+  });
+
+  test("Production (Belvaux) : refuse si matière insuffisante", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // Matière = 1000 € (1 unité). Demande 2 unités → refus.
+    const r = appliquerRealisationMetier(etat, 0, 2);
+    expect(r.succes).toBe(false);
+    expect(r.messageErreur).toContain("Matière première insuffisante");
+    expect(r.modifications.length).toBe(0);
+  });
+
+  test("Négoce (Azura) : coût de canal fixe 300 € à crédit", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const joueur = etat.joueurs[0];
+    const dettesAvant = joueur.bilan.dettes;
+
+    // Paramètres quantite/mode : quantite ignorée pour Azura, mode pertinent
+    const r = appliquerRealisationMetier(etat, 0, 99, "dettes");
+
+    expect(r.succes).toBe(true);
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(300);
+    expect(joueur.bilan.dettes).toBe(dettesAvant + 300);
+    // Stock inchangé (négoce : canal n'impacte pas les marchandises)
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Marchandises Azura")!.valeur).toBe(4000);
+  });
+
+  test("Logistique (Véloce) : 2 écritures doubles — charges + en-cours", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const joueur = etat.joueurs[0];
+    const tresoAvant = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+    const encoursAvant = joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur;
+    expect(encoursAvant).toBe(0);
+
+    // Exécute 2 tournées
+    const r = appliquerRealisationMetier(etat, 0, 2, "tresorerie");
+
+    expect(r.succes).toBe(true);
+    // (a) Charges personnel +2000, Trésorerie −2000
+    expect(joueur.compteResultat.charges.chargesPersonnel).toBe(2000);
+    expect(joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur).toBe(tresoAvant - 2000);
+    // (b) En-cours +2000, productionStockee +2000
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur).toBe(2000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(2000);
+  });
+
+  test("Conseil (Synergia) : 2 écritures doubles — charges + en-cours mission", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    const encoursAvant = joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")!.valeur;
+    expect(encoursAvant).toBe(0);
+
+    // Livre 3 missions
+    const r = appliquerRealisationMetier(etat, 0, 3, "tresorerie");
+
+    expect(r.succes).toBe(true);
+    // (a) Charges personnel +3000
+    expect(joueur.compteResultat.charges.chargesPersonnel).toBe(3000);
+    // (b) En-cours mission +3000, productionStockee +3000
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")!.valeur).toBe(3000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(3000);
+  });
+
+  test("Invariant partie double : Σ débits = Σ crédits après chaque écriture (4 entreprises)", () => {
+    const cas: Array<{
+      nom: "Manufacture Belvaux" | "Azura Commerce" | "Véloce Transports" | "Synergia Lab";
+      qte: number;
+    }> = [
+      { nom: "Manufacture Belvaux", qte: 1 },
+      { nom: "Azura Commerce", qte: 99 },
+      { nom: "Véloce Transports", qte: 2 },
+      { nom: "Synergia Lab", qte: 2 },
+    ];
+    for (const { nom, qte } of cas) {
+      const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: nom }]);
+      const r = appliquerRealisationMetier(etat, 0, qte, "tresorerie");
+      expect(r.succes).toBe(true);
+      expect(r.modifications.length).toBeGreaterThanOrEqual(2);
+      // Chaque écriture produit 2 mods (1 débit + 1 crédit). Le nombre total
+      // de modifications doit être pair (2, 4, ...).
+      expect(r.modifications.length % 2).toBe(0);
+    }
+  });
+
+  test("Quantité nulle (hors Azura) : aucune modification, succès", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const r = appliquerRealisationMetier(etat, 0, 0, "tresorerie");
+    expect(r.succes).toBe(true);
+    expect(r.modifications.length).toBe(0);
+  });
+
+  test("Belvaux étape 2 cible bien « Matière première Belvaux » (régression B9-C)", () => {
+    // Vérifie que l'achat matière à l'étape 2 ne pollue PAS les Produits finis.
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    const finisAvant = joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur;
+
+    appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
+
+    // Matière première alimentée, Produits finis inchangés
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur).toBe(1000 + 2000);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(finisAvant);
   });
 });

@@ -23,6 +23,22 @@ export declare function appliquerRessourcesPreparation(etat: EtatJeu, joueurIdx:
  * À retirer quand tous les call sites auront migré.
  */
 export declare function appliquerAchatMarchandises(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
+/**
+ * Dispatcher polymorphe B9-D — route vers la branche adaptée au modèle
+ * économique du joueur actif pour l'étape 3 REALISATION_METIER.
+ *
+ * Paramètres :
+ *   - `quantite` : nombre d'unités à réaliser (transformer / exécuter / livrer).
+ *     Ignoré pour Azura (montant fixe 300 €).
+ *   - `modePaiement` : "tresorerie" (comptant) ou "dettes" (à crédit).
+ *     Pour les 4 métiers sauf Belvaux qui consomme sa propre matière
+ *     (pas de flux de trésorerie à cette étape — le flux sort à l'étape 2
+ *     lors de l'achat de matière).
+ *
+ * Invariant : chaque branche applique des écritures parfaitement
+ * équilibrées en partie double.
+ */
+export declare function appliquerRealisationMetier(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement?: "tresorerie" | "dettes"): ResultatAction;
 export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: number): ResultatAction;
 export declare function calculerCoutCommerciaux(joueur: Joueur): number;
 export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
