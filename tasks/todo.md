@@ -206,18 +206,29 @@ function appliquerEtape2(etat, j): ResultatAction {
 
 ### Plan d'implémentation
 
-#### B9-A — Socle de vocabulaire commun + renumérotation Option B
+#### B9-A — Socle de vocabulaire commun + renumérotation Option B — 2026-04-23 ✅
 - [x] B9-A.1 : Tableau d'écritures cibles (ci-dessus)
-- [ ] Renommer les étapes dans `packages/game-engine/src/types.ts` (union `EtapeTour = 0..7` avec nouveaux commentaires ; `ETAPES` renumérotées)
-- [ ] `packages/game-engine/src/engine.ts` : `maxEtape = 7` (inchangé) ; `appliquerClotureTrimestre` déplacé à l'étape 7 (pré-bilan)
-- [ ] `apps/web/app/jeu/hooks/useGameFlow.ts` : switch remappé selon nouveau cycle B9 ; sous-étapes 5a/5b (était 4a/4b DECISION)
-- [ ] `apps/web/app/jeu/hooks/gameFlowUtils.ts` : `ETAPE_INFO` 0..7 remappé
-- [ ] `apps/web/lib/game-engine/data/pedagogie.ts` : `MODALES_ETAPES` remappées
-- [ ] `apps/web/components/jeu/ModalEtape.tsx` : `ETAPE_CONFIG` 0..7 (couleurs + icônes à ajuster pour nouvelle étape 3 « Réalisation métier »)
-- [ ] `apps/web/app/jeu/hooks/useGamePersistence.ts` : `SAVE_VERSION = 3`
-- [ ] `apps/web/components/jeu/LeftPanel.tsx`, `HeaderJeu.tsx`, `EntryPanel.tsx`, `MainContent.tsx`, `pedagogicalMessages.ts`, `CompteResultatPanel.tsx`, `EtapeGuide.tsx`, `useDecisionCards.ts` : indices remappés
-- [ ] `npx tsc --noEmit` sur `packages/game-engine` et `apps/web` → 0 erreur
-- [ ] Rebuild `dist/`
+- [x] `packages/game-engine/src/types.ts` : union `EtapeTour = 0..7` avec nouveaux commentaires B9 ; `ETAPES` renumérotées (ENCAISSEMENTS, DEVELOPPEMENT_COMMERCIAL, RESSOURCES_PREPARATION, REALISATION_METIER, FACTURATION_VENTES, DECISION, EVENEMENT, CLOTURE_BILAN)
+- [x] `packages/game-engine/src/engine.ts` : `maxEtape = 7` (inchangé) ; en-têtes de sections mises à jour pour refléter B9 ; `appliquerClotureTrimestre` déplacé narrativement à l'étape 7 (les fonctions moteur gardent leurs noms historiques, pilotage via le switch useGameFlow)
+- [x] `apps/web/app/jeu/hooks/useGameFlow.ts` : switch remappé (case 0 ENCAISSEMENTS, 1 DEV_COMMERCIAL, 4 FACTURATION_VENTES ex-3, 6 EVENEMENT ex-5, 7 CLOTURE_BILAN ex-6) ; étape 3 REALISATION_METIER auto-skipée via condition `modsFiltrees.length === 0` ; étape 7 fusionne clôture + bilan avec shortcut `verifierFinTour + confirmEndOfTurn` dans `confirmActiveStep` ; `AUTO_ETAPES = [0, 1, 3, 4, 6, 7]` ; `subEtape6` → `subEtapeDecision`
+- [x] `apps/web/app/jeu/hooks/useDecisionCards.ts` : `etapeTour === 4` → `=== 5` ; `subEtape6` → `subEtapeDecision` ; `pioche6b` → `piocheDecision` ; libellés 4a/4b → 5a/5b
+- [x] `apps/web/app/jeu/hooks/gameFlowUtils.ts` : `ETAPE_INFO` 0..7 remappé avec textes B9 (intro « Réalisation métier » polymorphe V1 placeholder, fusion Clôture+Bilan en index 7)
+- [x] `apps/web/lib/game-engine/data/pedagogie.ts` : `MODALES_ETAPES` remappées (0 Encaissements, 1 Développement commercial, 2 Ressources & préparation, 3 Réalisation métier NEW, 4 Facturation & ventes, 5 Décision, 6 Événement, 7 Clôture & bilan fusion). Texte étape 3 explicite : « polymorphe, pleinement active en B9-D »
+- [x] `apps/web/components/jeu/ModalEtape.tsx` : `ETAPE_CONFIG` 0..7 remappé. Étape 3 utilise `Factory` + palette `violet/fuchsia`. Étape 7 `Landmark` + `teal/cyan` pour la fusion clôture+bilan
+- [x] `apps/web/app/jeu/hooks/useGamePersistence.ts` : `SAVE_VERSION = 3` (invalide les saves v2)
+- [x] `apps/web/components/jeu/LeftPanel.tsx` : `STEP_NAMES` + `STEP_HELP` 8 entrées B9, `isDecisionStep = etapeTour === 5`, `hasSaleGroups = etapeTour === 4`, `etapeTour !== 2 && !== 5` pour masquer le bouton Lancer, libellés 4a/4b → 5a/5b
+- [x] `apps/web/components/jeu/HeaderJeu.tsx` : `/8` inchangé (déjà correct)
+- [x] `apps/web/components/jeu/EntryPanel.tsx` : `isSalesStep = etapeTour === 4`
+- [x] `apps/web/components/jeu/MainContent.tsx` : prop `subEtape6` → `subEtapeDecision`, `etapeTour === 4` → `=== 5`, libellés 4a/4b → 5a/5b
+- [x] `apps/web/components/jeu/pedagogicalMessages.ts` : `ctx.etape === 3` → `=== 4` (règle post-ventes), libellé « étape 4a » → « étape 5a »
+- [x] `apps/web/components/CompteResultatPanel.tsx` : commentaire T25.C → B9, condition `isProvisoire` inchangée (0..6 provisoire, 7 avec activeStep provisoire)
+- [x] `apps/web/components/jeu/InvestissementPanel.tsx` : header « étape 6b » → « étape 5b B9 »
+- [x] `apps/web/app/jeu/page.tsx` : prop `subEtape6={flow.subEtape6}` → `subEtapeDecision={flow.subEtapeDecision}` (2 occurrences)
+- [ ] `apps/web/components/EtapeGuide.tsx` : laissé en l'état (dead code, zéro import détecté par `grep -r "EtapeGuide"`). Mention cosmétique « recruter à l'étape 5 » reste correcte par hasard pour B9.
+- [x] `npx tsc --noEmit` sur `packages/game-engine` → EXIT=0
+- [x] `npx tsc --noEmit` sur `apps/web` → EXIT=0
+- [x] Rebuild `dist/` via `npm run build --workspace=packages/game-engine`
+- [x] Tests moteur : 37/39 verts (2 échecs pré-existants sur Junior `calculerCoutCommerciaux` + `genererClientsParCommerciaux`, relèvent de #45 B8-D comme pour T25.C-RESTART)
 
 #### B9-B — Étape 1 : Développement commercial (V1 texte, V2 mécanique différée)
 - [ ] **V1** (ce chantier) : renommer « Paiement des commerciaux » → « Développement commercial » dans MODALES, LeftPanel, pedagogicalMessages. Texte pédagogique qui explique que les commerciaux sont UN levier parmi d'autres (trafic, contrats, réputation). Zéro mécanique nouvelle — les commerciaux génèrent encore les clients comme aujourd'hui.

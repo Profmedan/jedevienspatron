@@ -34,7 +34,7 @@ interface MainContentProps {
     ancienneValeur: number;
     nouvelleValeur: number;
   }>;
-  subEtape6?: "recrutement" | "investissement";
+  subEtapeDecision?: "recrutement" | "investissement";
   modeRapide?: boolean;
   onSkipDecision?: () => void;
   onLaunchDecision?: (carte?: CarteDecision) => void;
@@ -58,7 +58,7 @@ export function MainContent({
   cartesDisponibles,
   cartesRecrutement = [],
   recentModifications: _recentModifications,
-  subEtape6,
+  subEtapeDecision,
   modeRapide: _modeRapide,
   onSkipDecision,
   onLaunchDecision,
@@ -191,12 +191,12 @@ export function MainContent({
         </AnimatePresence>
       </div>
 
-      {/* ─── Étape 4a (T25.C) — Sélection recrutement (flux classique) ─── */}
-      {etapeTour === 4 && subEtape6 === "recrutement" && !_activeStep && (
+      {/* ─── Étape 5a (B9) — Sélection recrutement (flux classique) ─── */}
+      {etapeTour === 5 && subEtapeDecision === "recrutement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-              4a — Recrutement
+              5a — Recrutement
             </p>
 
             {/* Card list */}
@@ -250,8 +250,8 @@ export function MainContent({
         </div>
       )}
 
-      {/* ─── Étape 4b (T25.C) — Investissement (panneau unifié catégorisé) ─ */}
-      {etapeTour === 4 && subEtape6 === "investissement" && !_activeStep && (
+      {/* ─── Étape 5b (B9) — Investissement (panneau unifié catégorisé) ─ */}
+      {etapeTour === 5 && subEtapeDecision === "investissement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3 max-h-[65vh] overflow-y-auto">
           <InvestissementPanel
             joueur={displayJoueur}

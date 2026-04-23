@@ -4,21 +4,22 @@ import { useState } from "react";
 import { getTotalActif, getTotalPassif, CarteDecision, Joueur } from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
-// NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel à l'étape 6b.
+// NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel à l'étape 5b (B9).
 // Les cartes du mini-deck logistique sont désormais fusionnées dans
 // `InvestissementPanel`, affiché dans le panneau central (MainContent).
 
-// T25.C — cycle 8 étapes : ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES
-//                        → DECISION → EVENEMENT → CLOTURE_TRIMESTRE → BILAN
+// B9 — cycle 8 étapes : ENCAISSEMENTS → DEVELOPPEMENT_COMMERCIAL
+//      → RESSOURCES_PREPARATION → REALISATION_METIER → FACTURATION_VENTES
+//      → DECISION → EVENEMENT → CLOTURE_BILAN
 const STEP_NAMES = [
   "Encaissements",
-  "Paiement commerciaux",
-  "Approvisionnement",
-  "Traitement ventes",
+  "Développement commercial",
+  "Ressources & préparation",
+  "Réalisation métier",
+  "Facturation & ventes",
   "Décisions",
   "Événement",
-  "Clôture du trimestre",
-  "Bilan trimestre",
+  "Clôture & bilan",
 ];
 
 interface JournalEntry {
@@ -56,7 +57,7 @@ interface LeftPanelProps {
   decisionError: string | null;
   onLaunchStep: () => void;
   journal: JournalEntry[];
-  subEtape6?: "recrutement" | "investissement";
+  subEtapeDecision?: "recrutement" | "investissement";
   modeRapide?: boolean;
   setModeRapide?: (val: boolean) => void;
   modalEtapeEnAttente?: number | null;
@@ -69,16 +70,16 @@ interface LeftPanelProps {
   onApplySaleGroup?: (saleGroupId: string) => void;
 }
 
-// T25.C — aide par étape, alignée sur STEP_NAMES
+// B9 — aide par étape, alignée sur STEP_NAMES
 const STEP_HELP = [
   "Vos créances clients avancent et sont encaissées.",
-  "Salaires versés. Nouveaux clients générés.",
-  "Achat de stocks (optionnel)",
-  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.",
+  "Salaires versés. Nouveaux clients générés. Les commerciaux sont UN levier parmi d'autres (sources multiples à venir en B9-B V2).",
+  "Achat de stocks / réassort / planification des tournées / staffing des missions (polymorphe par entreprise).",
+  "Réalisation métier — polymorphe par entreprise (production / canal / exécution / mission). Activation pleine en B9-D.",
+  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat avec la contrepartie comptable adaptée à ton métier.",
   "Sélection de carte de recrutement ou d'investissement.",
   "Une carte Événement sera piochée.",
-  "Clôture : charges fixes, amortissements, effets récurrents, remboursement d'emprunt (et intérêts dès le T3).",
-  "Vérification du bilan. Fin du trimestre.",
+  "Clôture + bilan (deux temps) : charges fixes, amortissements, effets récurrents, puis vérification de l'équilibre et calcul du résultat net.",
 ];
 
 export function LeftPanel({
@@ -106,7 +107,7 @@ export function LeftPanel({
   // onInvestirPersonnel retiré du destructuring : plus utilisé dans ce composant (voir interface)
   onLicencierCommercial,
   onApplySaleGroup,
-  subEtape6,
+  subEtapeDecision,
 }: LeftPanelProps) {
   const [pendingConfirm, setPendingConfirm] = useState(false);
 
@@ -127,7 +128,7 @@ export function LeftPanel({
     const allApplied   = !firstPending;
 
     // ── Données pour la modale de confirmation ────────────────────────────────
-    const isDecisionStep    = etapeTour === 4;
+    const isDecisionStep    = etapeTour === 5;
     const isFirstEntry      = isDecisionStep && activeStep.entries.every((e) => !e.applied);
     const tresorerieActuelle = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")?.valeur ?? 0;
     const deltasTresorerie  = activeStep.entries
@@ -229,7 +230,7 @@ export function LeftPanel({
           <div className="space-y-4">
             {(() => {
               // ── MODE VENTES GROUPÉES (step 3 avec saleGroupId) ──
-              const hasSaleGroups = etapeTour === 3 && activeStep.entries.some(e => e.saleGroupId);
+              const hasSaleGroups = etapeTour === 4 && activeStep.entries.some(e => e.saleGroupId);
               if (hasSaleGroups && onApplySaleGroup) {
                 // Constantes d’affichage pédagogique
                 const DISPLAY_POS: Record<number, number> = { 2: 1, 1: 2, 3: 3, 4: 4 };
@@ -613,10 +614,10 @@ export function LeftPanel({
               </div>
             )}
 
-            {etapeTour === 4 && (
+            {etapeTour === 5 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-300">
-                  {subEtape6 === "recrutement" ? "4a — Recrutement" : "4b — Investissement"}
+                  {subEtapeDecision === "recrutement" ? "5a — Recrutement" : "5b — Investissement"}
                 </p>
                 {selectedDecision ? (
                   <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/20 p-2">
@@ -627,9 +628,9 @@ export function LeftPanel({
                     <p className="text-xs text-cyan-100">👉 Choisis une carte dans le panneau central</p>
                   </div>
                 )}
-                {/* Mini-deck logistique déplacé vers InvestissementPanel (MainContent) à l'étape 4b */}
-                {/* Licenciement — visible à l'étape 4a si des commerciaux sont actifs */}
-                {subEtape6 === "recrutement" && joueur.cartesActives.some(c => c.categorie === "commercial") && (
+                {/* Mini-deck logistique déplacé vers InvestissementPanel (MainContent) à l'étape 5b */}
+                {/* Licenciement — visible à l'étape 5a si des commerciaux sont actifs */}
+                {subEtapeDecision === "recrutement" && joueur.cartesActives.some(c => c.categorie === "commercial") && (
                   <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-2 space-y-1">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-300">
                       📤 Licencier un commercial
@@ -662,7 +663,7 @@ export function LeftPanel({
             )}
           </div>
 
-          {etapeTour !== 2 && etapeTour !== 4 && (
+          {etapeTour !== 2 && etapeTour !== 5 && (
             <button
               onClick={onLaunchStep}
               className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300"

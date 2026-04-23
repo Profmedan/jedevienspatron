@@ -29,58 +29,62 @@ export type ModificationMoteur = {
 
 // ─── ETAPE_INFO ───────────────────────────────────────────────────────────────
 // Réutilisé par useGameFlow, buildActiveStep et les composants (via re-export).
-// Ordre T25.C (8 étapes, 0..7) : activité PUIS clôture.
+// Ordre B9 (8 étapes, 0..7) : activité métier puis clôture.
+// L'étape 3 REALISATION_METIER est polymorphe par entreprise (B9-D) ;
+// auto-skipée en V1 B9-A.
+// L'étape 7 CLOTURE_BILAN fusionne narrativement clôture et bilan mais
+// le moteur applique deux passes séquentielles.
 
 export const ETAPE_INFO: Record<number, {
   icone: string; titre: string; description: string; principe: string; conseil: string;
 }> = {
   0: {
-    icone: "⏩", titre: "Encaissements — Avancement des créances",
+    icone: "⏩", titre: "Encaissements & règlements",
     description: "Les clients règlent à échéance : les créances à 2 trimestres passent à 1, et celles à 1 trimestre entrent en trésorerie.",
     principe: "Tes clients te paient selon leur délai. Les créances à 1 trimestre entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant. L'argent arrive, mais avec du retard.",
     conseil: "Un client Grand Compte est rentable mais paie en 2 trimestres. Attention au décalage : tu peux être en bénéfice et à court de cash en même temps.",
   },
   1: {
-    icone: "👔", titre: "Paiement des commerciaux",
-    description: "Si tu as recruté des commerciaux, leurs salaires sont versés ici et ils génèrent de nouveaux clients. Sans commercial, cette étape est vide — c'est normal au T1.",
-    principe: "Tu verses les salaires de tes commerciaux : ta trésorerie baisse et tes charges de personnel augmentent. En contrepartie, chaque commercial te ramène de nouveaux clients.",
+    icone: "👔", titre: "Développement commercial",
+    description: "Tes commerciaux touchent leur salaire et te ramènent de nouveaux clients. Les commerciaux sont UN levier de demande parmi d'autres — d'autres sources (trafic passif, contrats, réputation) arriveront dans une phase ultérieure.",
+    principe: "Tu verses les salaires de tes commerciaux : ta trésorerie baisse et tes charges de personnel augmentent. En contrepartie, chaque commercial te ramène de nouveaux clients selon son profil.",
     conseil: "Junior → 2 clients particuliers/trim. Senior → 2 TPE/trim. Directrice → 2 Grands Comptes/trim. Recrute via les cartes Décision à l'étape 5.",
   },
   2: {
-    icone: "📦", titre: "Achats de marchandises",
-    description: "Tu peux acheter des stocks pour les revendre. Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
-    principe: "Tu achètes des marchandises. Si tu paies comptant, ta trésorerie baisse immédiatement. Si tu achètes à crédit, tu gardes ta trésorerie aujourd'hui mais tu crées une dette à payer au trimestre suivant.",
-    conseil: "Acheter à crédit préserve ta trésorerie, mais crée une dette à rembourser au prochain tour. Trouve le bon équilibre.",
+    icone: "📦", titre: "Ressources & préparation",
+    description: "Tu mobilises les ressources dont tu as besoin pour réaliser ton activité : achat de marchandises pour le négoce, matière première pour la production, planification des tournées pour le service, staffing des missions pour le conseil.",
+    principe: "Tu engages des ressources avant de pouvoir produire ou vendre. Selon ton métier, l'impact comptable varie : achat de stock (comptant ou à crédit fournisseur), prépaiement de services externes, affectation de capacité humaine.",
+    conseil: "Acheter à crédit préserve ta trésorerie, mais crée une dette à rembourser. Dans tous les cas, n'engage des ressources que pour ce que tu sais pouvoir transformer et vendre.",
   },
   3: {
-    icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
-    description: "Chaque vente génère plusieurs écritures simultanées. Au T1, 2 clients initiaux sont traités ici — sans commercial, c'est normal.",
-    principe: "Chaque vente déclenche 4 mouvements : ton chiffre d'affaires augmente, ton stock diminue, le coût des marchandises vendues est enregistré, et tu encaisses (comptant ou à terme). C'est la partie double en action.",
-    conseil: "C'est le cœur du jeu : une seule vente crée 4 écritures qui s'équilibrent. Plus tu as de commerciaux, plus tu vends.",
+    icone: "🛠️", titre: "Réalisation métier",
+    description: "C'est le moment où ton entreprise crée vraiment de la valeur : production d'un bien, mise en vente d'un produit, exécution d'une prestation, livraison d'une mission. L'écriture comptable varie selon ton modèle économique.",
+    principe: "Cette étape matérialise la valeur ajoutée de ton entreprise. Elle est polymorphe selon ton mode économique (production, négoce, logistique, conseil). L'activation de cette polymorphie arrive avec la sous-tâche B9-D.",
+    conseil: "En V1 B9-A, cette étape passe automatiquement : elle sera pleinement active dès que la polymorphie par entreprise sera branchée (B9-D). Le principe de partie double sera respecté sur toutes les écritures.",
   },
   4: {
-    icone: "🎯", titre: "Décisions — Recrutement & Investissement",
-    description: "Tu peux recruter un commercial (4a) puis investir dans une carte Décision (4b). Chaque carte a des effets immédiats et des effets récurrents. Ce choix est OPTIONNEL.",
+    icone: "🤝", titre: "Facturation & ventes",
+    description: "Tu factures les clients servis ce trimestre. Chaque vente génère plusieurs écritures simultanées adaptées à ton métier : CA encaissé ou créancé, et contrepartie stock / production stockée / charges selon le cas.",
+    principe: "Chaque vente déclenche plusieurs mouvements : ton chiffre d'affaires augmente ET ta contrepartie comptable s'ajuste. En négoce, ton stock baisse et le CMV monte. En production, tu extournes la production stockée. En service, tu ne déstockes rien.",
+    conseil: "C'est le moment où tes efforts des étapes précédentes se transforment en revenus réels. Une vente mal servie (capacité dépassée) = client perdu. Anticipe ta capacité.",
+  },
+  5: {
+    icone: "🎯", titre: "Décision du dirigeant",
+    description: "Tu peux recruter un commercial (5a) puis investir dans une carte Décision (5b). Chaque carte a des effets immédiats et des effets récurrents. Ce choix est OPTIONNEL.",
     principe: "Tu peux recruter un commercial (charge de personnel) ou investir dans un équipement (immobilisation). Chaque choix a un coût immédiat et des effets à long terme sur ton entreprise.",
     conseil: "L'assurance protège des événements négatifs. La levée de fonds apporte des capitaux. Anticipe tes besoins avant d'investir.",
   },
-  5: {
-    icone: "🎲", titre: "Événement aléatoire",
+  6: {
+    icone: "🎲", titre: "Événement & ajustement",
     description: "Un événement imprévu affecte ton entreprise. Positif ou négatif : tu ne peux pas le refuser.",
     principe: "Un événement imprévu touche ton entreprise. S'il est positif, ta trésorerie ou tes revenus augmentent. S'il est négatif, tu subis une charge exceptionnelle. L'assurance peut te protéger.",
     conseil: "Avoir des réserves de trésorerie absorbe les chocs. L'assurance prévoyance annule certains événements négatifs.",
   },
-  6: {
-    icone: "💼", titre: "Clôture du trimestre",
-    description: "Fin du trimestre : charges fixes payées (loyer, énergie, assurances…), dotations aux amortissements constatées (−1 par immobilisation), intérêts d'emprunt prélevés, puis effets récurrents de tes cartes actives (spécialité métier, abonnements, maintenance…).",
-    principe: "C'est la clôture opérationnelle du trimestre. Ta trésorerie diminue du montant des charges obligatoires. Tes équipements s'usent : leur valeur au bilan baisse et une charge d'amortissement est enregistrée. Les cartes actives déclenchent automatiquement leurs effets récurrents (ex. production stockée : un produit au CR + un actif au bilan).",
-    conseil: "Ces charges sont obligatoires. L'amortissement n'est pas une sortie d'argent, mais il réduit ton résultat. La production stockée n'est pas de la trésorerie : tu 'gagnes' sur le papier, mais l'argent n'arrive que quand tu vends.",
-  },
   7: {
-    icone: "✅", titre: "Bilan de fin de trimestre",
-    description: "On vérifie l'équilibre du bilan, on contrôle la solvabilité et on calcule ton score. Si c'est le dernier trimestre de l'exercice, on clôture l'année (IS + affectation du résultat).",
-    principe: "Fin du trimestre : on calcule ton résultat (produits − charges). S'il est positif, tes capitaux propres augmentent et ta solvabilité s'améliore. S'il est négatif, attention à la faillite.",
-    conseil: "Résultat Net = Produits − Charges. Positif = tes capitaux propres montent. Négatif = ta solvabilité baisse.",
+    icone: "🏛️", titre: "Clôture & bilan",
+    description: "Fin du trimestre en deux temps : (1) les charges obligatoires retombent (loyer, énergie, assurances, amortissements, intérêts d'emprunt, effets récurrents des cartes actives) ; (2) on calcule ton résultat net, on vérifie l'équilibre du bilan, on contrôle la solvabilité et on met à jour ton score.",
+    principe: "D'abord la clôture : ta trésorerie diminue du montant des charges obligatoires, tes équipements s'usent (amortissement), tes cartes actives déclenchent leurs effets récurrents. Puis le bilan : on calcule ton résultat (produits − charges). S'il est positif, tes capitaux propres augmentent. S'il est négatif, attention à la faillite.",
+    conseil: "Ces charges sont obligatoires. L'amortissement n'est pas une sortie d'argent mais il réduit ton résultat. Résultat Net = Produits − Charges. Positif = tes capitaux propres montent. Négatif = ta solvabilité baisse.",
   },
 };
 

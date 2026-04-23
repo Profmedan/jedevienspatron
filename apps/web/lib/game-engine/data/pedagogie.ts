@@ -31,7 +31,7 @@ export interface QCMTrimestre {
 // Clé = etat.etapeTour du moteur de jeu (0-7, cycle T25.C : activité puis clôture).
 // Correspondance exacte avec ETAPE_INFO (gameFlowUtils.ts).
 export const MODALES_ETAPES: Record<number, ModalEtape> = {
-  // ── étape 0 : Encaissements (avancement des créances clients) ──────────────
+  // ── étape 0 B9 : Encaissements & règlements ───────────────────────────────
   0: {
     etape: 0,
     titre: `Tes clients te paient enfin !`,
@@ -40,68 +40,68 @@ export const MODALES_ETAPES: Record<number, ModalEtape> = {
     impactComptes: `Les créances clients baissent (les montants que tes clients te devaient diminuent). Ta banque augmente (l'argent arrive). Zéro impact sur le résultat — la vente avait déjà été comptée au moment où tu l'as faite.`,
     conseil: `Surveille tes délais de paiement. Plus les clients paient vite, mieux ta trésorerie se porte. Laisser des clients payer très tard, c'est leur faire crédit sans le décider — et ça peut t'étouffer.`,
   },
-  // ── étape 1 : Paiement des commerciaux ─────────────────────────────────────
+  // ── étape 1 B9 : Développement commercial ─────────────────────────────────
   1: {
     etape: 1,
-    titre: `Tu paies tes vendeurs pour leurs efforts`,
-    ceQuiSePasse: `Tes commerciaux (vendeurs/représentants) te ramènent des ventes. Tu dois les payer — soit un salaire fixe, soit une commission (pourcentage des ventes), soit les deux. L'argent sort de ta banque.`,
-    pourquoi: `Sans eux, tu ne vends rien. Mais tu dois pouvoir les payer. Un commercial qui gagne bien = motivation et plus de ventes. Un commercial mal payé = démotivation et départ.`,
-    impactComptes: `Le paiement réduit ta banque et augmente tes charges (frais commerciaux/salaires). C'est une dépense courante qui réduit ton résultat.`,
-    conseil: `Paie une commission qui te laisse une marge suffisante. Si tu paies 50 % de chaque vente en commission, il faut vraiment vendre beaucoup pour que ça reste rentable.`,
+    titre: `Tu développes ta demande commerciale`,
+    ceQuiSePasse: `Tes commerciaux (vendeurs/représentants) touchent leur salaire et te ramènent de nouveaux clients pour le trimestre. L'argent sort de ta banque en contrepartie de la demande qu'ils génèrent.`,
+    pourquoi: `Les commerciaux sont UN levier de demande parmi d'autres (trafic passif, contrats récurrents, réputation — arriveront dans une phase ultérieure). Sans demande, tu ne vends rien. Mais tu dois pouvoir payer ce que ta demande te coûte.`,
+    impactComptes: `Le paiement réduit ta banque et augmente tes charges de personnel. C'est une dépense courante qui réduit ton résultat. En contrepartie, tu reçois des clients à traiter aux étapes 2, 3 et 4.`,
+    conseil: `Junior → 2 particuliers/trim. Senior → 2 TPE/trim. Directrice → 2 Grands Comptes/trim. Recrute via les cartes Décision à l'étape 5.`,
   },
-  // ── étape 2 : Achats de marchandises ───────────────────────────────────────
+  // ── étape 2 B9 : Ressources & préparation ─────────────────────────────────
   2: {
     etape: 2,
-    titre: `Tu remplis tes rayons pour vendre`,
-    ceQuiSePasse: `Tu achètes de la marchandise auprès de tes fournisseurs pour la revendre. Cet achat augmente ton stock. Tu le paies maintenant (ou plus tard si c'est à crédit fournisseur — tu paieras au prochain tour), mais tu ne le comptabilises en "charge" que quand tu le vends.`,
-    pourquoi: `Plus tu as de stock, plus tu peux vendre — mais tu dois avoir de l'argent disponible (ou du crédit fournisseur) pour le financer. Un stock trop gros bloque ton argent inutilement, trop petit te fait rater des ventes.`,
-    impactComptes: `L'achat augmente ton stock (ce que tu possèdes) et réduit ta banque (ou crée une dette envers ton fournisseur). Pas de charge immédiate — c'est seulement quand tu vends que ça devient un "coût des ventes".`,
-    conseil: `Achète juste assez pour 2-3 mois de ventes estimées. Pas plus, sinon tu immobilises de l'argent qui ne rapporte rien.`,
+    titre: `Tu mobilises tes ressources avant de délivrer`,
+    ceQuiSePasse: `Tu engages les ressources nécessaires pour réaliser ton activité : achat de marchandises pour le négoce, matière première pour la production, planification des tournées pour le service, staffing des missions pour le conseil. La nature de l'écriture varie selon ton métier (stock vs services vs personnel) mais le principe est le même : tu investis avant de produire.`,
+    pourquoi: `Impossible de livrer de la valeur sans avoir d'abord engagé les moyens. Un stock trop petit = ventes ratées. Un staffing mal dimensionné = missions bâclées. Une tournée mal préparée = prestations dégradées. La préparation est une étape comptable à part entière.`,
+    impactComptes: `Augmentation de stock, de charges externes, ou de charges de personnel selon l'entreprise. Contrepartie : trésorerie qui baisse (paiement comptant) ou dettes fournisseurs qui augmentent (paiement à crédit).`,
+    conseil: `Dimensionne tes ressources en fonction de la demande que tu peux raisonnablement servir. Acheter à crédit préserve la trésorerie mais crée une dette à rembourser rapidement.`,
   },
-  // ── étape 3 : Traitement des ventes (Cartes Client) ────────────────────────
+  // ── étape 3 B9 : Réalisation métier ───────────────────────────────────────
   3: {
     etape: 3,
-    titre: `Tes commerciaux livrent, tu fais des ventes !`,
-    ceQuiSePasse: `Grâce au travail de tes commerciaux, des clients reçoivent de la marchandise et tu enregistres une vente. Ton chiffre d'affaires (total des ventes) monte. Selon tes conditions, tu reçois l'argent tout de suite ou une promesse de paiement.`,
-    pourquoi: `C'est LE moteur de ton entreprise. Plus tu vends, plus tu couvres tes frais fixes et plus tu fais de bénéfice. Sans clients, tu n'es rien.`,
-    impactComptes: `Le chiffre d'affaires augmente (résultat en plus). Ton stock diminue (la marchandise part). Tes créances clients montent (si tu vends à crédit) ou ta banque augmente (si le client paie comptant).`,
-    conseil: `Plus tu vends, plus tes frais fixes se répartissent sur beaucoup de ventes — tes bénéfices montent beaucoup plus vite que tes ventes. Une fois tes frais fixes couverts, chaque euro de vente supplémentaire est presque tout bénéfice.`,
+    titre: `Tu fabriques, prépares, exécutes, livres`,
+    ceQuiSePasse: `C'est l'instant où ton entreprise crée vraiment de la valeur. La forme varie selon ton modèle économique : Belvaux fabrique un produit fini, Azura met la marchandise en vente (canal / animation), Véloce exécute la tournée, Synergia livre la mission. L'écriture comptable suit la logique métier.`,
+    pourquoi: `C'est LE cœur métier de ton entreprise — ce qui différencie vraiment un fabricant d'un distributeur, d'un logisticien, d'un cabinet de conseil. Sans cette étape visible, l'apprentissage aplatirait les métiers à un seul modèle « achat-vente » qui ment sur ce que font vraiment ces entreprises.`,
+    impactComptes: `En production : consommation de matière + constat de la production stockée (2 écritures doubles). En négoce : coût de canal / distribution (charges externes). En service : charges d'exécution + constat d'en-cours de production. Le principe de partie double reste l'invariant non négociable.`,
+    conseil: `Cette étape est polymorphe et sera pleinement active dès que la branche par entreprise sera câblée (sous-tâche B9-D). En V1 B9-A elle passe automatiquement, mais elle est bien dans le cycle pour que tu comprennes qu'elle arrive.`,
   },
-  // ── étape 4 : Décisions (4a recrutement + 4b investissement) ───────────────
+  // ── étape 4 B9 : Facturation & ventes ─────────────────────────────────────
   4: {
     etape: 4,
+    titre: `Tu factures tes clients`,
+    ceQuiSePasse: `Tu factures les clients servis ce trimestre. Chaque vente génère plusieurs écritures simultanées adaptées à ton métier : CA encaissé ou créancé, et contrepartie comptable (déstockage, extourne d'en-cours, ou rien du tout selon le modèle).`,
+    pourquoi: `C'est le moment où tes efforts des étapes précédentes se transforment en revenus réels. Les règles d'écriture diffèrent par métier — un fabricant extourne sa production stockée, un négociant débite son CMV, un prestataire solde son en-cours. Tous respectent la partie double.`,
+    impactComptes: `Le chiffre d'affaires augmente (produit). Ton stock / en-cours diminue selon ton métier. Tes créances clients montent (si crédit) ou ta trésorerie augmente (si comptant).`,
+    conseil: `Plus tu factures, plus tu couvres tes charges fixes et plus ton résultat monte. Une capacité dépassée = clients perdus : anticipe tes ressources à l'étape 2.`,
+  },
+  // ── étape 5 B9 : Décision du dirigeant (5a recrutement + 5b investissement) ─
+  5: {
+    etape: 5,
     titre: `Tu choisis une carte Décision (optionnel)`,
-    ceQuiSePasse: `Tu as la possibilité de jouer une carte Décision ce trimestre : recruter un commercial (sous-étape 4a) ou investir dans un équipement, un logiciel, une protection (sous-étape 4b)… Ce choix est entièrement optionnel, mais c'est souvent ici que tu construis ton avantage sur la durée.`,
+    ceQuiSePasse: `Tu as la possibilité de jouer une carte Décision ce trimestre : recruter un commercial (sous-phase 5a) ou investir dans un équipement, un logiciel, une protection (sous-phase 5b)… Ce choix est entièrement optionnel, mais c'est souvent ici que tu construis ton avantage sur la durée.`,
     pourquoi: `Recruter ou investir coûte de l'argent tout de suite (salaire, prix d'achat), mais rapporte progressivement (plus de ventes, meilleure efficacité). Tu dois avoir assez de trésorerie pour tenir pendant que les bénéfices arrivent.`,
     impactComptes: `Un recrutement augmente tes charges de personnel. Un investissement augmente un actif (ce que tu possèdes) et réduit ta banque. Dans les deux cas, la rentabilité réelle dépend de ce que ça te rapporte en ventes ou en économies par rapport à son coût.`,
     conseil: `Recrute ou investis seulement si tu penses que ça va générer en bénéfices au moins 2 à 3 fois son coût annuel. Sinon, c'est une perte nette. Ne te laisse pas séduire par une belle carte sans en calculer la rentabilité.`,
   },
-  // ── étape 5 : Événement aléatoire ──────────────────────────────────────────
-  5: {
-    etape: 5,
+  // ── étape 6 B9 : Événement & ajustement ───────────────────────────────────
+  6: {
+    etape: 6,
     titre: `Une surprise (bonne ou mauvaise) tombe du ciel`,
     ceQuiSePasse: `Chaque trimestre, un événement aléatoire arrive : un gros client se précipite sur toi (hausse des ventes), un concurrent baisse ses prix (tu perds des clients), une usine ferme (rupture de stock), un emprunt devient plus cher… Les entrepreneurs vivent dans l'incertitude.`,
     pourquoi: `C'est la réalité. Tu peux avoir le meilleur plan du monde, mais la vie te joue des tours. Comment tu réagis ? Tu paniques ? Tu t'adaptes ? La vraie compétence, c'est de rebondir.`,
     impactComptes: `Ça dépend de l'événement. Une grosse vente = chiffre d'affaires en hausse. Une rupture d'approvisionnement = stock qui baisse, ventes manquées. Un accident = dépense imprévue. Chaque événement modifie ton résultat du trimestre.`,
     conseil: `Garde toujours une réserve de trésorerie pour absorber les mauvaises surprises. Et regarde les bonnes surprises comme des occasions à saisir — ne les gaspille pas en dépenses impulsives.`,
   },
-  // ── étape 6 : Clôture du trimestre (charges fixes + amortissements + effets récurrents) ──
-  6: {
-    etape: 6,
-    titre: `Clôture : les coûts obligatoires retombent`,
-    ceQuiSePasse: `Fin de trimestre : tu paies tes charges régulières (loyer, salaire du gérant, assurances, électricité…), tu constates l'usure de tes équipements (amortissement), tu rembourses ton emprunt (intérêts dès le T3), et tes cartes Décision actives déclenchent automatiquement leurs effets récurrents (abonnements, maintenance, production stockée de ta spécialité métier…).`,
-    pourquoi: `Ces coûts sont incontournables : ils tombent que tu aies bien vendu ou pas. Même tes équipements qui durent longtemps perdent de la valeur — il faut en tenir compte pour connaître le vrai coût de ton activité. Et chaque carte Décision activée embarque une charge invisible qui revient tous les trimestres.`,
-    impactComptes: `Les charges fixes sortent vraiment de ta banque. L'amortissement, lui, ne coûte rien en trésorerie — mais il réduit la valeur de tes immobilisations au bilan ET enregistre une charge au résultat. Les intérêts d'emprunt réduisent ta banque et ton résultat. Les effets récurrents des cartes Décision modifient selon leur nature (charges, produits, stocks).`,
-    conseil: `Avant d'activer une nouvelle carte Décision, vérifie toujours son coût récurrent trimestriel. Deux ou trois cartes à effets récurrents peuvent peser très lourd à chaque clôture. Assure-toi d'avoir la trésorerie pour tout encaisser.`,
-  },
-  // ── étape 7 : Bilan de fin de trimestre ────────────────────────────────────
+  // ── étape 7 B9 : Clôture & bilan (deux temps : écritures de clôture puis bilan) ──
   7: {
     etape: 7,
-    titre: `C'est fini ce trimestre, bilan et diagnostic`,
-    ceQuiSePasse: `Le trimestre se termine. Tu dois regarder tes résultats : as-tu fait un bénéfice ou une perte ? Ta trésorerie tient-elle ? Tes dettes deviennent-elles trop lourdes par rapport à ce que tu possèdes ? C'est le moment de dire "j'ai bien géré" ou "je dois changer de stratégie".`,
-    pourquoi: `Sans ce bilan de fin de trimestre, tu ne sais pas où tu en es. Chaque trimestre clôturé, c'est une occasion de vérifier que tu vas dans la bonne direction avant d'entamer le suivant.`,
-    impactComptes: `Tu calcules ton résultat net (bénéfice ou perte), tu mets à jour ton bilan, tu vérifies ta trésorerie. Si tu as une perte, elle ronge tes fonds propres (l'argent mis au départ + les bénéfices accumulés). Si tu as un bénéfice, tu le gardes en réserve ou tu le distribues.`,
-    conseil: `À chaque clôture, pose-toi : "Où en suis-je réellement ?" Si tu as des doutes, c'est le moment d'ajuster : réduire tes charges, vendre davantage, recruter ou investir différemment.`,
+    titre: `Clôture : on paie les coûts obligatoires puis on fait le bilan`,
+    ceQuiSePasse: `Fin de trimestre en deux temps. Premier temps — clôture : tu paies tes charges régulières (loyer, salaire du gérant, assurances, électricité…), tu constates l'usure de tes équipements (amortissement), tu rembourses ton emprunt (intérêts dès le T3), et tes cartes Décision actives déclenchent automatiquement leurs effets récurrents (abonnements, maintenance, production stockée de ta spécialité métier…). Deuxième temps — bilan : tu calcules ton résultat net (bénéfice ou perte), tu vérifies l'équilibre Actif/Passif, tu mesures ta solvabilité.`,
+    pourquoi: `Ces charges sont incontournables : elles tombent que tu aies bien vendu ou pas. Même tes équipements qui durent longtemps perdent de la valeur — il faut en tenir compte pour connaître le vrai coût de ton activité. Et le bilan te dit où tu en es vraiment : bénéfice ou perte, solvable ou en danger.`,
+    impactComptes: `Charges fixes → banque ↓ + charges ↑. Amortissement → immobilisations ↓ + charges ↑ (mais pas de sortie de cash). Intérêts → banque ↓ + charges ↑. Effets récurrents des cartes → selon leur nature. Puis le résultat net met à jour les capitaux propres : bénéfice → capitaux ↑, perte → capitaux ↓.`,
+    conseil: `Avant d'activer une nouvelle carte Décision, vérifie toujours son coût récurrent trimestriel. Plusieurs cartes à effets récurrents peuvent peser très lourd. Et à chaque clôture, pose-toi : "Où en suis-je réellement ?" Si tu as des doutes, c'est le moment d'ajuster ta stratégie.`,
   },
 };
 

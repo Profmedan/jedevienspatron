@@ -245,8 +245,12 @@ export default function CompteResultatPanel({
   const totalProduits = getTotalProduits(produits);
   const resultat      = getResultatNet(joueur);
 
-  // Cycle T25.C (8 étapes, 0..7) : CR est provisoire pendant toute l'activité
-  // du trimestre et devient définitif au BILAN (étape 7).
+  // Cycle B9 (8 étapes, 0..7) : CR provisoire pendant toute l'activité
+  // (étapes 0..6) et pendant la première passe de clôture (étape 7 avec
+  // activeStep ouvert). Il devient définitif après la seconde passe du
+  // BILAN, mais à cet instant le trimestre bascule aussitôt sur le tour
+  // suivant (étape 0), donc l'affichage "définitif standalone" n'est
+  // jamais observé en pratique.
   const isProvisoire =
     hasActiveStep === true ||
     (etapeTour !== undefined && etapeTour >= 0 && etapeTour <= 6);

@@ -7,19 +7,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
 /**
  * Constantes nommées pour les étapes du trimestre — utilisez ces noms
- * plutôt que les chiffres. Les index correspondent à l'ordre T25.C :
- * ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION →
- * EVENEMENT → CLOTURE_TRIMESTRE → BILAN.
+ * plutôt que les chiffres. Les index correspondent à l'ordre B9 :
+ * ENCAISSEMENTS → DEVELOPPEMENT_COMMERCIAL → RESSOURCES_PREPARATION →
+ * REALISATION_METIER → FACTURATION_VENTES → DECISION → EVENEMENT →
+ * CLOTURE_BILAN.
  */
 exports.ETAPES = {
     ENCAISSEMENTS: 0,
-    COMMERCIAUX: 1,
-    ACHATS_STOCK: 2,
-    VENTES: 3,
-    DECISION: 4,
-    EVENEMENT: 5,
-    CLOTURE_TRIMESTRE: 6,
-    BILAN: 7,
+    DEVELOPPEMENT_COMMERCIAL: 1,
+    RESSOURCES_PREPARATION: 2,
+    REALISATION_METIER: 3,
+    FACTURATION_VENTES: 4,
+    DECISION: 5,
+    EVENEMENT: 6,
+    CLOTURE_BILAN: 7,
 };
 // ─── CONSTANTES ───────────────────────────────────────────────
 exports.DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement

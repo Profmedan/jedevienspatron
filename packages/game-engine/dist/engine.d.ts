@@ -57,16 +57,18 @@ export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: 
  */
 export declare function genererClientsSpecialite(joueur: Joueur): CarteClient[];
 /**
- * Étape de clôture du trimestre (cycle T25.C, index 6).
+ * Étape de clôture du trimestre (cycle B9, index 7 — première passe).
  *
  * Fusionne les trois blocs qui, dans l'ancien cycle à 9 étapes, étaient
  * dispersés entre l'étape 0 (charges fixes + amortissements + remboursement
  * emprunt + intérêts) et l'étape 5 (effets récurrents des cartes actives +
- * spécialité d'entreprise). Pédagogiquement, « activité puis clôture » :
- * on a encaissé, payé les commerciaux, acheté, vendu, décidé, subi un
- * événement → on ferme la porte en appliquant charges fixes, amortissements,
- * effets récurrents, remboursement d'emprunt et intérêts ; puis le BILAN
- * (étape 7) vérifie l'équilibre et calcule le résultat net.
+ * spécialité d'entreprise). Pédagogiquement, « activité métier puis clôture » :
+ * on a encaissé, développé le commercial, préparé, réalisé, facturé,
+ * décidé, subi un événement → on ferme la porte en appliquant charges
+ * fixes, amortissements, effets récurrents, remboursement d'emprunt et
+ * intérêts. Puis, dans la même étape 7 côté UI, la seconde passe
+ * (`verifierFinTour`) vérifie l'équilibre et déclenche la transition
+ * de fin de tour.
  *
  * Retourne un ResultatAction unique dont `modifications` concatène
  * celles des trois fonctions sous-jacentes, dans l'ordre d'application.

@@ -251,40 +251,50 @@ export interface Joueur {
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
 
 /**
- * Les 8 étapes d'un trimestre (cycle T25.C — « activité puis clôture »).
+ * Les 8 étapes d'un trimestre (cycle B9 — « activité métier puis clôture »).
  *
- * Ordre pédagogique : on commence par encaisser ce qui est dû, on paie
- * les commerciaux qui ramènent de nouveaux clients, on s'approvisionne,
- * on vend, on prend éventuellement une décision, un événement survient,
- * on clôture (charges fixes + amortissements + effets récurrents +
- * remboursement emprunt + intérêts), et on vérifie enfin l'équilibre
- * du bilan.
+ * Ordre pédagogique : on encaisse ce qui est dû (0), on développe la demande
+ * commerciale (1), on prépare les ressources nécessaires (2), on réalise le
+ * cœur métier (3) — production / prestation / mission selon l'entreprise —,
+ * on facture les ventes (4), on prend éventuellement une décision (5), un
+ * événement survient (6), et on clôture le trimestre (7) avec charges fixes,
+ * amortissements, effets récurrents, intérêts d'emprunt puis vérification
+ * de l'équilibre du bilan.
+ *
+ * L'étape 3 (REALISATION_METIER) est polymorphe selon `modeEconomique` de
+ * l'entreprise (implémenté en B9-D) ; auto-skipée en V1 B9-A tant que
+ * la polymorphie n'est pas branchée.
+ * L'étape 7 (CLOTURE_BILAN) fusionne narrativement clôture et bilan mais
+ * le moteur applique deux passes séquentielles à l'intérieur de la même
+ * étape : d'abord `appliquerClotureTrimestre` (écritures), puis
+ * `verifierFinTour` + transition fin de tour.
  */
 export type EtapeTour =
   | 0 // ENCAISSEMENTS — créances clients à échéance encaissées, C+2 → C+1
-  | 1 // COMMERCIAUX — paiement salaires + génération de nouveaux clients
-  | 2 // ACHATS_STOCK — achats de marchandises (optionnel, user-driven)
-  | 3 // VENTES — traitement des cartes Client
-  | 4 // DECISION — recrutement (4a) + investissement (4b), optionnel
-  | 5 // EVENEMENT — pioche d'une carte Événement
-  | 6 // CLOTURE_TRIMESTRE — charges fixes + amortissements + effets récurrents + emprunt
-  | 7; // BILAN — vérification de l'équilibre + fin de trimestre
+  | 1 // DEVELOPPEMENT_COMMERCIAL — paiement commerciaux + génération de clients (V1) ; multi-sources (V2)
+  | 2 // RESSOURCES_PREPARATION — achats matière / réassort / planification / staffing selon métier (polymorphe B9-C)
+  | 3 // REALISATION_METIER — production / coût canal / exécution / mission selon métier (polymorphe B9-D, auto-skip V1 B9-A)
+  | 4 // FACTURATION_VENTES — traitement des cartes Client (polymorphe ventes B9-E)
+  | 5 // DECISION — recrutement (5a) + investissement (5b), optionnel
+  | 6 // EVENEMENT — pioche d'une carte Événement
+  | 7; // CLOTURE_BILAN — charges fixes + amortissements + effets récurrents + intérêts, puis vérification d'équilibre et fin de trimestre
 
 /**
  * Constantes nommées pour les étapes du trimestre — utilisez ces noms
- * plutôt que les chiffres. Les index correspondent à l'ordre T25.C :
- * ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION →
- * EVENEMENT → CLOTURE_TRIMESTRE → BILAN.
+ * plutôt que les chiffres. Les index correspondent à l'ordre B9 :
+ * ENCAISSEMENTS → DEVELOPPEMENT_COMMERCIAL → RESSOURCES_PREPARATION →
+ * REALISATION_METIER → FACTURATION_VENTES → DECISION → EVENEMENT →
+ * CLOTURE_BILAN.
  */
 export const ETAPES = {
   ENCAISSEMENTS: 0,
-  COMMERCIAUX: 1,
-  ACHATS_STOCK: 2,
-  VENTES: 3,
-  DECISION: 4,
-  EVENEMENT: 5,
-  CLOTURE_TRIMESTRE: 6,
-  BILAN: 7,
+  DEVELOPPEMENT_COMMERCIAL: 1,
+  RESSOURCES_PREPARATION: 2,
+  REALISATION_METIER: 3,
+  FACTURATION_VENTES: 4,
+  DECISION: 5,
+  EVENEMENT: 6,
+  CLOTURE_BILAN: 7,
 } as const satisfies Record<string, EtapeTour>;
 
 export interface EtatJeu {

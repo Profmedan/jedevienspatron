@@ -1,7 +1,7 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// InvestissementPanel — Panneau unifié étape 6b (Tâche 11, Volet 1)
+// InvestissementPanel — Panneau unifié étape 5b B9 (Tâche 11, Volet 1)
 // ─────────────────────────────────────────────────────────────
 // Fusionne :
 //  • piochePersonnelle (mini-deck logistique de l'entreprise)
@@ -9,7 +9,8 @@
 // … en un seul panneau organisé par catégories pédagogiques.
 //
 // Remplace à la fois `MiniDeckPanel` (dans LeftPanel) et le bloc
-// de sélection inline de `MainContent` à l'étape 6b.
+// de sélection inline de `MainContent` à l'étape 5b (investissement,
+// sous-phase de l'étape 5 DECISION dans le cycle B9).
 // ─────────────────────────────────────────────────────────────
 
 import { useState } from "react";
@@ -375,7 +376,7 @@ export function InvestissementPanel({
       <div className="flex items-start justify-between gap-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">
-            6b — Investissement
+            5b — Investissement
           </p>
           <p className="mt-1 text-sm font-semibold text-white">
             Faites grandir votre entreprise

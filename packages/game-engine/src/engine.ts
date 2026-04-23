@@ -308,7 +308,9 @@ export function initialiserJeu(
   };
 }
 
-// ─── ÉTAPE 0 : Remboursements obligatoires + charges fixes + amortissements ──
+// ─── ÉTAPE 7 (B9) — sous-passe 1/3 : Charges fixes + remboursement emprunt + amortissements ──
+// NOTE : la fonction `appliquerEtape0` garde son nom historique mais est
+// appelée lors de la CLÔTURE (B9 étape 7), pas au début du trimestre.
 
 export function appliquerEtape0(
   etat: EtatJeu,
@@ -502,7 +504,9 @@ export function verifierEquilibreComptable(joueur: Joueur, contexte: string): vo
   }
 }
 
-// ─── ÉTAPE 1 : Achats de marchandises (optionnel) ────────────
+// ─── ÉTAPE 2 (B9) : Ressources & préparation — achats de marchandises ────────
+// Polymorphie future B9-C : cette fonction deviendra un cas particulier
+// (négoce Azura + production Belvaux matière 1ère).
 
 export function appliquerAchatMarchandises(
   etat: EtatJeu,
@@ -532,7 +536,7 @@ export function appliquerAchatMarchandises(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 2 : Avancement des créances ──────────────────────
+// ─── ÉTAPE 0 (B9) : Encaissements — avancement des créances ──────────────────
 
 export function appliquerAvancementCreances(
   etat: EtatJeu,
@@ -581,7 +585,7 @@ export function appliquerAvancementCreances(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 3 : Paiement des commerciaux ──────────────────────
+// ─── ÉTAPE 1 (B9) : Développement commercial — paiement des commerciaux ──────
 
 export function calculerCoutCommerciaux(joueur: Joueur): number {
   // Les cartes commerciales ont effetsRecurrents: [] (vide par design).
@@ -661,7 +665,10 @@ export function licencierCommercial(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 4 : Traitement carte Client ───────────────────────
+// ─── ÉTAPE 4 (B9) : Facturation & ventes — traitement carte Client ───────────
+// Polymorphie future B9-E : cette fonction deviendra un dispatch par
+// `modeEconomique` (production / négoce / services) pour générer les
+// bonnes écritures de vente et d'extourne stock/en-cours.
 /**
  * Comptabilisation en 4 écritures (partie double complète).
  * Ordre narratif optimisé pour la pédagogie :
@@ -729,7 +736,7 @@ export function appliquerCarteClient(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 5 : Effets récurrents des cartes Décision ────────
+// ─── ÉTAPE 7 (B9) — sous-passe 2/3 : Effets récurrents des cartes Décision ──
 
 export function appliquerEffetsRecurrents(
   etat: EtatJeu,
@@ -760,7 +767,7 @@ export function appliquerEffetsRecurrents(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 5bis : Spécialité d'entreprise (effets passifs) ────
+// ─── ÉTAPE 7 (B9) — sous-passe 3/3 : Spécialité d'entreprise (effets passifs) ──
 
 /**
  * Applique les effets passifs liés à la spécialité de l'entreprise.
@@ -818,19 +825,21 @@ export function genererClientsSpecialite(joueur: Joueur): CarteClient[] {
   return [];
 }
 
-// ─── ÉTAPE 6 (T25.C) : Clôture du trimestre ─────────────────
+// ─── ÉTAPE 7 (B9) : Clôture du trimestre ────────────────────
 
 /**
- * Étape de clôture du trimestre (cycle T25.C, index 6).
+ * Étape de clôture du trimestre (cycle B9, index 7 — première passe).
  *
  * Fusionne les trois blocs qui, dans l'ancien cycle à 9 étapes, étaient
  * dispersés entre l'étape 0 (charges fixes + amortissements + remboursement
  * emprunt + intérêts) et l'étape 5 (effets récurrents des cartes actives +
- * spécialité d'entreprise). Pédagogiquement, « activité puis clôture » :
- * on a encaissé, payé les commerciaux, acheté, vendu, décidé, subi un
- * événement → on ferme la porte en appliquant charges fixes, amortissements,
- * effets récurrents, remboursement d'emprunt et intérêts ; puis le BILAN
- * (étape 7) vérifie l'équilibre et calcule le résultat net.
+ * spécialité d'entreprise). Pédagogiquement, « activité métier puis clôture » :
+ * on a encaissé, développé le commercial, préparé, réalisé, facturé,
+ * décidé, subi un événement → on ferme la porte en appliquant charges
+ * fixes, amortissements, effets récurrents, remboursement d'emprunt et
+ * intérêts. Puis, dans la même étape 7 côté UI, la seconde passe
+ * (`verifierFinTour`) vérifie l'équilibre et déclenche la transition
+ * de fin de tour.
  *
  * Retourne un ResultatAction unique dont `modifications` concatène
  * celles des trois fonctions sous-jacentes, dans l'ordre d'application.
@@ -859,7 +868,7 @@ export function appliquerClotureTrimestre(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 4 (T25.C) : Recrutement garanti (toujours disponible) ────
+// ─── ÉTAPE 5 (B9) : Recrutement garanti (toujours disponible, sous-phase 5a) ────
 
 /**
  * Retourne les cartes commerciales que le joueur peut encore recruter.
@@ -871,7 +880,7 @@ export function obtenirCarteRecrutement(_etat: EtatJeu, _joueurIdx: number): Car
   return CARTES_DECISION.filter((c) => c.categorie === "commercial");
 }
 
-// ─── ÉTAPE 4 (T25.C) : Pioche Décision (hors commerciaux) ───
+// ─── ÉTAPE 5 (B9) : Pioche Décision (hors commerciaux, sous-phase 5b) ───
 
 /**
  * Tire nb cartes de la pioche (les cartes commerciales sont exclues :
@@ -1138,7 +1147,7 @@ export function vendreImmobilisation(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 7 : Carte Événement ───────────────────────────────
+// ─── ÉTAPE 6 (B9) : Carte Événement ──────────────────────────
 
 export function appliquerCarteEvenement(
   etat: EtatJeu,
@@ -1188,7 +1197,7 @@ export function appliquerCarteEvenement(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 8 : Vérification fin de tour ──────────────────────
+// ─── ÉTAPE 7 (B9) — seconde passe : Vérification fin de tour (BILAN) ─────────
 
 export interface ResultatFinTour {
   equilibre: boolean;
@@ -1276,7 +1285,7 @@ export function cloturerAnnee(etat: EtatJeu): void {
 // ─── AVANCEMENT DU TOUR ─────────────────────────────────────
 
 export function avancerEtape(etat: EtatJeu): void {
-  // T25.C : cycle à 8 étapes (0..7). BILAN = 7 est la dernière.
+  // B9 : cycle à 8 étapes (0..7). CLOTURE_BILAN = 7 est la dernière.
   const maxEtape = 7;
   if (etat.etapeTour < maxEtape) {
     etat.etapeTour = (etat.etapeTour + 1) as EtapeTour;

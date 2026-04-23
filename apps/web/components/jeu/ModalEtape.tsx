@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import {
   Landmark, Package, Mail, Handshake,
-  DollarSign, Target, Dice6, BarChart3, LucideIcon
+  DollarSign, Target, Dice6, Factory, LucideIcon
 } from "lucide-react";
 import { MODALES_ETAPES } from "@/lib/game-engine/data/pedagogie";
 
@@ -13,7 +13,9 @@ interface Props {
   onClose: () => void;
 }
 
-// Cycle T25.C (8 étapes, 0..7) : activité puis clôture.
+// Cycle B9 (8 étapes, 0..7) : activité métier puis clôture.
+// L'étape 3 REALISATION_METIER est polymorphe par entreprise (B9-D) ;
+// auto-skipée en V1 B9-A. L'étape 7 fusionne narrativement clôture + bilan.
 const ETAPE_CONFIG: Record<number, {
   Icon: LucideIcon;
   bg: string;
@@ -21,22 +23,22 @@ const ETAPE_CONFIG: Record<number, {
   badge: string;
   accent: string;
 }> = {
-  // 0 : Encaissements — Avancement des créances (argent qui rentre)
+  // 0 : Encaissements & règlements (argent qui rentre)
   0: { Icon: DollarSign,  bg: "from-green-50 to-emerald-50",  border: "border-green-300",  badge: "bg-green-600",   accent: "text-green-700"  },
-  // 1 : Paiement des commerciaux (salaires / commissions)
+  // 1 : Développement commercial (commerciaux + génération de demande)
   1: { Icon: Handshake,   bg: "from-blue-50 to-indigo-50",    border: "border-blue-300",   badge: "bg-blue-600",    accent: "text-blue-700"   },
-  // 2 : Achats de marchandises (stock → rayons)
+  // 2 : Ressources & préparation (achats matière / réassort / planification / staffing)
   2: { Icon: Package,     bg: "from-amber-50 to-yellow-50",   border: "border-amber-300",  badge: "bg-amber-600",   accent: "text-amber-700"  },
-  // 3 : Ventes via cartes Client (objectif commercial)
-  3: { Icon: Target,      bg: "from-purple-50 to-violet-50",  border: "border-purple-300", badge: "bg-purple-600",  accent: "text-purple-700" },
-  // 4 : Décisions — Recrutement (4a) + Investissement (4b)
-  4: { Icon: Mail,        bg: "from-indigo-50 to-blue-50",    border: "border-indigo-300", badge: "bg-indigo-600",  accent: "text-indigo-700" },
-  // 5 : Événement aléatoire (surprise)
-  5: { Icon: Dice6,       bg: "from-yellow-50 to-amber-50",   border: "border-yellow-300", badge: "bg-yellow-600",  accent: "text-yellow-700" },
-  // 6 : Clôture du trimestre (charges fixes + amortissements + effets récurrents)
-  6: { Icon: Landmark,    bg: "from-red-50 to-orange-50",     border: "border-orange-300", badge: "bg-red-600",     accent: "text-red-700"    },
-  // 7 : Bilan de fin de trimestre
-  7: { Icon: BarChart3,   bg: "from-teal-50 to-cyan-50",      border: "border-teal-300",   badge: "bg-teal-600",    accent: "text-teal-700"   },
+  // 3 : Réalisation métier (production / canal / exécution / mission) — polymorphe B9-D
+  3: { Icon: Factory,     bg: "from-violet-50 to-fuchsia-50", border: "border-violet-300", badge: "bg-violet-600",  accent: "text-violet-700" },
+  // 4 : Facturation & ventes (ex-VENTES T25.C, décalé +1)
+  4: { Icon: Target,      bg: "from-purple-50 to-pink-50",    border: "border-purple-300", badge: "bg-purple-600",  accent: "text-purple-700" },
+  // 5 : Décision du dirigeant — Recrutement (5a) + Investissement (5b)
+  5: { Icon: Mail,        bg: "from-indigo-50 to-blue-50",    border: "border-indigo-300", badge: "bg-indigo-600",  accent: "text-indigo-700" },
+  // 6 : Événement & ajustement (surprise)
+  6: { Icon: Dice6,       bg: "from-yellow-50 to-amber-50",   border: "border-yellow-300", badge: "bg-yellow-600",  accent: "text-yellow-700" },
+  // 7 : Clôture & bilan (fusion narrative charges + amortissements + effets récurrents + bilan)
+  7: { Icon: Landmark,    bg: "from-teal-50 to-cyan-50",      border: "border-teal-300",   badge: "bg-teal-600",    accent: "text-teal-700"   },
 };
 
 export default function ModalEtape({ etape, onClose }: Props) {

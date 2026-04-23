@@ -424,7 +424,7 @@ export default function JeuPage() {
             decisionError={flow.decisionError}
             onLaunchStep={flow.launchStep}
             journal={flow.journal}
-            subEtape6={flow.subEtape6}
+            subEtapeDecision={flow.subEtapeDecision}
             modeRapide={ui.modeRapide}
             setModeRapide={ui.setModeRapide}
             modalEtapeEnAttente={flow.modalEtapeEnAttente}
@@ -452,7 +452,7 @@ export default function JeuPage() {
             cartesDisponibles={flow.cartesDisponibles}
             cartesRecrutement={flow.cartesRecrutement}
             recentModifications={flow.effectiveRecentMods}
-            subEtape6={flow.subEtape6}
+            subEtapeDecision={flow.subEtapeDecision}
             modeRapide={ui.modeRapide}
             onSkipDecision={flow.skipDecision}
             onLaunchDecision={flow.launchDecision}

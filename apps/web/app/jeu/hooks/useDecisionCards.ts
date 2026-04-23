@@ -1,5 +1,5 @@
 /**
- * Sous-hook : cartes Décision (étape 6)
+ * Sous-hook : cartes Décision (B9 étape 5, sous-phases 5a recrutement + 5b investissement)
  * Gère l'état, les effets React et les actions liées aux investissements,
  * recrutements, cessions et licenciements.
  */
@@ -36,37 +36,38 @@ export function useDecisionCards({
   const [selectedDecision, setSelectedDecision] = useState<CarteDecision | null>(null);
   const [showCartes, setShowCartes]             = useState(false);
   const [decisionError, setDecisionError]       = useState<string | null>(null);
-  const [subEtape6, setSubEtape6]               = useState<"recrutement" | "investissement">("recrutement");
+  const [subEtapeDecision, setSubEtapeDecision]               = useState<"recrutement" | "investissement">("recrutement");
 
   // ── Pioche d'investissement stable du tour (L32) ─────────────────────────
-  // À l'étape 6b, on tire une fois 4 cartes globales et on les conserve pendant
-  // tout le séjour sur cette sous-étape. Les cartes investies sont retirées
-  // explicitement dans `launchDecision`. Reset à null à la sortie.
-  const [pioche6b, setPioche6b] = useState<CarteDecision[] | null>(null);
+  // À la sous-phase 5b (investissement), on tire une fois 4 cartes globales
+  // et on les conserve pendant tout le séjour sur cette sous-phase. Les cartes
+  // investies sont retirées explicitement dans `launchDecision`. Reset à null
+  // à la sortie.
+  const [piocheDecision, setPiocheDecision] = useState<CarteDecision[] | null>(null);
 
-  // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape 6 ───────────
+  // ── Auto-ouvre les cartes dès que le joueur arrive à l'étape 5 DECISION ──
   useEffect(() => {
-    if (etat?.etapeTour === 4 && !activeStep) {
+    if (etat?.etapeTour === 5 && !activeStep) {
       setShowCartes(true);
     }
-  }, [etat?.etapeTour, subEtape6, activeStep]);
+  }, [etat?.etapeTour, subEtapeDecision, activeStep]);
 
-  // ── Init / reset de la pioche stable de l'étape 6b ───────────────────────
+  // ── Init / reset de la pioche stable de la sous-phase 5b (investissement) ──
   useEffect(() => {
     if (!etat) return;
-    const enInvestissement = etat.etapeTour === 4 && subEtape6 === "investissement";
-    if (enInvestissement && pioche6b === null) {
-      setPioche6b(tirerCartesDecision(cloneEtat(etat), 4));
-    } else if (!enInvestissement && pioche6b !== null) {
-      setPioche6b(null);
+    const enInvestissement = etat.etapeTour === 5 && subEtapeDecision === "investissement";
+    if (enInvestissement && piocheDecision === null) {
+      setPiocheDecision(tirerCartesDecision(cloneEtat(etat), 4));
+    } else if (!enInvestissement && piocheDecision !== null) {
+      setPiocheDecision(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [etat?.etapeTour, etat?.tourActuel, etat?.joueurActif, subEtape6]);
+  }, [etat?.etapeTour, etat?.tourActuel, etat?.joueurActif, subEtapeDecision]);
 
   // ── Cartes disponibles (computed) ────────────────────────────────────────
   const cartesDisponibles: CarteDecision[] = etat
-    ? (etat.etapeTour === 4 && subEtape6 === "investissement"
-        ? (pioche6b ?? [])
+    ? (etat.etapeTour === 5 && subEtapeDecision === "investissement"
+        ? (piocheDecision ?? [])
         : tirerCartesDecision(cloneEtat(etat), 4))
     : [];
   const cartesRecrutement = etat ? obtenirCarteRecrutement(cloneEtat(etat), etat.joueurActif) : [];
@@ -116,7 +117,7 @@ export function useDecisionCards({
     setActiveStep(buildActiveStep(etat, mods, next, 4));
 
     // L32 : retirer la carte achetée de la pioche stable du tour
-    setPioche6b(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null);
+    setPiocheDecision(prev => prev?.filter(c => c.id !== carteUsed.id) ?? null);
   }
 
   /** Active une carte logistique (investissement personnel). */
@@ -185,13 +186,13 @@ export function useDecisionCards({
   }
 
   /**
-   * Skip l'étape 6 (ou bascule 6a → 6b, puis avance à l'étape 7).
-   * L33 : le passage à l'étape 7 est toujours explicite (bouton "Terminer →").
+   * Skip l'étape 5 DECISION (ou bascule 5a → 5b, puis avance à l'étape 6 EVENEMENT).
+   * L33 : le passage à l'étape 6 est toujours explicite (bouton "Terminer →").
    */
   function skipDecision() {
     if (!etat) return;
-    if (etat.etapeTour === 4 && subEtape6 === "recrutement") {
-      setSubEtape6("investissement");
+    if (etat.etapeTour === 5 && subEtapeDecision === "recrutement") {
+      setSubEtapeDecision("investissement");
       setShowCartes(false);
       setSelectedDecision(null);
       setDecisionError(null);
@@ -204,14 +205,14 @@ export function useDecisionCards({
     setShowCartes(false);
     setSelectedDecision(null);
     setDecisionError(null);
-    setSubEtape6("recrutement");
+    setSubEtapeDecision("recrutement");
   }
 
-  /** Remet à zéro l'état de l'étape 6 (appelé depuis confirmEndOfTurn). */
+  /** Remet à zéro l'état de l'étape 5 DECISION (appelé depuis confirmEndOfTurn). */
   function resetDecisionState() {
     setSelectedDecision(null);
     setShowCartes(false);
-    setSubEtape6("recrutement");
+    setSubEtapeDecision("recrutement");
     setDecisionError(null);
   }
 
@@ -220,7 +221,7 @@ export function useDecisionCards({
     selectedDecision, setSelectedDecision,
     showCartes,
     decisionError,
-    subEtape6, setSubEtape6,
+    subEtapeDecision, setSubEtapeDecision,
     // Computed
     cartesDisponibles,
     cartesRecrutement,

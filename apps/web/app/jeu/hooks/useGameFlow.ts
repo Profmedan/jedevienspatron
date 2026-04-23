@@ -90,7 +90,7 @@ interface UseGameFlowReturn {
   failliteInfo: { joueurNom: string; raison: string } | null;
   setFailliteInfo: (v: { joueurNom: string; raison: string } | null) => void;
   decisionError: string | null;
-  subEtape6: "recrutement" | "investissement";
+  subEtapeDecision: "recrutement" | "investissement";
   etapesPedagoVues: Set<number>;
   setEtapesPedagoVues: (v: Set<number>) => void;
   modalEtapeEnAttente: number | null;
@@ -276,13 +276,14 @@ export function useGameFlow({
     addToJournal(next, activeStep.entries, next.etapeTour);
     const etapeAvantAvancement = next.etapeTour;
 
-    // 4a (recrutement) → 4b (investissement) sans avancer à l'étape 5
-    if (etapeAvantAvancement === 4 && decisions.subEtape6 === "recrutement") {
+    // B9 étape 5 DECISION — sous-phase 5a (recrutement) → 5b (investissement)
+    // sans avancer à l'étape 6.
+    if (etapeAvantAvancement === 5 && decisions.subEtapeDecision === "recrutement") {
       // Capturer le label de la carte recrutée pour le snapshot trimestriel
       if (decisions.selectedDecision) {
         setLastDecisionLabel(decisions.selectedDecision.titre);
       }
-      decisions.setSubEtape6("investissement");
+      decisions.setSubEtapeDecision("investissement");
       setEtat({ ...next });
       setActiveStep(null);
       setRecentModifications([]);
@@ -290,8 +291,8 @@ export function useGameFlow({
       return;
     }
 
-    // 4b (investissement) → retour au panneau unifié (L33 : multi-investissements)
-    if (etapeAvantAvancement === 4 && decisions.subEtape6 === "investissement") {
+    // 5b (investissement) → retour au panneau unifié (L33 : multi-investissements)
+    if (etapeAvantAvancement === 5 && decisions.subEtapeDecision === "investissement") {
       // Capturer le label de la carte investie pour le snapshot trimestriel
       if (decisions.selectedDecision) {
         setLastDecisionLabel(decisions.selectedDecision.titre);
@@ -303,12 +304,23 @@ export function useGameFlow({
       return;
     }
 
+    // B9 étape 7 CLOTURE_BILAN — fusion côté UI : après validation des
+    // écritures de clôture, enchaîner directement la seconde passe
+    // (verifierFinTour + transition fin de tour) sans avancer d'étape,
+    // car c'est la dernière. Le moteur applique donc ses deux passes
+    // séquentielles à l'intérieur de la même étape 7 visible.
+    if (etapeAvantAvancement === 7) {
+      const fin = verifierFinTour(next, next.joueurActif);
+      confirmEndOfTurn(next, fin);
+      return;
+    }
+
     avancerEtape(next);
     pedagogy.maybeShowPedagoModal(next.etapeTour);
     setEtat({ ...next });
     setActiveStep(null);
     setRecentModifications([]);
-    if (etapeAvantAvancement === 4) decisions.setSubEtape6("recrutement");
+    if (etapeAvantAvancement === 5) decisions.setSubEtapeDecision("recrutement");
   }
 
   // ─ Lancer la prévisualisation d'une étape automatique ────────────────────
@@ -319,16 +331,17 @@ export function useGameFlow({
     let mods: ModificationMoteur[] = [];
     let evenementCapture: { titre: string; icone?: string; description: string } | undefined;
 
-    // Début de trimestre = étape 0 (ENCAISSEMENTS, T25.C) : on remet à zéro
+    // Début de trimestre = étape 0 (ENCAISSEMENTS, B9) : on remet à zéro
     // le compteur de clients perdus accumulés au trimestre précédent.
     if (next.etapeTour === 0) {
       next.joueurs[idx].clientsPerdusCeTour = 0;
     }
 
-    // Switch T25.C — cycle 0..7
-    //   0 ENCAISSEMENTS · 1 COMMERCIAUX · 2 ACHATS_STOCK (user-driven, pas de case)
-    //   3 VENTES       · 4 DECISION (user-driven, pas de case) · 5 EVENEMENT
-    //   6 CLOTURE_TRIMESTRE · 7 BILAN
+    // Switch B9 — cycle 0..7
+    //   0 ENCAISSEMENTS · 1 DEVELOPPEMENT_COMMERCIAL · 2 RESSOURCES_PREPARATION (user-driven, pas de case)
+    //   3 REALISATION_METIER (polymorphe B9-D, auto-skip V1 via modsFiltrees vide)
+    //   4 FACTURATION_VENTES · 5 DECISION (user-driven, pas de case) · 6 EVENEMENT
+    //   7 CLOTURE_BILAN (deux passes moteur : appliquerClotureTrimestre puis verifierFinTour)
     switch (next.etapeTour) {
       case 0: { const r = appliquerAvancementCreances(next, idx); if (r.succes) mods = r.modifications as ModificationMoteur[]; break; }
       case 1: {
@@ -339,7 +352,10 @@ export function useGameFlow({
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
-      case 3: {
+      // case 3 REALISATION_METIER : auto-skip en V1 (aucune modification → géré par la
+      // condition skip-auto plus bas). La polymorphie par modeEconomique arrive en B9-D.
+      case 4: {
+        // B9 FACTURATION_VENTES — traitement des cartes Client (était le case 3 en T25.C)
         const joueur = next.joueurs[idx];
         const capacite = calculerCapaciteLogistique(joueur);
         const clientsAtrait = joueur.clientsATrait;
@@ -374,7 +390,8 @@ export function useGameFlow({
         }
         break;
       }
-      case 5: {
+      case 6: {
+        // B9 EVENEMENT (était le case 5 en T25.C)
         if (next.piocheEvenements.length > 0) {
           const carte = next.piocheEvenements[0];
           evenementCapture = { titre: carte.titre, description: carte.description };
@@ -384,22 +401,27 @@ export function useGameFlow({
         }
         break;
       }
-      case 6: {
-        // CLOTURE_TRIMESTRE — charges fixes + amortissements + remboursement
-        // emprunt (+ intérêts T3+) + effets récurrents + spécialité entreprise.
+      case 7: {
+        // B9 CLOTURE_BILAN — première passe : écritures de clôture
+        // (charges fixes + amortissements + remboursement emprunt + intérêts T3+
+        // + effets récurrents + spécialité entreprise). La seconde passe
+        // (verifierFinTour + transition fin de tour) est déclenchée dans
+        // confirmActiveStep après validation par l'utilisateur.
         const r = appliquerClotureTrimestre(next, idx);
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
-      case 7: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
       default: break;
     }
 
     const etapeActuelle = next.etapeTour;
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    // Skip auto des étapes sans impact : ENCAISSEMENTS (0) si aucune créance
-    // ne vient à échéance, et COMMERCIAUX (1) si aucun commercial n'est actif.
-    if ((etapeActuelle === 0 || etapeActuelle === 1) && modsFiltrees.length === 0) {
+    // Skip auto des étapes sans impact :
+    //   - 0 ENCAISSEMENTS si aucune créance ne vient à échéance,
+    //   - 1 DEVELOPPEMENT_COMMERCIAL si aucun commercial n'est actif,
+    //   - 3 REALISATION_METIER (placeholder V1 B9-A, toujours sans modification
+    //     tant que la polymorphie par `modeEconomique` n'est pas branchée en B9-D).
+    if ((etapeActuelle === 0 || etapeActuelle === 1 || etapeActuelle === 3) && modsFiltrees.length === 0) {
       avancerEtape(next);
       pedagogy.maybeShowPedagoModal(next.etapeTour);
       setEtat({ ...next });
@@ -413,8 +435,9 @@ export function useGameFlow({
 
     // Étapes éligibles au mode rapide (auto-cochage de toutes les écritures) :
     // toutes celles qui ne demandent aucun input utilisateur.
-    //   0 ENCAISSEMENTS · 1 COMMERCIAUX · 3 VENTES · 5 EVENEMENT · 6 CLOTURE_TRIMESTRE
-    const AUTO_ETAPES = [0, 1, 3, 5, 6];
+    //   0 ENCAISSEMENTS · 1 DEVELOPPEMENT_COMMERCIAL · 3 REALISATION_METIER
+    //   4 FACTURATION_VENTES · 6 EVENEMENT · 7 CLOTURE_BILAN
+    const AUTO_ETAPES = [0, 1, 3, 4, 6, 7];
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {
       dispatchActiveStep({ type: "SET_STEP", step });
@@ -507,7 +530,7 @@ export function useGameFlow({
     setSelectedDecision: decisions.setSelectedDecision,
     showCartes: decisions.showCartes,
     decisionError: decisions.decisionError,
-    subEtape6: decisions.subEtape6,
+    subEtapeDecision: decisions.subEtapeDecision,
     cartesDisponibles: decisions.cartesDisponibles,
     cartesRecrutement: decisions.cartesRecrutement,
 

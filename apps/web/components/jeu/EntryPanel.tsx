@@ -210,7 +210,7 @@ export function EntryPanel({
   const impactApplied = impactRows.filter((row) => row.delta !== 0).length;
   const nextEntry = pendingEntries[0];
 
-  const isSalesStep = etapeTour === 3;
+  const isSalesStep = etapeTour === 4;
 
   // Nouveau : détection des groupes de vente narratifs (saleGroupId)
   const hasSaleGroupEntries = useMemo(() => entries.some(e => e.saleGroupId), [entries]);

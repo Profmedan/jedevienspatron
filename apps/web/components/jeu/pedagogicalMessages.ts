@@ -58,13 +58,13 @@ export function generatePedagogicalMessage(ctx: PedagogicalContext): string | nu
   }
 
   // Rule 7: After sales processing
-  if (ctx.etape === 3 && ctx.ca > 0) {
+  if (ctx.etape === 4 && ctx.ca > 0) {
     return `Les ventes du trimestre génèrent ${ctx.ca} de chiffre d'affaires. N'oubliez pas : les ventes augmentent le résultat, mais seuls les paiements comptants augmentent immédiatement la trésorerie.`;
   }
 
   // Rule 8: No sales force (after early game)
   if (ctx.nbCommerciaux === 0 && ctx.tour > 2) {
-    return `Vous n'avez aucun commercial ! Sans force de vente, pas de nouveaux clients. Le recrutement est accessible à l'étape 4a.`;
+    return `Vous n'avez aucun commercial ! Sans force de vente, pas de nouveaux clients. Le recrutement est accessible à l'étape 5a.`;
   }
 
   // No special insight

@@ -21,7 +21,7 @@ type Phase = "setup" | "intro" | "playing" | "gameover";
  * incompatible (sinon les anciennes sauvegardes seraient restaurées avec un
  * moteur incompatible et planteraient silencieusement).
  */
-const SAVE_VERSION = 2; // T25.C : cycle 9→8 étapes (activité puis clôture)
+const SAVE_VERSION = 3; // B9 : renumérotation 8→8 étapes avec insertion de « Réalisation métier » (index 3) et fusion Clôture+Bilan (index 7)
 const SAVE_TTL_MS  = 24 * 60 * 60 * 1000; // 24 h
 
 interface SavedGame {

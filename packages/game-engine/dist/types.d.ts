@@ -178,31 +178,41 @@ export interface Joueur {
     piochePersonnelle: CarteDecision[];
 }
 /**
- * Les 8 étapes d'un trimestre (cycle T25.C — « activité puis clôture »).
+ * Les 8 étapes d'un trimestre (cycle B9 — « activité métier puis clôture »).
  *
- * Ordre pédagogique : on commence par encaisser ce qui est dû, on paie
- * les commerciaux qui ramènent de nouveaux clients, on s'approvisionne,
- * on vend, on prend éventuellement une décision, un événement survient,
- * on clôture (charges fixes + amortissements + effets récurrents +
- * remboursement emprunt + intérêts), et on vérifie enfin l'équilibre
- * du bilan.
+ * Ordre pédagogique : on encaisse ce qui est dû (0), on développe la demande
+ * commerciale (1), on prépare les ressources nécessaires (2), on réalise le
+ * cœur métier (3) — production / prestation / mission selon l'entreprise —,
+ * on facture les ventes (4), on prend éventuellement une décision (5), un
+ * événement survient (6), et on clôture le trimestre (7) avec charges fixes,
+ * amortissements, effets récurrents, intérêts d'emprunt puis vérification
+ * de l'équilibre du bilan.
+ *
+ * L'étape 3 (REALISATION_METIER) est polymorphe selon `modeEconomique` de
+ * l'entreprise (implémenté en B9-D) ; auto-skipée en V1 B9-A tant que
+ * la polymorphie n'est pas branchée.
+ * L'étape 7 (CLOTURE_BILAN) fusionne narrativement clôture et bilan mais
+ * le moteur applique deux passes séquentielles à l'intérieur de la même
+ * étape : d'abord `appliquerClotureTrimestre` (écritures), puis
+ * `verifierFinTour` + transition fin de tour.
  */
 export type EtapeTour = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 /**
  * Constantes nommées pour les étapes du trimestre — utilisez ces noms
- * plutôt que les chiffres. Les index correspondent à l'ordre T25.C :
- * ENCAISSEMENTS → COMMERCIAUX → ACHATS_STOCK → VENTES → DECISION →
- * EVENEMENT → CLOTURE_TRIMESTRE → BILAN.
+ * plutôt que les chiffres. Les index correspondent à l'ordre B9 :
+ * ENCAISSEMENTS → DEVELOPPEMENT_COMMERCIAL → RESSOURCES_PREPARATION →
+ * REALISATION_METIER → FACTURATION_VENTES → DECISION → EVENEMENT →
+ * CLOTURE_BILAN.
  */
 export declare const ETAPES: {
     readonly ENCAISSEMENTS: 0;
-    readonly COMMERCIAUX: 1;
-    readonly ACHATS_STOCK: 2;
-    readonly VENTES: 3;
-    readonly DECISION: 4;
-    readonly EVENEMENT: 5;
-    readonly CLOTURE_TRIMESTRE: 6;
-    readonly BILAN: 7;
+    readonly DEVELOPPEMENT_COMMERCIAL: 1;
+    readonly RESSOURCES_PREPARATION: 2;
+    readonly REALISATION_METIER: 3;
+    readonly FACTURATION_VENTES: 4;
+    readonly DECISION: 5;
+    readonly EVENEMENT: 6;
+    readonly CLOTURE_BILAN: 7;
 };
 export interface EtatJeu {
     phase: "setup" | "playing" | "gameover";
