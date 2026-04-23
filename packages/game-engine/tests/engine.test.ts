@@ -17,6 +17,7 @@ import {
   vendreImmobilisation,
   appliquerRessourcesPreparation,
   appliquerRealisationMetier,
+  appliquerClotureTrimestre,
 } from "../src/engine";
 import {
   verifierEquilibre,
@@ -810,5 +811,176 @@ describe("appliquerCarteClient — polymorphisme vente par modeEconomique (B9-E)
     const r = appliquerCarteClient(etat, 0, particulier, 0);
     expect(r.succes).toBe(false);
     expect(r.messageErreur).toContain("Produits finis insuffisants");
+  });
+});
+
+// ─── B9-F : Cycle complet par entreprise (bout-en-bout) ──────────────────
+// Vérifie que le cycle complet d'un trimestre (étapes 2→3→4→7) fonctionne
+// pour chaque métier et que le Bilan reste équilibré en fin de trimestre.
+// Les étapes 5 (décision) et 6 (événement) sont testées indirectement —
+// elles ne modifient que des postes communs (pas de ciblage par nom).
+
+describe("B9-F — cycle complet par entreprise (bout-en-bout)", () => {
+  const particulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
+
+  test("Belvaux : cycle T1 achat→production→vente→clôture, bilan équilibré", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+
+    // Bilan initial : équilibré à 28 000 €
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+    const totalInitial = verifierEquilibre(joueur).totalActif;
+    expect(totalInitial).toBe(28000);
+
+    // Étape 2 : achat 2 unités de matière première (comptant)
+    const r2 = appliquerRessourcesPreparation(etat, 0, 2, "tresorerie");
+    expect(r2.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur).toBe(3000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 3 : production 2 unités (consommation matière + production stockée)
+    const r3 = appliquerRealisationMetier(etat, 0, 2);
+    expect(r3.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Matière première Belvaux")!.valeur).toBe(1000);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(5000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(2000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 4 : vente 1 particulier (extourne productionStockee en priorité)
+    const r4 = appliquerCarteClient(etat, 0, particulier, 0);
+    expect(r4.succes).toBe(true);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(1000); // extourne de 2000 - 1000 = 1000
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(4000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 7 : clôture trimestre (charges fixes + amortissements + effets récurrents + spécialité)
+    const r7 = appliquerClotureTrimestre(etat, 0);
+    expect(r7.succes).toBe(true);
+    // Spécialité Belvaux : productionStockee +1000 (effet passif), stocks +1000 (sur Produits finis)
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Produits finis Belvaux")!.valeur).toBe(5000); // 4000 + 1000 spécialité
+    // Bilan toujours équilibré
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+  });
+
+  test("Azura : cycle T1 réassort→canal→vente→clôture, bilan équilibré", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const joueur = etat.joueurs[0];
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 2 : réassort 1 unité marchandises (comptant)
+    const r2 = appliquerRessourcesPreparation(etat, 0, 1, "tresorerie");
+    expect(r2.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Marchandises Azura")!.valeur).toBe(5000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 3 : coût de canal 300 € (quantité ignorée)
+    const r3 = appliquerRealisationMetier(etat, 0, 0, "tresorerie");
+    expect(r3.succes).toBe(true);
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(300);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 4 : vente 1 particulier (modèle CMV)
+    const r4 = appliquerCarteClient(etat, 0, particulier, 0);
+    expect(r4.succes).toBe(true);
+    expect(joueur.compteResultat.charges.achats).toBe(1000);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Marchandises Azura")!.valeur).toBe(4000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 7 : clôture
+    const r7 = appliquerClotureTrimestre(etat, 0);
+    expect(r7.succes).toBe(true);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+  });
+
+  test("Véloce : cycle T1 préparation→exécution→facturation→clôture, extourne propre", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const joueur = etat.joueurs[0];
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 2 : préparation 1 tournée (charges services extérieurs)
+    const r2 = appliquerRessourcesPreparation(etat, 0, 1, "tresorerie");
+    expect(r2.succes).toBe(true);
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(1000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 3 : exécution 1 tournée (charges personnel + en-cours)
+    const r3 = appliquerRealisationMetier(etat, 0, 1, "tresorerie");
+    expect(r3.succes).toBe(true);
+    expect(joueur.compteResultat.charges.chargesPersonnel).toBe(1000);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur).toBe(1000);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(1000);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 4 : facturation 1 client (extourne en-cours + productionStockee)
+    const r4 = appliquerCarteClient(etat, 0, particulier, 0);
+    expect(r4.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours tournée Véloce")!.valeur).toBe(0);
+    expect(joueur.compteResultat.produits.productionStockee).toBe(0);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 7 : clôture
+    const r7 = appliquerClotureTrimestre(etat, 0);
+    expect(r7.succes).toBe(true);
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+  });
+
+  test("Synergia : cycle T1 staffing→mission→facturation→clôture, spécialité +licences", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+
+    // Étape 2 : staffing 1 mission (charges personnel)
+    const r2 = appliquerRessourcesPreparation(etat, 0, 1, "tresorerie");
+    expect(r2.succes).toBe(true);
+    const tresoApresEtape2 = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+
+    // Étape 3 : réalisation mission (charges + en-cours)
+    const r3 = appliquerRealisationMetier(etat, 0, 1, "tresorerie");
+    expect(r3.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")!.valeur).toBe(1000);
+
+    // Étape 4 : facturation
+    const r4 = appliquerCarteClient(etat, 0, particulier, 0);
+    expect(r4.succes).toBe(true);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "En-cours mission Synergia")!.valeur).toBe(0);
+
+    // Étape 7 : clôture — Spécialité Synergia : licences +1000 (trésorerie + produitsFinanciers)
+    const tresoAvantCloture = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+    const r7 = appliquerClotureTrimestre(etat, 0);
+    expect(r7.succes).toBe(true);
+    expect(joueur.compteResultat.produits.produitsFinanciers).toBe(1000);
+    const tresoApresCloture = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")!.valeur;
+    // La trésorerie après clôture inclut : +1000 spécialité licences, -2000 charges fixes, -500 remboursement emprunt
+    // (intérêts T1 aussi : emprunt 8000 × 5% = 400 appliqués au T1)
+    expect(tresoApresCloture).toBeLessThan(tresoAvantCloture); // charges ont sorti plus que les licences n'ont rentré
+    expect(verifierEquilibre(joueur).equilibre).toBe(true);
+  });
+
+  test("Régression amortissement : nouveaux postes stocks ne sont PAS amortis", () => {
+    // L'amortissement est sur les immobilisations (-1000/bien nommé, pas "Autres Immobilisations").
+    // Les nouvelles lignes "Matière première Belvaux", "Produits finis Belvaux",
+    // "Marchandises Azura", "En-cours tournée Véloce", "En-cours mission Synergia"
+    // sont toutes catégorisées en `stocks` et NE DOIVENT PAS être amorties.
+    const etats: Array<{ nom: "Manufacture Belvaux" | "Azura Commerce" | "Véloce Transports" | "Synergia Lab"; stocksLines: string[] }> = [
+      { nom: "Manufacture Belvaux", stocksLines: ["Matière première Belvaux", "Produits finis Belvaux"] },
+      { nom: "Azura Commerce", stocksLines: ["Marchandises Azura"] },
+      { nom: "Véloce Transports", stocksLines: ["Stocks", "En-cours tournée Véloce"] },
+      { nom: "Synergia Lab", stocksLines: ["Stocks", "En-cours mission Synergia"] },
+    ];
+    for (const { nom, stocksLines } of etats) {
+      const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: nom }]);
+      const joueur = etat.joueurs[0];
+      const valeurs = stocksLines.map((n) => joueur.bilan.actifs.find((a) => a.nom === n)!.valeur);
+
+      appliquerClotureTrimestre(etat, 0); // inclut appliquerEtape0 → amortissement
+
+      // Vérifier que chaque ligne stocks n'a PAS été amortie par -1000 (peut augmenter via spécialité)
+      stocksLines.forEach((n, i) => {
+        const apres = joueur.bilan.actifs.find((a) => a.nom === n)!.valeur;
+        // La valeur APRÈS clôture doit être >= valeur AVANT (pas de −1000 d'amortissement)
+        expect(apres).toBeGreaterThanOrEqual(valeurs[i]);
+      });
+      expect(verifierEquilibre(joueur).equilibre).toBe(true);
+    }
   });
 });

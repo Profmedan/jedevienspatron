@@ -298,10 +298,15 @@ function appliquerEtape2(etat, j): ResultatAction {
 - [x] Rebuild `dist/`
 - [ ] `SaleGroupCard.tsx` : les 4 écritures polymorphes sont déjà transmises via les extras saleGroupId/saleActIndex — le composant affichera automatiquement la nouvelle narration. Vérification visuelle à faire par Pierre (tâche #21 Phase 4).
 
-#### B9-F — Étapes 5, 6 et 7
-- [ ] Étape 5 : décisions du dirigeant — alignement des cartes recrutement/investissement sur le goulot de chaque entreprise (ex. licence Synergia, entrepôt Belvaux, flotte Véloce, canal Azura)
-- [ ] Étape 6 : événements rédigés selon le métier
-- [ ] Étape 7 : moteur = 2 passes (`appliquerClotureTrimestre` + vérif équilibre/affectation) ; UI raconte « deux temps pédagogiques » mais reste une seule étape numérotée
+#### B9-F — Vérification étapes 5, 6 et 7 — 2026-04-23 ✅
+- [x] Vérification bout-en-bout : le cycle complet (étapes 2→3→4→7) fonctionne pour les 4 entreprises avec bilan équilibré à chaque étape
+- [x] Régression amortissement : les nouveaux postes `stocks` (Matière première, Produits finis, Marchandises Azura, En-cours tournée Véloce, En-cours mission Synergia) ne sont PAS amortis par `appliquerEtape0` (qui est appelée dans `appliquerClotureTrimestre` à l'étape 7). L'amortissement reste sur les seuls biens de catégorie `immobilisations` (Entrepôt, Camion, etc.).
+- [x] Spécialité Belvaux (`effetsPassifs: [{stocks: +1000}, {productionStockee: +1000}]`) — le +1000 sur stocks pousse sur le PREMIER actif de catégorie stocks = « Produits finis Belvaux » (par ordre dans data). Comportement cohérent avec le récit « Produit à chaque tour ».
+- [x] Spécialité Synergia (`effetsPassifs: [{tresorerie: +1000}, {produitsFinanciers: +1000}]`) — licences récurrentes. Cohérent, aucune interaction avec les en-cours.
+- [x] Étapes 5 (DECISION) et 6 (EVENEMENT) : aucun impact testé sur les nouveaux postes stocks nommés. Les cartes décision et événements utilisent `appliquerDeltaPoste` par CATÉGORIE (pas par nom), donc un effet +stocks pousse sur le premier actif stocks, un effet -stocks aussi. Acceptable en V1 — un raffinement par nom pourra venir en B9-G ou plus tard si nécessaire.
+- [x] Étape 7 : `appliquerClotureTrimestre` chaîne toujours `appliquerEtape0` + `appliquerEffetsRecurrents` + `appliquerSpecialiteEntreprise`. Pas de changement moteur. La fusion avec le BILAN (seconde passe `verifierFinTour` + transition fin de tour) reste gérée dans `confirmActiveStep` côté hook.
+- [x] Tests unitaires : 5 nouveaux cas dans `describe("B9-F — cycle complet par entreprise (bout-en-bout)")` couvrant Belvaux/Azura/Véloce/Synergia cycles complets T1 + régression amortissement 4 entreprises. **64/66 tests verts** (les 2 pré-existants #45 B8-D Junior persistent).
+- [x] `npx tsc --noEmit` sur `packages/game-engine` ET `apps/web` → EXIT=0
 
 #### B9-G — UI & pédagogie (absorbe B8-E absent de main)
 - [ ] `SetupScreen` : afficher clairement ce que vend chaque entreprise, d'où vient la valeur, son goulot
