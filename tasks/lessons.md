@@ -446,3 +446,20 @@ Business model corrigé : 1 crédit = 1 code unique = 1 apprenant = 1 partie. Un
 **Constat** : `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` contiennent encore l'ancienne union `EtapeTour = 0..8` et un vieil `ETAPE_INFO` 9 entrées. Aucun code ne les importe — `grep "from.*lib/game-engine/types"` et `grep "from.*jeu/etape-info"` retournent 0.
 
 **Règle** : quand un refactor a la tentation de supprimer du dead code adjacent, **évaluer si ça appartient au même commit logique**. Pour T25.C-RESTART (réordonnancement du cycle), supprimer 2 fichiers non importés = pollution de diff. Créer une tâche de nettoyage séparée (« Supprimer les fichiers legacy `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` non importés ») et la sortir du commit principal.
+
+---
+
+## Session 2026-04-23 — Communication & outillage
+
+### L-COMM-1 — Lire `tasks/lessons.md` en début de session et avant chaque recommandation non-code
+
+**Erreur** : en fin de session B9, j'ai donné à Pierre une procédure de push avec commentaires bash (`# l'état actuel`, `# ce qu'on va pousser`) contenant des apostrophes typographiques. Pierre a copié-collé, son terminal a interprété l'apostrophe Unicode `'` (U+2019) comme une quote ASCII non fermée et s'est bloqué sur `quote>`. J'aurais dû anticiper ce problème classique du copier-coller depuis Markdown.
+
+**Règle A — lecture des leçons** : au début de chaque session ET avant toute recommandation qui sort du scope code pur (procédures, commandes à copier-coller, communication interactive), **relire `tasks/lessons.md` via Grep ou Read**. Les préférences utilisateur de Pierre le précisent explicitement : « Review lessons at session start for relevant project ».
+
+**Règle B — blocs bash sans piège à copier-coller** : dans tout bloc de commandes destiné à être copié dans un terminal Pierre :
+- **Aucune apostrophe typographique** (`'`, U+2019) — même dans les commentaires `#`. Les éditeurs Markdown les introduisent automatiquement mais le shell bash/zsh peut les interpréter comme des single quotes ASCII non fermées dans certains terminaux (iTerm, Terminal.app avec smart quotes).
+- **Une commande par bloc** quand le contexte est un push/deploy/opération irréversible. Ça force l'attention et évite les chaînes partiellement collées.
+- **Pas de commentaires dans les blocs de commandes** à copier. Les explications vont AVANT ou APRÈS le bloc, pas dedans.
+
+**Pattern d'urgence** : quand Pierre se retrouve bloqué sur `quote>` ou `> `, la sortie est toujours `Ctrl+C`. Le signaler en premier avant d'expliquer la cause.
