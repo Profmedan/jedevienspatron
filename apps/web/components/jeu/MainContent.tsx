@@ -12,7 +12,7 @@ import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
 
 import { type ActiveStep } from "./EntryPanel";
-import { getDocumentType, nomCompte } from "./utils";
+import { getDocumentType, getSens, nomCompte } from "./utils";
 import { InvestissementPanel } from "./InvestissementPanel";
 
 type TabType = "bilan" | "cr" | "indicateurs" | "glossaire" | "vue-ensemble" | "impact";
@@ -149,18 +149,19 @@ export function MainContent({
               </button>
             );
           })}
-          {modeDouble && (
-            <span className="ml-1 text-xs text-slate-400 italic flex items-center gap-1">
-              <span>⚡</span> Cette opération touche les deux documents
-            </span>
-          )}
         </div>
 
-        {/* Mini-aperçus d'impacts — visibles uniquement en modeDouble.
-            Le panneau central n'affiche qu'UN SEUL document à la fois (bascule auto
-            selon l'écriture courante). Les mini-cartes servent à :
-            1) voir d'un coup d'œil ce qui bouge dans l'autre document,
-            2) basculer manuellement d'un document à l'autre (override utilisateur). */}
+        {/* ─── Cadre PARTIE DOUBLE — visible uniquement en modeDouble ───────────
+            Le panneau central n'affiche qu'UN SEUL document à la fois (bascule
+            auto selon l'écriture courante). Les 2 mini-cartes sont réunies dans
+            un cadre pédagogique qui matérialise la règle fondamentale du PCG :
+            chaque écriture touche au moins 2 comptes, et Σ Débits = Σ Crédits.
+            Les mini-cartes servent à :
+              1) voir d'un coup d'œil ce qui bouge dans l'autre document,
+              2) basculer manuellement d'un document à l'autre,
+              3) vérifier l'équilibre comptable de l'écriture en cours.
+            Le titre est cliquable et ouvre le glossaire sur l'entrée "partie-double".
+        */}
         <AnimatePresence>
           {modeDouble && (
             <motion.div
@@ -171,22 +172,75 @@ export function MainContent({
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <ImpactMiniCard
-                  accent="cyan"
-                  label="📊 Bilan"
-                  entries={entriesBilan}
-                  isCurrentTab={tabVisibleState === "bilan"}
-                  onClick={() => handleTabChange("bilan")}
-                />
-                <ImpactMiniCard
-                  accent="violet"
-                  label="📈 Compte de Résultat"
-                  entries={entriesCR}
-                  isCurrentTab={tabVisibleState === "cr"}
-                  onClick={() => handleTabChange("cr")}
-                />
-              </div>
+              {(() => {
+                // Calcul des totaux débit / crédit de l'écriture en cours.
+                // getSens() mappe (poste, delta) → "debit" | "credit" selon PCG.
+                const allEntries = [...entriesBilan, ...entriesCR];
+                let totalDebit = 0;
+                let totalCredit = 0;
+                for (const e of allEntries) {
+                  const amount = Math.abs(e.delta);
+                  if (getSens(e.poste, e.delta) === "debit") totalDebit += amount;
+                  else totalCredit += amount;
+                }
+                const equilibre = Math.abs(totalDebit - totalCredit) < 0.01;
+                return (
+                  <div className="mt-3 rounded-2xl border-2 border-amber-400/30 bg-amber-500/[0.04] p-3 shadow-lg shadow-amber-500/5">
+                    {/* Header cliquable : ouvre le glossaire sur "Partie double" */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("glossaire")}
+                      aria-label="Voir la fiche Partie double dans le glossaire"
+                      className="group w-full flex items-center justify-between mb-2.5 px-1"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-amber-300 text-base" aria-hidden="true">⚖️</span>
+                        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300 group-hover:text-amber-200 transition-colors">
+                          Partie double
+                        </span>
+                        <span className="text-[10px] text-slate-400 italic">
+                          — chaque écriture touche au moins 2 comptes
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-amber-400/70 group-hover:text-amber-300 italic transition-colors">
+                        ? glossaire →
+                      </span>
+                    </button>
+
+                    {/* Les 2 mini-cartes Bilan / Compte de Résultat */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <ImpactMiniCard
+                        accent="cyan"
+                        label="📊 Bilan"
+                        entries={entriesBilan}
+                        isCurrentTab={tabVisibleState === "bilan"}
+                        onClick={() => handleTabChange("bilan")}
+                      />
+                      <ImpactMiniCard
+                        accent="violet"
+                        label="📈 Compte de Résultat"
+                        entries={entriesCR}
+                        isCurrentTab={tabVisibleState === "cr"}
+                        onClick={() => handleTabChange("cr")}
+                      />
+                    </div>
+
+                    {/* Footer — Σ Débits = Σ Crédits (équilibre comptable) */}
+                    <div className={`mt-2.5 flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-mono tabular-nums ${
+                      equilibre
+                        ? "bg-emerald-500/10 border border-emerald-400/30 text-emerald-200"
+                        : "bg-red-500/10 border border-red-400/30 text-red-200"
+                    }`}>
+                      <span className="text-slate-400">Σ Débits</span>
+                      <span className="font-bold">{totalDebit.toLocaleString("fr-FR")} €</span>
+                      <span className="text-slate-500">{equilibre ? "=" : "≠"}</span>
+                      <span className="text-slate-400">Σ Crédits</span>
+                      <span className="font-bold">{totalCredit.toLocaleString("fr-FR")} €</span>
+                      <span aria-hidden="true" className="ml-1">{equilibre ? "✓" : "⚠️"}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
