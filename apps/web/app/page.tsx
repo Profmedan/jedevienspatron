@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
@@ -289,9 +289,23 @@ function EntryPanel({
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const shouldReduceMotion = useReducedMotion();
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
+
+  // SEC-bypass (2026-04-24) — si l'utilisateur arrive ici avec `?expired=bypass`,
+  // c'est que le middleware a intercepté une tentative d'accès à `/jeu?access=bypass`
+  // sans cookie valide. On affiche un message explicite pour qu'il comprenne
+  // pourquoi il est redirigé (bookmark obsolète, cookie expiré au bout de 4h, etc.).
+  const expired = searchParams.get("expired") === "bypass";
+  useEffect(() => {
+    if (expired) {
+      setCodeError(
+        "Votre session d'accès bypass a expiré (durée maximale 4h, ou session depuis un autre navigateur). Ressaisissez votre code pour reprendre."
+      );
+    }
+  }, [expired]);
 
   async function handleCode(e: React.FormEvent) {
     e.preventDefault();
@@ -310,6 +324,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.valid) {
+        // SEC-bypass : le cookie HttpOnly signé est maintenant posé par
+        // `/api/bypass`. Le query param `?access=bypass` reste conservé dans
+        // l'URL pour le flag UX côté `useGamePersistence` (qui l'utilise pour
+        // distinguer le mode bypass du mode solo authentifié), mais il ne
+        // confère plus aucune autorisation par lui-même — seul le cookie
+        // compte côté middleware.
         router.push("/jeu?access=bypass");
         return;
       }
