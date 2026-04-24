@@ -2,7 +2,7 @@
 
 ---
 
-## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A + C + D faits, B9-E suivant)
+## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A + C + D + E faits, B9-F suivant)
 
 ### Contexte
 
@@ -122,7 +122,14 @@ Insertion de REALISATION_METIER en position 3 via décalage de VENTES/DECISION/E
    - `appliquerExtourneEnCours` appelée début étape 4 pour logistique/conseil
    - Glossaire : nouvelle entrée "Extourne" avec exemple Véloce
    - Tests : 212/212 (+9 nouveaux B9-D). Smoke test 27/27.
-6. **B9-E** — extension du switch `appliquerCarteClient` : la logique B8 actuelle pour les modes service/logistique/conseil écrit `servicesExterieurs + coutVariable / dettes + coutVariable` par carte. À évaluer : est-ce toujours valide en B9-D, ou faut-il ajuster ? (L'extourne de l'en-cours est déjà en place via `appliquerExtourneEnCours`.) Arbitrage court à faire si doute.
+6. **B9-E** — clarification coutVariable étape 4 ✅ commit `1cc4b8a` (2026-04-24)
+   - Arbitrage tranché : cf. `tasks/b9-e-arbitrages.md` (commit `c330211`) — option 2 (coût complémentaire, pas doublon).
+   - Libellés Véloce resserrés : "Livraison réalisée — frais variables (manutention, assurance, dernier kilomètre)".
+   - Libellés Synergia resserrés : "Mission livrée — frais variables (déplacement, support, expertise ponctuelle)".
+   - Mode "service" legacy conservé pour rétro-compat saves v3.
+   - Glossaire : nouvelle entrée "Coûts fixes vs coûts variables" avec exemple Véloce chiffré + principe marge sur coûts variables.
+   - Tests : 212/212 (inchangé — pas de nouvelle fonction moteur). Smoke test pipeline complet 24/24 assertions (Véloce/Synergia/Belvaux).
+   - Marges brutes vérifiées : Véloce 700 €/carte particulier, Synergia 600 €/carte particulier.
 7. **B9-F** — tests bout-en-bout 4 entreprises + régression B8 + test de couverture polymorphie
 8. **B9-G** — UI pitch : enrichir `CompanyIntro` (B8-E déjà amorcé) et `LeftPanel` pour différencier Véloce de Synergia, ajouter explications étape 3
 
