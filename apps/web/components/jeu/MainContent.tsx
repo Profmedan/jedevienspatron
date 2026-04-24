@@ -263,8 +263,13 @@ export function MainContent({
       {/* ─── Sous-étape Recrutement (flux classique de l'étape Décisions) ─── */}
       {etapeTour === ETAPES.DECISION && subEtape6 === "recrutement" && !_activeStep && (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3">
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+          {/* B9 post-audit (2026-04-24) — panneau Recrutement renforcé :
+              bordure cyan marquée + accent vertical gauche + titre coloré + emoji,
+              pour compenser la discrétion visuelle précédente (slate-500 sur fond
+              quasi transparent) signalée par Pierre. */}
+          <div className="rounded-xl border-2 border-cyan-500/30 bg-cyan-500/[0.05] p-3 space-y-3 border-l-4 border-l-cyan-400 shadow-lg shadow-cyan-500/5">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300 flex items-center gap-2">
+              <span aria-hidden="true">👔</span>
               Recrutement
             </p>
 
