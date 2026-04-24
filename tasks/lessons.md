@@ -1105,3 +1105,27 @@ Un smoke test qui échoue pour raison de signature n'est pas un garde-fou — c'
 npx tsc --noEmit 2>&1 | grep -v "TS2786" | grep -v "JSX component" | grep -v "^ "
 ```
 Les erreurs qui restent sont les nouvelles erreurs réellement introduites par la refonte. Si la liste est vide (hors bruit Lucide), la refonte n'a pas introduit de régression de types sur Vercel. Documenter cet accord explicitement dans les commits et dans le todo (plan) pour éviter de bloquer sur un faux positif.
+
+### L-B9C-1 — Un arbitrage court avant le code est toujours plus rentable qu'un refactor après
+
+**Contexte** : avant B9-C, Pierre a demandé un doc d'arbitrage de ~100 lignes tranchant 3 questions précises (Véloce/Synergia étape 2 + confirmation Belvaux/Azura). Le doc a pris ~10 minutes à écrire. Le code qui a suivi a tenu en ~30 minutes sans aller-retour ni hésitation — chaque décision était déjà prise, les écritures cibles déjà posées, les montants déjà chiffrés.
+
+**Règle** : pour toute refonte qui introduit 2+ nouvelles branches moteur ou 2+ nouveaux libellés UI différenciés, imposer un doc d'arbitrage court (~100 lignes max, format « Q → recommandation tranchée + écriture cible + pourquoi pas l'alternative »). Si on ne peut pas trancher en 3 questions, la refonte n'est pas mûre pour commencer. Si on peut trancher en 1 question, on peut court-circuiter le doc.
+
+**Ce qu'il ne faut PAS faire** : rédiger un doc « options A/B/C sans recommandation ». Le doc doit trancher, sinon c'est à Claude de trancher dans le code et on retombe dans le problème qu'on voulait éviter.
+
+### L-B9C-2 — Jest --coverage plante parfois à froid, --no-coverage permet de vérifier la logique
+
+**Erreur** : après l'ajout de 4 tests B9-C, `npx jest --silent` (= `jest --coverage` via config package.json) a planté avec une erreur de parse "Missing semicolon (117:87)" sur une ligne pré-existante qui marchait 30 secondes avant. `npx jest --no-coverage` sur le même fichier passait sans problème. En ré-exécutant `npx jest --coverage` quelques secondes plus tard, les 203 tests passaient.
+
+**Cause probable** : flakiness de ts-jest avec istanbul/nyc en mode coverage sur un fichier qui vient d'être modifié — cache cold + transformation concurrente.
+
+**Règle** : si `npx jest` plante sur une erreur de syntaxe inexplicable après ajout de tests, d'abord ré-exécuter sans coverage (`--no-coverage`) pour isoler le problème. Si ça passe sans coverage, le bug est dans la chaîne coverage, pas dans le code. Ré-exécuter avec coverage une fois ou deux résout en général le problème. Ne pas paniquer en croyant avoir corrompu le fichier source.
+
+### L-B9C-3 — Les libellés visibles côté élève méritent leur propre ligne dans les données, pas juste dans les commentaires
+
+**Erreur potentielle** évitée : j'ai d'abord pensé garder le libellé générique `"Stocks"` partout dans `entreprises.ts` et ne différencier que dans les messages d'écriture (`explication`). Pierre avait demandé dans le doc B9-C que le libellé soit différencié.
+
+**Pourquoi c'est important** : le libellé de la ligne bilan s'affiche à l'élève dans le tableau de l'actif. Si Belvaux et Azura voient tous les deux « Stocks 4 000 € », l'élève ne comprend pas que le contenu économique est différent. Renommer en « Stocks matières premières » vs « Stocks marchandises » rend la différence PCG (classe 31 vs 37) visible dès le T1, sans charger le moteur.
+
+**Règle** : un libellé visible côté utilisateur n'est jamais « cosmétique » — il fait partie de la pédagogie. Quand on décide de différencier 2 entreprises sur un poste, le rename doit se faire dans les DONNÉES, pas dans les commentaires ou les tooltips. Corollaire : toujours vérifier l'impact de ce rename sur les tests qui cherchent la ligne par nom (`find((a) => a.nom === "Stocks")`) — la faire passer en « par nom exact ou substring » est un petit refactor souvent négligé.

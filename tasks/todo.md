@@ -2,7 +2,7 @@
 
 ---
 
-## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A fait, B9-C suivant)
+## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A + C faits, B9-D suivant)
 
 ### Contexte
 
@@ -88,7 +88,7 @@ Insertion de REALISATION_METIER en position 3 via décalage de VENTES/DECISION/E
    - Rebuild `dist/` OK
    - Tests moteur : 199/199 passent
    - Smoke test `/tmp/smoke-b9a.mjs` : cycle 0→1→2→3→4→5→6→7 traverse sans erreur, placeholder REALISATION_METIER conforme
-4. **B9-C** — polymorphie étape 2 🚧 en cours (2026-04-24)
+4. **B9-C** — polymorphie étape 2 ✅ commit `9761c0f` (2026-04-24)
    - **Arbitrages tranchés** : cf. `tasks/b9-c-arbitrages.md` (commit `3d65dc7`).
      - Belvaux : appro matières premières (B8) — ciblage par nom de ligne
      - Azura : réassort marchandises (B8) — ciblage par nom de ligne
