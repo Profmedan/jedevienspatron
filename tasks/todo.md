@@ -2,7 +2,7 @@
 
 ---
 
-## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧
+## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A fait, B9-C suivant)
 
 ### Contexte
 
@@ -74,19 +74,20 @@ Insertion de REALISATION_METIER en position 3 via décalage de VENTES/DECISION/E
 
 **Ordre de travail** (un commit par jalon, Pierre push après chaque) :
 
-1. **B9-A.1** — ce doc (spec écritures, pas de code) ← ce commit
-2. **B9-A** — structure :
-   - `types.ts` : renuméroter `EtapeTour`, renommer `ETAPES.VENTES → FACTURATION_VENTES`, ajouter `REALISATION_METIER = 3`, renommer `CLOTURE_TRIMESTRE → CLOTURE_BILAN`, bumper `SAVE_VERSION 3 → 4`, ajouter literal `"logistique"` et `"conseil"` au type `SecteurActivite` et `ModeleValeurEntreprise.mode`
-   - `entreprises.ts` : Véloce `service → logistique`, Synergia `service → conseil` sur les 2 champs
-   - `engine.ts` : re-câbler les anciens index dans `appliquerClotureTrimestre`, `verifierFinTour`, switch `appliquerCarteClient` adapté au nouveau literal, ajouter une fonction placeholder `appliquerRealisationMetier` qui ne fait rien et return ResultatAction vide
-   - `useGameFlow.ts`, `LeftPanel.tsx`, `ModalEtape.tsx`, `pedagogicalMessages.ts`, `MainContent.tsx` : remappage d'index, ajout de l'étape 3 dans STEP_NAMES + ETAPE_INFO + MODALES_ETAPES (placeholder pédagogique « placeholder, activé en B9-D »)
-   - Constante `COUT_CANAL_AZURA_PAR_TOUR = 300` ajoutée dans `types.ts`
-3. **🛡️ Garde-fou B9-A** :
-   - `npx tsc --noEmit` sur `packages/game-engine` → EXIT=0
-   - `npx tsc --noEmit` sur `apps/web` → EXIT=0 (filtrage pré-existant TS2786 lucide-react accepté)
-   - Rebuild `dist/` : `npm run build --workspace=packages/game-engine`
-   - Tests moteur : `cd packages/game-engine && npm test` → les 199 tests B8 passent toujours (l'étape 3 placeholder n'ajoute aucune écriture, rien ne doit régresser)
-   - Smoke test scripté : `initialiserJeu({Belvaux}) → traverser les 8 étapes → vérifier bilan équilibré fin de T1`
+1. **B9-A.1** — ce doc (spec écritures, pas de code) ✅ commit `e0dc3cf`
+2. **B9-A** — structure ✅ commit `b4c41b0` (2026-04-24)
+   - `types.ts` : renumérotation `EtapeTour`, renommage `ETAPES.VENTES → FACTURATION_VENTES`, ajout `REALISATION_METIER = 3`, fusion `CLOTURE_TRIMESTRE + BILAN → CLOTURE_BILAN`, literal `"logistique"` et `"conseil"` ajoutés au type `SecteurActivite` et `ModeleValeurEntreprise.mode`, constante `COUT_CANAL_AZURA_PAR_TOUR = 300`
+   - `entreprises.ts` : Véloce → `logistique`, Synergia → `conseil`
+   - `engine.ts` : placeholder `appliquerRealisationMetier`, `MODELE_DEFAUT_PAR_SECTEUR` étendu, switchs `appliquerAchatMarchandises` et `appliquerCarteClient` étendus aux 3 modes service-like, `avancerEtape` → `CLOTURE_BILAN`
+   - `index.ts` : export `appliquerRealisationMetier`
+   - tests moteur adaptés (cycle-shape + engine) — 199/199
+   - UI : `useGameFlow`, `useGamePersistence (SAVE_VERSION 3→4)`, `LeftPanel` (STEP_NAMES + STEP_HELP 8), `ModalEtape` (ETAPE_CONFIG 8 + icône Wrench), `gameFlowUtils` (ETAPE_INFO 8), `pedagogie.ts` (MODALES_ETAPES 8), `CompanyIntro` (MODE_LABEL 5 + pitch 3 modes), `EntryPanel`, `CompteResultatPanel`, `pedagogicalMessages` (renommages)
+3. **🛡️ Garde-fou B9-A** ✅ 2026-04-24
+   - `npx tsc --noEmit` game-engine : EXIT=0
+   - `npx tsc --noEmit` apps/web : seules erreurs TS2786 pré-existantes (React 18/19 VM), aucune régression B9-A
+   - Rebuild `dist/` OK
+   - Tests moteur : 199/199 passent
+   - Smoke test `/tmp/smoke-b9a.mjs` : cycle 0→1→2→3→4→5→6→7 traverse sans erreur, placeholder REALISATION_METIER conforme
 4. **B9-C** — polymorphie étape 2 si nécessaire (souvent déjà OK pour Belvaux/Azura en B8 ; Véloce/Synergia pourraient n'avoir rien à acheter, à arbitrer)
 5. **B9-D** — polymorphie étape 3 `appliquerRealisationMetier` : 4 fonctions dédiées par mode, avec les écritures spécifiées plus haut ; ajout du helper `pushByName` pour cibler des lignes de stock précises (matière première vs produits finis vs en-cours)
 6. **B9-E** — extension du switch `appliquerCarteClient` avec les 4 branches (3 modes B8 → 4 modes B9) et les extournes (production/logistique/conseil)
