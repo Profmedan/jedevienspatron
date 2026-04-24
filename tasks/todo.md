@@ -2,7 +2,7 @@
 
 ---
 
-## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A + C faits, B9-D suivant)
+## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧 (A + C + D faits, B9-E suivant)
 
 ### Contexte
 
@@ -111,9 +111,18 @@ Insertion de REALISATION_METIER en position 3 via décalage de VENTES/DECISION/E
      - Tests moteur 199/199 + 4 nouveaux
      - Rebuild dist
      - Smoke test étape 2 par mode : 4 parties × 8 étapes, vérif bilan équilibré à chaque étape
-5. **B9-D** — polymorphie étape 3 `appliquerRealisationMetier` : 4 fonctions dédiées par mode, avec les écritures spécifiées plus haut ; ajout du helper `pushByName` pour cibler des lignes de stock précises (matière première vs produits finis vs en-cours)
-5. **B9-D** — polymorphie étape 3 `appliquerRealisationMetier` : 4 fonctions dédiées par mode, avec les écritures spécifiées plus haut ; ajout du helper `pushByName` pour cibler des lignes de stock précises (matière première vs produits finis vs en-cours)
-6. **B9-E** — extension du switch `appliquerCarteClient` avec les 4 branches (3 modes B8 → 4 modes B9) et les extournes (production/logistique/conseil)
+5. **B9-D** — polymorphie étape 3 ✅ commit `a002568` (2026-04-24)
+   - Arbitrages tranchés : cf. `tasks/b9-d-arbitrages.md` (commit `d917fe3`)
+   - Belvaux : 2 écritures doubles (consommation MP + entrée PF), 1 unité/trim auto si matière suffisante, 0 sinon avec message
+   - Azura : coût de canal 300 € (servicesExterieurs / dettes)
+   - Véloce : en-cours tournée 300 €, extourné étape 4
+   - Synergia : en-cours mission 400 €, extourné étape 4
+   - Helper `pushByName` ajouté pour cibler par nom (MP/PF distincts côté Belvaux)
+   - Dispatcher `appliquerRealisationMetier` + 4 fonctions dédiées
+   - `appliquerExtourneEnCours` appelée début étape 4 pour logistique/conseil
+   - Glossaire : nouvelle entrée "Extourne" avec exemple Véloce
+   - Tests : 212/212 (+9 nouveaux B9-D). Smoke test 27/27.
+6. **B9-E** — extension du switch `appliquerCarteClient` : la logique B8 actuelle pour les modes service/logistique/conseil écrit `servicesExterieurs + coutVariable / dettes + coutVariable` par carte. À évaluer : est-ce toujours valide en B9-D, ou faut-il ajuster ? (L'extourne de l'en-cours est déjà en place via `appliquerExtourneEnCours`.) Arbitrage court à faire si doute.
 7. **B9-F** — tests bout-en-bout 4 entreprises + régression B8 + test de couverture polymorphie
 8. **B9-G** — UI pitch : enrichir `CompanyIntro` (B8-E déjà amorcé) et `LeftPanel` pour différencier Véloce de Synergia, ajouter explications étape 3
 

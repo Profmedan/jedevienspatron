@@ -1129,3 +1129,39 @@ Les erreurs qui restent sont les nouvelles erreurs réellement introduites par l
 **Pourquoi c'est important** : le libellé de la ligne bilan s'affiche à l'élève dans le tableau de l'actif. Si Belvaux et Azura voient tous les deux « Stocks 4 000 € », l'élève ne comprend pas que le contenu économique est différent. Renommer en « Stocks matières premières » vs « Stocks marchandises » rend la différence PCG (classe 31 vs 37) visible dès le T1, sans charger le moteur.
 
 **Règle** : un libellé visible côté utilisateur n'est jamais « cosmétique » — il fait partie de la pédagogie. Quand on décide de différencier 2 entreprises sur un poste, le rename doit se faire dans les DONNÉES, pas dans les commentaires ou les tooltips. Corollaire : toujours vérifier l'impact de ce rename sur les tests qui cherchent la ligne par nom (`find((a) => a.nom === "Stocks")`) — la faire passer en « par nom exact ou substring » est un petit refactor souvent négligé.
+
+### L-B9D-1 — Quand plusieurs lignes de bilan partagent la même catégorie, créer un helper par NOM, pas par catégorie
+
+**Contexte** : en B9-D, Belvaux gagne une 2ᵉ ligne `categorie: "stocks"` (Stocks produits finis, en plus de Stocks matières premières). Véloce et Synergia gagnent également une ligne `categorie: "stocks"` en plus (Stocks en-cours de production). Le `appliquerDeltaPoste` existant ne sait matcher que par `categorie`, ce qui prend toujours la première ligne — inadapté dès qu'il y a plusieurs lignes même catégorie.
+
+**Règle** : dès qu'une entreprise a 2+ lignes de bilan avec la même catégorie, on crée un helper `pushByName(joueur, modifications, nomLigne, delta, explication)` qui cherche la ligne par nom exact. Le helper gère actifs ET passifs (recherche actifs d'abord, fallback passifs). Il jette une erreur claire si la ligne n'existe pas pour le joueur, ce qui évite les bugs silencieux du type "l'écriture est allée sur la mauvaise ligne".
+
+**Garde-fou TS strict** : les types `PosteActif` et `PostePassif` ont des unions de catégories disjointes, donc on ne peut pas assigner l'un à l'autre. Le pattern recommandé est de chercher dans chacun séparément avec des `const` distincts (`const actif = actifs.find(...); const passif = !actif ? passifs.find(...) : undefined;`), puis d'extraire les champs communs dans une variable typée `string`.
+
+### L-B9D-2 — Séparer la fonction d'extourne plutôt que l'intégrer dans `appliquerCarteClient`
+
+**Contexte** : en B9-D, les modes logistique et conseil constatent un en-cours à l'étape 3 qui doit être extourné à l'étape 4 AVANT la facturation. Deux options architecturales :
+1. Intégrer l'extourne dans `appliquerCarteClient` (détecter la 1ère carte du trimestre et extourner avant).
+2. Créer une fonction dédiée `appliquerExtourneEnCours(etat, joueurIdx)` appelée une seule fois au début de l'étape 4.
+
+**Décision prise** : option 2 (séparée). Pierre a validé en arbitrage B9-D.
+
+**Pourquoi c'est mieux** :
+- `appliquerCarteClient` reste focalisée sur la vente/facturation — une responsabilité par fonction.
+- L'extourne devient un moment comptable EXPLICITE que l'élève voit en tête des écritures de l'étape 4, pas un effet de bord caché à la 1ère carte.
+- Tests : une fonction dédiée est testable unitairement (pas besoin de simuler "1ère carte du trimestre"), ce qui a permis 3 tests propres en B9-D (Véloce/Synergia extournent, Belvaux/Azura sont no-op).
+- B9-E (extension `appliquerCarteClient`) reste inchangé sur sa logique B8 côté coût variable par carte.
+
+**Règle générale** : quand une écriture comptable se fait « une fois par trimestre » (extourne, clôture, amortissement), préférer une fonction dédiée appelée une seule fois, plutôt qu'un bout de logique intégré dans une fonction qui se déclenche plusieurs fois (cartes clients, événements). Le "une fois par trimestre" devient un contrat explicite, pas un état caché.
+
+### L-B9D-3 — Un message informatif (delta=0) n'est pas filtrable par la chaîne `modsFiltrees`
+
+**Contexte** : en B9-D, le garde-fou matière Belvaux émet une ligne `modification` avec `ancienneValeur === nouvelleValeur` et une `explication` claire ("Aucune production ce trimestre : matière insuffisante…"). Mais la chaîne de traitement standard filtre ces lignes dans `modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur)`, et le skip-auto se déclenche si `modsFiltrees.length === 0` — ce qui fait que le message ne remonte pas à l'élève.
+
+**Fix** : dans `useGameFlow`, avant le skip-auto, on détecte `etapeActuelle === ETAPES.REALISATION_METIER && modsFiltrees.length === 0` et on scanne `mods` pour trouver une ligne informative (`explication.includes("matière insuffisante")`). Si présente, on la pousse dans `etat.messages` (tableau de strings pédagogiques), que le journal et l'UI affichent normalement.
+
+**Règle** : quand on veut qu'un message arrive à l'élève mais PAS comme écriture comptable, il y a 2 canaux :
+1. `etat.messages: string[]` — global, affiché par le journal et l'UI comme note pédagogique.
+2. `ModificationMoteur` avec delta=0 — visible dans `activeStep.entries` SEULEMENT si la fonction qui les affiche n'a pas filtré les delta=0.
+
+Choisir le canal 1 (messages) pour les messages qui ne doivent pas polluer la vue "écritures comptables", et le canal 2 pour les messages directement liés à une ligne de bilan/CR. Toujours être explicite : une ligne delta=0 dans une fonction moteur est un message destiné à l'élève, pas un bug — la documenter dans le commentaire de la fonction.
