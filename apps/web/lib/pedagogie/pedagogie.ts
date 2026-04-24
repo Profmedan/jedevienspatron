@@ -53,14 +53,18 @@ export const MODALES_ETAPES: Record<number, ModalEtape> = {
     impactComptes: `Charges de personnel +, trésorerie -. Le résultat se dégrade d'autant. C'est une charge d'exploitation courante — pas une immobilisation, même si l'effet sur les ventes est durable.`,
     conseil: `Dimensionne ton équipe à ta marge prévue, pas à ton ambition. Un commercial en trop brûle du cash jusqu'à ce qu'il produise ; une équipe trop maigre laisse du chiffre à la concurrence.`,
   },
-  // ── étape 2 : Approvisionnement (marchandises / matières) ────────────────────
+  // ── étape 2 : Approvisionnement (marchandises / matières / moyens) ──────────
+  // B9-E (2026-04-24) — rewrite pour couvrir les 4 métiers et non plus uniquement
+  // négoce/production. Le texte évoque explicitement "marchandises à revendre,
+  // matières à transformer, moyens pour réaliser une prestation" pour embrasser
+  // Belvaux / Azura / Véloce / Synergia sans jargon comptable prématuré.
   2: {
     etape: 2,
-    titre: `Tu achètes ce que tu vas vendre`,
-    ceQuiSePasse: `Tu achètes marchandises ou matières (selon ton métier). Le stock augmente, et soit la trésorerie baisse (achat comptant), soit une dette fournisseur est créée (paiement différé). Pas de charge à ce stade : c'est une transformation d'actif.`,
-    pourquoi: `Le stock, c'est de l'argent transformé en marchandises. Trop de stock immobilise la trésorerie sans la rémunérer ; trop peu te fait rater des ventes. Acheter, c'est parier sur la demande à venir.`,
-    impactComptes: `Stocks +, et soit trésorerie -, soit dettes fournisseurs +. Le coût d'achat ne devient charge qu'au moment de la vente — c'est pourquoi un stock élevé ne réduit pas ton résultat courant.`,
-    conseil: `Achète pour couvrir 2 à 3 trimestres de ventes prévues, pas plus. Le stock qui dort, c'est du cash qui ne travaille pas.`,
+    titre: `Tu achètes ce dont ton activité a besoin`,
+    ceQuiSePasse: `Tu achètes des ressources nécessaires à ton entreprise : des marchandises à revendre, des matières à transformer, ou des moyens pour réaliser une prestation. Le stock ou les moyens disponibles augmentent. En contrepartie, soit tu payes tout de suite, soit tu crées une dette fournisseur.`,
+    pourquoi: `Tu dépenses avant de gagner. Si tu achètes trop, tu bloques de la trésorerie. Si tu n'achètes pas assez, tu ne peux plus produire, livrer ou vendre. Bien gérer cette étape, c'est engager juste ce qu'il faut pour faire tourner l'activité sans mettre le cash en danger.`,
+    impactComptes: `Pour un négoce ou une production, stocks + et trésorerie − (comptant) ou dettes fournisseurs + (crédit) — le coût d'achat ne devient charge qu'au moment de la vente. Pour la logistique ou le conseil, le coût d'approche ou de staffing passe directement en services extérieurs +, avec dettes fournisseurs + en contrepartie (charge immédiate).`,
+    conseil: `Engage juste ce qu'il faut pour servir ton activité. Un stock qui dort, c'est du cash qui ne travaille pas. Un coût d'approche trop élevé, c'est une marge rognée avant même d'avoir facturé.`,
   },
   // ── étape 3 : Réalisation métier (B9-A — polymorphie par entreprise) ─────────
   3: {
