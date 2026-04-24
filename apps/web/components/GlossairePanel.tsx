@@ -872,6 +872,41 @@ const TERMES: TermeGlossaire[] = [
     ),
   },
 
+  {
+    id: "couts-fixes-variables",
+    terme: "Coûts fixes vs coûts variables",
+    categorie: "cr",
+    court: "Distinction entre charges qui ne dépendent pas du volume (fixes) et charges proportionnelles au volume (variables)",
+    contenu: (
+      <div className="space-y-2 text-xs text-gray-300 leading-relaxed">
+        <p>Toutes les charges n'ont pas le même comportement face à l'activité.</p>
+        <div className="bg-amber-950/30 border border-amber-700/40 rounded-lg p-2">
+          <div className="font-bold text-amber-300 mb-1">Coûts fixes</div>
+          <div className="text-amber-200 text-[11px] leading-relaxed">
+            Charges qui tombent <em>chaque trimestre</em>, peu importe qu'on vende 0 ou 10 unités : loyer, salaires fixes, abonnements, coût d'approche d'une tournée, staffing d'une mission.
+          </div>
+        </div>
+        <div className="bg-blue-950/30 border border-blue-700/40 rounded-lg p-2">
+          <div className="font-bold text-blue-300 mb-1">Coûts variables</div>
+          <div className="text-blue-200 text-[11px] leading-relaxed">
+            Charges <em>proportionnelles au volume vendu</em> : coût d'achat des marchandises, frais de livraison par colis, frais de mission par jour consultant. Si tu vends 0, ces coûts sont 0.
+          </div>
+        </div>
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-2">
+          <div className="text-gray-300 text-[11px] font-bold mb-1">Exemple Véloce (logistique)</div>
+          <div className="space-y-0.5 text-[10px]">
+            <div className="text-gray-400">Étape 2 — <strong>fixe</strong> : 300 € de coût d'approche (carburant, préparation) payés quel que soit le nombre de livraisons.</div>
+            <div className="text-gray-400">Étape 4 — <strong>variable</strong> : 1 000 € par livraison (manutention, assurance, dernier km) proportionnel au volume.</div>
+          </div>
+        </div>
+        <div className="bg-indigo-950/30 border border-indigo-700/40 rounded-lg p-2 text-[11px] text-indigo-200">
+          <strong>Marge sur coûts variables</strong> = CA − coûts variables. Elle doit couvrir les coûts fixes pour que l'entreprise soit rentable. C'est l'outil n°1 du dirigeant pour piloter la profitabilité.
+        </div>
+        <p className="text-amber-300 text-[11px] font-bold">💡 Règle : plus les coûts fixes sont élevés, plus il faut de volume pour atteindre le seuil de rentabilité.</p>
+      </div>
+    ),
+  },
+
   // ── M ──
   {
     id: "marge-brute",

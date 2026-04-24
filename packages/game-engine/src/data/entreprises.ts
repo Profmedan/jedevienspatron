@@ -144,14 +144,17 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     specialite: "🚀 Livraison rapide",
     reducDelaiPaiement: true, // Spécialité : délai d'encaissement réduit de 1 (TPE → immédiat, Grand Compte → C+1)
     // B8-C — Modèle de valeur : prestataire de transport (mode "logistique" depuis B9-A)
+    // B9-E (2026-04-24) — libellés étape 4 resserrés sur la part VARIABLE par livraison,
+    // pour distinguer du coût d'approche FIXE par trimestre déjà posé à l'étape 2 (B9-C)
+    // et de l'en-cours de tournée déjà constaté à l'étape 3 (B9-D).
     modeleValeur: {
       mode: "logistique",
       ceQueJeVends: "Des prestations de transport et de livraison",
       dOuVientLaValeur: "Le temps de conduite, le carburant et le tri des colis",
       goulotPrincipal: "Capacité de la flotte et disponibilité des chauffeurs",
       coutVariable: 1000,
-      libelleExecution: "Carburant et sous-traitance mobilisés pour la course",
-      libelleContrepartie: "Facture transporteur / carburant à régler au prochain trimestre",
+      libelleExecution: "Livraison réalisée — frais variables (manutention, assurance, dernier kilomètre)",
+      libelleContrepartie: "Dette fournisseur pour les frais variables de livraison (règlement au trimestre suivant)",
     },
     // B8-C — Demande passive : flux récurrent de livraisons courtes
     clientsPassifsParTour: [
@@ -258,14 +261,17 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { poste: "tresorerie", delta: 1000 },
     ],
     // B8-C — Modèle de valeur : prestataire missions + licences (mode "conseil" depuis B9-A)
+    // B9-E (2026-04-24) — libellés étape 4 resserrés sur la part VARIABLE par mission,
+    // pour distinguer du coût de staffing FIXE par trimestre déjà posé à l'étape 2 (B9-C)
+    // et de l'en-cours de mission déjà constaté à l'étape 3 (B9-D).
     modeleValeur: {
       mode: "conseil",
       ceQueJeVends: "Des missions de conseil et des licences logicielles",
       dOuVientLaValeur: "Le savoir-faire de l'équipe et la propriété intellectuelle (brevets)",
       goulotPrincipal: "Disponibilité des ingénieurs et qualité du portefeuille de brevets",
       coutVariable: 1000,
-      libelleExecution: "Temps ingénieur et infrastructure cloud mobilisés pour la mission",
-      libelleContrepartie: "Facture sous-traitance / cloud à régler au prochain trimestre",
+      libelleExecution: "Mission livrée — frais variables (déplacement, support, expertise ponctuelle)",
+      libelleContrepartie: "Dette fournisseur pour les frais variables de mission (règlement au trimestre suivant)",
     },
     // B8-C — Demande passive : abonnements individuels (particuliers payants)
     clientsPassifsParTour: [

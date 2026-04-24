@@ -871,15 +871,18 @@ function appliquerCarteClient(etat, joueurIdx, carteClient, saleGroupIndex) {
         push("productionStockee", -coutVar, `${modele.libelleContrepartie} : −${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
     }
     else if (modele.mode === "service" || modele.mode === "logistique" || modele.mode === "conseil") {
-        // Les services (alias historique "service" + modes B9-A "logistique" /
-        // "conseil") ne consomment pas de stock physique mais mobilisent des
-        // ressources (sous-traitance, carburant, consommables techniques,
-        // honoraires consultants) : on enregistre un coût variable réel au
-        // lieu d'une marge brute 100 %.
-        // B9-D/E divergera les 3 modes (ex. Synergia aura ses en-cours mission
-        // + licences, Véloce ses en-cours tournée).
-        push("servicesExterieurs", coutVar, `${modele.libelleExecution} : +${coutVar} € de services extérieurs`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
-        push("dettes", coutVar, `${modele.libelleContrepartie} : +${coutVar} € de dettes fournisseurs`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
+        // B9-E (2026-04-24) — Part VARIABLE par carte client (frais de livraison
+        // Véloce / frais de mission Synergia), distincte de :
+        //   • la part FIXE par trimestre (étape 2, B9-C) — coût d'approche Véloce,
+        //     staffing Synergia ;
+        //   • l'en-cours constaté à l'étape 3 (B9-D) — extourné en début d'étape 4
+        //     par `appliquerExtourneEnCours` AVANT l'appel à cette fonction.
+        // Les libellés détaillés (manutention/assurance/dernier km pour Véloce,
+        // déplacement/support/expertise ponctuelle pour Synergia) sont portés par
+        // `modele.libelleExecution` / `libelleContrepartie` dans entreprises.ts.
+        // Le mode "service" legacy conserve son libellé historique pour les saves v3.
+        push("servicesExterieurs", coutVar, `${modele.libelleExecution} : +${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+        push("dettes", coutVar, `${modele.libelleContrepartie} : +${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
     }
     return { succes: true, modifications };
 }
