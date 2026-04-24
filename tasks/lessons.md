@@ -1000,3 +1000,76 @@ Pour toute tâche touchant plus de 2 fichiers ou introduisant une nouvelle logiq
 - Quand on filtre le résultat de `tsc --noEmit` pour isoler les régressions non pré-existantes, filtrer par code d'erreur (`grep -v TS2786`) plutôt que par fichier — un nouveau fichier fautif n'apparaît pas dans la denylist par fichier.
 - Pour les templates custom persistés en base (Supabase `custom_entreprise_templates`), ajouter un mapping `baseType → secteurActivite` avec fallback conservateur (`"service"`) tant que la colonne `secteur_activite` n'existe pas en DB. Migration DB différée — pas bloquante pour B8.
 - Pattern récurrent : à chaque ajout de champ obligatoire sur un type partagé, faire `grep -rn "as EntrepriseTemplate\|: EntrepriseTemplate" apps/` pour recenser les points de construction manuels, avant même de faire tourner `tsc`.
+---
+
+## Session 2026-04-21 — T25.C-RESTART (réordonnancement 9→8 étapes)
+
+### L-T25R-1 — Ne jamais faire confiance aveuglément au rapport d'un subagent Explore
+
+**Erreur** : lors du diagnostic initial de T25.C, un subagent `Explore` a rapporté que le réordonnancement 9→8 étapes était déjà en place sur `main` (union `EtapeTour = 0..7`, switch à 8 entrées dans le nouvel ordre). Les tâches T25.C Commit 2 (#19) et Commit 3 (#20) ont été marquées *completed* sur la base de ce rapport. En réalité, le code était dans un **état mixte** : `ETAPES` renommé (nouveaux noms) mais union et switch encore à 9 entrées dans l'ordre legacy, ce qui rendait `ETAPES.COMMERCIAUX = 2` incohérent avec `useGameFlow.ts` qui câblait l'index 2 sur `appliquerAvancementCreances`. Pierre a découvert le problème lors d'une partie manuelle — le jeu semblait fonctionner mais l'ordre pédagogique était faux.
+
+**Cause** : un subagent Explore est configuré pour la synthèse rapide, pas pour la vérification byte-à-byte. Quand la question porte sur **l'état exact d'un fichier** (présence littérale d'une constante, nombre d'entrées dans un type union, ordre précis dans un switch), il peut extrapoler à partir de commentaires, de noms de fichiers ou de patterns partiels.
+
+**Règle** : pour tout diagnostic où l'état binaire d'un fichier (X est-il présent ? Y a-t-il N entrées ?) conditionne une décision de workflow (marquer une tâche complétée, commit, bump de version), **lire le fichier directement avec `Read` ou `Grep` avec un pattern littéral**. Les subagents Explore restent parfaits pour cartographier une architecture ou chercher des usages, pas pour attester la présence exacte d'un symbole.
+
+### L-T25R-2 — Ne jamais faire confiance à un statut *completed* sans vérifier le commit correspondant sur `main`
+
+**Erreur** : T25.C Commit 2 et Commit 3 étaient marqués *completed* dans la todo-list, mais aucune ligne du diff T25.C réordonnancement n'avait atterri sur `main`. La cohérence du statut todo ↔ code réel n'était pas garantie.
+
+**Cause** : le statut *completed* dans la todo-list reflète une intention (« j'ai terminé ce travail ») mais pas nécessairement un commit. Il peut être marqué à la fin d'une session, alors qu'aucun `git commit` n'a eu lieu côté VM (Pierre pousse depuis le Mac).
+
+**Règle** : avant de construire sur le travail d'une tâche marquée *completed* — surtout quand la tâche suivante dépend directement de son état — **vérifier avec `git log --oneline -- <fichier>` ou `git show HEAD:<fichier>` que le code cible est bien présent sur `main`**. Sinon, relire le fichier en direct et rouvrir la tâche (suffixer `-RESTART`) si l'état ne correspond pas.
+
+### L-T25R-3 — Un bump de `SAVE_VERSION` invalide les parties en cours — le documenter
+
+**Erreur potentielle** : passer `SAVE_VERSION` de 1 à 2 dans `useGamePersistence.ts` sans prévenir les apprenants en cours de partie peut leur faire perdre leur progression au prochain chargement de page.
+
+**Règle** : quand on change l'ordre/la sémantique des étapes et qu'on ne peut pas écrire un mappeur v1→v2 fidèle, bumper `SAVE_VERSION` ET l'indiquer dans le message de commit + dans `tasks/todo.md` + mentionner à Pierre qu'il doit **attendre qu'aucune partie ne soit en cours** avant de pousser en prod, ou accepter que les parties en cours redémarrent à zéro. La route `/api/sessions/[code]/start` PATCH peut aussi être utilisée pour « réinitialiser » une session côté DB si nécessaire.
+
+### L-T25R-4 — Rebuild `dist/` est obligatoire après modification du game-engine
+
+**Erreur** : après avoir ajouté `appliquerClotureTrimestre` dans `packages/game-engine/src/engine.ts` et l'export dans `index.ts`, `npx tsc --noEmit` dans `apps/web` a échoué avec `Module '"@jedevienspatron/game-engine"' has no exported member 'appliquerClotureTrimestre'`.
+
+**Cause** : `apps/web` importe depuis `@jedevienspatron/game-engine` qui est résolu par npm workspaces via `packages/game-engine/package.json` → `main: "dist/index.js"` + `types: "dist/index.d.ts"`. Les sources `.ts` du package ne sont pas lues directement ; seule la build `dist/` compte.
+
+**Règle** : après chaque modification des exports de `packages/game-engine`, exécuter `npm run build --workspace=packages/game-engine` avant de relancer `tsc` dans `apps/web`. Cette règle est valable pour tout ajout/suppression/renommage d'export, pas seulement les nouvelles fonctions.
+
+### L-T25R-5 — Laisser le dead code en place pour garder un commit focalisé
+
+**Constat** : `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` contiennent encore l'ancienne union `EtapeTour = 0..8` et un vieil `ETAPE_INFO` 9 entrées. Aucun code ne les importe — `grep "from.*lib/game-engine/types"` et `grep "from.*jeu/etape-info"` retournent 0.
+
+**Règle** : quand un refactor a la tentation de supprimer du dead code adjacent, **évaluer si ça appartient au même commit logique**. Pour T25.C-RESTART (réordonnancement du cycle), supprimer 2 fichiers non importés = pollution de diff. Créer une tâche de nettoyage séparée (« Supprimer les fichiers legacy `apps/web/lib/game-engine/types.ts` et `apps/web/app/jeu/etape-info.ts` non importés ») et la sortir du commit principal.
+
+---
+
+## Session 2026-04-23 — Communication & outillage
+
+### L-COMM-1 — Lire `tasks/lessons.md` en début de session et avant chaque recommandation non-code
+
+**Erreur** : en fin de session B9, j'ai donné à Pierre une procédure de push avec commentaires bash (`# l'état actuel`, `# ce qu'on va pousser`) contenant des apostrophes typographiques. Pierre a copié-collé, son terminal a interprété l'apostrophe Unicode `'` (U+2019) comme une quote ASCII non fermée et s'est bloqué sur `quote>`. J'aurais dû anticiper ce problème classique du copier-coller depuis Markdown.
+
+**Règle A — lecture des leçons** : au début de chaque session ET avant toute recommandation qui sort du scope code pur (procédures, commandes à copier-coller, communication interactive), **relire `tasks/lessons.md` via Grep ou Read**. Les préférences utilisateur de Pierre le précisent explicitement : « Review lessons at session start for relevant project ».
+
+**Règle B — blocs bash sans piège à copier-coller** : dans tout bloc de commandes destiné à être copié dans un terminal Pierre :
+- **Aucune apostrophe typographique** (`'`, U+2019) — même dans les commentaires `#`. Les éditeurs Markdown les introduisent automatiquement mais le shell bash/zsh peut les interpréter comme des single quotes ASCII non fermées dans certains terminaux (iTerm, Terminal.app avec smart quotes).
+- **Une commande par bloc** quand le contexte est un push/deploy/opération irréversible. Ça force l'attention et évite les chaînes partiellement collées.
+- **Pas de commentaires dans les blocs de commandes** à copier. Les explications vont AVANT ou APRÈS le bloc, pas dedans.
+
+**Pattern d'urgence** : quand Pierre se retrouve bloqué sur `quote>` ou `> `, la sortie est toujours `Ctrl+C`. Le signaler en premier avant d'expliquer la cause.
+
+### L-COMM-2 — `git fetch origin` AVANT de raisonner sur l'état du code
+
+**Erreur** : session B9 complète bâtie sur un clone VM périmé. Mon VM était à `9d35b2d`. `origin/main` était à `fb0e768` avec 15 commits d'avance (B4, B6-A, B6-B, B7, B8, et même un T25.C déjà posé `ac3a775`). J'ai travaillé pendant toute la session sans m'en apercevoir. Résultat : les 9 commits B9 (dont un T25.C-RESTART qui dupliquait `ac3a775` déjà sur `main`) étaient construits sur une base qui n'était plus la réalité. Impossibilité de push fast-forward, et L-T25R-2 n'a servi à rien parce que j'ai vérifié le `main` LOCAL du VM et pas l'`origin/main`.
+
+**Règle** : dans TOUTE session qui touche le code d'un dépôt partagé (Pierre travaille en parallèle sur son Mac), la toute première action après avoir lu les leçons est :
+
+```
+git fetch origin
+git log HEAD..origin/main --oneline
+```
+
+Si la seconde commande retourne des commits, NE PAS commencer à coder. Mettre à jour le clone local (rebase/merge/rollback selon le contexte) OU prévenir Pierre qu'on va écraser des changements. C'est un garde-fou non négociable pour les sessions sur ce projet.
+
+**Pattern d'application** : L-T25R-2 et L-COMM-2 sont un **couple** — L-T25R-2 vérifie que le statut `completed` correspond à un commit, L-COMM-2 vérifie que le clone local reflète l'état réel du remote. Sans les deux, on peut se tromper.
+
+**Cas particulier Cowork** (découvert en 2026-04-23) : le clone monté par le VM dans `/sessions/<id>/mnt/jedevienspatron-github` peut être un clone SÉPARÉ du vrai clone Pierre, qui est imbriqué à `jedevienspatron-github/jedevienspatron-github`. Toujours vérifier s'il y a un sous-dossier `jedevienspatron-github/` contenant son propre `.git` → c'est celui que Pierre utilise vraiment et que `git push` depuis son Mac synchronise avec `origin`. Travailler dans le mauvais clone = diffs invisibles côté Pierre.
