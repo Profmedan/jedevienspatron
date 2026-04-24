@@ -133,6 +133,48 @@ git commit -m "type: description"
 
 ---
 
+## Comportements Claude — règles transverses
+
+Ces règles complètent le workflow obligatoire ci-dessus. Elles s'appliquent à chaque étape et visent à réduire les erreurs fréquentes en codage assisté. Source d'inspiration : karpathy-skills (forrestchang/andrej-karpathy-skills), points retenus après dédoublonnage avec le reste du guide.
+
+### 1. Exposer les alternatives au lieu de choisir seul
+
+Quand une demande admet plusieurs interprétations raisonnables, les présenter toutes à Pierre avant de coder — ne pas trancher silencieusement. Même règle pour les choix d'architecture : si j'hésite entre 2 approches, les nommer explicitement et demander laquelle.
+
+C'est le prolongement pratique de « NE JAMAIS inventer, extrapoler ou deviner » du CLAUDE.md global : non seulement ne pas halluciner, mais aussi ne pas trancher dans l'ombre un arbitrage qui appartient à Pierre.
+
+### 2. Respecter le style existant
+
+Quand je touche à un fichier, matcher son style existant même si je ferais autrement par défaut (indentation, nommage, pattern de structuration, conventions JSDoc…). Exception : si le style est franchement cassé ET que le fix fait partie de la tâche, le signaler avant de corriger — pas le corriger en silence au passage.
+
+### 3. Nettoyer MES résidus, pas le dead code pré-existant
+
+Quand mes changements rendent un import, une variable ou une fonction inutile, je la supprime dans le même commit. Mais je ne supprime PAS le dead code pré-existant qui ne vient pas de moi — j'en prends note dans le message de commit ou dans `tasks/lessons.md`, et je laisse Pierre décider.
+
+Règle dérivée : chaque ligne que je change doit pouvoir se rattacher directement à la demande en cours.
+
+### 4. Transformer les tâches floues en objectifs vérifiables
+
+Avant d'implémenter, convertir la demande en critère de réussite testable :
+
+- « Ajoute une validation » → « Écrire d'abord le test qui échoue sur input invalide, puis rendre le test vert »
+- « Corrige ce bug » → « Écrire d'abord le test qui reproduit le bug, puis le rendre vert »
+- « Refactor X » → « Vérifier que les tests passent avant, refactorer, vérifier que les tests passent après »
+
+Un critère fort (« tests verts ») permet de boucler seul. Un critère faible (« que ça marche ») demande de solliciter Pierre à chaque doute — à éviter.
+
+### 5. Indicateurs de succès de ces règles
+
+Ces comportements fonctionnent si, au fil des sessions, on observe :
+
+- moins de diffs inutiles (lignes changées sans rapport direct avec la demande)
+- moins de ré-écritures dues à une sur-complication
+- plus de questions de clarification AVANT implémentation (et moins après, une fois le code écrit)
+
+Si ces signaux se dégradent, relire cette section et `tasks/lessons.md` pour recalibrer.
+
+---
+
 ## Superpowers Skills
 
 ### Déclencheurs automatiques
