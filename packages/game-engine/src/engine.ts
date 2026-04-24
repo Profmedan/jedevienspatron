@@ -45,6 +45,7 @@ import {
   TypeClientEntreprise,
   COUT_APPROCHE_VELOCE_PAR_TOUR,
   COUT_STAFFING_SYNERGIA_PAR_TOUR,
+  COUT_CANAL_AZURA_PAR_TOUR,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
@@ -139,6 +140,68 @@ function makePush(
       ...extras,
     });
   };
+}
+
+/**
+ * B9-D (2026-04-24) — Helper pour cibler une ligne de bilan par son NOM exact
+ * (pas par catégorie comme `makePush`). Nécessaire dès qu'une entreprise a
+ * plusieurs lignes dans la même catégorie (ex. Belvaux a "Stocks matières
+ * premières" ET "Stocks produits finis", tous deux `categorie: "stocks"`).
+ *
+ * Recherche la ligne par nom dans `actifs` OU `passifs`. Le delta peut être
+ * négatif. Le plancher 0 est appliqué (cohérent avec `appliquerDeltaPoste`),
+ * sauf pour la trésorerie où les négatifs sont autorisés (découvert).
+ *
+ * Ajoute une `ModificationMoteur` au tableau `modifications` avec le poste
+ * = catégorie de la ligne (pour que l'UI et les tests puissent filtrer par
+ * poste). Le nom exact de la ligne est disponible dans `explication`.
+ */
+function pushByName(
+  joueur: Joueur,
+  modifications: ResultatAction["modifications"],
+  nomLigne: string,
+  delta: number,
+  explication: string,
+): void {
+  // Chercher d'abord dans actifs, puis dans passifs. Les deux types (PosteActif
+  // / PostePassif) ont tous deux { nom, valeur, categorie } mais des unions de
+  // catégories disjointes, donc on extrait les champs communs pour écrire une
+  // seule ModificationMoteur.
+  const actif = joueur.bilan.actifs.find((a) => a.nom === nomLigne);
+  const passif = !actif
+    ? joueur.bilan.passifs.find((p) => p.nom === nomLigne)
+    : undefined;
+
+  if (!actif && !passif) {
+    throw new Error(
+      `[GameEngine] pushByName — ligne "${nomLigne}" introuvable pour le joueur ${joueur.pseudo}. ` +
+        `Actifs disponibles : ${joueur.bilan.actifs.map((a) => a.nom).join(", ")}. ` +
+        `Passifs disponibles : ${joueur.bilan.passifs.map((p) => p.nom).join(", ")}.`,
+    );
+  }
+
+  const ancienneValeur = actif ? actif.valeur : passif!.valeur;
+  // Plancher 0 sauf trésorerie (découvert autorisé, cf. appliquerDeltaPoste)
+  const nouvelleValeur = nomLigne === "Trésorerie"
+    ? ancienneValeur + delta
+    : Math.max(0, ancienneValeur + delta);
+  if (actif) {
+    actif.valeur = nouvelleValeur;
+  } else {
+    passif!.valeur = nouvelleValeur;
+  }
+
+  // Le champ `poste` de ModificationMoteur accepte la catégorie (qui couvre
+  // l'ensemble des unions actif/passif via EffetCarte["poste"]). On cast en
+  // string pour satisfaire l'union stricte côté consommateur UI.
+  const categorie: string = actif ? actif.categorie : passif!.categorie;
+  modifications.push({
+    joueurId: joueur.id,
+    poste: categorie as EffetCarte["poste"],
+    ancienneValeur,
+    nouvelleValeur,
+    explication,
+  });
 }
 
 /** Applique un delta sur le poste d'un joueur et retourne l'ancienne valeur */
@@ -1120,28 +1183,317 @@ export function appliquerSpecialiteEntreprise(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 3 : Réalisation métier (B9-A placeholder, polymorphe B9-D) ───────
+// ─── ÉTAPE 3 : Réalisation métier (B9-D — polymorphe par entreprise) ────────
 //
-// Fonction placeholder insérée en B9-A (2026-04-24). Sert à matérialiser
-// la nouvelle étape REALISATION_METIER dans le cycle 8 étapes sans
-// changer la sémantique moteur : retourne une liste de modifications vide,
-// ce qui permet à `useGameFlow` de traverser l'étape via sa condition
-// skip-auto (modsFiltrees.length === 0 → avancerEtape) sans rien afficher.
+// B9-D (2026-04-24) — Le placeholder B9-A est remplacé par un dispatcher
+// qui délègue à 4 fonctions dédiées, une par entreprise, en fonction du
+// mode économique (cf. `ModeleValeurEntreprise.mode`).
 //
-// B9-D (prochaine tâche) remplacera ce corps par un dispatcher par mode :
-//   - production  (Belvaux)  : +stocks produits finis + productionStockee
-//   - negoce      (Azura)    : +servicesExterieurs (coût canal 300 €) / −tresorerie
-//   - logistique  (Véloce)   : +stocks en-cours tournée / +dettes (heures chauffeur)
-//   - conseil     (Synergia) : +stocks en-cours mission / +dettes (honoraires)
+// Consignes Pierre (2026-04-24) : signatures homogènes, libellés très
+// explicites dans les écritures, pas de factorisation prématurée — on
+// factorisera plus tard seulement si une duplication est vraiment stable.
 //
-// Cette fonction EXPORTE un `ResultatAction` vide pour respecter le contrat
-// attendu par `useGameFlow.switch case ETAPES.REALISATION_METIER`.
+// Arbitrages tranchés : cf. tasks/b9-d-arbitrages.md
+//   - Belvaux (production) : 2 écritures doubles PCG — consommation MP + entrée PF.
+//     Garde-fou : si matière insuffisante, 0 production + message explicite.
+//   - Azura (negoce)       : 1 écriture — coût de canal marketplace/ads (300 €).
+//   - Véloce (logistique)  : 1 écriture — en-cours tournée (300 €).
+//   - Synergia (conseil)   : 1 écriture — en-cours mission (400 €).
+
+/** Dispatcher B9-D — route vers la bonne fonction selon le mode. */
 export function appliquerRealisationMetier(
-  _etat: EtatJeu,
-  _joueurIdx: number,
+  etat: EtatJeu,
+  joueurIdx: number,
 ): ResultatAction {
-  // B9-A : placeholder — pas d'écriture comptable, l'étape se traverse via skip-auto.
-  return { succes: true, modifications: [] };
+  const joueur = etat.joueurs[joueurIdx];
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  switch (modele.mode) {
+    case "production":
+      return appliquerRealisationBelvaux(etat, joueurIdx);
+    case "negoce":
+      return appliquerRealisationAzura(etat, joueurIdx);
+    case "logistique":
+      return appliquerRealisationVeloce(etat, joueurIdx);
+    case "conseil":
+    case "service":
+      // "service" est l'alias legacy (saves v3 / templates custom) — traité
+      // comme conseil pour la rétro-compat, jusqu'à rejet des v3 à la
+      // prochaine refonte (cf. useGamePersistence.SAVE_VERSION).
+      return appliquerRealisationSynergia(etat, joueurIdx);
+  }
+}
+
+/**
+ * Belvaux (production) — consomme 1 unité de matière première (1 000 €)
+ * pour produire 1 unité de produit fini (1 000 €). Effet net sur le résultat : 0.
+ *
+ * Écriture 1 (consommation MP) :
+ *   Débit  charges.achats (variation de stock MP)     +1 000
+ *   Crédit bilan "Stocks matières premières"          −1 000
+ *
+ * Écriture 2 (entrée PF) :
+ *   Débit  bilan "Stocks produits finis"              +1 000
+ *   Crédit produits.productionStockee                 +1 000
+ *
+ * Garde-fou matière : si le stock MP est < 1 000, aucune production.
+ * Retourne alors un ResultatAction avec une ligne informative dans
+ * `modifications` (ancienneValeur === nouvelleValeur) pour que l'UI
+ * et le journal affichent le message explicite à l'élève.
+ */
+export function appliquerRealisationBelvaux(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "production") {
+    return {
+      succes: false,
+      messageErreur: "appliquerRealisationBelvaux : entreprise non production.",
+      modifications: [],
+    };
+  }
+
+  const ligneMP = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières");
+  if (!ligneMP) {
+    return {
+      succes: false,
+      messageErreur: "Ligne 'Stocks matières premières' introuvable dans le bilan.",
+      modifications: [],
+    };
+  }
+
+  const quantite = 1; // V1 B9-D : production automatique d'1 unité par trimestre.
+  const montant = quantite * PRIX_UNITAIRE_MARCHANDISE; // 1 000 €
+
+  // Garde-fou matière : si stock insuffisant, pas de production — message clair.
+  if (ligneMP.valeur < montant) {
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "stocks",
+      ancienneValeur: ligneMP.valeur,
+      nouvelleValeur: ligneMP.valeur,
+      explication: `Aucune production ce trimestre : matière insuffisante (${ligneMP.valeur} € en stock, ${montant} € requis).`,
+    });
+    return { succes: true, modifications };
+  }
+
+  // Écriture 1 — consommation matière première
+  const push = makePush(joueur, modifications);
+  push(
+    "achats",
+    montant,
+    `Variation de stock matières premières : consommation de ${quantite} unité (+${montant} € en charges)`,
+  );
+  pushByName(
+    joueur,
+    modifications,
+    "Stocks matières premières",
+    -montant,
+    `Sortie de matières premières pour production (−${montant} €)`,
+  );
+
+  // Écriture 2 — entrée en stock des produits finis
+  pushByName(
+    joueur,
+    modifications,
+    "Stocks produits finis",
+    +montant,
+    `Entrée en stock : ${quantite} produit fini valorisé au coût de production (+${montant} €)`,
+  );
+  push(
+    "productionStockee",
+    montant,
+    `Production stockée : la valeur produite est enregistrée en contrepartie de l'entrée en stock (+${montant} €)`,
+  );
+
+  return { succes: true, modifications };
+}
+
+/**
+ * Azura (négoce e-commerce) — coût de canal trimestriel (commissions
+ * marketplace, ads, abonnements outils).
+ *
+ * Écriture unique :
+ *   Débit  charges.servicesExterieurs   +300
+ *   Crédit bilan dettes fournisseurs    +300
+ *
+ * Constante : COUT_CANAL_AZURA_PAR_TOUR (types.ts).
+ */
+export function appliquerRealisationAzura(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "negoce") {
+    return {
+      succes: false,
+      messageErreur: "appliquerRealisationAzura : entreprise non négoce.",
+      modifications: [],
+    };
+  }
+
+  const push = makePush(joueur, modifications);
+  const montant = COUT_CANAL_AZURA_PAR_TOUR;
+  push(
+    "servicesExterieurs",
+    montant,
+    `Coût de canal Azura : commissions marketplace, ads, abonnements outils (+${montant} €)`,
+  );
+  push(
+    "dettes",
+    montant,
+    `Dette fournisseur +${montant} € (règlement au trimestre suivant)`,
+  );
+
+  return { succes: true, modifications };
+}
+
+/**
+ * Véloce (logistique) — constate en stocks en-cours de production la
+ * valeur de la tournée en cours d'exécution. L'en-cours sera extourné
+ * à l'étape 4 avant la facturation (cf. `appliquerExtourneEnCours`).
+ *
+ * Écriture unique :
+ *   Débit  bilan "Stocks en-cours de production"   +300
+ *   Crédit produits.productionStockee              +300
+ *
+ * Constante : COUT_APPROCHE_VELOCE_PAR_TOUR (types.ts).
+ */
+export function appliquerRealisationVeloce(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "logistique") {
+    return {
+      succes: false,
+      messageErreur: "appliquerRealisationVeloce : entreprise non logistique.",
+      modifications: [],
+    };
+  }
+
+  const montant = COUT_APPROCHE_VELOCE_PAR_TOUR;
+  pushByName(
+    joueur,
+    modifications,
+    "Stocks en-cours de production",
+    +montant,
+    `Tournée en cours d'exécution : en-cours de production constaté (+${montant} €)`,
+  );
+  const push = makePush(joueur, modifications);
+  push(
+    "productionStockee",
+    montant,
+    `Production stockée : valeur de la tournée en cours (+${montant} €)`,
+  );
+
+  return { succes: true, modifications };
+}
+
+/**
+ * Synergia (conseil) — constate en stocks en-cours de production la
+ * valeur de la mission en cours de réalisation. L'en-cours sera
+ * extourné à l'étape 4 avant la facturation.
+ *
+ * Écriture unique :
+ *   Débit  bilan "Stocks en-cours de production"   +400
+ *   Crédit produits.productionStockee              +400
+ *
+ * Constante : COUT_STAFFING_SYNERGIA_PAR_TOUR (types.ts).
+ */
+export function appliquerRealisationSynergia(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "conseil" && modele.mode !== "service") {
+    return {
+      succes: false,
+      messageErreur: "appliquerRealisationSynergia : entreprise non conseil/service.",
+      modifications: [],
+    };
+  }
+
+  const montant = COUT_STAFFING_SYNERGIA_PAR_TOUR;
+  pushByName(
+    joueur,
+    modifications,
+    "Stocks en-cours de production",
+    +montant,
+    `Mission en cours de réalisation : en-cours de production constaté (+${montant} €)`,
+  );
+  const push = makePush(joueur, modifications);
+  push(
+    "productionStockee",
+    montant,
+    `Production stockée : valeur de la mission en cours (+${montant} €)`,
+  );
+
+  return { succes: true, modifications };
+}
+
+/**
+ * B9-D / B9-E (2026-04-24) — Extourne de l'en-cours de production à
+ * l'étape 4 (FACTURATION_VENTES), AVANT le traitement des cartes clients.
+ *
+ * L'en-cours constaté à l'étape 3 (REALISATION_METIER) pour les modes
+ * logistique et conseil est repris contre la production stockée, car la
+ * prestation sort du stock en-cours pour devenir une vente facturée.
+ *
+ * Pédagogie : "extourne" = annulation comptable d'une écriture antérieure.
+ * La valeur immobilisée en en-cours redevient du résultat en mouvement
+ * (via les ventes qui suivront).
+ *
+ * Fonction NO-OP pour les modes production (Belvaux) et négoce (Azura).
+ * Ils ne constituent pas d'en-cours à l'étape 3.
+ */
+export function appliquerExtourneEnCours(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "logistique" && modele.mode !== "conseil" && modele.mode !== "service") {
+    // Production / negoce : pas d'en-cours à extourner.
+    return { succes: true, modifications };
+  }
+
+  const ligneEnCours = joueur.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production");
+  if (!ligneEnCours || ligneEnCours.valeur <= 0) {
+    // Aucun en-cours à extourner (ex. première exécution sans étape 3 préalable).
+    return { succes: true, modifications };
+  }
+
+  const montant = ligneEnCours.valeur;
+  pushByName(
+    joueur,
+    modifications,
+    "Stocks en-cours de production",
+    -montant,
+    `Extourne de l'en-cours : la prestation sort du stock en-cours au moment de la facturation (−${montant} €)`,
+  );
+  const push = makePush(joueur, modifications);
+  push(
+    "productionStockee",
+    -montant,
+    `Extourne de la production stockée : l'en-cours redevient disponible pour la facturation (−${montant} €)`,
+  );
+
+  return { succes: true, modifications };
 }
 
 // ─── ÉTAPE 7 : Clôture & bilan (fusion B9-A des ex-CLOTURE_TRIMESTRE + BILAN) ────

@@ -109,6 +109,11 @@ exports.ENTREPRISES = [
             // STOCKS — B9-C (2026-04-24) : renommé "Stocks matières premières" (PCG classe 31)
             // pour rendre visible que Belvaux transforme de la matière en production stockée.
             { nom: "Stocks matières premières", valeur: 4000 },
+            // B9-D (2026-04-24) : ligne dédiée aux produits finis (PCG classe 35).
+            // Initialisée à 0 — se remplit à l'étape 3 (Réalisation métier) quand Belvaux
+            // consomme de la matière première pour produire. Se vide à l'étape 4 (Facturation)
+            // quand les produits finis sont vendus.
+            { nom: "Stocks produits finis", valeur: 0 },
             // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
             { nom: "Trésorerie", valeur: 10000 },
         ],
@@ -160,9 +165,13 @@ exports.ENTREPRISES = [
             // Autres : réservé aux investissements
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS — buffer de consommables (carburant, petites pièces). En mode
-            // service, ce poste n'est pas consommé par le cycle de vente (coût
+            // logistique, ce poste n'est pas consommé par le cycle de vente (coût
             // variable = servicesExterieurs/dettes).
             { nom: "Stocks", valeur: 4000 },
+            // B9-D (2026-04-24) : ligne "Stocks en-cours de production" (PCG classe 34)
+            // pour matérialiser la valeur de la tournée en cours d'exécution.
+            // Initialisée à 0 — se remplit à l'étape 3, s'extourne à l'étape 4 avant facturation.
+            { nom: "Stocks en-cours de production", valeur: 0 },
             // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
             { nom: "Trésorerie", valeur: 10000 },
         ],
@@ -267,9 +276,13 @@ exports.ENTREPRISES = [
             { nom: "Matériel informatique", valeur: 5000 },
             // Autres : réservé aux investissements
             { nom: "Autres Immobilisations", valeur: 0 },
-            // STOCKS — buffer de consommables. En mode service, ce poste n'est
+            // STOCKS — buffer de consommables. En mode conseil, ce poste n'est
             // pas consommé par le cycle de vente (coût variable = servicesExterieurs/dettes).
             { nom: "Stocks", valeur: 4000 },
+            // B9-D (2026-04-24) : ligne "Stocks en-cours de production" (PCG classe 34)
+            // pour matérialiser la valeur de la mission en cours d'exécution.
+            // Initialisée à 0 — se remplit à l'étape 3, s'extourne à l'étape 4 avant facturation.
+            { nom: "Stocks en-cours de production", valeur: 0 },
             // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
             { nom: "Trésorerie", valeur: 10000 },
         ],

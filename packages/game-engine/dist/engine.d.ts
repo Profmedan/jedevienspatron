@@ -84,7 +84,77 @@ export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: numb
  * • Synergia Lab (Innovation)        : +1 produitsFinanciers, +1 trésorerie
  */
 export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: number): ResultatAction;
-export declare function appliquerRealisationMetier(_etat: EtatJeu, _joueurIdx: number): ResultatAction;
+/** Dispatcher B9-D — route vers la bonne fonction selon le mode. */
+export declare function appliquerRealisationMetier(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * Belvaux (production) — consomme 1 unité de matière première (1 000 €)
+ * pour produire 1 unité de produit fini (1 000 €). Effet net sur le résultat : 0.
+ *
+ * Écriture 1 (consommation MP) :
+ *   Débit  charges.achats (variation de stock MP)     +1 000
+ *   Crédit bilan "Stocks matières premières"          −1 000
+ *
+ * Écriture 2 (entrée PF) :
+ *   Débit  bilan "Stocks produits finis"              +1 000
+ *   Crédit produits.productionStockee                 +1 000
+ *
+ * Garde-fou matière : si le stock MP est < 1 000, aucune production.
+ * Retourne alors un ResultatAction avec une ligne informative dans
+ * `modifications` (ancienneValeur === nouvelleValeur) pour que l'UI
+ * et le journal affichent le message explicite à l'élève.
+ */
+export declare function appliquerRealisationBelvaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * Azura (négoce e-commerce) — coût de canal trimestriel (commissions
+ * marketplace, ads, abonnements outils).
+ *
+ * Écriture unique :
+ *   Débit  charges.servicesExterieurs   +300
+ *   Crédit bilan dettes fournisseurs    +300
+ *
+ * Constante : COUT_CANAL_AZURA_PAR_TOUR (types.ts).
+ */
+export declare function appliquerRealisationAzura(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * Véloce (logistique) — constate en stocks en-cours de production la
+ * valeur de la tournée en cours d'exécution. L'en-cours sera extourné
+ * à l'étape 4 avant la facturation (cf. `appliquerExtourneEnCours`).
+ *
+ * Écriture unique :
+ *   Débit  bilan "Stocks en-cours de production"   +300
+ *   Crédit produits.productionStockee              +300
+ *
+ * Constante : COUT_APPROCHE_VELOCE_PAR_TOUR (types.ts).
+ */
+export declare function appliquerRealisationVeloce(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * Synergia (conseil) — constate en stocks en-cours de production la
+ * valeur de la mission en cours de réalisation. L'en-cours sera
+ * extourné à l'étape 4 avant la facturation.
+ *
+ * Écriture unique :
+ *   Débit  bilan "Stocks en-cours de production"   +400
+ *   Crédit produits.productionStockee              +400
+ *
+ * Constante : COUT_STAFFING_SYNERGIA_PAR_TOUR (types.ts).
+ */
+export declare function appliquerRealisationSynergia(etat: EtatJeu, joueurIdx: number): ResultatAction;
+/**
+ * B9-D / B9-E (2026-04-24) — Extourne de l'en-cours de production à
+ * l'étape 4 (FACTURATION_VENTES), AVANT le traitement des cartes clients.
+ *
+ * L'en-cours constaté à l'étape 3 (REALISATION_METIER) pour les modes
+ * logistique et conseil est repris contre la production stockée, car la
+ * prestation sort du stock en-cours pour devenir une vente facturée.
+ *
+ * Pédagogie : "extourne" = annulation comptable d'une écriture antérieure.
+ * La valeur immobilisée en en-cours redevient du résultat en mouvement
+ * (via les ventes qui suivront).
+ *
+ * Fonction NO-OP pour les modes production (Belvaux) et négoce (Azura).
+ * Ils ne constituent pas d'en-cours à l'étape 3.
+ */
+export declare function appliquerExtourneEnCours(etat: EtatJeu, joueurIdx: number): ResultatAction;
 export declare function appliquerClotureTrimestre(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Applique la clôture d'exercice comptable pour un joueur.

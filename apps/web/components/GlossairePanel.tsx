@@ -303,6 +303,39 @@ const TERMES: TermeGlossaire[] = [
     ),
   },
   {
+    id: "extourne",
+    terme: "Extourne",
+    categorie: "compta",
+    court: "Annulation comptable d'une écriture antérieure pour la redistribuer autrement",
+    contenu: (
+      <div className="space-y-2 text-xs text-gray-300 leading-relaxed">
+        <p>Une <strong className="text-gray-100">extourne</strong> (ou contre-passation) est une écriture qui annule exactement une écriture antérieure, en inversant débits et crédits pour les mêmes montants.</p>
+        <div className="bg-amber-950/30 border border-amber-700/40 rounded-lg p-2">
+          <div className="font-bold text-amber-300 mb-1 text-[11px]">Quand l'utilise-t-on ?</div>
+          <div className="text-amber-200 text-[11px] leading-relaxed">
+            Quand une écriture avait été posée <em>par anticipation</em> (en-cours de production, produits constatés d'avance, provisions) et qu'elle doit être reprise au moment où l'opération devient réelle (facturation, livraison, échéance).
+          </div>
+        </div>
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-2">
+          <div className="text-gray-300 text-[11px] font-bold mb-1">Exemple : Véloce — en-cours de tournée</div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="text-gray-400">Étape 3 (réalisation) : on constate l'en-cours.</div>
+            <div className="grid grid-cols-2 gap-2 min-w-0">
+              <div className="bg-blue-950/30 rounded p-1.5 text-blue-200">DÉBIT Stocks en-cours +300</div>
+              <div className="bg-orange-950/30 rounded p-1.5 text-orange-200">CRÉDIT Production stockée +300</div>
+            </div>
+            <div className="text-gray-400 mt-1">Étape 4 (facturation) : on extourne — l'en-cours sort, la vente prend le relais.</div>
+            <div className="grid grid-cols-2 gap-2 min-w-0">
+              <div className="bg-blue-950/30 rounded p-1.5 text-blue-200">DÉBIT Production stockée −300</div>
+              <div className="bg-orange-950/30 rounded p-1.5 text-orange-200">CRÉDIT Stocks en-cours −300</div>
+            </div>
+          </div>
+        </div>
+        <p className="text-indigo-300 text-[11px] font-bold">💡 L'extourne ne modifie pas le résultat net : elle redistribue la valeur d'un compte à un autre au moment où l'économie réelle se matérialise.</p>
+      </div>
+    ),
+  },
+  {
     id: "emprunt",
     terme: "Emprunt bancaire",
     categorie: "bilan",

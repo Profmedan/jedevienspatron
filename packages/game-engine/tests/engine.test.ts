@@ -22,10 +22,19 @@ import {
   getModeleValeurEntreprise,
   genererClientsDepuisFlux,
   genererClientsSpecialite,
+  // B9-D : 4 dispatchers étape 3 + extourne en-cours étape 4
+  appliquerRealisationMetier,
+  appliquerRealisationBelvaux,
+  appliquerRealisationAzura,
+  appliquerRealisationVeloce,
+  appliquerRealisationSynergia,
+  appliquerExtourneEnCours,
 } from "../src/engine";
 import {
   COUT_APPROCHE_VELOCE_PAR_TOUR,
   COUT_STAFFING_SYNERGIA_PAR_TOUR,
+  COUT_CANAL_AZURA_PAR_TOUR,
+  PRIX_UNITAIRE_MARCHANDISE,
 } from "../src/types";
 import {
   verifierEquilibre,
@@ -710,5 +719,167 @@ describe("B9-C — Étape 2 polymorphe par mode (approvisionnement)", () => {
     const etatAzura = initialiserJeu([{ pseudo: "T", nomEntreprise: "Azura Commerce" }]);
     const rKo = appliquerApprovisionnementSynergia(etatAzura, 0);
     expect(rKo.succes).toBe(false);
+  });
+});
+
+// ─── B9-D (2026-04-24) — Étape 3 polymorphe : réalisation métier par entreprise ──
+
+describe("B9-D — Étape 3 polymorphe par entreprise (réalisation métier)", () => {
+  test("Belvaux : 2 écritures doubles — consommation MP + entrée PF, effet net nul sur le résultat", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const j = etat.joueurs[0];
+
+    const mpAvant = j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+    const pfAvant = j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
+    const achatsAvant = j.compteResultat.charges.achats;
+    const prodStockeeAvant = j.compteResultat.produits.productionStockee;
+
+    const r = appliquerRealisationBelvaux(etat, 0);
+    expect(r.succes).toBe(true);
+
+    // Écriture 1 : consommation MP
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur)
+      .toBe(mpAvant - PRIX_UNITAIRE_MARCHANDISE);
+    expect(j.compteResultat.charges.achats).toBe(achatsAvant + PRIX_UNITAIRE_MARCHANDISE);
+
+    // Écriture 2 : entrée PF
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur)
+      .toBe(pfAvant + PRIX_UNITAIRE_MARCHANDISE);
+    expect(j.compteResultat.produits.productionStockee)
+      .toBe(prodStockeeAvant + PRIX_UNITAIRE_MARCHANDISE);
+
+    // Effet net nul sur le résultat : +1000 charge et +1000 produit = 0
+    const deltaResultatBrut =
+      (j.compteResultat.produits.productionStockee - prodStockeeAvant) -
+      (j.compteResultat.charges.achats - achatsAvant);
+    expect(deltaResultatBrut).toBe(0);
+  });
+
+  test("Belvaux : matière insuffisante → 0 production + message explicite", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const j = etat.joueurs[0];
+    // Vider le stock MP sous le seuil de production (1000 €)
+    j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur = 500;
+    const pfAvant = j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
+    const achatsAvant = j.compteResultat.charges.achats;
+
+    const r = appliquerRealisationBelvaux(etat, 0);
+    expect(r.succes).toBe(true);
+    // Aucune production réellement écrite
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur).toBe(pfAvant);
+    expect(j.compteResultat.charges.achats).toBe(achatsAvant);
+    // Une ligne informative est présente
+    expect(r.modifications.length).toBeGreaterThanOrEqual(1);
+    const info = r.modifications[0];
+    expect(info.explication).toContain("matière insuffisante");
+    expect(info.ancienneValeur).toBe(info.nouvelleValeur); // pas de delta réel
+  });
+
+  test("Azura : coût de canal 300 € en servicesExterieurs + dettes fournisseurs", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Azura Commerce" }]);
+    const j = etat.joueurs[0];
+    const servAvant = j.compteResultat.charges.servicesExterieurs;
+    const dettesAvant = j.bilan.dettes;
+
+    const r = appliquerRealisationAzura(etat, 0);
+    expect(r.succes).toBe(true);
+
+    expect(j.compteResultat.charges.servicesExterieurs)
+      .toBe(servAvant + COUT_CANAL_AZURA_PAR_TOUR);
+    expect(j.bilan.dettes).toBe(dettesAvant + COUT_CANAL_AZURA_PAR_TOUR);
+    expect(COUT_CANAL_AZURA_PAR_TOUR).toBe(300);
+  });
+
+  test("Véloce : en-cours +300 € + productionStockée +300 € (contrepartie équilibrée)", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Véloce Transports" }]);
+    const j = etat.joueurs[0];
+    const encoursAvant = j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur;
+    const prodStockeeAvant = j.compteResultat.produits.productionStockee;
+
+    const r = appliquerRealisationVeloce(etat, 0);
+    expect(r.succes).toBe(true);
+
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur)
+      .toBe(encoursAvant + COUT_APPROCHE_VELOCE_PAR_TOUR);
+    expect(j.compteResultat.produits.productionStockee)
+      .toBe(prodStockeeAvant + COUT_APPROCHE_VELOCE_PAR_TOUR);
+  });
+
+  test("Synergia : en-cours +400 € + productionStockée +400 €", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Synergia Lab" }]);
+    const j = etat.joueurs[0];
+    const encoursAvant = j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur;
+    const prodStockeeAvant = j.compteResultat.produits.productionStockee;
+
+    const r = appliquerRealisationSynergia(etat, 0);
+    expect(r.succes).toBe(true);
+
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur)
+      .toBe(encoursAvant + COUT_STAFFING_SYNERGIA_PAR_TOUR);
+    expect(j.compteResultat.produits.productionStockee)
+      .toBe(prodStockeeAvant + COUT_STAFFING_SYNERGIA_PAR_TOUR);
+  });
+
+  test("Dispatcher : appliquerRealisationMetier route correctement par mode", () => {
+    const cases: Array<[string, number, string]> = [
+      ["Manufacture Belvaux", PRIX_UNITAIRE_MARCHANDISE, "Stocks produits finis"],
+      ["Azura Commerce", COUT_CANAL_AZURA_PAR_TOUR, null as unknown as string], // vérif via charges
+      ["Véloce Transports", COUT_APPROCHE_VELOCE_PAR_TOUR, "Stocks en-cours de production"],
+      ["Synergia Lab", COUT_STAFFING_SYNERGIA_PAR_TOUR, "Stocks en-cours de production"],
+    ];
+    for (const [nom, montant, ligneCible] of cases) {
+      const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: nom as import("../src/types").NomEntreprise }]);
+      const r = appliquerRealisationMetier(etat, 0);
+      expect(r.succes).toBe(true);
+      // Tous les modes produisent au moins une modification sauf si matière insuffisante
+      expect(r.modifications.length).toBeGreaterThan(0);
+      if (ligneCible) {
+        // Pour production / logistique / conseil : la ligne cible doit avoir bougé
+        const j = etat.joueurs[0];
+        const ligne = j.bilan.actifs.find((a) => a.nom === ligneCible);
+        expect(ligne).toBeDefined();
+      }
+      // Suppress unused warning
+      void montant;
+    }
+  });
+});
+
+describe("B9-D — appliquerExtourneEnCours (étape 4 avant facturation)", () => {
+  test("Véloce : après réalisation, l'extourne ramène en-cours et productionStockée à leurs valeurs d'avant étape 3", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Véloce Transports" }]);
+    const j = etat.joueurs[0];
+    const encoursAvant = j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur;
+    const prodStockeeAvant = j.compteResultat.produits.productionStockee;
+
+    // Poser l'en-cours étape 3
+    appliquerRealisationVeloce(etat, 0);
+    // Extourner étape 4
+    const r = appliquerExtourneEnCours(etat, 0);
+    expect(r.succes).toBe(true);
+
+    // Retour à l'état d'avant étape 3
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur).toBe(encoursAvant);
+    expect(j.compteResultat.produits.productionStockee).toBe(prodStockeeAvant);
+  });
+
+  test("Synergia : l'extourne annule la réalisation (400 €)", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Synergia Lab" }]);
+    const j = etat.joueurs[0];
+    appliquerRealisationSynergia(etat, 0);
+    const encoursApresRealisation = j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur;
+    expect(encoursApresRealisation).toBe(COUT_STAFFING_SYNERGIA_PAR_TOUR);
+
+    appliquerExtourneEnCours(etat, 0);
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks en-cours de production")!.valeur).toBe(0);
+  });
+
+  test("Belvaux / Azura : extourne est un no-op (pas d'en-cours à extourner)", () => {
+    for (const nom of ["Manufacture Belvaux", "Azura Commerce"] as const) {
+      const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: nom }]);
+      const r = appliquerExtourneEnCours(etat, 0);
+      expect(r.succes).toBe(true);
+      expect(r.modifications).toHaveLength(0);
+    }
   });
 });

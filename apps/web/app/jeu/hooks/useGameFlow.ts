@@ -6,6 +6,7 @@ import {
   initialiserJeu, avancerEtape, appliquerClotureTrimestre, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerRealisationMetier,
+  appliquerExtourneEnCours,
   genererClientsSpecialite,
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, genererClientsParCommerciaux,
@@ -540,15 +541,29 @@ export function useGameFlow({
         break;
       }
       case ETAPES.REALISATION_METIER: {
-        // B9-A (2026-04-24) — étape placeholder. Le dispatcher polymorphe
-        // `appliquerRealisationMetier` retourne un ResultatAction vide.
-        // L'étape se traverse via la condition skip-auto ci-dessous.
+        // B9-D (2026-04-24) — dispatcher polymorphe par entreprise :
+        //   - Belvaux  : 2 écritures doubles (consommation MP + entrée PF)
+        //   - Azura    : coût de canal 300 €
+        //   - Véloce   : en-cours tournée 300 €
+        //   - Synergia : en-cours mission 400 €
+        // Si Belvaux n'a plus assez de matière, renvoie 1 ligne informative
+        // (ancienneValeur === nouvelleValeur → skip-auto puisque modsFiltrees vide).
         const r = appliquerRealisationMetier(next, idx);
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
       case ETAPES.FACTURATION_VENTES: {
         const joueur = next.joueurs[idx];
+
+        // B9-D / B9-E (2026-04-24) — Extourne de l'en-cours AVANT la facturation.
+        // Pour les modes logistique (Véloce) et conseil (Synergia), l'en-cours
+        // constaté à l'étape 3 doit être repris avant de facturer les ventes.
+        // No-op pour Belvaux / Azura. L'extourne produit 2 lignes comptables
+        // (bilan en-cours −X, produit productionStockée −X) qui apparaîtront
+        // dans la prévisualisation de l'étape 4 en tête des écritures.
+        const rExtourne = appliquerExtourneEnCours(next, idx);
+        if (rExtourne.succes) mods = [...mods, ...(rExtourne.modifications as ModificationMoteur[])];
+
         const capacite = calculerCapaciteLogistique(joueur);
         const clientsAtrait = joueur.clientsATrait;
         let clientsPerdusPrise = 0;
@@ -609,6 +624,19 @@ export function useGameFlow({
 
     const etapeActuelle = next.etapeTour;
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
+
+    // B9-D (2026-04-24) — REALISATION_METIER peut émettre une ligne informative
+    // (delta=0) pour le cas "Belvaux matière insuffisante". Cette ligne est filtrée
+    // par modsFiltrees mais doit quand même être remontée à l'élève via un
+    // `messages` global sur l'état. On pousse le message dans `next.messages`
+    // pour que le journal/UI l'affiche, puis on skip-auto normalement.
+    if (etapeActuelle === ETAPES.REALISATION_METIER && modsFiltrees.length === 0) {
+      const msgInfo = mods.find(m => m.explication.includes("matière insuffisante"));
+      if (msgInfo) {
+        next.messages = [...(next.messages ?? []), `T${next.tourActuel} — ${msgInfo.explication}`];
+      }
+    }
+
     if ((etapeActuelle === ETAPES.ENCAISSEMENTS_CREANCES || etapeActuelle === ETAPES.COMMERCIAUX || etapeActuelle === ETAPES.REALISATION_METIER) && modsFiltrees.length === 0) {
       avancerEtape(next);
       pedagogy.maybeShowPedagoModal(next.etapeTour);
@@ -624,11 +652,12 @@ export function useGameFlow({
     // Étapes « automatiques » : flow accéléré en mode rapide (toutes écritures appliquées d'un coup).
     // Cycle B9-A (2026-04-24) : ENCAISSEMENTS_CREANCES(0), COMMERCIAUX(1),
     // FACTURATION_VENTES(4, ex-VENTES), CLOTURE_BILAN(7, fusion ex-CLOTURE_TRIMESTRE + BILAN).
-    // REALISATION_METIER(3) n'est pas listée : en B9-A placeholder elle se traverse
-    // via la condition skip-auto (modsFiltrees vide). Sera ajoutée ici en B9-D.
+    // B9-D (2026-04-24) : REALISATION_METIER(3) ajoutée — maintenant productrice
+    // d'écritures réelles (2 écritures Belvaux / 1 écriture Azura/Véloce/Synergia).
     const AUTO_ETAPES: number[] = [
       ETAPES.ENCAISSEMENTS_CREANCES,
       ETAPES.COMMERCIAUX,
+      ETAPES.REALISATION_METIER,
       ETAPES.FACTURATION_VENTES,
       ETAPES.CLOTURE_BILAN,
     ];
