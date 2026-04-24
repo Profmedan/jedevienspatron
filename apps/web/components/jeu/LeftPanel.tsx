@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { getTotalActif, getTotalPassif, CarteDecision, Joueur, ETAPES } from "@jedevienspatron/game-engine";
+import {
+  getTotalActif,
+  getTotalPassif,
+  CarteDecision,
+  Joueur,
+  ETAPES,
+  COUT_APPROCHE_VELOCE_PAR_TOUR,
+  COUT_STAFFING_SYNERGIA_PAR_TOUR,
+} from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "./EntryPanel";
 import { nomCompte } from "./utils";
 // NOTE (Tâche 11 Volet 1) : MiniDeckPanel retiré de LeftPanel (sous-étape Investissement).
@@ -51,6 +59,10 @@ interface LeftPanelProps {
   setAchatMode: (val: "tresorerie" | "dettes") => void;
   onLaunchAchat: () => void;
   onSkipAchat: () => void;
+  /** B9-C (2026-04-24) — Véloce mode logistique : préparation tournée 300 € fixe */
+  onLaunchPreparationVeloce?: () => void;
+  /** B9-C (2026-04-24) — Synergia mode conseil : staffing mission 400 € fixe */
+  onLaunchStaffingSynergia?: () => void;
   selectedDecision: CarteDecision | null;
   setSelectedDecision?: (val: CarteDecision | null) => void;
   cartesDisponibles?: CarteDecision[];
@@ -110,6 +122,8 @@ export function LeftPanel({
   setAchatMode,
   onLaunchAchat,
   onSkipAchat,
+  onLaunchPreparationVeloce,
+  onLaunchStaffingSynergia,
   selectedDecision,
   setSelectedDecision,
   cartesDisponibles = [],
@@ -592,9 +606,43 @@ export function LeftPanel({
             <p className="text-sm text-slate-300">{stepHelp}</p>
 
             {etapeTour === ETAPES.ACHATS_STOCK && (
-              (joueur.entreprise.secteurActivite === "service" ||
-               joueur.entreprise.secteurActivite === "logistique" ||
-               joueur.entreprise.secteurActivite === "conseil") ? (
+              // B9-C (2026-04-24) — Étape 2 polymorphe par mode :
+              //   logistique (Véloce) → bouton "Préparer la tournée (−300 €)"
+              //   conseil (Synergia) → bouton "Staffer la mission (−400 €)"
+              //   service (legacy) → bouton Passer (rétro-compat saves v3)
+              //   negoce / production → input quantité (B8 conservé)
+              joueur.entreprise.secteurActivite === "logistique" ? (
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                    <p className="text-xs leading-relaxed text-sky-100">
+                      💡 Véloce prépare sa tournée : un coût d'approche fixe (carburant, préparation véhicule, cotisations chauffeur) est engagé ce trimestre. La tournée sera exécutée à l'étape 4 (Facturation & ventes).
+                    </p>
+                  </div>
+                  <button
+                    onClick={onLaunchPreparationVeloce}
+                    autoFocus
+                    className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300 transition-colors"
+                  >
+                    Préparer la tournée (−{COUT_APPROCHE_VELOCE_PAR_TOUR.toLocaleString("fr-FR")} €) →
+                  </button>
+                </div>
+              ) : joueur.entreprise.secteurActivite === "conseil" ? (
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
+                    <p className="text-xs leading-relaxed text-sky-100">
+                      💡 Synergia cadre et staffe sa mission : un coût fixe (sous-traitance consultants, licences outil, kickoff) est engagé ce trimestre. La mission sera réalisée à l'étape 4 (Facturation & ventes).
+                    </p>
+                  </div>
+                  <button
+                    onClick={onLaunchStaffingSynergia}
+                    autoFocus
+                    className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300 transition-colors"
+                  >
+                    Staffer la mission (−{COUT_STAFFING_SYNERGIA_PAR_TOUR.toLocaleString("fr-FR")} €) →
+                  </button>
+                </div>
+              ) : joueur.entreprise.secteurActivite === "service" ? (
+                // Legacy "service" (saves v3 / templates custom) — pas d'écriture dédiée, on passe
                 <div className="space-y-2">
                   <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
                     <p className="text-xs leading-relaxed text-sky-100">

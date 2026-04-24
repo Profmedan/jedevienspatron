@@ -43,6 +43,8 @@ import {
   ModeleValeurEntreprise,
   FluxClientsEntreprise,
   TypeClientEntreprise,
+  COUT_APPROCHE_VELOCE_PAR_TOUR,
+  COUT_STAFFING_SYNERGIA_PAR_TOUR,
 } from "./types";
 import { ENTREPRISES } from "./data/entreprises";
 import { CARTES_DECISION, CARTES_CLIENTS, CARTES_EVENEMENTS } from "./data/cartes";
@@ -606,8 +608,12 @@ export function appliquerAchatMarchandises(
   // 1 unité physique de marchandise = PRIX_UNITAIRE_MARCHANDISE (1 000 €) de valeur comptable
   const montant = quantite * PRIX_UNITAIRE_MARCHANDISE;
 
-  // DÉBIT 37 Stocks de marchandises (Actif +)
-  push("stocks", montant, `Achat de ${quantite} unité(s) de marchandises (${montant} €)`);
+  // DÉBIT Stocks (catégorie "stocks") — libellé adapté au mode dans l'explication
+  // PCG : classe 31 "Matières premières" pour production, classe 37 "Marchandises" pour négoce.
+  // Le libellé réel de la ligne bilan est déjà différencié dans entreprises.ts
+  // ("Stocks matières premières" pour Belvaux, "Stocks marchandises" pour Azura).
+  const libelleStock = modeleAchat.mode === "production" ? "matières premières" : "marchandises";
+  push("stocks", montant, `Achat de ${quantite} unité(s) de ${libelleStock} (${montant} €)`);
 
   // CRÉDIT : trésorerie (comptant) ou dettes fournisseurs (à crédit)
   if (modePaiement === "tresorerie") {
@@ -615,6 +621,91 @@ export function appliquerAchatMarchandises(
   } else {
     push("dettes", montant, `Achat à crédit : dette fournisseur +${montant} €`);
   }
+
+  return { succes: true, modifications };
+}
+
+// ─── ÉTAPE 2 (B9-C) : Préparation tournée — Véloce (mode logistique) ─────────
+// Véloce ne constitue pas de stock mais engage un coût d'approche AVANT la
+// réalisation de la tournée. Écritures fixes (pas de quantité) :
+//   Services extérieurs  +300 € (PCG classe 61 — carburant, préparation véhicule)
+//   Dettes fournisseurs  +300 € (règlement au trimestre suivant par défaut)
+// Constante de calibrage : COUT_APPROCHE_VELOCE_PAR_TOUR dans types.ts.
+// Le montant est volontairement fixe en V1 de playtest — recalibrage après partie manuelle.
+
+export function appliquerApprovisionnementVeloce(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "logistique") {
+    return {
+      succes: false,
+      messageErreur: "La préparation de tournée est réservée au mode logistique (Véloce).",
+      modifications: [],
+    };
+  }
+
+  const push = makePush(joueur, modifications);
+  const montant = COUT_APPROCHE_VELOCE_PAR_TOUR;
+
+  // DÉBIT : Services extérieurs (charge, CR)
+  push(
+    "servicesExterieurs",
+    montant,
+    `Coût d'approche tournée : carburant, préparation véhicule, cotisations chauffeur (+${montant} €)`,
+  );
+  // CRÉDIT : Dettes fournisseurs (passif, bilan)
+  push(
+    "dettes",
+    montant,
+    `Dette fournisseur +${montant} € (règlement au trimestre suivant)`,
+  );
+
+  return { succes: true, modifications };
+}
+
+// ─── ÉTAPE 2 (B9-C) : Staffing mission — Synergia (mode conseil) ─────────────
+// Synergia cadre et staffe sa mission AVANT la réalisation : allocation
+// consultants, kickoff, licences outil ponctuelles. Écritures fixes :
+//   Services extérieurs  +400 € (agrégat de sous-traitance / licences / frais de mission)
+//   Dettes fournisseurs  +400 € (règlement au trimestre suivant par défaut)
+// Constante de calibrage : COUT_STAFFING_SYNERGIA_PAR_TOUR dans types.ts.
+
+export function appliquerApprovisionnementSynergia(
+  etat: EtatJeu,
+  joueurIdx: number,
+): ResultatAction {
+  const joueur = etat.joueurs[joueurIdx];
+  const modifications: ResultatAction["modifications"] = [];
+
+  const modele = getModeleValeurEntreprise(joueur.entreprise);
+  if (modele.mode !== "conseil") {
+    return {
+      succes: false,
+      messageErreur: "Le staffing de mission est réservé au mode conseil (Synergia).",
+      modifications: [],
+    };
+  }
+
+  const push = makePush(joueur, modifications);
+  const montant = COUT_STAFFING_SYNERGIA_PAR_TOUR;
+
+  // DÉBIT : Services extérieurs (charge, CR)
+  push(
+    "servicesExterieurs",
+    montant,
+    `Staffing mission : sous-traitance consultants, licences outil, kickoff (+${montant} €)`,
+  );
+  // CRÉDIT : Dettes fournisseurs (passif, bilan)
+  push(
+    "dettes",
+    montant,
+    `Dette fournisseur +${montant} € (règlement au trimestre suivant)`,
+  );
 
   return { succes: true, modifications };
 }

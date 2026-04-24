@@ -134,6 +134,10 @@ interface UseGameFlowReturn {
   handleDemanderEmprunt: () => void;
   launchAchat: () => void;
   skipAchat: () => void;
+  /** B9-C (2026-04-24) — Véloce (logistique) : préparation tournée 300 € */
+  launchPreparationVeloce: () => void;
+  /** B9-C (2026-04-24) — Synergia (conseil) : staffing mission 400 € */
+  launchStaffingSynergia: () => void;
   launchDecision: (carteArg?: CarteDecision) => void;
   skipDecision: () => void;
   handleInvestirPersonnel: (carteId: string) => void;
@@ -890,6 +894,8 @@ export function useGameFlow({
     handleDemanderEmprunt: loans.handleDemanderEmprunt,
     launchAchat: achat.launchAchat,
     skipAchat: achat.skipAchat,
+    launchPreparationVeloce: achat.launchPreparationVeloce,
+    launchStaffingSynergia: achat.launchStaffingSynergia,
     launchDecision: decisions.launchDecision,
     skipDecision: decisions.skipDecision,
     handleInvestirPersonnel: decisions.handleInvestirPersonnel,

@@ -6,6 +6,9 @@ import {
   creerJoueur,
   initialiserJeu,
   appliquerEtape0,
+  appliquerAchatMarchandises,
+  appliquerApprovisionnementVeloce,
+  appliquerApprovisionnementSynergia,
   appliquerCarteClient,
   appliquerPaiementCommerciaux,
   appliquerAvancementCreances,
@@ -20,6 +23,10 @@ import {
   genererClientsDepuisFlux,
   genererClientsSpecialite,
 } from "../src/engine";
+import {
+  COUT_APPROCHE_VELOCE_PAR_TOUR,
+  COUT_STAFFING_SYNERGIA_PAR_TOUR,
+} from "../src/types";
 import {
   verifierEquilibre,
   getResultatNet,
@@ -492,7 +499,8 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     const modele = getModeleValeurEntreprise(joueur.entreprise);
     expect(modele.mode).toBe("negoce");
 
-    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur;
+    // B9-C (2026-04-24) : ligne de stock d'Azura renommée "Stocks marchandises" (PCG classe 37)
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks marchandises")!.valeur;
     const achatsAvant = joueur.compteResultat.charges.achats;
     const productionStockeeAvant = joueur.compteResultat.produits.productionStockee;
     const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
@@ -501,7 +509,7 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     expect(result.succes).toBe(true);
 
     // Acte 3 : stocks − coutVariable
-    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur).toBe(stocksAvant - modele.coutVariable);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks marchandises")!.valeur).toBe(stocksAvant - modele.coutVariable);
     // Acte 4 : achats (CMV) + coutVariable
     expect(joueur.compteResultat.charges.achats).toBe(achatsAvant + modele.coutVariable);
     // Les autres branches (production, service) ne sont PAS empruntées
@@ -515,7 +523,8 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     const modele = getModeleValeurEntreprise(joueur.entreprise);
     expect(modele.mode).toBe("production");
 
-    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur;
+    // B9-C (2026-04-24) : ligne de stock de Belvaux renommée "Stocks matières premières" (PCG classe 31)
+    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
     const productionStockeeAvant = joueur.compteResultat.produits.productionStockee;
     const achatsAvant = joueur.compteResultat.charges.achats;
     const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
@@ -524,7 +533,7 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     expect(result.succes).toBe(true);
 
     // Acte 3 : stocks − coutVariable (déstockage du produit fini)
-    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur).toBe(stocksAvant - modele.coutVariable);
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur).toBe(stocksAvant - modele.coutVariable);
     // Acte 4 : productionStockée − coutVariable (variation négative, produit signé)
     expect(joueur.compteResultat.produits.productionStockee).toBe(productionStockeeAvant - modele.coutVariable);
     // Les autres branches (négoce achats, service) ne sont PAS empruntées
@@ -626,5 +635,80 @@ describe("genererClientsDepuisFlux & clientsPassifsParTour", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const clients = genererClientsSpecialite(etat.joueurs[0]);
     expect(clients).toHaveLength(0);
+  });
+});
+
+// ─── B9-C (2026-04-24) — Étape 2 polymorphe : approvisionnement par mode ────
+
+describe("B9-C — Étape 2 polymorphe par mode (approvisionnement)", () => {
+  test("Belvaux (production) : appro cible la ligne 'Stocks matières premières' par nom (PCG 31)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    const joueur = etat.joueurs[0];
+    const stocksMPAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+
+    const r = appliquerAchatMarchandises(etat, 0, 2, "tresorerie");
+    expect(r.succes).toBe(true);
+
+    // La ligne renommée a bien reçu le delta — pas une ligne générique "Stocks"
+    const stocksMPApres = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+    expect(stocksMPApres).toBe(stocksMPAvant + 2000);
+
+    // Le libellé de modification mentionne "matières premières" (pas "marchandises")
+    const ecritureStock = r.modifications.find((m) => m.poste === "stocks" && m.nouvelleValeur > m.ancienneValeur);
+    expect(ecritureStock?.explication).toContain("matières premières");
+  });
+
+  test("Azura (negoce) : appro cible la ligne 'Stocks marchandises' par nom (PCG 37)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
+    const joueur = etat.joueurs[0];
+    const stocksMdseAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks marchandises")!.valeur;
+
+    const r = appliquerAchatMarchandises(etat, 0, 3, "dettes");
+    expect(r.succes).toBe(true);
+
+    const stocksMdseApres = joueur.bilan.actifs.find((a) => a.nom === "Stocks marchandises")!.valeur;
+    expect(stocksMdseApres).toBe(stocksMdseAvant + 3000);
+
+    const ecritureStock = r.modifications.find((m) => m.poste === "stocks" && m.nouvelleValeur > m.ancienneValeur);
+    expect(ecritureStock?.explication).toContain("marchandises");
+    expect(ecritureStock?.explication).not.toContain("matières premières");
+  });
+
+  test("Véloce (logistique) : appliquerApprovisionnementVeloce écrit 300 € en servicesExterieurs + dettes", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
+    const joueur = etat.joueurs[0];
+    const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
+    const dettesAvant = joueur.bilan.dettes;
+
+    const r = appliquerApprovisionnementVeloce(etat, 0);
+    expect(r.succes).toBe(true);
+
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant + COUT_APPROCHE_VELOCE_PAR_TOUR);
+    expect(joueur.bilan.dettes).toBe(dettesAvant + COUT_APPROCHE_VELOCE_PAR_TOUR);
+    expect(COUT_APPROCHE_VELOCE_PAR_TOUR).toBe(300);
+
+    // Rejet si mauvais mode
+    const etatBelvaux = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const rKo = appliquerApprovisionnementVeloce(etatBelvaux, 0);
+    expect(rKo.succes).toBe(false);
+  });
+
+  test("Synergia (conseil) : appliquerApprovisionnementSynergia écrit 400 € en servicesExterieurs + dettes", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
+    const joueur = etat.joueurs[0];
+    const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
+    const dettesAvant = joueur.bilan.dettes;
+
+    const r = appliquerApprovisionnementSynergia(etat, 0);
+    expect(r.succes).toBe(true);
+
+    expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant + COUT_STAFFING_SYNERGIA_PAR_TOUR);
+    expect(joueur.bilan.dettes).toBe(dettesAvant + COUT_STAFFING_SYNERGIA_PAR_TOUR);
+    expect(COUT_STAFFING_SYNERGIA_PAR_TOUR).toBe(400);
+
+    // Rejet si mauvais mode
+    const etatAzura = initialiserJeu([{ pseudo: "T", nomEntreprise: "Azura Commerce" }]);
+    const rKo = appliquerApprovisionnementSynergia(etatAzura, 0);
+    expect(rKo.succes).toBe(false);
   });
 });

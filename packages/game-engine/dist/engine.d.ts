@@ -24,6 +24,8 @@ export declare function basculerTresorerieSiNegative(etat: EtatJeu, joueurIdx: n
  */
 export declare function verifierEquilibreComptable(joueur: Joueur, contexte: string): void;
 export declare function appliquerAchatMarchandises(etat: EtatJeu, joueurIdx: number, quantite: number, modePaiement: "tresorerie" | "dettes"): ResultatAction;
+export declare function appliquerApprovisionnementVeloce(etat: EtatJeu, joueurIdx: number): ResultatAction;
+export declare function appliquerApprovisionnementSynergia(etat: EtatJeu, joueurIdx: number): ResultatAction;
 export declare function appliquerAvancementCreances(etat: EtatJeu, joueurIdx: number): ResultatAction;
 export declare function calculerCoutCommerciaux(joueur: Joueur): number;
 export declare function appliquerPaiementCommerciaux(etat: EtatJeu, joueurIdx: number): ResultatAction;

@@ -106,8 +106,9 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Machine de production", valeur: 8000 },
       // Autres : réservé aux investissements via Cartes Décision
       { nom: "Autres Immobilisations", valeur: 0 },
-      // STOCKS
-      { nom: "Stocks", valeur: 4000 },
+      // STOCKS — B9-C (2026-04-24) : renommé "Stocks matières premières" (PCG classe 31)
+      // pour rendre visible que Belvaux transforme de la matière en production stockée.
+      { nom: "Stocks matières premières", valeur: 4000 },
       // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
       { nom: "Trésorerie", valeur: 10000 },
     ],
@@ -212,8 +213,9 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
       { nom: "Voiture", valeur: 8000 },
       // Autres : réservé aux investissements
       { nom: "Autres Immobilisations", valeur: 0 },
-      // STOCKS
-      { nom: "Stocks", valeur: 4000 },
+      // STOCKS — B9-C (2026-04-24) : renommé "Stocks marchandises" (PCG classe 37)
+      // pour rendre visible qu'Azura achète et revend des marchandises finies sans transformation.
+      { nom: "Stocks marchandises", valeur: 4000 },
       // TRÉSORERIE — +2 000 € depuis Tâche 25 (coussin de démarrage)
       { nom: "Trésorerie", valeur: 10000 },
     ],

@@ -4,7 +4,14 @@
  */
 
 import { useState } from "react";
-import { EtatJeu, appliquerAchatMarchandises, avancerEtape, ETAPES } from "@jedevienspatron/game-engine";
+import {
+  EtatJeu,
+  appliquerAchatMarchandises,
+  appliquerApprovisionnementVeloce,
+  appliquerApprovisionnementSynergia,
+  avancerEtape,
+  ETAPES,
+} from "@jedevienspatron/game-engine";
 import { type ActiveStep } from "@/components/jeu";
 import { cloneEtat, buildActiveStep, type ModificationMoteur } from "./gameFlowUtils";
 
@@ -57,6 +64,65 @@ export function useAchatFlow({
     setEtat(next);
   }
 
+  /**
+   * B9-C (2026-04-24) — Véloce (mode logistique) : prévisualise le coût
+   * d'approche tournée (300 € fixe). Comportement identique à `launchAchat`
+   * mais avec une fonction moteur dédiée qui ne prend pas de quantité.
+   */
+  function launchPreparationVeloce() {
+    if (!etat) return;
+    const next = cloneEtat(etat);
+    const r = appliquerApprovisionnementVeloce(next, next.joueurActif);
+    if (!r.succes) return;
+    const modsFiltrees = (r.modifications as ModificationMoteur[]).filter(
+      (m) => m.nouvelleValeur !== m.ancienneValeur,
+    );
+    setRecentModifications(
+      modsFiltrees.map((m) => ({
+        poste: m.poste,
+        ancienneValeur: m.ancienneValeur,
+        nouvelleValeur: m.nouvelleValeur,
+      })),
+    );
+    setActiveStep(
+      buildActiveStep(etat, r.modifications as ModificationMoteur[], next, ETAPES.ACHATS_STOCK, {
+        titre: "Préparation de la tournée",
+        icone: "🚚",
+        description:
+          "Coût d'approche fixe (carburant, préparation véhicule, cotisations chauffeur) engagé avant la tournée.",
+      }),
+    );
+  }
+
+  /**
+   * B9-C (2026-04-24) — Synergia (mode conseil) : prévisualise le coût de
+   * staffing mission (400 € fixe). Même pattern que `launchPreparationVeloce`.
+   */
+  function launchStaffingSynergia() {
+    if (!etat) return;
+    const next = cloneEtat(etat);
+    const r = appliquerApprovisionnementSynergia(next, next.joueurActif);
+    if (!r.succes) return;
+    const modsFiltrees = (r.modifications as ModificationMoteur[]).filter(
+      (m) => m.nouvelleValeur !== m.ancienneValeur,
+    );
+    setRecentModifications(
+      modsFiltrees.map((m) => ({
+        poste: m.poste,
+        ancienneValeur: m.ancienneValeur,
+        nouvelleValeur: m.nouvelleValeur,
+      })),
+    );
+    setActiveStep(
+      buildActiveStep(etat, r.modifications as ModificationMoteur[], next, ETAPES.ACHATS_STOCK, {
+        titre: "Staffing de la mission",
+        icone: "👥",
+        description:
+          "Coût fixe d'allocation consultants, kickoff et licences outil engagé avant la réalisation.",
+      }),
+    );
+  }
+
   return {
     // State
     achatQte, setAchatQte,
@@ -64,5 +130,7 @@ export function useAchatFlow({
     // Actions
     launchAchat,
     skipAchat,
+    launchPreparationVeloce,
+    launchStaffingSynergia,
   };
 }

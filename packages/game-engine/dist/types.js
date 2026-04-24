@@ -4,7 +4,7 @@
 // Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.COUT_CANAL_AZURA_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
+exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.COUT_STAFFING_SYNERGIA_PAR_TOUR = exports.COUT_APPROCHE_VELOCE_PAR_TOUR = exports.COUT_CANAL_AZURA_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
 /**
  * Constantes nommées pour les étapes du tour (8 étapes, cycle B9 depuis 2026-04-24).
  *
@@ -41,6 +41,35 @@ exports.PRIX_UNITAIRE_MARCHANDISE = 1000;
  * Activé en B9-D (fonction `appliquerRealisationMetier` branche négoce).
  */
 exports.COUT_CANAL_AZURA_PAR_TOUR = 300;
+/**
+ * B9-C (2026-04-24) — Coût d'approche tournée pour Véloce (mode logistique)
+ * à l'étape 2 (ACHATS_STOCK / Approvisionnement).
+ *
+ * Véloce ne constitue pas de stock de marchandises mais engage un coût
+ * d'approche (carburant, préparation véhicule, cotisation chauffeur) AVANT
+ * la réalisation de la tournée. Comptabilisation :
+ *   Services extérieurs   +300  (charge, CR)
+ *   Dettes fournisseurs   +300  (passif, bilan)
+ *
+ * V1 de playtest (2026-04-24) : 300 € / trim — visible sans être punitif,
+ * différencie déjà du métier stock, laisse place à l'étape 3 et 4.
+ * Recalibrage prévu après partie manuelle.
+ */
+exports.COUT_APPROCHE_VELOCE_PAR_TOUR = 300;
+/**
+ * B9-C (2026-04-24) — Coût de staffing mission pour Synergia (mode conseil)
+ * à l'étape 2 (ACHATS_STOCK / Approvisionnement).
+ *
+ * Synergia cadre et staffe sa mission AVANT la réalisation : allocation
+ * consultants, kickoff, licences outil ponctuelles. Comptabilisation :
+ *   Charges de sous-traitance   +400  (charge, CR)
+ *   Dettes fournisseurs         +400  (passif, bilan)
+ *
+ * V1 de playtest (2026-04-24) : 400 € / trim — légèrement supérieur à
+ * Véloce car la valeur d'une heure consultant > d'une heure chauffeur.
+ * Recalibrage prévu après partie manuelle.
+ */
+exports.COUT_STAFFING_SYNERGIA_PAR_TOUR = 400;
 /** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
 exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */

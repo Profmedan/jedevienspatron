@@ -88,7 +88,30 @@ Insertion de REALISATION_METIER en position 3 via décalage de VENTES/DECISION/E
    - Rebuild `dist/` OK
    - Tests moteur : 199/199 passent
    - Smoke test `/tmp/smoke-b9a.mjs` : cycle 0→1→2→3→4→5→6→7 traverse sans erreur, placeholder REALISATION_METIER conforme
-4. **B9-C** — polymorphie étape 2 si nécessaire (souvent déjà OK pour Belvaux/Azura en B8 ; Véloce/Synergia pourraient n'avoir rien à acheter, à arbitrer)
+4. **B9-C** — polymorphie étape 2 🚧 en cours (2026-04-24)
+   - **Arbitrages tranchés** : cf. `tasks/b9-c-arbitrages.md` (commit `3d65dc7`).
+     - Belvaux : appro matières premières (B8) — ciblage par nom de ligne
+     - Azura : réassort marchandises (B8) — ciblage par nom de ligne
+     - Véloce : coût d'approche tournée **300 € / trim** (nouveau)
+     - Synergia : staffing mission **400 € / trim** (nouveau)
+   - **Plan d'implémentation** :
+     1. `types.ts` : 2 constantes `COUT_APPROCHE_VELOCE_PAR_TOUR=300`, `COUT_STAFFING_SYNERGIA_PAR_TOUR=400`
+     2. `engine.ts` : créer `appliquerApprovisionnementVeloce(etat, nomJoueur)` et `appliquerApprovisionnementSynergia(etat, nomJoueur)` (dispatchers par entreprise, cohérent avec B9-D). Écritures : `Services extérieurs +` ou `Sous-traitance +` / `Dettes fournisseurs +`. Pas de paramètre quantité.
+     3. `engine.ts` : dans `appliquerAchatMarchandises`, garde-fou de ciblage — écrire dans la ligne stock par **nom** (`Stocks matières premières` Belvaux, `Stocks marchandises` Azura), pas par position.
+     4. `index.ts` : exports des 2 nouvelles fonctions.
+     5. `LeftPanel.tsx` : étape 2 polymorphe sur `modeleValeur.mode` :
+        - `negoce` / `production` → input quantité existant (inchangé)
+        - `logistique` → bouton `Préparer la tournée (−300 €)` qui déclenche `onLaunchPreparation`
+        - `conseil` → bouton `Staffer la mission (−400 €)` qui déclenche `onLaunchStaffing`
+        - `service` legacy → bouton Passer (fallback)
+     6. `useGameFlow.ts` : ajouter handlers `onLaunchPreparation` et `onLaunchStaffing` qui appellent les fonctions moteur et génèrent un `activeStep`.
+     7. Tests moteur : 4 nouveaux tests (Véloce 300 €, Synergia 400 €, Belvaux stock MP par nom, Azura stock Mdse par nom).
+   - **🛡️ Garde-fou B9-C** :
+     - tsc engine + apps/web (hors TS2786 pré-existants)
+     - Tests moteur 199/199 + 4 nouveaux
+     - Rebuild dist
+     - Smoke test étape 2 par mode : 4 parties × 8 étapes, vérif bilan équilibré à chaque étape
+5. **B9-D** — polymorphie étape 3 `appliquerRealisationMetier` : 4 fonctions dédiées par mode, avec les écritures spécifiées plus haut ; ajout du helper `pushByName` pour cibler des lignes de stock précises (matière première vs produits finis vs en-cours)
 5. **B9-D** — polymorphie étape 3 `appliquerRealisationMetier` : 4 fonctions dédiées par mode, avec les écritures spécifiées plus haut ; ajout du helper `pushByName` pour cibler des lignes de stock précises (matière première vs produits finis vs en-cours)
 6. **B9-E** — extension du switch `appliquerCarteClient` avec les 4 branches (3 modes B8 → 4 modes B9) et les extournes (production/logistique/conseil)
 7. **B9-F** — tests bout-en-bout 4 entreprises + régression B8 + test de couverture polymorphie
