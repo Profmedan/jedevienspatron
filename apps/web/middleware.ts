@@ -1,5 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+// SEC-bypass (2026-04-24) — vérification du cookie signé remplace le check
+// du query param URL. Cf. tasks/sec-bypass-arbitrages.md.
+import { verifyBypassCookie, BYPASS_COOKIE_NAME } from "@/lib/bypass-cookie";
 
 // Routes API POST sensibles protégées contre le CSRF
 const CSRF_PROTECTED_ROUTES = [
@@ -31,8 +34,16 @@ export async function middleware(request: NextRequest) {
 
   // Routes publiques — pas de vérification auth
   const code = request.nextUrl.searchParams.get("code");
-  const access = request.nextUrl.searchParams.get("access");
-  const isBypassOrRoomCode = (code !== null) || (access === "bypass");
+
+  // SEC-bypass (2026-04-24) — l'autorisation pour `/jeu` en mode bypass repose
+  // maintenant sur un cookie HttpOnly signé posé par `/api/bypass` après
+  // validation réussie du code. Le query param `?access=bypass` est IGNORÉ
+  // par le middleware (il reste accepté côté client pour l'UX de
+  // `useGamePersistence`, mais ne confère plus d'autorisation).
+  const bypassCookie = request.cookies.get(BYPASS_COOKIE_NAME)?.value;
+  const bypassPayload = verifyBypassCookie(bypassCookie);
+  const hasBypassSession = bypassPayload !== null;
+  const hasRoomCode = code !== null;
 
   if (
     pathname === "/" ||
@@ -48,9 +59,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // /jeu avec room_code ou bypass code → public (apprenants + testeurs)
-  if (pathname.startsWith("/jeu") && isBypassOrRoomCode) {
+  // /jeu avec room_code ou cookie bypass valide → public (apprenants + testeurs)
+  if (pathname.startsWith("/jeu") && (hasBypassSession || hasRoomCode)) {
     return NextResponse.next();
+  }
+
+  // SEC-bypass : un utilisateur avec un query param `?access=bypass` MAIS sans
+  // cookie valide (cookie absent, expiré ou forgé) doit être redirigé vers /
+  // avec un marqueur qui permet à la page d'accueil d'afficher le bon message.
+  if (pathname.startsWith("/jeu") && request.nextUrl.searchParams.get("access") === "bypass" && !hasBypassSession) {
+    const homeUrl = request.nextUrl.clone();
+    homeUrl.pathname = "/";
+    homeUrl.search = "?expired=bypass";
+    return NextResponse.redirect(homeUrl);
   }
 
   // Routes protégées (/dashboard, /historique) — vérifier auth

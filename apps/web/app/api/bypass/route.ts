@@ -11,6 +11,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+// SEC-bypass (2026-04-24) : cookie HttpOnly signé remplace le query param URL.
+// Cf. tasks/sec-bypass-arbitrages.md et commit 0d27695.
+import {
+  signBypassCookie,
+  BYPASS_COOKIE_NAME,
+  BYPASS_COOKIE_OPTIONS,
+} from "@/lib/bypass-cookie";
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,7 +78,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, reason: "quota_epuise" });
     }
 
-    return NextResponse.json({ valid: true });
+    // SEC-bypass (2026-04-24) — Code validé : on pose un cookie HttpOnly
+    // signé pour autoriser l'accès à /jeu. Le middleware vérifie ce cookie
+    // au lieu du query param (qui était exploitable à l'infini). Durée : 4h.
+    const response = NextResponse.json({ valid: true });
+    try {
+      const cookieValue = signBypassCookie(trimmed);
+      response.cookies.set(BYPASS_COOKIE_NAME, cookieValue, BYPASS_COOKIE_OPTIONS);
+    } catch (signError) {
+      // Sécurité préservée : si la signature échoue (secret absent), on refuse
+      // l'accès plutôt que de valider sans cookie. L'incrément use_count est
+      // déjà fait ; le joueur devra re-saisir son code (ou contacter le support).
+      console.error("[bypass] signature cookie impossible:", signError);
+      return NextResponse.json(
+        { valid: false, reason: "erreur_signature" },
+        { status: 500 }
+      );
+    }
+    return response;
 
   } catch {
     return NextResponse.json({ valid: false, reason: "erreur_serveur" }, { status: 500 });
