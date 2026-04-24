@@ -89,8 +89,16 @@ export function nomCompte(poste: string): string {
     revenusExceptionnels: "Revenus exceptionnels",
   };
 
+  // Bug fix (2026-04-24) : `poste.toLowerCase()` met tout en minuscules,
+  // mais les clés `k` du map conservent leur casse camelCase (ex. "chargesPersonnel").
+  // Sans mettre `k` en minuscules aussi, la correspondance échouait pour les postes
+  // camelCase à 2 mots et les labels remontaient bruts ("chargesPersonnel" au lieu
+  // de "Charges de personnel"). Impact : chargesPersonnel, chargesInteret,
+  // productionStockee, servicesExterieurs, creancesPlus1, creancesPlus2,
+  // produitsFinanciers, dotationsAmortissements, etc.
+  const posteLower = poste.toLowerCase();
   for (const [k, v] of Object.entries(map)) {
-    if (poste.toLowerCase().includes(k)) return v;
+    if (posteLower.includes(k.toLowerCase())) return v;
   }
   return poste;
 }
