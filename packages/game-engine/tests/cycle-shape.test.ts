@@ -95,27 +95,27 @@ describe("Caractérisation A — Valeurs de ETAPES (cycle 8-étapes T25.C)", () 
     expect(ETAPES.ACHATS_STOCK).toBe(2);
   });
 
-  test("ETAPES.VENTES = 3 (= traitement des cartes Client)", () => {
-    expect(ETAPES.VENTES).toBe(3);
+  test("ETAPES.REALISATION_METIER = 3 (B9-A — NEW, placeholder polymorphe B9-D)", () => {
+    expect(ETAPES.REALISATION_METIER).toBe(3);
   });
 
-  test("ETAPES.DECISION = 4", () => {
-    expect(ETAPES.DECISION).toBe(4);
+  test("ETAPES.FACTURATION_VENTES = 4 (ex-VENTES B8, décalée de +1 par B9-A)", () => {
+    expect(ETAPES.FACTURATION_VENTES).toBe(4);
   });
 
-  test("ETAPES.EVENEMENT = 5", () => {
-    expect(ETAPES.EVENEMENT).toBe(5);
+  test("ETAPES.DECISION = 5 (décalée de +1 par B9-A)", () => {
+    expect(ETAPES.DECISION).toBe(5);
   });
 
-  test("ETAPES.CLOTURE_TRIMESTRE = 6 (fusion charges + amortissements + effets récurrents)", () => {
-    expect(ETAPES.CLOTURE_TRIMESTRE).toBe(6);
+  test("ETAPES.EVENEMENT = 6 (décalée de +1 par B9-A)", () => {
+    expect(ETAPES.EVENEMENT).toBe(6);
   });
 
-  test("ETAPES.BILAN = 7 (étape finale)", () => {
-    expect(ETAPES.BILAN).toBe(7);
+  test("ETAPES.CLOTURE_BILAN = 7 (fusion B9-A des ex-CLOTURE_TRIMESTRE + BILAN, 2 passes moteur)", () => {
+    expect(ETAPES.CLOTURE_BILAN).toBe(7);
   });
 
-  test("Il y a bien 8 clés dans ETAPES (plus de CHARGES_FIXES ni EFFETS_RECURRENTS)", () => {
+  test("Il y a bien 8 clés dans ETAPES (8 étapes visibles, cycle B9-A)", () => {
     expect(Object.keys(ETAPES).length).toBe(8);
   });
 
@@ -170,7 +170,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(snapApres).toEqual(snapAvant);
   });
 
-  test("Étape 3 (VENTES) : traitement carte Client Particulier → +2 000 € tréso, +2 000 € ventes, -1 000 € stocks", () => {
+  test("Étape 4 (FACTURATION_VENTES) : traitement carte Client Particulier → +2 000 € tréso, +2 000 € ventes, -1 000 € stocks", () => {
     const etat = initBelvaux();
     // Particulier : 2 000 € comptant, consomme 1 unité (1 000 € de stock).
     const particulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
@@ -186,10 +186,10 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
   });
 
-  // Étape 4 (DECISION) : dépend d'un choix interactif (achat de carte,
+  // Étape 5 (DECISION) : dépend d'un choix interactif (achat de carte,
   // recrutement). Couverte séparément dans les tests d'intégration UI.
 
-  test("Étape 5 (EVENEMENT) : une carte événement préserve l'invariant comptable", () => {
+  test("Étape 6 (EVENEMENT) : une carte événement préserve l'invariant comptable", () => {
     const etat = initBelvaux();
     const carte = CARTES_EVENEMENTS[0];
     const ecartAvant = equilibre(etat.joueurs[0]).ecart;
@@ -199,7 +199,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(ecartApres).toBe(ecartAvant);
   });
 
-  test("Étape 6 (CLOTURE_TRIMESTRE) : -2 000 € charges fixes, -500 € capital emprunt, +2 000 € dotations, pas d'intérêts à T1, +1 000 € production stockée Belvaux", () => {
+  test("Étape 7 (CLOTURE_BILAN) : -2 000 € charges fixes, -500 € capital emprunt, +2 000 € dotations, pas d'intérêts à T1, +1 000 € production stockée Belvaux", () => {
     const etat = initBelvaux();
     const tresoAvant = getTresorerie(etat.joueurs[0]);
     const stocksAvant = stocksOf(etat.joueurs[0]);
@@ -222,7 +222,7 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
   });
 
-  test("Étape 7 (BILAN) : verifierFinTour retourne un score numérique, pas de faillite à T1", () => {
+  test("Étape 7 (CLOTURE_BILAN, 2e passe) : verifierFinTour retourne un score numérique, pas de faillite à T1", () => {
     const etat = initBelvaux();
     appliquerClotureTrimestre(etat, 0);
     const res = verifierFinTour(etat, 0);

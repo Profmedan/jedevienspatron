@@ -4,30 +4,43 @@
 // Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
+exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.COUT_CANAL_AZURA_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
 /**
- * Constantes nommées pour les étapes du tour (8 étapes depuis le Commit 3 de T25.C).
+ * Constantes nommées pour les étapes du tour (8 étapes, cycle B9 depuis 2026-04-24).
  *
- * Cycle « activité puis clôture » validé par Pierre 2026-04-19 :
- * on encaisse et on vend avant d'être assommé par les charges de fin de
- * période. Les anciennes étapes 0 (charges fixes) et 5 (effets récurrents)
- * sont fusionnées dans `CLOTURE_TRIMESTRE`.
+ * Cycle « activité métier puis clôture » :
+ * on encaisse, on paie les commerciaux, on approvisionne, on réalise le
+ * cœur métier (B9), on facture, on décide, un événement, puis la clôture
+ * (charges fixes + amortissements + effets récurrents + bilan) fusionnée.
+ *
+ * Migration B8 → B9-A :
+ *   - VENTES (3) → FACTURATION_VENTES (4) : renommage + décalage
+ *   - DECISION : 4 → 5
+ *   - EVENEMENT : 5 → 6
+ *   - CLOTURE_TRIMESTRE (6) + BILAN (7) → CLOTURE_BILAN (7, fusion)
+ *   - REALISATION_METIER (3) : NEW
  */
 exports.ETAPES = {
     ENCAISSEMENTS_CREANCES: 0, // Avancement des créances clients
     COMMERCIAUX: 1, // Paiement commerciaux + génération clients + recrutement
-    ACHATS_STOCK: 2, // Achats de marchandises
-    VENTES: 3, // Traitement des cartes Client
-    DECISION: 4, // Carte Décision / Investissement
-    EVENEMENT: 5, // Carte Événement
-    CLOTURE_TRIMESTRE: 6, // Fusion : charges fixes + emprunt + amortissements + effets récurrents + spécialité
-    BILAN: 7, // Bilan de fin de trimestre
+    ACHATS_STOCK: 2, // Achats de marchandises / ressources
+    REALISATION_METIER: 3, // NEW B9-A — acte métier polymorphe par mode (activé B9-D)
+    FACTURATION_VENTES: 4, // ex-VENTES — Traitement des cartes Client
+    DECISION: 5, // ex-4 — Carte Décision / Investissement
+    EVENEMENT: 6, // ex-5 — Carte Événement
+    CLOTURE_BILAN: 7, // Fusion ex-CLOTURE_TRIMESTRE + ex-BILAN : charges fixes + amortissements + effets récurrents + spécialité, puis vérification équilibre et transition fin de tour
 };
 // ─── CONSTANTES ───────────────────────────────────────────────
 exports.DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 8 000€ → cessation de paiement
 exports.CHARGES_FIXES_PAR_TOUR = 2000; // Services extérieurs +2 000€, Tréso -2 000€
 /** Prix unitaire d'une marchandise : 1 unité physique = 1 000 € de valeur comptable (achat & CMV) */
 exports.PRIX_UNITAIRE_MARCHANDISE = 1000;
+/**
+ * B9-A (2026-04-24) : coût de canal fixe d'Azura à l'étape 3 REALISATION_METIER.
+ * 300 € ≈ 15 % de la marge brute moyenne Azura — impact ressenti sans étouffer.
+ * Activé en B9-D (fonction `appliquerRealisationMetier` branche négoce).
+ */
+exports.COUT_CANAL_AZURA_PAR_TOUR = 300;
 /** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
 exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */

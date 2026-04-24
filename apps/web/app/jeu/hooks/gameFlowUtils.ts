@@ -40,8 +40,8 @@ export type ModificationMoteur = {
 // ─── ETAPE_INFO ───────────────────────────────────────────────────────────────
 // Réutilisé par useGameFlow, buildActiveStep et les composants (via re-export)
 
-// ─── T25.C — Nouveau cycle 8 étapes (activité puis clôture) ─────────────
-// Ordre : encaissements → commerciaux → achats → ventes → décision → événement → clôture → bilan
+// ─── B9-A (2026-04-24) — Cycle 8 étapes, insertion REALISATION_METIER(3), fusion CLOTURE_BILAN(7) ─────
+// Ordre : encaissements → commerciaux → achats → réalisation métier → facturation ventes → décision → événement → clôture&bilan
 // Contenu court pour ActiveStep + Journal. Le fond pédagogique détaillé
 // vit dans `apps/web/lib/pedagogie/pedagogie.ts` (MODALES_ETAPES).
 export const ETAPE_INFO: Record<number, {
@@ -60,40 +60,40 @@ export const ETAPE_INFO: Record<number, {
     conseil: "Les commerciaux coûtent avant de rapporter. Dimensionne ton équipe à ta marge prévue, pas à ton ambition.",
   },
   2: {
-    icone: "📦", titre: "Achats de marchandises",
-    description: "Tu achètes marchandises ou matières. Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
+    icone: "📦", titre: "Approvisionnement",
+    description: "Tu achètes marchandises ou matières (selon ton métier). Choisis la quantité et le mode de paiement : comptant (trésorerie immédiate) ou à crédit (dette fournisseur D+1).",
     principe: "Stocks +, et soit trésorerie −, soit dettes fournisseurs +. Pas de charge à ce stade : le coût d'achat ne devient charge qu'au moment de la vente.",
     conseil: "Le stock est de l'argent transformé en marchandises. Trop de stock immobilise la trésorerie, trop peu fait rater des ventes.",
   },
   3: {
-    icone: "🤝", titre: "Traitement des ventes (Cartes Client)",
-    description: "Chaque carte Client déclenche 4 écritures : chiffre d'affaires, sortie de stock, coût des marchandises vendues, encaissement ou créance.",
+    icone: "🛠️", titre: "Réalisation métier",
+    description: "Étape propre à votre entreprise : production, logistique, conseil, négoce pur. Les écritures spécifiques (coût de fabrication, coût de canal, livraison, mission) sont appliquées ici.",
+    principe: "Selon le métier : transformation de stock, consommation de ressources, comptabilisation d'en-cours. Cette étape rend visibles les coûts métier que l'étape Facturation ne peut pas porter seule.",
+    conseil: "Chaque entreprise crée de la valeur différemment. Comprends ton modèle : ce qui distingue ta marge de celle du voisin.",
+  },
+  4: {
+    icone: "🤝", titre: "Facturation & ventes (Cartes Client)",
+    description: "Chaque carte Client déclenche les écritures : chiffre d'affaires, sortie de stock (si applicable), coût des marchandises vendues, encaissement ou créance.",
     principe: "Produits d'exploitation +, stocks −, trésorerie ou créances clients +. La marge brute se révèle à cette étape ; c'est elle qui conditionne la capacité à absorber les charges fixes de la clôture.",
     conseil: "Vendre beaucoup ne suffit pas : ce qui compte, c'est ce qu'il reste quand on a retiré le coût du produit. La marge, pas le volume.",
   },
-  4: {
+  5: {
     icone: "🎯", titre: "Carte Décision",
     description: "Tu peux jouer une carte Décision — investissement, recrutement, emprunt, carte logistique, protection. Ce choix est OPTIONNEL.",
     principe: "Selon la carte : immobilisation + et trésorerie − (investissement), emprunt + et trésorerie + (crédit), charges de personnel + (recrutement). Beaucoup de cartes embarquent un effet récurrent.",
     conseil: "C'est toi qui décides : mais le marché ne te dira pas si tu as eu raison avant plusieurs trimestres. Regarde toujours la sortie de cash d'aujourd'hui ET le coût récurrent cumulé.",
   },
-  5: {
+  6: {
     icone: "🎲", titre: "Carte Événement",
     description: "Une carte Événement est tirée automatiquement. Elle peut affecter la trésorerie, le stock, les clients, les dettes — ou plusieurs postes à la fois.",
     principe: "Variable selon l'événement. Un incident augmente les charges exceptionnelles ou réduit un actif ; une opportunité gonfle le CA ou les produits.",
     conseil: "Tu n'as pas choisi ce moment : ta responsabilité, c'est la lecture, pas la panique. Un coussin de trésorerie absorbe les chocs.",
   },
-  6: {
-    icone: "💼", titre: "Clôture du trimestre",
-    description: "Tout ce qui a permis à l'entreprise de fonctionner ce trimestre arrive dans les comptes : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents des cartes actives.",
-    principe: "La trésorerie baisse avec les paiements exigibles. Les amortissements augmentent les charges sans impacter la banque. C'est ici qu'on comprend pourquoi trésorerie et bénéfice ne racontent pas la même histoire.",
-    conseil: "Respire : c'est ici que tu vois si ta stratégie tient. Regarde d'abord ta trésorerie après clôture, puis ton résultat net.",
-  },
   7: {
-    icone: "✅", titre: "Bilan de fin de trimestre",
-    description: "Le résultat net du trimestre est affecté aux capitaux propres. Actif et passif sont recalés. Les indicateurs de solidité sont mis à jour.",
-    principe: "Capitaux propres +/− selon le résultat, actif et passif équilibrés par construction. Aucun flux de trésorerie à cette étape : c'est une écriture de constatation, pas de décaissement.",
-    conseil: "Regarde la tendance, pas seulement la photo. Trois bilans consécutifs montrent si la structure se consolide ou se fragilise.",
+    icone: "💼", titre: "Clôture & bilan",
+    description: "Tout ce qui a permis à l'entreprise de fonctionner ce trimestre arrive dans les comptes : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents. Le résultat net est affecté aux capitaux propres, le bilan est vérifié.",
+    principe: "La trésorerie baisse avec les paiements exigibles. Les amortissements augmentent les charges sans impacter la banque. Capitaux propres +/− selon le résultat, actif et passif équilibrés par construction.",
+    conseil: "Respire : c'est ici que tu vois si ta stratégie tient. Regarde d'abord la trésorerie après clôture, puis le résultat net et la tendance sur trois bilans.",
   },
 };
 

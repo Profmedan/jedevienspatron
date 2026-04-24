@@ -76,7 +76,18 @@ export type DefaultEntreprise =
 /** Accepte les 4 défauts + tout nom custom (string) avec autocomplétion */
 export type NomEntreprise = DefaultEntreprise | (string & {});
 
-export type SecteurActivite = "negoce" | "service" | "production";
+/**
+ * Secteur d'activité — pilote la branche du switch dans `appliquerCarteClient`
+ * et les libellés pédagogiques.
+ *
+ * Depuis B9-A (2026-04-24), le mode historique "service" est décliné en
+ * "logistique" (Véloce) et "conseil" (Synergia) pour que les 4 entreprises
+ * canoniques aient chacune leur propre mode. "service" reste un literal valide
+ * pour compat avec les saves v3 (B6/B7/B8) et les templates custom antérieurs.
+ * Les switches moteur traitent "service" comme un alias de "logistique" +
+ * "conseil" (même comportement en B9-A, polymorphie divergente en B9-D/E).
+ */
+export type SecteurActivite = "negoce" | "service" | "production" | "logistique" | "conseil";
 
 export type TypeClientEntreprise = "particulier" | "tpe" | "grand_compte";
 
@@ -97,10 +108,17 @@ export interface FluxClientsEntreprise {
  * Modèle de création de valeur d'une entreprise (palier 1 — Tâche B8).
  * Pilote le comportement comptable de `appliquerCarteClient` et les libellés pédagogiques.
  *
- * Trois modes supportés :
+ * B8 supportait trois modes (negoce/production/service).
+ * B9-A (2026-04-24) ajoute "logistique" et "conseil" pour splitter "service"
+ * et permettre des écritures moteur différentes entre Véloce et Synergia en
+ * B9-D/E. "service" reste un literal valide (saves v3 + templates custom).
+ *
+ * Modes supportés :
  *   • "negoce"     : stocks − / achats + (CMV classique — Azura)
- *   • "production" : stocks − / productionStockee − (déstockage de produit fini — Belvaux)
- *   • "service"    : servicesExterieurs + / dettes + (coût variable de prestation — Véloce, Synergia)
+ *   • "production" : stocks − / productionStockee − (déstockage produit fini — Belvaux)
+ *   • "service"    : alias historique (équivalent logistique + conseil en B9-A)
+ *   • "logistique" : servicesExterieurs + / dettes + (Véloce, B9-A) — divergera en B9-D/E avec en-cours tournée
+ *   • "conseil"    : servicesExterieurs + / dettes + (Synergia, B9-A) — divergera en B9-D/E avec en-cours mission + licences
  *
  * Les champs textuels (`ceQueJeVends`, `dOuVientLaValeur`, `goulotPrincipal`,
  * `libelleExecution`, `libelleContrepartie`) alimentent l'intro d'entreprise et
@@ -108,7 +126,7 @@ export interface FluxClientsEntreprise {
  */
 export interface ModeleValeurEntreprise {
   /** Famille économique principale */
-  mode: "negoce" | "production" | "service";
+  mode: "negoce" | "production" | "service" | "logistique" | "conseil";
   /** Ce que l'entreprise vend réellement */
   ceQueJeVends: string;
   /** Ce qui crée la valeur avant la vente */
@@ -334,41 +352,50 @@ export interface Joueur {
 // ─── ÉTAT DE JEU ─────────────────────────────────────────────
 
 /**
- * Les 8 étapes d'un tour de jeu (cycle T25.C — "activité puis clôture").
+ * Les 8 étapes d'un tour de jeu (cycle B9 — « activité métier puis clôture »).
  *
- * Le cycle est ordonné de manière à ce que le trimestre commence par une
- * action visible (encaissements), fasse apparaître la vie commerciale
- * (commerciaux → achats → ventes → décision → événement), puis termine
- * par la clôture qui matérialise les charges structurelles et les effets
- * récurrents, avant le bilan de fin de trimestre.
+ * B9-A (2026-04-24) insère une étape 3 REALISATION_METIER visible entre
+ * ACHATS_STOCK (2) et FACTURATION_VENTES (4) — ex-VENTES. Décale DECISION
+ * (4→5), EVENEMENT (5→6) et fusionne ex-CLOTURE_TRIMESTRE + ex-BILAN
+ * en un seul CLOTURE_BILAN (7) avec deux passes moteur séquentielles.
+ *
+ * Le cycle devient : encaissements → commerciaux → ressources → RÉALISATION
+ * métier (NEW) → facturation → décision → événement → clôture+bilan.
  */
 export type EtapeTour =
-  | 0 // Encaissements des créances clients (ex-étape 2)
-  | 1 // Paiement commerciaux + génération clients + recrutement (ex-étape 3)
-  | 2 // Achats de marchandises (ex-étape 1)
-  | 3 // Traitement des cartes Client (ex-étape 4)
-  | 4 // Carte Décision / Investissement (ex-étape 6)
-  | 5 // Carte Événement (ex-étape 7)
-  | 6 // Clôture trimestre : charges fixes + amortissements + emprunt + effets récurrents (ex-étapes 0 + 5 fusionnées)
-  | 7; // Bilan de fin de trimestre (ex-étape 8)
+  | 0 // Encaissements des créances clients
+  | 1 // Paiement commerciaux + génération clients + recrutement
+  | 2 // Achats de marchandises / ressources
+  | 3 // Réalisation métier (B9-A placeholder, polymorphe B9-D)
+  | 4 // Facturation & ventes — traitement des cartes Client (ex-étape 3)
+  | 5 // Carte Décision / Investissement (ex-étape 4)
+  | 6 // Carte Événement (ex-étape 5)
+  | 7; // Clôture & bilan — fusion ex-CLOTURE_TRIMESTRE + ex-BILAN (2 passes moteur)
 
 /**
- * Constantes nommées pour les étapes du tour (8 étapes depuis le Commit 3 de T25.C).
+ * Constantes nommées pour les étapes du tour (8 étapes, cycle B9 depuis 2026-04-24).
  *
- * Cycle « activité puis clôture » validé par Pierre 2026-04-19 :
- * on encaisse et on vend avant d'être assommé par les charges de fin de
- * période. Les anciennes étapes 0 (charges fixes) et 5 (effets récurrents)
- * sont fusionnées dans `CLOTURE_TRIMESTRE`.
+ * Cycle « activité métier puis clôture » :
+ * on encaisse, on paie les commerciaux, on approvisionne, on réalise le
+ * cœur métier (B9), on facture, on décide, un événement, puis la clôture
+ * (charges fixes + amortissements + effets récurrents + bilan) fusionnée.
+ *
+ * Migration B8 → B9-A :
+ *   - VENTES (3) → FACTURATION_VENTES (4) : renommage + décalage
+ *   - DECISION : 4 → 5
+ *   - EVENEMENT : 5 → 6
+ *   - CLOTURE_TRIMESTRE (6) + BILAN (7) → CLOTURE_BILAN (7, fusion)
+ *   - REALISATION_METIER (3) : NEW
  */
 export const ETAPES = {
   ENCAISSEMENTS_CREANCES: 0,  // Avancement des créances clients
   COMMERCIAUX: 1,             // Paiement commerciaux + génération clients + recrutement
-  ACHATS_STOCK: 2,            // Achats de marchandises
-  VENTES: 3,                  // Traitement des cartes Client
-  DECISION: 4,                // Carte Décision / Investissement
-  EVENEMENT: 5,               // Carte Événement
-  CLOTURE_TRIMESTRE: 6,       // Fusion : charges fixes + emprunt + amortissements + effets récurrents + spécialité
-  BILAN: 7,                   // Bilan de fin de trimestre
+  ACHATS_STOCK: 2,            // Achats de marchandises / ressources
+  REALISATION_METIER: 3,      // NEW B9-A — acte métier polymorphe par mode (activé B9-D)
+  FACTURATION_VENTES: 4,      // ex-VENTES — Traitement des cartes Client
+  DECISION: 5,                // ex-4 — Carte Décision / Investissement
+  EVENEMENT: 6,               // ex-5 — Carte Événement
+  CLOTURE_BILAN: 7,           // Fusion ex-CLOTURE_TRIMESTRE + ex-BILAN : charges fixes + amortissements + effets récurrents + spécialité, puis vérification équilibre et transition fin de tour
 } as const satisfies Record<string, EtapeTour>;
 
 export interface EtatJeu {
@@ -464,6 +491,12 @@ export const DECOUVERT_MAX = 8000; // Seuil de faillite : découvert bancaire > 
 export const CHARGES_FIXES_PAR_TOUR = 2000; // Services extérieurs +2 000€, Tréso -2 000€
 /** Prix unitaire d'une marchandise : 1 unité physique = 1 000 € de valeur comptable (achat & CMV) */
 export const PRIX_UNITAIRE_MARCHANDISE = 1000;
+/**
+ * B9-A (2026-04-24) : coût de canal fixe d'Azura à l'étape 3 REALISATION_METIER.
+ * 300 € ≈ 15 % de la marge brute moyenne Azura — impact ressenti sans étouffer.
+ * Activé en B9-D (fonction `appliquerRealisationMetier` branche négoce).
+ */
+export const COUT_CANAL_AZURA_PAR_TOUR = 300;
 /** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
 export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */

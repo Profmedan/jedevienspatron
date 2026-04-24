@@ -36,6 +36,7 @@ export {
   appliquerAvancementCreances,
   appliquerPaiementCommerciaux,
   appliquerCarteClient,
+  appliquerRealisationMetier,
   appliquerEffetsRecurrents,
   appliquerSpecialiteEntreprise,
   appliquerClotureTrimestre,

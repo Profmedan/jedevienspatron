@@ -5,6 +5,7 @@ import {
   EtatJeu, Joueur, CarteDecision, ResultatDemandePret, MONTANTS_EMPRUNT, TrimSnapshot, EntrepriseTemplate, ETAPES,
   initialiserJeu, avancerEtape, appliquerClotureTrimestre, appliquerAchatMarchandises,
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
+  appliquerRealisationMetier,
   genererClientsSpecialite,
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, genererClientsParCommerciaux,
@@ -382,6 +383,18 @@ export function useGameFlow({
       return;
     }
 
+    // B9-A (2026-04-24) — CLOTURE_BILAN fusionne ex-CLOTURE_TRIMESTRE + ex-BILAN.
+    // Après validation des écritures de clôture (ex-CLOTURE_TRIMESTRE),
+    // on enchaîne directement la 2e passe moteur (verifierFinTour +
+    // confirmEndOfTurn) au lieu d'avancerEtape, puisque CLOTURE_BILAN
+    // est la dernière étape du cycle 8. Évite de passer par un state UI
+    // intermédiaire pour la passe « bilan ».
+    if (etapeAvantAvancement === ETAPES.CLOTURE_BILAN) {
+      const fin = verifierFinTour(next, next.joueurActif);
+      confirmEndOfTurn(next, fin);
+      return;
+    }
+
     avancerEtape(next);
     pedagogy.maybeShowPedagoModal(next.etapeTour);
     setEtat({ ...next });
@@ -522,7 +535,15 @@ export function useGameFlow({
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
       }
-      case ETAPES.VENTES: {
+      case ETAPES.REALISATION_METIER: {
+        // B9-A (2026-04-24) — étape placeholder. Le dispatcher polymorphe
+        // `appliquerRealisationMetier` retourne un ResultatAction vide.
+        // L'étape se traverse via la condition skip-auto ci-dessous.
+        const r = appliquerRealisationMetier(next, idx);
+        if (r.succes) mods = r.modifications as ModificationMoteur[];
+        break;
+      }
+      case ETAPES.FACTURATION_VENTES: {
         const joueur = next.joueurs[idx];
         const capacite = calculerCapaciteLogistique(joueur);
         const clientsAtrait = joueur.clientsATrait;
@@ -557,7 +578,11 @@ export function useGameFlow({
         }
         break;
       }
-      case ETAPES.CLOTURE_TRIMESTRE: {
+      case ETAPES.CLOTURE_BILAN: {
+        // B9-A (2026-04-24) — 1re passe : `appliquerClotureTrimestre` (charges
+        // fixes + amortissements + effets récurrents + spécialité). La 2e passe
+        // (verifierFinTour + confirmEndOfTurn) est déclenchée dans
+        // `confirmActiveStep` quand l'utilisateur valide les écritures de clôture.
         const r = appliquerClotureTrimestre(next, idx);
         if (r.succes) mods = r.modifications as ModificationMoteur[];
         break;
@@ -572,13 +597,15 @@ export function useGameFlow({
         }
         break;
       }
-      case ETAPES.BILAN: { const fin = verifierFinTour(next, idx); confirmEndOfTurn(next, fin); return; }
+      // B9-A : l'ancien `case ETAPES.BILAN` a été supprimé — la fin de tour
+      // est déclenchée dans `confirmActiveStep` lorsque `etapeAvantAvancement
+      // === ETAPES.CLOTURE_BILAN` (fusion des 2 passes sous un même index UI).
       default: break;
     }
 
     const etapeActuelle = next.etapeTour;
     const modsFiltrees = mods.filter(m => m.nouvelleValeur !== m.ancienneValeur);
-    if ((etapeActuelle === ETAPES.ENCAISSEMENTS_CREANCES || etapeActuelle === ETAPES.COMMERCIAUX) && modsFiltrees.length === 0) {
+    if ((etapeActuelle === ETAPES.ENCAISSEMENTS_CREANCES || etapeActuelle === ETAPES.COMMERCIAUX || etapeActuelle === ETAPES.REALISATION_METIER) && modsFiltrees.length === 0) {
       avancerEtape(next);
       pedagogy.maybeShowPedagoModal(next.etapeTour);
       setEtat({ ...next });
@@ -591,12 +618,15 @@ export function useGameFlow({
     })));
 
     // Étapes « automatiques » : flow accéléré en mode rapide (toutes écritures appliquées d'un coup).
-    // Nouveau cycle T25.C : ENCAISSEMENTS_CREANCES(0), COMMERCIAUX(1), VENTES(3), CLOTURE_TRIMESTRE(6).
+    // Cycle B9-A (2026-04-24) : ENCAISSEMENTS_CREANCES(0), COMMERCIAUX(1),
+    // FACTURATION_VENTES(4, ex-VENTES), CLOTURE_BILAN(7, fusion ex-CLOTURE_TRIMESTRE + BILAN).
+    // REALISATION_METIER(3) n'est pas listée : en B9-A placeholder elle se traverse
+    // via la condition skip-auto (modsFiltrees vide). Sera ajoutée ici en B9-D.
     const AUTO_ETAPES: number[] = [
       ETAPES.ENCAISSEMENTS_CREANCES,
       ETAPES.COMMERCIAUX,
-      ETAPES.VENTES,
-      ETAPES.CLOTURE_TRIMESTRE,
+      ETAPES.FACTURATION_VENTES,
+      ETAPES.CLOTURE_BILAN,
     ];
     const step = buildActiveStep(etat, mods, next, next.etapeTour, evenementCapture);
     if (modeRapide && AUTO_ETAPES.includes(next.etapeTour)) {

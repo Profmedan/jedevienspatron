@@ -247,11 +247,13 @@ export default function CompteResultatPanel({
 
   // T25.C — Nouveau cycle 8 étapes (activité puis clôture) : le résultat est
   // provisoire pendant toute la période d'activité et de clôture du trimestre,
-  // et devient définitif à l'étape BILAN (7). Simplification par rapport à
-  // l'ancien cycle qui avait une « étape 0 initiale » distincte.
+  // et devient définitif à l'étape CLOTURE_BILAN (7, B9-A fusion ex-CLOTURE_TRIMESTRE
+  // + ex-BILAN). Le CR reste provisoire pendant toute la saisie des écritures
+  // de clôture ; il ne devient définitif que lorsque `confirmActiveStep`
+  // déclenche la 2e passe `verifierFinTour + confirmEndOfTurn`.
   const isProvisoire =
     hasActiveStep === true ||
-    (etapeTour !== undefined && etapeTour !== ETAPES.BILAN);
+    (etapeTour !== undefined && etapeTour !== ETAPES.CLOTURE_BILAN);
 
   return (
     <div className="bg-gray-900 rounded-2xl shadow-md border border-gray-700 flex flex-col max-h-full">

@@ -12,16 +12,18 @@ import {
   getTresorerie,
 } from "@jedevienspatron/game-engine";
 
-// B8-F : mapping `type` (libellé UI de l'entreprise de base) → `secteurActivite`
+// B8-F / B9-A : mapping `type` (libellé UI de l'entreprise de base) → `secteurActivite`
 // (clé technique du moteur). Utilisé uniquement pour les templates custom
 // persistés en base (Supabase) qui ne stockent pas encore `secteur_activite`.
+// B9-A (2026-04-24) : Logistique et Innovation obtiennent enfin leurs modes propres
+// ("logistique" et "conseil"), introduits dans le type union SecteurActivite.
 // Fallback "service" (le plus conservateur : marge non nulle, pas de blocage stock).
 function _deduireSecteurActivite(baseType: string | undefined): SecteurActivite {
   switch (baseType) {
     case "Production": return "production";
     case "Commerce":   return "negoce";
-    case "Logistique": return "service";
-    case "Innovation": return "service";
+    case "Logistique": return "logistique";
+    case "Innovation": return "conseil";
     default:           return "service";
   }
 }
@@ -47,8 +49,15 @@ type Phase = "setup" | "intro" | "playing" | "gameover";
  * `compteResultatCumulePartie` → les calculs B6 planteraient au premier
  * accès. La rejection automatique (readSave retourne null si version ≠)
  * réinitialise proprement la partie : l'élève doit repartir de T1.
+ *
+ * v4 (B9-A, 2026-04-24) — insertion de REALISATION_METIER en position 3,
+ * décalage VENTES→FACTURATION_VENTES(4), DECISION→5, EVENEMENT→6, fusion
+ * CLOTURE_TRIMESTRE+BILAN→CLOTURE_BILAN(7). Une save v3 chargée ferait
+ * pointer `etapeTour` sur une étape qui a changé de sens (ex. un `etapeTour=3`
+ * pointait vers VENTES en v3, pointe vers REALISATION_METIER placeholder
+ * en v4). Bump 3→4 rejette les v3 au chargement.
  */
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const SAVE_TTL_MS  = 24 * 60 * 60 * 1000; // 24 h
 
 interface SavedGame {

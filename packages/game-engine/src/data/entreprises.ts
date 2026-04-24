@@ -132,12 +132,14 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#7b2d8b",
     icon: "🚚",
     type: "Logistique",
-    secteurActivite: "service",
+    // B9-A (2026-04-24) : split du mode "service" en "logistique" pour
+    // permettre des écritures divergentes de Synergia en B9-D/E.
+    secteurActivite: "logistique",
     specialite: "🚀 Livraison rapide",
     reducDelaiPaiement: true, // Spécialité : délai d'encaissement réduit de 1 (TPE → immédiat, Grand Compte → C+1)
-    // B8-C — Modèle de valeur : prestataire de transport
+    // B8-C — Modèle de valeur : prestataire de transport (mode "logistique" depuis B9-A)
     modeleValeur: {
-      mode: "service",
+      mode: "logistique",
       ceQueJeVends: "Des prestations de transport et de livraison",
       dOuVientLaValeur: "Le temps de conduite, le carburant et le tri des colis",
       goulotPrincipal: "Capacité de la flotte et disponibilité des chauffeurs",
@@ -235,16 +237,18 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     couleur: "#2e7d32",
     icon: "💡",
     type: "Innovation",
-    secteurActivite: "service",
+    // B9-A (2026-04-24) : split du mode "service" en "conseil" pour
+    // distinguer le métier missions+licences de Synergia de la logistique de Véloce.
+    secteurActivite: "conseil",
     specialite: "💎 Revenus de licence",
     // Spécialité active : +1 000 € produitsFinanciers, +1 000 € trésorerie par trimestre
     effetsPassifs: [
       { poste: "produitsFinanciers", delta: 1000 },
       { poste: "tresorerie", delta: 1000 },
     ],
-    // B8-C — Modèle de valeur : prestataire de services d'innovation
+    // B8-C — Modèle de valeur : prestataire missions + licences (mode "conseil" depuis B9-A)
     modeleValeur: {
-      mode: "service",
+      mode: "conseil",
       ceQueJeVends: "Des missions de conseil et des licences logicielles",
       dOuVientLaValeur: "Le savoir-faire de l'équipe et la propriété intellectuelle (brevets)",
       goulotPrincipal: "Disponibilité des ingénieurs et qualité du portefeuille de brevets",

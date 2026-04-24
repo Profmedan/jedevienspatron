@@ -60,7 +60,7 @@ export function generatePedagogicalMessage(ctx: PedagogicalContext): string | nu
   }
 
   // Rule 7: After sales processing
-  if (ctx.etape === ETAPES.VENTES && ctx.ca > 0) {
+  if (ctx.etape === ETAPES.FACTURATION_VENTES && ctx.ca > 0) {
     return `Les ventes du trimestre génèrent ${ctx.ca} de chiffre d'affaires. N'oubliez pas : les ventes augmentent le résultat, mais seuls les paiements comptants augmentent immédiatement la trésorerie.`;
   }
 

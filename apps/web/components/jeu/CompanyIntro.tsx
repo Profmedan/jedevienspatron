@@ -72,10 +72,14 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
   // Fallback par secteur si l'entreprise n'expose pas de `modeleValeur` explicite
   // (rétrocompat saves antérieures à B8).
   const modeleValeur = getModeleValeurEntreprise(j.entreprise);
+  // B9-A (2026-04-24) — 5 modes : negoce / production / service / logistique / conseil.
+  // "service" conservé comme mode legacy pour la rétro-compat des saves v3.
   const MODE_LABEL: Record<typeof modeleValeur.mode, string> = {
     negoce: "Négoce",
     production: "Production",
     service: "Service",
+    logistique: "Logistique",
+    conseil: "Conseil",
   };
 
   const steps = [
@@ -305,7 +309,7 @@ export function CompanyIntro({ joueurs, onStart }: CompanyIntroProps) {
             Vous vendez ce que vous avez produit : gérer la capacité de production est vital.
           </p>
         )}
-        {modeleValeur.mode === "service" && (
+        {(modeleValeur.mode === "service" || modeleValeur.mode === "logistique" || modeleValeur.mode === "conseil") && (
           <p>
             À chaque vente : <strong className="text-white">Services extérieurs +{fmt(modeleValeur.coutVariable)}</strong> et
             <strong className="text-white"> Dettes fournisseurs +{fmt(modeleValeur.coutVariable)}</strong>.

@@ -536,7 +536,9 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Synergia Lab" }]);
     const joueur = etat.joueurs[0];
     const modele = getModeleValeurEntreprise(joueur.entreprise);
-    expect(modele.mode).toBe("service");
+    // B9-A (2026-04-24) : mode "service" historique splitté en "conseil" (Synergia)
+    // et "logistique" (Véloce). Comportement moteur identique jusqu'en B9-E.
+    expect(modele.mode).toBe("conseil");
 
     const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
     const dettesAvant = joueur.bilan.dettes;

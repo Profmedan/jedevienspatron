@@ -587,10 +587,12 @@ export function appliquerAchatMarchandises(
   const joueur = etat.joueurs[joueurIdx];
   const modifications: ResultatAction["modifications"] = [];
 
-  // Blocage sur le mode "service" : le coût variable est un flux de
-  // services extérieurs (acte 4 de la vente), pas un stock reconstituable.
+  // Blocage sur les modes "service" / "logistique" / "conseil" : le coût
+  // variable est un flux de services extérieurs (acte 4 de la vente), pas
+  // un stock reconstituable. "service" est conservé en tant qu'alias
+  // historique (saves v3 + templates custom).
   const modeleAchat = getModeleValeurEntreprise(joueur.entreprise);
-  if (modeleAchat.mode === "service") {
+  if (modeleAchat.mode === "service" || modeleAchat.mode === "logistique" || modeleAchat.mode === "conseil") {
     return {
       succes: false,
       messageErreur: "Votre entreprise commercialise des services. Vous n'avez pas besoin d'acheter de marchandises.",
@@ -794,6 +796,27 @@ const MODELE_DEFAUT_PAR_SECTEUR: Record<SecteurActivite, ModeleValeurEntreprise>
     libelleExecution: "Ressources mobilisées pour exécuter la prestation",
     libelleContrepartie: "Facture fournisseur à régler au prochain trimestre",
   },
+  // B9-A (2026-04-24) : défauts pour les nouveaux modes "logistique" et
+  // "conseil". Même contenu de base que "service" (comportement moteur
+  // identique en B9-A), libellés divergés à B9-D/E.
+  logistique: {
+    mode: "logistique",
+    ceQueJeVends: "Des prestations de transport et de livraison",
+    dOuVientLaValeur: "La flotte, les chauffeurs et la planification des tournées",
+    goulotPrincipal: "Disponibilité de la flotte et productivité des tournées",
+    coutVariable: PRIX_UNITAIRE_MARCHANDISE,
+    libelleExecution: "Tournée exécutée et facturée",
+    libelleContrepartie: "Coût variable de la tournée (carburant, sous-traitance)",
+  },
+  conseil: {
+    mode: "conseil",
+    ceQueJeVends: "Des missions de conseil et des licences logicielles",
+    dOuVientLaValeur: "Le savoir-faire des consultants et la propriété intellectuelle",
+    goulotPrincipal: "Staffing des missions et monétisation des licences",
+    coutVariable: PRIX_UNITAIRE_MARCHANDISE,
+    libelleExecution: "Mission livrée et facturée",
+    libelleContrepartie: "Honoraires des consultants et frais de mission",
+  },
 };
 
 /**
@@ -916,10 +939,14 @@ export function appliquerCarteClient(
   } else if (modele.mode === "production") {
     push("stocks", -coutVar, `${modele.libelleExecution} : −${coutVar} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
     push("productionStockee", -coutVar, `${modele.libelleContrepartie} : −${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
-  } else if (modele.mode === "service") {
-    // Le service ne consomme pas de stock physique mais mobilise des
-    // ressources (sous-traitance, carburant, consommables techniques) :
-    // on enregistre un coût variable réel au lieu d'une marge brute 100 %.
+  } else if (modele.mode === "service" || modele.mode === "logistique" || modele.mode === "conseil") {
+    // Les services (alias historique "service" + modes B9-A "logistique" /
+    // "conseil") ne consomment pas de stock physique mais mobilisent des
+    // ressources (sous-traitance, carburant, consommables techniques,
+    // honoraires consultants) : on enregistre un coût variable réel au
+    // lieu d'une marge brute 100 %.
+    // B9-D/E divergera les 3 modes (ex. Synergia aura ses en-cours mission
+    // + licences, Véloce ses en-cours tournée).
     push("servicesExterieurs", coutVar, `${modele.libelleExecution} : +${coutVar} € de services extérieurs`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
     push("dettes", coutVar, `${modele.libelleContrepartie} : +${coutVar} € de dettes fournisseurs`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
   }
@@ -1002,7 +1029,31 @@ export function appliquerSpecialiteEntreprise(
   return { succes: true, modifications };
 }
 
-// ─── ÉTAPE 6 : Clôture du trimestre (fusion T25.C) ───────────
+// ─── ÉTAPE 3 : Réalisation métier (B9-A placeholder, polymorphe B9-D) ───────
+//
+// Fonction placeholder insérée en B9-A (2026-04-24). Sert à matérialiser
+// la nouvelle étape REALISATION_METIER dans le cycle 8 étapes sans
+// changer la sémantique moteur : retourne une liste de modifications vide,
+// ce qui permet à `useGameFlow` de traverser l'étape via sa condition
+// skip-auto (modsFiltrees.length === 0 → avancerEtape) sans rien afficher.
+//
+// B9-D (prochaine tâche) remplacera ce corps par un dispatcher par mode :
+//   - production  (Belvaux)  : +stocks produits finis + productionStockee
+//   - negoce      (Azura)    : +servicesExterieurs (coût canal 300 €) / −tresorerie
+//   - logistique  (Véloce)   : +stocks en-cours tournée / +dettes (heures chauffeur)
+//   - conseil     (Synergia) : +stocks en-cours mission / +dettes (honoraires)
+//
+// Cette fonction EXPORTE un `ResultatAction` vide pour respecter le contrat
+// attendu par `useGameFlow.switch case ETAPES.REALISATION_METIER`.
+export function appliquerRealisationMetier(
+  _etat: EtatJeu,
+  _joueurIdx: number,
+): ResultatAction {
+  // B9-A : placeholder — pas d'écriture comptable, l'étape se traverse via skip-auto.
+  return { succes: true, modifications: [] };
+}
+
+// ─── ÉTAPE 7 : Clôture & bilan (fusion B9-A des ex-CLOTURE_TRIMESTRE + BILAN) ────
 //
 // Fusion des anciennes étapes 0 (charges fixes + amortissements + emprunt)
 // et 5 (effets récurrents + spécialité). L'ordre d'application est celui
@@ -1773,7 +1824,7 @@ export function cloturerAnnee(etat: EtatJeu): void {
 // ─── AVANCEMENT DU TOUR ─────────────────────────────────────
 
 export function avancerEtape(etat: EtatJeu): void {
-  if (etat.etapeTour < ETAPES.BILAN) {
+  if (etat.etapeTour < ETAPES.CLOTURE_BILAN) {
     etat.etapeTour = (etat.etapeTour + 1) as EtapeTour;
   } else {
     // Fin du tour pour ce joueur — passer au joueur suivant

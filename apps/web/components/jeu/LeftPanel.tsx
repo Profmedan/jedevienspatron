@@ -8,17 +8,17 @@ import { nomCompte } from "./utils";
 // Les cartes du mini-deck logistique sont désormais fusionnées dans
 // `InvestissementPanel`, affiché dans le panneau central (MainContent).
 
-// T25.C — Nouveau cycle 8 étapes (activité puis clôture).
-// Ordre aligné sur ETAPES.* du moteur (packages/game-engine/src/types.ts).
+// B9-A (2026-04-24) — cycle 8 étapes avec insertion REALISATION_METIER(3)
+// et fusion CLOTURE_BILAN(7). Ordre aligné sur ETAPES.* du moteur.
 const STEP_NAMES = [
   "Encaissements créances",    // 0 — ENCAISSEMENTS_CREANCES
   "Paiement commerciaux",      // 1 — COMMERCIAUX
   "Approvisionnement",         // 2 — ACHATS_STOCK
-  "Traitement ventes",         // 3 — VENTES
-  "Décisions",                 // 4 — DECISION
-  "Événement",                 // 5 — EVENEMENT
-  "Clôture du trimestre",      // 6 — CLOTURE_TRIMESTRE
-  "Bilan trimestre",           // 7 — BILAN
+  "Réalisation métier",        // 3 — REALISATION_METIER (B9-A placeholder)
+  "Facturation & ventes",      // 4 — FACTURATION_VENTES (ex-VENTES)
+  "Décisions",                 // 5 — DECISION
+  "Événement",                 // 6 — EVENEMENT
+  "Clôture & bilan",           // 7 — CLOTURE_BILAN (fusion ex-CLOTURE_TRIMESTRE + BILAN)
 ];
 
 interface JournalEntry {
@@ -79,18 +79,18 @@ interface LeftPanelProps {
   onApplySaleGroup?: (saleGroupId: string) => void;
 }
 
-// T25.C — Nouveau cycle 8 étapes (activité puis clôture).
-// Indexé par ETAPES.* (même ordre que STEP_NAMES ci-dessus).
+// B9-A (2026-04-24) — cycle 8 étapes avec insertion REALISATION_METIER(3)
+// et fusion CLOTURE_BILAN(7). Indexé par ETAPES.* (même ordre que STEP_NAMES).
 // Override spécial sur COMMERCIAUX dans le corps du composant (présence de commerciaux).
 const STEP_HELP = [
   "Vos créances clients avancent d'un trimestre : celles qui arrivent à échéance entrent en trésorerie.", // 0 — ENCAISSEMENTS_CREANCES
   "Salaires versés. Nouveaux clients générés.",                                                           // 1 — COMMERCIAUX (override en bas)
   "Achat de stocks (optionnel).",                                                                         // 2 — ACHATS_STOCK
-  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.", // 3 — VENTES
-  "Sélection d'une carte de recrutement, d'investissement ou d'emprunt (optionnel).",                     // 4 — DECISION
-  "Une carte Événement sera piochée.",                                                                     // 5 — EVENEMENT
-  "Clôture : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents appliqués. Le résultat net se révèle.", // 6 — CLOTURE_TRIMESTRE
-  "Vérification du bilan. Fin du trimestre.",                                                              // 7 — BILAN
+  "Étape métier propre à votre entreprise (production, logistique, conseil…). Les écritures spécifiques seront appliquées ici.", // 3 — REALISATION_METIER (B9-A placeholder)
+  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.", // 4 — FACTURATION_VENTES
+  "Sélection d'une carte de recrutement, d'investissement ou d'emprunt (optionnel).",                     // 5 — DECISION
+  "Une carte Événement sera piochée.",                                                                     // 6 — EVENEMENT
+  "Clôture & bilan : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents. Le résultat net se révèle, puis le bilan est vérifié.", // 7 — CLOTURE_BILAN (fusion ex-CLOTURE_TRIMESTRE + BILAN)
 ];
 
 export function LeftPanel({
@@ -256,8 +256,8 @@ export function LeftPanel({
         <section className="rounded-[28px] border border-white/10 bg-slate-950/75 px-4 py-4">
           <div className="space-y-4">
             {(() => {
-              // ── MODE VENTES GROUPÉES (étape VENTES avec saleGroupId) ──
-              const hasSaleGroups = etapeTour === ETAPES.VENTES && activeStep.entries.some(e => e.saleGroupId);
+              // ── MODE VENTES GROUPÉES (étape FACTURATION_VENTES avec saleGroupId) ──
+              const hasSaleGroups = etapeTour === ETAPES.FACTURATION_VENTES && activeStep.entries.some(e => e.saleGroupId);
               if (hasSaleGroups && onApplySaleGroup) {
                 // Constantes d’affichage pédagogique
                 const DISPLAY_POS: Record<number, number> = { 2: 1, 1: 2, 3: 3, 4: 4 };
@@ -592,11 +592,13 @@ export function LeftPanel({
             <p className="text-sm text-slate-300">{stepHelp}</p>
 
             {etapeTour === ETAPES.ACHATS_STOCK && (
-              joueur.entreprise.secteurActivite === "service" ? (
+              (joueur.entreprise.secteurActivite === "service" ||
+               joueur.entreprise.secteurActivite === "logistique" ||
+               joueur.entreprise.secteurActivite === "conseil") ? (
                 <div className="space-y-2">
                   <div className="rounded-lg bg-sky-500/10 border border-sky-400/20 px-3 py-2.5">
                     <p className="text-xs leading-relaxed text-sky-100">
-                      💡 Votre entreprise commercialise des services. Vous n'avez pas de stocks de marchandises à constituer !
+                      💡 Votre entreprise ne constitue pas de stocks de marchandises à cette étape. L'activité métier aura lieu à l'étape 3 (Réalisation métier).
                     </p>
                   </div>
                   <button

@@ -82,6 +82,7 @@ export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: numb
  * • Synergia Lab (Innovation)        : +1 produitsFinanciers, +1 trésorerie
  */
 export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: number): ResultatAction;
+export declare function appliquerRealisationMetier(_etat: EtatJeu, _joueurIdx: number): ResultatAction;
 export declare function appliquerClotureTrimestre(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Applique la clôture d'exercice comptable pour un joueur.
