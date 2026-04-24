@@ -1,4 +1,112 @@
-# Tâches JE DEVIENS PATRON — mis à jour 2026-04-21
+# Tâches JE DEVIENS PATRON — mis à jour 2026-04-24
+
+---
+
+## Tâche B9 : Refonte métier polymorphe — étape 3 visible + 4 modes distincts — 2026-04-24 🚧
+
+### Contexte
+
+Suite de B8 palier 1 (2026-04-21), qui a installé 3 modes (`negoce` / `production` / `service`), `FluxClientsEntreprise`, `clientsPassifsParTour` et un switch 3 branches dans `appliquerCarteClient`. B9 reprend l'ambition de la session B9-attempt-1 (archivée sous `archive/b9-attempt-1-2026-04-23`) en la construisant proprement par-dessus B8 cette fois.
+
+**Objectif pédagogique** : les 4 entreprises doivent être **réellement différentes** en jeu — pas seulement via des libellés, mais via des écritures comptables qui reflètent leur cœur métier. En particulier, une étape 3 visible « Réalisation métier » matérialise la création de valeur spécifique à chaque modèle économique.
+
+### Décisions validées (2026-04-24)
+
+**1B — 4 modes distincts** (`negoce` / `production` / `logistique` / `conseil`)
+Split du mode `service` en `logistique` (Véloce) et `conseil` (Synergia) pour permettre des écritures moteur différentes (Synergia aura ses en-cours mission + licences récurrentes, Véloce ses en-cours tournée + coût chauffeur).
+
+**2A — 8 étapes avec fusion CLOTURE_BILAN** (pas de passage à 9 étapes)
+Insertion de REALISATION_METIER en position 3 via décalage de VENTES/DECISION/EVENEMENT de +1 et fusion des ex-CLOTURE_TRIMESTRE + BILAN en un seul `CLOTURE_BILAN` (index 7). Le moteur garde 2 passes séquentielles sous l'index 7 ; l'UI présente une seule étape.
+
+**3B — Dispatchs moteur par mode, `ModeleValeurEntreprise` inchangé pour les libellés**
+`ModeleValeurEntreprise` (B8) garde ses champs texte (`ceQueJeVends`, `libelleExecution`, etc.). Les paramètres métier (coût canal Azura 300€, matière/finis Belvaux, en-cours services) sont ajoutés en propriétés séparées sur `EntrepriseTemplate` et lus par des fonctions dédiées (`appliquerRealisationBelvaux`, `appliquerRealisationAzura`, etc.).
+
+**Garde-fou entre B9-A et B9-C** : après migration structurelle (B9-A), faire passer `npx tsc --noEmit` (engine + web) + smoke test scripté sur cycle /8 avec étape 3 placeholder avant d'injecter la polymorphie. Permet d'isoler les régressions de structure des régressions de sémantique métier.
+
+### B9-A.1 — Spec d'écritures cibles (par étape polymorphe × par mode)
+
+**Nouveau cycle 8 étapes** (après B9-A) :
+
+| Index | Constante | Rôle |
+|---|---|---|
+| 0 | `ENCAISSEMENTS_CREANCES` | Avancement créances — inchangé |
+| 1 | `COMMERCIAUX` | Paiement + génération clients — inchangé |
+| 2 | `ACHATS_STOCK` | Achats de marchandises — inchangé (polymorphie éventuelle B9-C) |
+| 3 | `REALISATION_METIER` | **NEW** — Acte métier polymorphe (B9-D) |
+| 4 | `FACTURATION_VENTES` | ex-VENTES — décalé ; polymorphie étendue B9-E |
+| 5 | `DECISION` | ex-4 — décalé |
+| 6 | `EVENEMENT` | ex-5 — décalé |
+| 7 | `CLOTURE_BILAN` | **Fusion** ex-CLOTURE_TRIMESTRE + ex-BILAN (2 passes moteur) |
+
+**4 modes** : `negoce` (Azura), `production` (Belvaux), `logistique` (Véloce), `conseil` (Synergia).
+
+**Écritures cibles par étape × par mode** :
+
+| Étape | Mode | Écritures |
+|---|---|---|
+| 2 ACHATS_STOCK | tous | D `stocks` / C `tresorerie` ou `dettes` (B8, inchangé) |
+| 3 REALISATION_METIER | `negoce` | D `servicesExterieurs` +300 € (canal) / C `tresorerie` −300 € ou `dettes` +300 € |
+| 3 REALISATION_METIER | `production` | D `stocks` (produits finis) + `coutVariable` / C `productionStockee` + `coutVariable` ; consommation implicite de matière via `stocks` initial (B9-D V1) |
+| 3 REALISATION_METIER | `logistique` | D `stocks` (en-cours tournée) + `coutVariable` / C `dettes` + `coutVariable` (heures chauffeur à payer) |
+| 3 REALISATION_METIER | `conseil` | D `stocks` (en-cours mission) + `coutVariable` / C `dettes` + `coutVariable` (honoraires consultants) |
+| 4 FACTURATION_VENTES | `negoce` | D `stocks` − `coutVariable` / C `achats` + `coutVariable` (CMV, B8) + D `ventes` / C `tresorerie` ou créances |
+| 4 FACTURATION_VENTES | `production` | D `productionStockee` − `coutVariable` / C `stocks` (produits finis) − `coutVariable` (extourne) + vente |
+| 4 FACTURATION_VENTES | `logistique` | D `productionStockee` − `coutVariable` / C `stocks` (en-cours tournée) − `coutVariable` (extourne) + vente |
+| 4 FACTURATION_VENTES | `conseil` | D `productionStockee` − `coutVariable` / C `stocks` (en-cours mission) − `coutVariable` (extourne) + vente |
+
+**Constantes de référence** :
+- `PRIX_UNITAIRE_MARCHANDISE = 1000` (inchangé)
+- `COUT_CANAL_AZURA_PAR_TOUR = 300` (nouveau, étape 3 Azura)
+- `CHARGES_FIXES_PAR_TOUR = 2000` (inchangé, clôture)
+- `coutVariable` par entreprise lu depuis `modeleValeur.coutVariable` (B8, déjà à 1000 pour les 4)
+
+**Invariants à préserver** :
+- Partie double stricte : Σ débits = Σ crédits par écriture (vérification à chaque application)
+- Bilan équilibré Actif = Passif après chaque étape complète
+- Modes B8 existants (`negoce`/`production`/`service`) migrent vers B9 sans perte :
+  - `negoce` → `negoce`
+  - `production` → `production`
+  - `service` → `logistique` (Véloce) ou `conseil` (Synergia) selon `nom` entreprise
+- Tests B8 conservés (199/199 avant B9 → 199/199 après B9-A, étendu progressivement en B9-D/E)
+- `clientsPassifsParTour` conservé (champ B8 toujours actif)
+
+### Plan d'implémentation
+
+**Ordre de travail** (un commit par jalon, Pierre push après chaque) :
+
+1. **B9-A.1** — ce doc (spec écritures, pas de code) ← ce commit
+2. **B9-A** — structure :
+   - `types.ts` : renuméroter `EtapeTour`, renommer `ETAPES.VENTES → FACTURATION_VENTES`, ajouter `REALISATION_METIER = 3`, renommer `CLOTURE_TRIMESTRE → CLOTURE_BILAN`, bumper `SAVE_VERSION 3 → 4`, ajouter literal `"logistique"` et `"conseil"` au type `SecteurActivite` et `ModeleValeurEntreprise.mode`
+   - `entreprises.ts` : Véloce `service → logistique`, Synergia `service → conseil` sur les 2 champs
+   - `engine.ts` : re-câbler les anciens index dans `appliquerClotureTrimestre`, `verifierFinTour`, switch `appliquerCarteClient` adapté au nouveau literal, ajouter une fonction placeholder `appliquerRealisationMetier` qui ne fait rien et return ResultatAction vide
+   - `useGameFlow.ts`, `LeftPanel.tsx`, `ModalEtape.tsx`, `pedagogicalMessages.ts`, `MainContent.tsx` : remappage d'index, ajout de l'étape 3 dans STEP_NAMES + ETAPE_INFO + MODALES_ETAPES (placeholder pédagogique « placeholder, activé en B9-D »)
+   - Constante `COUT_CANAL_AZURA_PAR_TOUR = 300` ajoutée dans `types.ts`
+3. **🛡️ Garde-fou B9-A** :
+   - `npx tsc --noEmit` sur `packages/game-engine` → EXIT=0
+   - `npx tsc --noEmit` sur `apps/web` → EXIT=0 (filtrage pré-existant TS2786 lucide-react accepté)
+   - Rebuild `dist/` : `npm run build --workspace=packages/game-engine`
+   - Tests moteur : `cd packages/game-engine && npm test` → les 199 tests B8 passent toujours (l'étape 3 placeholder n'ajoute aucune écriture, rien ne doit régresser)
+   - Smoke test scripté : `initialiserJeu({Belvaux}) → traverser les 8 étapes → vérifier bilan équilibré fin de T1`
+4. **B9-C** — polymorphie étape 2 si nécessaire (souvent déjà OK pour Belvaux/Azura en B8 ; Véloce/Synergia pourraient n'avoir rien à acheter, à arbitrer)
+5. **B9-D** — polymorphie étape 3 `appliquerRealisationMetier` : 4 fonctions dédiées par mode, avec les écritures spécifiées plus haut ; ajout du helper `pushByName` pour cibler des lignes de stock précises (matière première vs produits finis vs en-cours)
+6. **B9-E** — extension du switch `appliquerCarteClient` avec les 4 branches (3 modes B8 → 4 modes B9) et les extournes (production/logistique/conseil)
+7. **B9-F** — tests bout-en-bout 4 entreprises + régression B8 + test de couverture polymorphie
+8. **B9-G** — UI pitch : enrichir `CompanyIntro` (B8-E déjà amorcé) et `LeftPanel` pour différencier Véloce de Synergia, ajouter explications étape 3
+
+### Critères de succès (definition of done)
+
+- Un joueur lance une partie Belvaux : il voit à l'étape 3 « Réalisation métier — production des produits finis » avec des écritures visibles (+productionStockée, +stocks produits finis). À l'étape 4, les mêmes écritures sont extournées contre la vente.
+- Un joueur lance une partie Véloce : étape 3 affiche « Préparation/exécution de la tournée » avec coût chauffeur + en-cours. Étape 4 extourne l'en-cours.
+- Un joueur lance une partie Synergia : étape 3 affiche « Réalisation de la mission » avec honoraires consultants + en-cours. Étape 4 extourne l'en-cours. Licences récurrentes en clôture (déjà via `effetsPassifs`).
+- Un joueur lance une partie Azura : étape 3 affiche « Coût du canal (300 €) ». Étape 4 reste sur modèle CMV B8.
+- Les 4 entreprises ont un bilan équilibré à chaque étape.
+- Tests moteur 199/199 (ou +) — aucune régression B7/B8.
+- `npx tsc --noEmit` engine + web → EXIT=0.
+
+### Matériel de référence
+
+- Branche archive `archive/b9-attempt-1-2026-04-23` : contient la tentative précédente de B9, utile comme source d'inspiration pour les helpers (`pushByName`, `mutateActifByName`) et les libellés pédagogiques. Pas à merger — à lire.
+- Leçons : L-T25R-1..5 et L-COMM-1..2 dans `tasks/lessons.md` (session B9-attempt-1).
 
 ---
 
