@@ -867,7 +867,36 @@ function appliquerCarteClient(etat, joueurIdx, carteClient, saleGroupIndex) {
         push("achats", coutVar, `${modele.libelleContrepartie} : +${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
     }
     else if (modele.mode === "production") {
-        push("stocks", -coutVar, `${modele.libelleExecution} : −${coutVar} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+        // B9-D post (2026-04-24) — la vente de Belvaux consomme UNIQUEMENT des
+        // produits finis (pas des matières premières). L'ancien `push("stocks", ...)`
+        // ciblait par catégorie et tombait sur la 1re ligne = "Stocks matières
+        // premières", ce qui permettait de facturer des clients sans avoir rien
+        // produit. Le garde-fou en amont (useGameFlow, case FACTURATION_VENTES)
+        // limite déjà le nombre de clients traités au stock PF disponible ; ici
+        // on refuse par sécurité si la ligne est introuvable ou vide, pour
+        // éviter un négatif silencieux.
+        const lignePF = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis");
+        if (!lignePF || lignePF.valeur < coutVar) {
+            return {
+                succes: false,
+                messageErreur: `Pas assez de produits finis en stock pour servir ce client (${lignePF?.valeur ?? 0} € dispo, ${coutVar} € requis).`,
+                modifications: [],
+            };
+        }
+        // Écriture 3 (sortie PF) — avec extras saleGroupId pour l'UI groupée.
+        const ancPF = lignePF.valeur;
+        lignePF.valeur = Math.max(0, ancPF - coutVar);
+        modifications.push({
+            joueurId: joueur.id,
+            poste: "stocks",
+            ancienneValeur: ancPF,
+            nouvelleValeur: lignePF.valeur,
+            explication: `${modele.libelleExecution} : −${coutVar} € de produits finis sortis du stock`,
+            saleGroupId: groupId,
+            saleClientLabel: clientLabel,
+            saleActIndex: 3,
+        });
+        // Écriture 4 (extourne productionStockée) — via push classique
         push("productionStockee", -coutVar, `${modele.libelleContrepartie} : −${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
     }
     else if (modele.mode === "service" || modele.mode === "logistique" || modele.mode === "conseil") {
@@ -1009,26 +1038,45 @@ function appliquerRealisationBelvaux(etat, joueurIdx) {
             modifications: [],
         };
     }
-    const quantite = 1; // V1 B9-D : production automatique d'1 unité par trimestre.
-    const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE; // 1 000 €
-    // Garde-fou matière : si stock insuffisant, pas de production — message clair.
-    if (ligneMP.valeur < montant) {
+    // B9-D post (2026-04-24) — Capacité de production dédiée, distincte de la
+    // capacité logistique (calculerCapaciteLogistique). Belvaux fabrique jusqu'à
+    // PRODUCTION_BELVAUX_PAR_TOUR unités par trimestre, limitée par les MP.
+    const coutUnitaire = types_1.PRIX_UNITAIRE_MARCHANDISE; // 1 000 € par unité
+    const capaciteProduction = types_1.PRODUCTION_BELVAUX_PAR_TOUR;
+    const capaciteMatiere = Math.floor(ligneMP.valeur / coutUnitaire);
+    const quantiteEffective = Math.min(capaciteProduction, capaciteMatiere);
+    // Cas 0 production : aucune matière disponible (ou MP < 1 unité).
+    if (quantiteEffective === 0) {
         modifications.push({
             joueurId: joueur.id,
             poste: "stocks",
             ancienneValeur: ligneMP.valeur,
             nouvelleValeur: ligneMP.valeur,
-            explication: `Aucune production ce trimestre : matière insuffisante (${ligneMP.valeur} € en stock, ${montant} € requis).`,
+            explication: `Aucune production ce trimestre : matière insuffisante (${ligneMP.valeur} € en stock, ${coutUnitaire} € requis par unité).`,
         });
         return { succes: true, modifications };
     }
-    // Écriture 1 — consommation matière première
+    // Production partielle : capacité théorique dépasse la matière disponible.
+    // Message pédagogique avant les écritures pour que l'élève comprenne pourquoi
+    // il ne produit pas les 2 unités attendues.
+    const productionPartielle = quantiteEffective < capaciteProduction;
+    if (productionPartielle) {
+        modifications.push({
+            joueurId: joueur.id,
+            poste: "stocks",
+            ancienneValeur: ligneMP.valeur,
+            nouvelleValeur: ligneMP.valeur,
+            explication: `La machine pouvait produire ${capaciteProduction} lots, mais la matière disponible n'a permis d'en fabriquer que ${quantiteEffective}.`,
+        });
+    }
+    const montantTotal = quantiteEffective * coutUnitaire;
     const push = makePush(joueur, modifications);
-    push("achats", montant, `Variation de stock matières premières : consommation de ${quantite} unité (+${montant} € en charges)`);
-    pushByName(joueur, modifications, "Stocks matières premières", -montant, `Sortie de matières premières pour production (−${montant} €)`);
-    // Écriture 2 — entrée en stock des produits finis
-    pushByName(joueur, modifications, "Stocks produits finis", +montant, `Entrée en stock : ${quantite} produit fini valorisé au coût de production (+${montant} €)`);
-    push("productionStockee", montant, `Production stockée : la valeur produite est enregistrée en contrepartie de l'entrée en stock (+${montant} €)`);
+    // Écriture 1 — consommation matière première (agrégée pour les N unités)
+    push("achats", montantTotal, `Variation de stock matières premières : consommation de ${quantiteEffective} unité${quantiteEffective > 1 ? "s" : ""} (+${montantTotal} € en charges)`);
+    pushByName(joueur, modifications, "Stocks matières premières", -montantTotal, `Sortie de matières premières pour production (−${montantTotal} €)`);
+    // Écriture 2 — entrée en stock des produits finis (agrégée)
+    pushByName(joueur, modifications, "Stocks produits finis", +montantTotal, `Entrée en stock : ${quantiteEffective} produit${quantiteEffective > 1 ? "s" : ""} fini${quantiteEffective > 1 ? "s" : ""} valorisé${quantiteEffective > 1 ? "s" : ""} au coût de production (+${montantTotal} €)`);
+    push("productionStockee", montantTotal, `Production stockée : la valeur produite est enregistrée en contrepartie de l'entrée en stock (+${montantTotal} €)`);
     return { succes: true, modifications };
 }
 /**

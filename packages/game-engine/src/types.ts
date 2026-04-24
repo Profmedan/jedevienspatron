@@ -526,6 +526,28 @@ export const COUT_APPROCHE_VELOCE_PAR_TOUR = 300;
  * Recalibrage prévu après partie manuelle.
  */
 export const COUT_STAFFING_SYNERGIA_PAR_TOUR = 400;
+/**
+ * B9-D post (2026-04-24) — Capacité de production automatique de Belvaux
+ * à l'étape 3 (REALISATION_METIER).
+ *
+ * Belvaux fabrique jusqu'à N produits finis par trimestre, dans la limite
+ * de ses matières premières disponibles (coûtVariable × quantité).
+ * Production partielle si MP insuffisante (ex. 1 PF si 1 000 € de MP,
+ * 0 PF si aucune MP) avec message pédagogique explicite.
+ *
+ * V1 (2026-04-24) : 2 PF/trim. Aligné avec le Commercial Junior de départ
+ * (2 clients/trim) pour ne pas créer de frustration systématique au T1.
+ * Le goulot apparaît quand le joueur recrute un 2e commercial, subit un
+ * événement réduisant les MP, ou oublie de racheter à l'étape 2.
+ *
+ * NB : cette capacité est VOLONTAIREMENT distincte de `calculerCapaciteLogistique`
+ * (combien l'entreprise peut livrer/traiter de clients). La capacité de
+ * PRODUCTION (combien elle peut fabriquer) et la capacité LOGISTIQUE
+ * (combien elle peut livrer) sont deux notions différentes. Les futures
+ * cartes Décision (Robot Belvaux N1/N2) augmenteront cette capacité de
+ * production sans toucher à la capacité logistique.
+ */
+export const PRODUCTION_BELVAUX_PAR_TOUR = 2;
 /** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
 export const REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */

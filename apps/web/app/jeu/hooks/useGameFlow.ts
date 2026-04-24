@@ -7,6 +7,7 @@ import {
   appliquerAvancementCreances, appliquerPaiementCommerciaux, appliquerCarteClient,
   appliquerRealisationMetier,
   appliquerExtourneEnCours,
+  getModeleValeurEntreprise,
   genererClientsSpecialite,
   tirerCartesDecision, acheterCarteDecision, investirCartePersonnelle, licencierCommercial, vendreImmobilisation,
   appliquerCarteEvenement, verifierFinTour, genererClientsParCommerciaux,
@@ -566,7 +567,6 @@ export function useGameFlow({
 
         const capacite = calculerCapaciteLogistique(joueur);
         const clientsAtrait = joueur.clientsATrait;
-        let clientsPerdusPrise = 0;
 
         clientsAtrait.sort((a, b) => {
           const rentabilitéA = b.delaiPaiement - a.delaiPaiement;
@@ -574,25 +574,53 @@ export function useGameFlow({
           return b.montantVentes - a.montantVentes;
         });
 
-        const clientsTraites = clientsAtrait.slice(0, capacite);
-        const clientsPerdus = clientsAtrait.slice(capacite);
+        // 1. Filtrage par capacité logistique (combien d'unités on peut livrer/traiter)
+        let clientsTraites = clientsAtrait.slice(0, capacite);
+        const perdusCapacite = clientsAtrait.slice(capacite);
+
+        // 2. B9-D post (2026-04-24) — Filtrage supplémentaire par stock PF pour
+        //    le mode production. Belvaux ne peut servir que ce qu'il a fabriqué.
+        //    Les clients au-delà du stock PF disponible sont perdus, avec un
+        //    message distinct de la capacité logistique (notion différente).
+        const modele = getModeleValeurEntreprise(joueur.entreprise);
+        let perdusStockPF: typeof clientsTraites = [];
+        if (modele.mode === "production") {
+          const lignePF = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis");
+          const stockPF = lignePF?.valeur ?? 0;
+          const coutVar = modele.coutVariable;
+          const nbServibles = Math.floor(stockPF / coutVar);
+          if (clientsTraites.length > nbServibles) {
+            perdusStockPF = clientsTraites.slice(nbServibles);
+            clientsTraites = clientsTraites.slice(0, nbServibles);
+          }
+        }
 
         for (let si = 0; si < clientsTraites.length; si++) {
           const r = appliquerCarteClient(next, idx, clientsTraites[si], si);
           if (r.succes) mods = [...mods, ...(r.modifications as ModificationMoteur[])];
         }
 
-        clientsPerdusPrise = clientsPerdus.length;
+        const clientsPerdusPrise = perdusCapacite.length + perdusStockPF.length;
         joueur.clientsPerdusCeTour = clientsPerdusPrise;
         joueur.clientsATrait = [];
 
-        if (clientsPerdusPrise > 0) {
+        // Messages pédagogiques distincts selon la cause de perte.
+        if (perdusCapacite.length > 0) {
           mods.push({
             joueurId: joueur.id,
             poste: "ventes",
             ancienneValeur: 0,
             nouvelleValeur: 0,
-            explication: `⚠️ Capacité logistique dépassée ! ${clientsPerdusPrise} client(s) perdu(s) faute de capacité (max ${capacite}, ${clientsAtrait.length} en attente).`,
+            explication: `⚠️ Capacité logistique dépassée ! ${perdusCapacite.length} client(s) perdu(s) faute de capacité de traitement (max ${capacite}, ${clientsAtrait.length} en attente).`,
+          });
+        }
+        if (perdusStockPF.length > 0) {
+          mods.push({
+            joueurId: joueur.id,
+            poste: "ventes",
+            ancienneValeur: 0,
+            nouvelleValeur: 0,
+            explication: `⚠️ Production insuffisante ! ${perdusStockPF.length} client(s) perdu(s) faute de produits finis en stock — pour en vendre plus, il faut en fabriquer plus à l'étape 3.`,
           });
         }
         break;

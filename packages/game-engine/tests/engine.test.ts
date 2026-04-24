@@ -526,14 +526,17 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant);
   });
 
-  test("Production (Belvaux) : stocks − / productionStockée − (Option A, PCG)", () => {
+  test("Production (Belvaux) : stocks PF − / productionStockée − (B9-D post, vente consomme uniquement les PF)", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const modele = getModeleValeurEntreprise(joueur.entreprise);
     expect(modele.mode).toBe("production");
 
-    // B9-C (2026-04-24) : ligne de stock de Belvaux renommée "Stocks matières premières" (PCG classe 31)
-    const stocksAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+    // B9-D post (2026-04-24) — la vente consomme UNIQUEMENT des produits finis.
+    // On doit donc produire d'abord, sinon la vente échoue.
+    appliquerRealisationBelvaux(etat, 0);
+    const mpAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+    const pfAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
     const productionStockeeAvant = joueur.compteResultat.produits.productionStockee;
     const achatsAvant = joueur.compteResultat.charges.achats;
     const servicesAvant = joueur.compteResultat.charges.servicesExterieurs;
@@ -541,13 +544,24 @@ describe("appliquerCarteClient — couverture par modèle de valeur", () => {
     const result = appliquerCarteClient(etat, 0, CLIENT_PARTICULIER);
     expect(result.succes).toBe(true);
 
-    // Acte 3 : stocks − coutVariable (déstockage du produit fini)
-    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur).toBe(stocksAvant - modele.coutVariable);
+    // Acte 3 : Stocks produits finis − coutVariable (déstockage PF uniquement)
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur).toBe(pfAvant - modele.coutVariable);
+    // Les matières premières NE BOUGENT PAS pendant la vente (elles ont été
+    // consommées à la production, pas à la vente).
+    expect(joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur).toBe(mpAvant);
     // Acte 4 : productionStockée − coutVariable (variation négative, produit signé)
     expect(joueur.compteResultat.produits.productionStockee).toBe(productionStockeeAvant - modele.coutVariable);
     // Les autres branches (négoce achats, service) ne sont PAS empruntées
     expect(joueur.compteResultat.charges.achats).toBe(achatsAvant);
     expect(joueur.compteResultat.charges.servicesExterieurs).toBe(servicesAvant);
+  });
+
+  test("Production (Belvaux) : vente rejetée si aucun PF en stock (garde-fou)", () => {
+    const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
+    // PAS de réalisation préalable → PF = 0
+    const result = appliquerCarteClient(etat, 0, CLIENT_PARTICULIER);
+    expect(result.succes).toBe(false);
+    expect(result.messageErreur).toContain("produits finis");
   });
 
   test("Service (Synergia) : servicesExterieurs + / dettes + du coût variable", () => {
@@ -725,7 +739,7 @@ describe("B9-C — Étape 2 polymorphe par mode (approvisionnement)", () => {
 // ─── B9-D (2026-04-24) — Étape 3 polymorphe : réalisation métier par entreprise ──
 
 describe("B9-D — Étape 3 polymorphe par entreprise (réalisation métier)", () => {
-  test("Belvaux : 2 écritures doubles — consommation MP + entrée PF, effet net nul sur le résultat", () => {
+  test("Belvaux : 2 écritures doubles — consommation MP + entrée PF × 2 unités/trim, effet net nul sur le résultat", () => {
     const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
     const j = etat.joueurs[0];
 
@@ -737,22 +751,41 @@ describe("B9-D — Étape 3 polymorphe par entreprise (réalisation métier)", (
     const r = appliquerRealisationBelvaux(etat, 0);
     expect(r.succes).toBe(true);
 
-    // Écriture 1 : consommation MP
+    // B9-D post (2026-04-24) — capacité de production automatique = 2 unités/trim
+    // (PRODUCTION_BELVAUX_PAR_TOUR), aligné avec le Commercial Junior de départ.
+    const montantTotal = 2 * PRIX_UNITAIRE_MARCHANDISE; // 2 000 €
+
+    // Écriture 1 : consommation MP agrégée sur 2 unités
     expect(j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur)
-      .toBe(mpAvant - PRIX_UNITAIRE_MARCHANDISE);
-    expect(j.compteResultat.charges.achats).toBe(achatsAvant + PRIX_UNITAIRE_MARCHANDISE);
+      .toBe(mpAvant - montantTotal);
+    expect(j.compteResultat.charges.achats).toBe(achatsAvant + montantTotal);
 
-    // Écriture 2 : entrée PF
+    // Écriture 2 : entrée PF agrégée sur 2 unités
     expect(j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur)
-      .toBe(pfAvant + PRIX_UNITAIRE_MARCHANDISE);
+      .toBe(pfAvant + montantTotal);
     expect(j.compteResultat.produits.productionStockee)
-      .toBe(prodStockeeAvant + PRIX_UNITAIRE_MARCHANDISE);
+      .toBe(prodStockeeAvant + montantTotal);
 
-    // Effet net nul sur le résultat : +1000 charge et +1000 produit = 0
+    // Effet net nul sur le résultat : +2000 charge et +2000 produit = 0
     const deltaResultatBrut =
       (j.compteResultat.produits.productionStockee - prodStockeeAvant) -
       (j.compteResultat.charges.achats - achatsAvant);
     expect(deltaResultatBrut).toBe(0);
+  });
+
+  test("Belvaux : production partielle (1 PF) si MP ne couvre qu'1 unité sur les 2 théoriques", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const j = etat.joueurs[0];
+    // MP = 1 500 € → couvre 1 unité (1000) mais pas 2 (2000). Capacité théorique = 2 unités.
+    j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur = 1500;
+    const r = appliquerRealisationBelvaux(etat, 0);
+    expect(r.succes).toBe(true);
+    // Production partielle : 1 unité, reste 500 € de MP.
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur).toBe(500);
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur).toBe(1000);
+    // Message pédagogique présent.
+    const info = r.modifications.find((m) => m.explication.includes("La machine pouvait produire"));
+    expect(info).toBeDefined();
   });
 
   test("Belvaux : matière insuffisante → 0 production + message explicite", () => {

@@ -30,6 +30,7 @@ import {
   appliquerAvancementCreances,
   appliquerPaiementCommerciaux,
   appliquerCarteClient,
+  appliquerRealisationBelvaux,
   appliquerEffetsRecurrents,
   appliquerSpecialiteEntreprise,
   appliquerClotureTrimestre,
@@ -170,19 +171,24 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(snapApres).toEqual(snapAvant);
   });
 
-  test("Étape 4 (FACTURATION_VENTES) : traitement carte Client Particulier → +2 000 € tréso, +2 000 € ventes, -1 000 € stocks", () => {
+  test("Étape 4 (FACTURATION_VENTES) : traitement carte Client Particulier → +2 000 € tréso, +2 000 € ventes, PF −1 000 €", () => {
     const etat = initBelvaux();
-    // Particulier : 2 000 € comptant, consomme 1 unité (1 000 € de stock).
+    // B9-D post (2026-04-24) — la vente consomme maintenant uniquement les
+    // produits finis. Il faut donc produire préalablement (étape 3) pour
+    // avoir du PF en stock, sinon la vente est rejetée.
+    appliquerRealisationBelvaux(etat, 0);
+    // Particulier : 2 000 € comptant, consomme 1 PF (1 000 € de coût).
     const particulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
     expect(particulier).toBeDefined();
     const tresoAvant = getTresorerie(etat.joueurs[0]);
     const ventesAvant = etat.joueurs[0].compteResultat.produits.ventes;
-    const stocksAvant = stocksOf(etat.joueurs[0]);
+    const pfAvant = etat.joueurs[0].bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
     const res = appliquerCarteClient(etat, 0, particulier!, 0);
     expect(res.succes).toBe(true);
     expect(getTresorerie(etat.joueurs[0]) - tresoAvant).toBe(2000);
     expect(etat.joueurs[0].compteResultat.produits.ventes - ventesAvant).toBe(2000);
-    expect(stocksAvant - stocksOf(etat.joueurs[0])).toBe(1000);
+    // La vente consomme du PF, pas des MP.
+    expect(pfAvant - etat.joueurs[0].bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur).toBe(1000);
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
   });
 
@@ -199,15 +205,15 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(ecartApres).toBe(ecartAvant);
   });
 
-  test("Étape 7 (CLOTURE_BILAN) : -2 000 € charges fixes, -500 € capital emprunt, +2 000 € dotations, pas d'intérêts à T1, +1 000 € production stockée Belvaux", () => {
+  test("Étape 7 (CLOTURE_BILAN) : -2 000 € charges fixes, -500 € capital emprunt, +2 000 € dotations, pas d'intérêts à T1, pas de production fantôme Belvaux", () => {
     const etat = initBelvaux();
     const tresoAvant = getTresorerie(etat.joueurs[0]);
     const stocksAvant = stocksOf(etat.joueurs[0]);
+    const prodStockeeAvant = etat.joueurs[0].compteResultat.produits.productionStockee;
     const res = appliquerClotureTrimestre(etat, 0);
     expect(res.succes).toBe(true);
     const tresoApres = getTresorerie(etat.joueurs[0]);
     // Bloc structurel : -2 000 (charges fixes) -500 (capital emprunt) = -2 500
-    // Les effets récurrents / spécialité n'impactent pas la trésorerie pour Belvaux (production stockée = produit comptable, +1 stock).
     expect(tresoAvant - tresoApres).toBe(2500);
     // Charges fixes comptabilisées au CR
     expect(etat.joueurs[0].compteResultat.charges.servicesExterieurs).toBe(2000);
@@ -215,9 +221,12 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(etat.joueurs[0].compteResultat.charges.dotationsAmortissements).toBe(2000);
     // Pas d'intérêts à T1 (gated sur tour >= 3 — T25.B)
     expect(etat.joueurs[0].compteResultat.charges.chargesInteret).toBe(0);
-    // Spécialité Belvaux : +1 000 € production stockée, +1 unité stock
-    expect(etat.joueurs[0].compteResultat.produits.productionStockee).toBe(1000);
-    expect(stocksOf(etat.joueurs[0]) - stocksAvant).toBe(1000);
+    // B9-D post (2026-04-24) — l'ancien `effetsPassifs` Belvaux (+1 000 € production
+    // stockée + +1 000 € stocks en clôture) a été SUPPRIMÉ car il doublonnait avec
+    // la réalisation métier explicite à l'étape 3. La clôture SEULE ne doit donc
+    // plus produire ni ajouter de stock "fantôme" à Belvaux.
+    expect(etat.joueurs[0].compteResultat.produits.productionStockee).toBe(prodStockeeAvant);
+    expect(stocksOf(etat.joueurs[0])).toBe(stocksAvant);
     // Invariant comptable préservé après fusion
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
   });

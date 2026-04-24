@@ -4,7 +4,7 @@
 // Extraits fidèlement de JEDEVIENSPATRON_v2.html — Pierre Médan
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.COUT_STAFFING_SYNERGIA_PAR_TOUR = exports.COUT_APPROCHE_VELOCE_PAR_TOUR = exports.COUT_CANAL_AZURA_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
+exports.SCORE_SEUIL_MAJORE = exports.SCORE_SEUIL_STANDARD = exports.AMORTISSEMENT_PAR_BIEN = exports.NOM_IMMOBILISATIONS_AUTRES = exports.TAUX_AGIOS = exports.BENEFICE_QUALITATIF = exports.BONUS_CAPACITE = exports.REVENU_PAR_CLIENT = exports.NB_TRIMESTRES_PAR_EXERCICE = exports.TAUX_DIVIDENDES_AUTORISES = exports.RESERVE_LEGALE_SEUIL_CAPITAUX = exports.RESERVE_LEGALE_MONTANT = exports.TAUX_IS = exports.MONTANTS_EMPRUNT = exports.TAUX_INTERET_MAJORE = exports.TAUX_INTERET_ANNUEL = exports.CAPACITE_IMMOBILISATION_PAR_ENTREPRISE = exports.CAPACITE_IMMOBILISATION = exports.CAPACITE_BASE = exports.SCORE_MULTIPLICATEUR_IMMO = exports.SCORE_MULTIPLICATEUR_RESULTAT = exports.NB_TOURS_MAX = exports.NB_TOURS_PAR_AN = exports.INTERET_EMPRUNT_FREQUENCE = exports.REMBOURSEMENT_DECOUVERT_MAX_PAR_TOUR = exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = exports.PRODUCTION_BELVAUX_PAR_TOUR = exports.COUT_STAFFING_SYNERGIA_PAR_TOUR = exports.COUT_APPROCHE_VELOCE_PAR_TOUR = exports.COUT_CANAL_AZURA_PAR_TOUR = exports.PRIX_UNITAIRE_MARCHANDISE = exports.CHARGES_FIXES_PAR_TOUR = exports.DECOUVERT_MAX = exports.ETAPES = void 0;
 /**
  * Constantes nommées pour les étapes du tour (8 étapes, cycle B9 depuis 2026-04-24).
  *
@@ -70,6 +70,28 @@ exports.COUT_APPROCHE_VELOCE_PAR_TOUR = 300;
  * Recalibrage prévu après partie manuelle.
  */
 exports.COUT_STAFFING_SYNERGIA_PAR_TOUR = 400;
+/**
+ * B9-D post (2026-04-24) — Capacité de production automatique de Belvaux
+ * à l'étape 3 (REALISATION_METIER).
+ *
+ * Belvaux fabrique jusqu'à N produits finis par trimestre, dans la limite
+ * de ses matières premières disponibles (coûtVariable × quantité).
+ * Production partielle si MP insuffisante (ex. 1 PF si 1 000 € de MP,
+ * 0 PF si aucune MP) avec message pédagogique explicite.
+ *
+ * V1 (2026-04-24) : 2 PF/trim. Aligné avec le Commercial Junior de départ
+ * (2 clients/trim) pour ne pas créer de frustration systématique au T1.
+ * Le goulot apparaît quand le joueur recrute un 2e commercial, subit un
+ * événement réduisant les MP, ou oublie de racheter à l'étape 2.
+ *
+ * NB : cette capacité est VOLONTAIREMENT distincte de `calculerCapaciteLogistique`
+ * (combien l'entreprise peut livrer/traiter de clients). La capacité de
+ * PRODUCTION (combien elle peut fabriquer) et la capacité LOGISTIQUE
+ * (combien elle peut livrer) sont deux notions différentes. Les futures
+ * cartes Décision (Robot Belvaux N1/N2) augmenteront cette capacité de
+ * production sans toucher à la capacité logistique.
+ */
+exports.PRODUCTION_BELVAUX_PAR_TOUR = 2;
 /** Remboursement du capital emprunté par trimestre (500 € — baissé de 1000 le 2026-04-10) */
 exports.REMBOURSEMENT_EMPRUNT_PAR_TOUR = 500;
 /** Maximum de découvert remboursable par trimestre (progressif) */

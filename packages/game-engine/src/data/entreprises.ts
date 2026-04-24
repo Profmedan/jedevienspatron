@@ -81,11 +81,18 @@ export const ENTREPRISES: EntrepriseTemplate[] = [
     type: "Production",
     secteurActivite: "production",
     specialite: "⚡ Produit à chaque tour",
-    // Spécialité active : +1 000 € productionStockée, +1 000 € stocks par trimestre
-    effetsPassifs: [
-      { poste: "productionStockee", delta: 1000 },
-      { poste: "stocks", delta: 1000 },
-    ],
+    // B9-D post (2026-04-24) — `effetsPassifs` B8 SUPPRIMÉS.
+    //
+    // Avant B9-D, la "spécialité" de Belvaux était un bonus caché appliqué
+    // silencieusement à la clôture (+1 000 € productionStockée, +1 000 €
+    // stocks). Depuis B9-D, la production est devenue explicite à l'étape 3
+    // (REALISATION_METIER → `appliquerRealisationBelvaux`), avec écritures
+    // PCG-conformes et visibles par l'élève. Conserver les `effetsPassifs`
+    // aurait créé un double comptage : production à l'étape 3 + bonus caché
+    // à la clôture, générant une production fantôme non balancée.
+    //
+    // Le libellé "⚡ Produit à chaque tour" RESTE valable : c'est
+    // désormais l'étape 3 qui matérialise cette spécialité.
     // B8-C — Modèle de valeur : producteur industriel
     modeleValeur: {
       mode: "production",
