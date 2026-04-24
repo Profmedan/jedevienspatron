@@ -80,12 +80,18 @@ export function MainContent({
     }
   };
 
-  // ── Détecter si l’étape active touche les deux documents (Bilan ET CR) ──────
-  // → dans ce cas on affiche des mini-aperçus sous la barre d'onglets (Pattern 3)
-  // → sinon on garde le système d’onglets classique avec auto-switch
+  // ── Détecter si l'étape active touche les deux documents (Bilan ET CR) ──────
+  // → `modeDouble` est conservé pour l'indicateur visuel (dot) sur les onglets
+  //   non actifs, qui signale "l'autre document est aussi touché".
+  // → `showPartieDouble` (B9-UI.2 — 2026-04-24) pilote l'affichage du cadre
+  //   pédagogique Partie double. Il se déclenche dès qu'une écriture contient
+  //   au moins 2 lignes, MÊME si elles restent dans un seul document
+  //   (ex. Approvisionnement comptant : stocks + / trésorerie −, toutes deux
+  //   dans le Bilan mais toujours une partie double Débit = Crédit).
   const entriesBilan = _activeStep?.entries.filter((e) => getDocumentType(e.poste) === "Bilan") ?? [];
   const entriesCR    = _activeStep?.entries.filter((e) => getDocumentType(e.poste) === "CR")    ?? [];
   const modeDouble   = entriesBilan.length > 0 && entriesCR.length > 0;
+  const showPartieDouble = (entriesBilan.length + entriesCR.length) >= 2;
 
   // Auto-switch vers l’onglet du document impacté par l’écriture courante.
   // Fonctionne aussi en modeDouble : on affiche TOUJOURS un seul document,
@@ -151,19 +157,20 @@ export function MainContent({
           })}
         </div>
 
-        {/* ─── Cadre PARTIE DOUBLE — visible uniquement en modeDouble ───────────
-            Le panneau central n'affiche qu'UN SEUL document à la fois (bascule
-            auto selon l'écriture courante). Les 2 mini-cartes sont réunies dans
-            un cadre pédagogique qui matérialise la règle fondamentale du PCG :
-            chaque écriture touche au moins 2 comptes, et Σ Débits = Σ Crédits.
-            Les mini-cartes servent à :
-              1) voir d'un coup d'œil ce qui bouge dans l'autre document,
-              2) basculer manuellement d'un document à l'autre,
-              3) vérifier l'équilibre comptable de l'écriture en cours.
+        {/* ─── Cadre PARTIE DOUBLE — visible dès qu'une écriture a ≥ 2 lignes ──
+            La partie double est une règle PCG universelle : Σ Débits = Σ Crédits
+            pour toute écriture, MÊME si toutes les lignes restent dans un seul
+            document (ex. Approvisionnement comptant : stocks + / trésorerie −,
+            deux lignes du Bilan mais toujours débit = crédit).
+            Le cadre s'adapte au contexte :
+              - Si les 2 documents sont touchés : 2 mini-cartes côte à côte
+                (Bilan cyan + CR violet), utiles aussi pour basculer d'onglet.
+              - Si un seul document est touché : 1 mini-carte pleine largeur.
+              - Footer Σ Débits = Σ Crédits TOUJOURS affiché — c'est le message.
             Le titre est cliquable et ouvre le glossaire sur l'entrée "partie-double".
         */}
         <AnimatePresence>
-          {modeDouble && (
+          {showPartieDouble && (
             <motion.div
               key="mini-previews"
               initial={{ opacity: 0, height: 0 }}
@@ -184,6 +191,8 @@ export function MainContent({
                   else totalCredit += amount;
                 }
                 const equilibre = Math.abs(totalDebit - totalCredit) < 0.01;
+                // Layout adaptatif : 1 colonne si un seul document touché, 2 si les deux.
+                const gridCols = modeDouble ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
                 return (
                   <div className="mt-3 rounded-2xl border-2 border-amber-400/30 bg-amber-500/[0.04] p-3 shadow-lg shadow-amber-500/5">
                     {/* Header cliquable : ouvre le glossaire sur "Partie double" */}
@@ -207,25 +216,30 @@ export function MainContent({
                       </span>
                     </button>
 
-                    {/* Les 2 mini-cartes Bilan / Compte de Résultat */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <ImpactMiniCard
-                        accent="cyan"
-                        label="📊 Bilan"
-                        entries={entriesBilan}
-                        isCurrentTab={tabVisibleState === "bilan"}
-                        onClick={() => handleTabChange("bilan")}
-                      />
-                      <ImpactMiniCard
-                        accent="violet"
-                        label="📈 Compte de Résultat"
-                        entries={entriesCR}
-                        isCurrentTab={tabVisibleState === "cr"}
-                        onClick={() => handleTabChange("cr")}
-                      />
+                    {/* Mini-carte(s) Bilan / Compte de Résultat — affichage conditionnel
+                        selon les documents touchés par l'écriture courante. */}
+                    <div className={`grid ${gridCols} gap-2`}>
+                      {entriesBilan.length > 0 && (
+                        <ImpactMiniCard
+                          accent="cyan"
+                          label="📊 Bilan"
+                          entries={entriesBilan}
+                          isCurrentTab={tabVisibleState === "bilan"}
+                          onClick={() => handleTabChange("bilan")}
+                        />
+                      )}
+                      {entriesCR.length > 0 && (
+                        <ImpactMiniCard
+                          accent="violet"
+                          label="📈 Compte de Résultat"
+                          entries={entriesCR}
+                          isCurrentTab={tabVisibleState === "cr"}
+                          onClick={() => handleTabChange("cr")}
+                        />
+                      )}
                     </div>
 
-                    {/* Footer — Σ Débits = Σ Crédits (équilibre comptable) */}
+                    {/* Footer — Σ Débits = Σ Crédits (équilibre comptable). */}
                     <div className={`mt-2.5 flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-mono tabular-nums ${
                       equilibre
                         ? "bg-emerald-500/10 border border-emerald-400/30 text-emerald-200"
