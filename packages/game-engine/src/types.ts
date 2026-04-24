@@ -461,6 +461,16 @@ export interface ResultatAction {
     saleClientLabel?: string;
     /** Numéro d'acte narratif dans le groupe (1=encaissement, 2=ventes, 3=stocks, 4=CMV) */
     saleActIndex?: number;
+    /**
+     * B9 post (2026-04-24) — Nom EXACT de la ligne de bilan touchée (ex.
+     * "Stocks matières premières" vs "Stocks produits finis"). Nécessaire
+     * pour que l'UI cible le bon badge dans le BilanPanel quand plusieurs
+     * lignes partagent la même catégorie (ex. Belvaux a 2 lignes "stocks").
+     * Alimenté automatiquement par `pushByName` côté moteur. Absent pour
+     * les modifications passées via `push(categorie, ...)` classique —
+     * l'UI se replie alors sur le filtrage par catégorie historique.
+     */
+    ligneNom?: string;
   }>;
 }
 

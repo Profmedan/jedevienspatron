@@ -35,6 +35,14 @@ export type ModificationMoteur = {
   saleGroupId?: string;
   saleClientLabel?: string;
   saleActIndex?: number;
+  /**
+   * B9 post (2026-04-24) — Nom exact de la ligne de bilan touchée, propagé
+   * depuis `pushByName` côté moteur (cf. types.ts `ResultatAction`). Permet
+   * au BilanPanel de cibler le bon badge quand plusieurs lignes partagent
+   * la même catégorie (Belvaux : "Stocks matières premières" et "Stocks
+   * produits finis", tous deux categorie "stocks").
+   */
+  ligneNom?: string;
 };
 
 // ─── ETAPE_INFO ───────────────────────────────────────────────────────────────

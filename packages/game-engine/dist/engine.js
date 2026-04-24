@@ -156,10 +156,14 @@ function pushByName(joueur, modifications, nomLigne, delta, explication) {
     // Le champ `poste` de ModificationMoteur accepte la catégorie (qui couvre
     // l'ensemble des unions actif/passif via EffetCarte["poste"]). On cast en
     // string pour satisfaire l'union stricte côté consommateur UI.
+    // `ligneNom` transporte le nom exact pour que l'UI cible la bonne ligne
+    // (critique quand plusieurs lignes partagent la même catégorie, ex.
+    // "Stocks matières premières" vs "Stocks produits finis" chez Belvaux).
     const categorie = actif ? actif.categorie : passif.categorie;
     modifications.push({
         joueurId: joueur.id,
         poste: categorie,
+        ligneNom: nomLigne,
         ancienneValeur,
         nouvelleValeur,
         explication,
@@ -523,12 +527,17 @@ function appliquerAchatMarchandises(etat, joueurIdx, quantite, modePaiement) {
     const push = makePush(joueur, modifications);
     // 1 unité physique de marchandise = PRIX_UNITAIRE_MARCHANDISE (1 000 €) de valeur comptable
     const montant = quantite * types_1.PRIX_UNITAIRE_MARCHANDISE;
-    // DÉBIT Stocks (catégorie "stocks") — libellé adapté au mode dans l'explication
+    // DÉBIT Stocks — B9 post (2026-04-24) : ciblage EXPLICITE par nom de ligne.
+    // Belvaux a maintenant 2 lignes `categorie: "stocks"` (matières premières +
+    // produits finis). Un `push("stocks", ...)` tombait sur la 1re ligne par
+    // chance. pushByName cible la bonne ligne ET transporte `ligneNom` dans
+    // la modification pour que l'UI cible le bon badge.
     // PCG : classe 31 "Matières premières" pour production, classe 37 "Marchandises" pour négoce.
-    // Le libellé réel de la ligne bilan est déjà différencié dans entreprises.ts
-    // ("Stocks matières premières" pour Belvaux, "Stocks marchandises" pour Azura).
+    const nomLigneStock = modeleAchat.mode === "production"
+        ? "Stocks matières premières"
+        : "Stocks marchandises";
     const libelleStock = modeleAchat.mode === "production" ? "matières premières" : "marchandises";
-    push("stocks", montant, `Achat de ${quantite} unité(s) de ${libelleStock} (${montant} €)`);
+    pushByName(joueur, modifications, nomLigneStock, montant, `Achat de ${quantite} unité(s) de ${libelleStock} (+${montant} €)`);
     // CRÉDIT : trésorerie (comptant) ou dettes fournisseurs (à crédit)
     if (modePaiement === "tresorerie") {
         push("tresorerie", -montant, `Paiement comptant : −${montant} €`);

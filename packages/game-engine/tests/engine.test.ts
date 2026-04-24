@@ -664,10 +664,11 @@ describe("genererClientsDepuisFlux & clientsPassifsParTour", () => {
 // ─── B9-C (2026-04-24) — Étape 2 polymorphe : approvisionnement par mode ────
 
 describe("B9-C — Étape 2 polymorphe par mode (approvisionnement)", () => {
-  test("Belvaux (production) : appro cible la ligne 'Stocks matières premières' par nom (PCG 31)", () => {
+  test("Belvaux (production) : appro cible la ligne 'Stocks matières premières' par nom, PF intact (PCG 31)", () => {
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Manufacture Belvaux" }]);
     const joueur = etat.joueurs[0];
     const stocksMPAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+    const stocksPFAvant = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
 
     const r = appliquerAchatMarchandises(etat, 0, 2, "tresorerie");
     expect(r.succes).toBe(true);
@@ -676,9 +677,16 @@ describe("B9-C — Étape 2 polymorphe par mode (approvisionnement)", () => {
     const stocksMPApres = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
     expect(stocksMPApres).toBe(stocksMPAvant + 2000);
 
-    // Le libellé de modification mentionne "matières premières" (pas "marchandises")
+    // B9 post (2026-04-24) — Non-régression critique : les Stocks produits finis
+    // NE DOIVENT PAS avoir bougé par l'achat. Protège contre un ciblage par
+    // catégorie qui tomberait silencieusement sur la mauvaise ligne.
+    const stocksPFApres = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
+    expect(stocksPFApres).toBe(stocksPFAvant);
+
+    // La modification transporte `ligneNom` pour que l'UI cible le bon badge.
     const ecritureStock = r.modifications.find((m) => m.poste === "stocks" && m.nouvelleValeur > m.ancienneValeur);
     expect(ecritureStock?.explication).toContain("matières premières");
+    expect(ecritureStock?.ligneNom).toBe("Stocks matières premières");
   });
 
   test("Azura (negoce) : appro cible la ligne 'Stocks marchandises' par nom (PCG 37)", () => {

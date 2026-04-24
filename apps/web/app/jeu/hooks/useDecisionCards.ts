@@ -18,7 +18,7 @@ import { cloneEtat, buildActiveStep, type ModificationMoteur } from "./gameFlowU
 interface DecisionCardsParams {
   etat: EtatJeu | null;
   setEtat: (e: EtatJeu | null) => void;
-  setRecentModifications: (mods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>) => void;
+  setRecentModifications: (mods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number; ligneNom?: string }>) => void;
   setActiveStep: (s: ActiveStep | null) => void;
   activeStep: ActiveStep | null;
   maybeShowPedagoModal: (etape: number) => void;

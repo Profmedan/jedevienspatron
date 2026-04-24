@@ -84,8 +84,8 @@ interface UseGameFlowReturn {
   journal: JournalEntry[];
   setJournal: (j: JournalEntry[]) => void;
   recentModifications: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
-  setRecentModifications: (m: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>) => void;
-  effectiveRecentMods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>;
+  setRecentModifications: (m: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number; ligneNom?: string }>) => void;
+  effectiveRecentMods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number; ligneNom?: string }>;
   /** Snapshots trimestriels accumulés pendant la partie (rapport pédagogique) */
   snapshots: TrimSnapshot[];
   achatQte: number;
@@ -192,7 +192,7 @@ export function useGameFlow({
   const [activeStep, dispatchActiveStep] = useReducer(activeStepReducer, null);
   const [journal, setJournal]             = useState<JournalEntry[]>([]);
   const [recentModifications, setRecentModifications] = useState<Array<{
-    poste: string; ancienneValeur: number; nouvelleValeur: number;
+    poste: string; ancienneValeur: number; nouvelleValeur: number; ligneNom?: string;
   }>>([]);
   const [tourTransition, setTourTransition] = useState<{ from: number; to: number } | null>(null);
   const [failliteInfo, setFailliteInfo]   = useState<{ joueurNom: string; raison: string } | null>(null);
@@ -674,7 +674,14 @@ export function useGameFlow({
     }
 
     setRecentModifications(modsFiltrees.map(m => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
+      poste: m.poste,
+      ancienneValeur: m.ancienneValeur,
+      nouvelleValeur: m.nouvelleValeur,
+      // B9 post (2026-04-24) — propager `ligneNom` depuis les modifications
+      // moteur posées via `pushByName`. Permet au BilanPanel de cibler le
+      // bon badge quand plusieurs lignes partagent la même catégorie
+      // (ex. Stocks MP / PF / en-cours chez Belvaux / Véloce / Synergia).
+      ligneNom: m.ligneNom,
     })));
 
     // Étapes « automatiques » : flow accéléré en mode rapide (toutes écritures appliquées d'un coup).

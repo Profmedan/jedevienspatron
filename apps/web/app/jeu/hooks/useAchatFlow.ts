@@ -20,7 +20,7 @@ import { cloneEtat, buildActiveStep, type ModificationMoteur } from "./gameFlowU
 interface AchatFlowParams {
   etat: EtatJeu | null;
   setEtat: (e: EtatJeu | null) => void;
-  setRecentModifications: (mods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number }>) => void;
+  setRecentModifications: (mods: Array<{ poste: string; ancienneValeur: number; nouvelleValeur: number; ligneNom?: string }>) => void;
   setActiveStep: (s: ActiveStep | null) => void;
   maybeShowPedagoModal: (etape: number) => void;
 }
@@ -46,7 +46,7 @@ export function useAchatFlow({
       m => m.nouvelleValeur !== m.ancienneValeur,
     );
     setRecentModifications(modsFiltrees.map(m => ({
-      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur,
+      poste: m.poste, ancienneValeur: m.ancienneValeur, nouvelleValeur: m.nouvelleValeur, ligneNom: m.ligneNom,
     })));
     // T25.C bugfix (2026-04-20) : l'ancien cycle indexait les Achats à 1.
     // Dans le nouveau cycle 8 étapes, ACHATS_STOCK vaut 2. On passe la

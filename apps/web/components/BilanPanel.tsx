@@ -3,7 +3,7 @@ import { Joueur, DECOUVERT_MAX, REMBOURSEMENT_EMPRUNT_PAR_TOUR, getTotalActif, g
 import { isBonPourEntreprise } from "@/lib/pedagogie/poste-helpers";
 import { useState, useRef, useEffect } from "react";
 
-type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number };
+type RecentMod = { poste: string; ancienneValeur: number; nouvelleValeur: number; ligneNom?: string };
 
 interface Props {
   joueur: Joueur;
@@ -241,12 +241,35 @@ function ColumnTotal({ label, value, variant }: { label: string; value: number; 
   );
 }
 
-function findMod(mods: RecentMod[] | undefined, poste: string): RecentMod | undefined {
+function findMod(
+  mods: RecentMod[] | undefined,
+  poste: string,
+  ligneNom?: string,
+): RecentMod | undefined {
   // Retourne le DERNIER mod pour ce poste : quand tresorerie est modifiée
   // plusieurs fois dans la même étape (intérêts, puis remboursement, puis charges),
   // le badge reflète l'opération la plus récente appliquée.
-  const matches = mods?.filter((m) => m.poste === poste);
-  return matches && matches.length > 0 ? matches[matches.length - 1] : undefined;
+  const matches = mods?.filter((m) => m.poste === poste) ?? [];
+  if (matches.length === 0) return undefined;
+
+  // B9 post (2026-04-24) — Ciblage par ligneNom quand plusieurs lignes partagent
+  // la même catégorie (ex. Belvaux a "Stocks matières premières" ET "Stocks
+  // produits finis" tous deux en categorie "stocks"). Le moteur remplit
+  // `ligneNom` via `pushByName`. Règles :
+  // 1. Si ligneNom demandé fourni ET qu'au moins un mod précise `ligneNom` :
+  //    ne garder que les mods dont `ligneNom` matche. Si aucun match → undefined
+  //    (évite d'afficher le même badge sur une autre ligne de la même catégorie).
+  // 2. Si ligneNom demandé fourni MAIS aucun mod n'a de `ligneNom` défini :
+  //    comportement legacy (retourne le dernier mod, badge générique).
+  // 3. Si ligneNom non fourni : comportement legacy.
+  if (ligneNom !== undefined) {
+    const someHaveLigneNom = matches.some((m) => m.ligneNom !== undefined);
+    if (someHaveLigneNom) {
+      const filteredByName = matches.filter((m) => m.ligneNom === ligneNom);
+      return filteredByName.length > 0 ? filteredByName[filteredByName.length - 1] : undefined;
+    }
+  }
+  return matches[matches.length - 1];
 }
 
 function BilanAnalyse({ joueur, totalActif, totalPassif }: { joueur: Joueur; totalActif: number; totalPassif: number }) {
@@ -395,7 +418,7 @@ export default function BilanPanel({ joueur, highlightedPoste, recentModificatio
               categorie="stocks"
               sub
               highlighted={highlightedPoste === "stocks"}
-              recentMod={findMod(recentModifications, "stocks")}
+              recentMod={findMod(recentModifications, "stocks", a.nom)}
             />
           ))}
 
