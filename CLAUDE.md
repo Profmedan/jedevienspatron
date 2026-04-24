@@ -25,9 +25,19 @@ Auteur : Pierre Médan (profmedan@gmail.com)
 
 ## Règles critiques React (lire avant tout fix build)
 
-1. **Ne jamais** ajouter `overrides` React dans `package.json` racine → crée une 2ème instance
-2. **Ne jamais** aliaser `react`/`react-dom` dans webpack → casse `react/cache`, `react/jsx-runtime`
-3. React 18.3.1 déclaré dans **root** `package.json` comme dépendance directe → npm le hisse partout
+1. **Ne jamais** ajouter `overrides` sur `react` / `react-dom` dans `package.json` racine → crée une 2ème instance qui casse `useState`, `react/cache`, `react/jsx-runtime`.
+2. **En revanche**, un `overrides` sur `@types/react` / `@types/react-dom` à la racine est SAFE et RECOMMANDÉ quand une dépendance transitive tire des types React 19 (ex. `recharts → react-redux` → `@types/react@19`). Sans cet override, `tsc apps/web` remonte des erreurs TS2786/TS2322 fantômes. Les `@types` sont des types TS sans runtime — pas de 2ème instance.
+3. **Ne jamais** aliaser `react`/`react-dom` dans webpack → casse `react/cache`, `react/jsx-runtime`.
+4. React 18.3.1 déclaré dans **root** `package.json` comme dépendance directe → npm le hisse partout.
+
+**Override actuel (depuis B9-E post, commit `05f347e`)** :
+```json
+"overrides": {
+  "@types/react": "^18.3.1",
+  "@types/react-dom": "^18.3.1"
+}
+```
+Supprime les 165 erreurs TS2786 fantômes et rend `tsc apps/web` utilisable comme garde-fou fiable (EXIT=0 si le code est propre).
 4. Pour valider TypeScript : `npx tsc --noEmit` (pas `npm run build` — SWC absent dans le VM)
 
 ---
