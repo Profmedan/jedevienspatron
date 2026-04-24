@@ -1,0 +1,13 @@
+# JEDEVIENSPATRON — robots.txt
+# SEC-bypass (2026-04-24) : empêche l'indexation de /jeu et ses variantes
+# (URL bypass, room codes). Complémente le `metadata.robots` de
+# app/jeu/layout.tsx.
+
+User-agent: *
+Disallow: /jeu
+Disallow: /dashboard
+Disallow: /historique
+Disallow: /api/
+Allow: /
+
+Sitemap: https://jedevienspatron.fr/sitemap.xml
