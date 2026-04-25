@@ -924,3 +924,76 @@ describe("B9-D — appliquerExtourneEnCours (étape 4 avant facturation)", () =>
     }
   });
 });
+
+// ─── Audit B9 (2026-04-24) — Non-régression `ligneNom` propagé ───────────────
+//
+// Garantit que les modifications émises par les fonctions moteur portent bien
+// `ligneNom` quand elles ciblent une ligne précise. Sans ça, le BilanPanel
+// ne sait pas quel badge afficher quand plusieurs lignes partagent la même
+// catégorie (Belvaux MP/PF, Véloce/Synergia Stocks/En-cours, immos).
+
+describe("Audit B9 — propagation `ligneNom` dans les modifications", () => {
+  test("Achat Belvaux : la mod stocks porte ligneNom = 'Stocks matières premières' (et PF inchangé)", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const j = etat.joueurs[0];
+    const pfAvant = j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
+
+    const r = appliquerAchatMarchandises(etat, 0, 2, "tresorerie");
+    expect(r.succes).toBe(true);
+
+    const modStock = r.modifications.find((m) => m.poste === "stocks");
+    expect(modStock?.ligneNom).toBe("Stocks matières premières");
+    // Garantie de non-régression : PF strictement inchangé.
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur).toBe(pfAvant);
+  });
+
+  test("Achat Azura : la mod stocks porte ligneNom = 'Stocks marchandises'", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Azura Commerce" }]);
+    const r = appliquerAchatMarchandises(etat, 0, 1, "dettes");
+    expect(r.succes).toBe(true);
+    const modStock = r.modifications.find((m) => m.poste === "stocks");
+    expect(modStock?.ligneNom).toBe("Stocks marchandises");
+  });
+
+  test("Vente Azura : la mod stocks (sortie marchandises) porte ligneNom = 'Stocks marchandises'", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Azura Commerce" }]);
+    const CLIENT = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
+    const r = appliquerCarteClient(etat, 0, CLIENT);
+    expect(r.succes).toBe(true);
+    const modStock = r.modifications.find((m) => m.poste === "stocks" && m.nouvelleValeur < m.ancienneValeur);
+    expect(modStock?.ligneNom).toBe("Stocks marchandises");
+  });
+
+  test("Vente Belvaux : la mod stocks porte ligneNom = 'Stocks produits finis' (et MP inchangé)", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const j = etat.joueurs[0];
+    appliquerRealisationBelvaux(etat, 0); // produit pour avoir du PF
+    const mpAvant = j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur;
+    const CLIENT = CARTES_CLIENTS.find((c) => c.id === "client-particulier")!;
+    const r = appliquerCarteClient(etat, 0, CLIENT);
+    expect(r.succes).toBe(true);
+    const modStock = r.modifications.find((m) => m.poste === "stocks" && m.nouvelleValeur < m.ancienneValeur);
+    expect(modStock?.ligneNom).toBe("Stocks produits finis");
+    // Non-régression : MP strictement inchangé pendant la vente.
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks matières premières")!.valeur).toBe(mpAvant);
+  });
+
+  test("Réalisation Véloce : en-cours touche 'Stocks en-cours de production' (et Stocks consommables inchangé)", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Véloce Transports" }]);
+    const j = etat.joueurs[0];
+    const stocksConsoAvant = j.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur;
+    const r = appliquerRealisationVeloce(etat, 0);
+    expect(r.succes).toBe(true);
+    const modStock = r.modifications.find((m) => m.poste === "stocks");
+    expect(modStock?.ligneNom).toBe("Stocks en-cours de production");
+    expect(j.bilan.actifs.find((a) => a.nom === "Stocks")!.valeur).toBe(stocksConsoAvant);
+  });
+
+  test("Vente immobilisation : la mod immobilisations porte ligneNom = nom du bien vendu", () => {
+    const etat = initialiserJeu([{ pseudo: "T", nomEntreprise: "Manufacture Belvaux" }]);
+    const r = vendreImmobilisation(etat, 0, "Entrepôt", 6000);
+    expect(r.succes).toBe(true);
+    const modImmo = r.modifications.find((m) => m.poste === "immobilisations");
+    expect(modImmo?.ligneNom).toBe("Entrepôt");
+  });
+});

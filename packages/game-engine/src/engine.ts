@@ -131,13 +131,18 @@ function makePush(
     saleClientLabel?: string;
     saleActIndex?: number;
   }) => {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(joueur, poste, delta);
+    // Audit B9 (2026-04-24) — `appliquerDeltaPoste` peut maintenant retourner
+    // un `ligneNom` quand la cible est une ligne précise par nom (ex.
+    // immobilisations → "Autres Immobilisations"). On le propage dans la
+    // modification pour que le BilanPanel cible le bon badge.
+    const { ancienneValeur, nouvelleValeur, ligneNom } = appliquerDeltaPoste(joueur, poste, delta);
     modifications.push({
       joueurId: joueur.id,
       poste,
       ancienneValeur,
       nouvelleValeur,
       explication,
+      ...(ligneNom !== undefined ? { ligneNom } : {}),
       ...extras,
     });
   };
@@ -214,7 +219,11 @@ function appliquerDeltaPoste(
   joueur: Joueur,
   poste: string,
   delta: number
-): { ancienneValeur: number; nouvelleValeur: number } {
+): { ancienneValeur: number; nouvelleValeur: number; ligneNom?: string } {
+  // Audit B9 (2026-04-24) — `ligneNom` propagé en retour quand la fonction
+  // cible une ligne précise par nom (cas immobilisations notamment). Permet
+  // au caller de poser ce ligneNom dans la modification émise, qui sera
+  // propagée jusqu'au BilanPanel pour cibler le bon badge.
   const charges = joueur.compteResultat.charges as unknown as Record<string, number>;
   const produits = joueur.compteResultat.produits as unknown as Record<string, number>;
   const bilanActifs = joueur.bilan.actifs;
@@ -261,7 +270,8 @@ function appliquerDeltaPoste(
     if (targetActif) {
       const old = targetActif.valeur;
       targetActif.valeur = Math.max(0, old + delta);
-      return { ancienneValeur: old, nouvelleValeur: targetActif.valeur };
+      // Propager `ligneNom` pour que le badge UI cible la bonne ligne.
+      return { ancienneValeur: old, nouvelleValeur: targetActif.valeur, ligneNom: targetActif.nom };
     }
   }
 
@@ -1104,7 +1114,30 @@ export function appliquerCarteClient(
 
   // ACTE 3 & 4 — Réalisation de la valeur selon le modèle
   if (modele.mode === "negoce") {
-    push("stocks", -coutVar, `${modele.libelleExecution} : −${coutVar} € de stock`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 3 });
+    // Audit B9 (2026-04-24) — ciblage explicite par nom + propagation `ligneNom`
+    // pour que le BilanPanel cible le bon badge même si Azura n'a qu'une ligne
+    // stock aujourd'hui (cohérence + résilience future si ajout d'autres lignes).
+    const ligneMdse = joueur.bilan.actifs.find((a) => a.nom === "Stocks marchandises");
+    if (!ligneMdse || ligneMdse.valeur < coutVar) {
+      return {
+        succes: false,
+        messageErreur: `Stock de marchandises insuffisant pour servir ce client (${ligneMdse?.valeur ?? 0} € dispo, ${coutVar} € requis).`,
+        modifications: [],
+      };
+    }
+    const ancMdse = ligneMdse.valeur;
+    ligneMdse.valeur = Math.max(0, ancMdse - coutVar);
+    modifications.push({
+      joueurId: joueur.id,
+      poste: "stocks",
+      ligneNom: "Stocks marchandises",
+      ancienneValeur: ancMdse,
+      nouvelleValeur: ligneMdse.valeur,
+      explication: `${modele.libelleExecution} : −${coutVar} € de stock`,
+      saleGroupId: groupId,
+      saleClientLabel: clientLabel,
+      saleActIndex: 3,
+    });
     push("achats", coutVar, `${modele.libelleContrepartie} : +${coutVar} €`, { saleGroupId: groupId, saleClientLabel: clientLabel, saleActIndex: 4 });
   } else if (modele.mode === "production") {
     // B9-D post (2026-04-24) — la vente de Belvaux consomme UNIQUEMENT des
@@ -1124,11 +1157,14 @@ export function appliquerCarteClient(
       };
     }
     // Écriture 3 (sortie PF) — avec extras saleGroupId pour l'UI groupée.
+    // Audit B9 (2026-04-24) — `ligneNom: "Stocks produits finis"` propagé
+    // pour que le BilanPanel cible le bon badge (PF, pas MP).
     const ancPF = lignePF.valeur;
     lignePF.valeur = Math.max(0, ancPF - coutVar);
     modifications.push({
       joueurId: joueur.id,
       poste: "stocks",
+      ligneNom: "Stocks produits finis",
       ancienneValeur: ancPF,
       nouvelleValeur: lignePF.valeur,
       explication: `${modele.libelleExecution} : −${coutVar} € de produits finis sortis du stock`,
@@ -2068,7 +2104,10 @@ export function investirCartePersonnelle(
 
   // Appliquer les effets immédiats
   for (const effet of carte.effetsImmédiats) {
-    const { ancienneValeur, nouvelleValeur } = appliquerDeltaPoste(
+    // Audit B9 (2026-04-24) — récupérer `ligneNom` retourné par
+    // appliquerDeltaPoste (cas immobilisations qui cible "Autres Immobilisations")
+    // et le propager dans la modification pour le badge UI.
+    const { ancienneValeur, nouvelleValeur, ligneNom } = appliquerDeltaPoste(
       joueur,
       effet.poste,
       effet.delta
@@ -2079,6 +2118,7 @@ export function investirCartePersonnelle(
       ancienneValeur,
       nouvelleValeur,
       explication: `${carte.titre} — investissement logistique`,
+      ...(ligneNom !== undefined ? { ligneNom } : {}),
     });
   }
 
@@ -2162,9 +2202,13 @@ export function vendreImmobilisation(
   }
 
   // 2. Sortie du bien du bilan (CRÉDIT 21x Immobilisations — VNC effacée)
+  // Audit B9 (2026-04-24) — `ligneNom: nomImmo` propagé pour que le BilanPanel
+  // cible le badge sur la ligne précise vendue (pas sur "Autres Immo" ou la
+  // 1re ligne immo trouvée).
   modifications.push({
     joueurId: joueur.id,
     poste: "immobilisations",
+    ligneNom: nomImmo,
     ancienneValeur: vnc,
     nouvelleValeur: 0,
     explication: `Cession ${nomImmo} : sortie du bilan, VNC ${vnc} € effacée`,
