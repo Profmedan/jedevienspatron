@@ -83,7 +83,9 @@ export async function POST(req: NextRequest) {
     // au lieu du query param (qui était exploitable à l'infini). Durée : 4h.
     const response = NextResponse.json({ valid: true });
     try {
-      const cookieValue = signBypassCookie(trimmed);
+      // Edge Runtime fix (2026-04-24) : signBypassCookie est maintenant async
+      // (Web Crypto API). On `await` sa Promise.
+      const cookieValue = await signBypassCookie(trimmed);
       response.cookies.set(BYPASS_COOKIE_NAME, cookieValue, BYPASS_COOKIE_OPTIONS);
     } catch (signError) {
       // Sécurité préservée : si la signature échoue (secret absent), on refuse

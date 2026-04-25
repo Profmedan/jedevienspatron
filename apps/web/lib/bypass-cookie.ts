@@ -19,8 +19,11 @@
 // présente) + warning console, pour éviter de casser la prod si le code est
 // déployé avant ajout de l'env var dédiée. À supprimer dès que BYPASS_SIGNING_SECRET
 // est configurée sur tous les environnements.
-
-import crypto from "node:crypto";
+//
+// Edge Runtime fix (2026-04-24) : 100 % Web Crypto API (`globalThis.crypto.subtle`)
+// au lieu de `node:crypto`. Compatible Node.js 19+, Edge Runtime (middleware
+// Next.js), et Browser. `signBypassCookie` et `verifyBypassCookie` sont
+// asynchrones (la Web Crypto API est async par construction).
 
 /** Durée de vie du cookie bypass : 4 heures (une session de cours typique). */
 const BYPASS_COOKIE_MAX_AGE_SECONDS = 4 * 60 * 60;
@@ -58,34 +61,67 @@ function getSigningSecret(): string {
   );
 }
 
-/** Encode URL-safe base64 (évite `+`, `/`, `=` problématiques dans les cookies). */
-function b64url(input: Buffer | string): string {
-  const buf = typeof input === "string" ? Buffer.from(input, "utf8") : input;
-  return buf
-    .toString("base64")
+/** Encode URL-safe base64 d'un Uint8Array (compatible Edge Runtime). */
+function b64urlEncode(buf: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  return btoa(bin)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 }
 
-function b64urlDecode(input: string): Buffer {
-  const padded = input.replace(/-/g, "+").replace(/_/g, "/") + "==".slice(0, (4 - (input.length % 4)) % 4);
-  return Buffer.from(padded, "base64");
+function b64urlDecode(input: string): Uint8Array {
+  const padded =
+    input.replace(/-/g, "+").replace(/_/g, "/") +
+    "==".slice(0, (4 - (input.length % 4)) % 4);
+  const bin = atob(padded);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+/** HMAC-SHA256 via Web Crypto API. Asynchrone (subtle.sign retourne une Promise). */
+async function hmacSha256(secret: string, message: string): Promise<Uint8Array> {
+  const enc = new TextEncoder();
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await globalThis.crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return new Uint8Array(sig);
+}
+
+/**
+ * Comparaison constant-time de deux Uint8Array. Évite les timing attacks
+ * sur la signature (équivalent à `crypto.timingSafeEqual` qui n'existe pas
+ * en Web Crypto API).
+ */
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
 }
 
 /**
  * Signe un cookie bypass et retourne sa valeur à poser dans l'en-tête Set-Cookie.
  * Format : `<payload_b64>.<sig_b64>` où `payload` est un JSON `{code, exp}`.
+ *
+ * Async (Web Crypto). Caller doit faire `await signBypassCookie(...)`.
  */
-export function signBypassCookie(code: string): string {
+export async function signBypassCookie(code: string): Promise<string> {
   const secret = getSigningSecret();
   const payload: BypassPayload = {
     code,
     exp: Date.now() + BYPASS_COOKIE_MAX_AGE_SECONDS * 1000,
   };
-  const payloadB64 = b64url(JSON.stringify(payload));
-  const sig = crypto.createHmac("sha256", secret).update(payloadB64).digest();
-  const sigB64 = b64url(sig);
+  const payloadB64 = b64urlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const sig = await hmacSha256(secret, payloadB64);
+  const sigB64 = b64urlEncode(sig);
   return `${payloadB64}.${sigB64}`;
 }
 
@@ -93,8 +129,12 @@ export function signBypassCookie(code: string): string {
  * Vérifie la signature et l'expiration d'un cookie bypass.
  * Retourne le payload si valide, `null` sinon (cookie absent, mal formé,
  * signature invalide, ou expiré).
+ *
+ * Async (Web Crypto). Caller doit faire `await verifyBypassCookie(...)`.
  */
-export function verifyBypassCookie(value: string | undefined | null): BypassPayload | null {
+export async function verifyBypassCookie(
+  value: string | undefined | null
+): Promise<BypassPayload | null> {
   if (!value) return null;
   const parts = value.split(".");
   if (parts.length !== 2) return null;
@@ -108,15 +148,24 @@ export function verifyBypassCookie(value: string | undefined | null): BypassPayl
   }
 
   // Vérif signature (constant-time pour éviter les timing attacks).
-  const expected = crypto.createHmac("sha256", secret).update(payloadB64).digest();
-  const received = b64urlDecode(sigB64);
-  if (expected.length !== received.length) return null;
-  if (!crypto.timingSafeEqual(expected, received)) return null;
+  let expected: Uint8Array;
+  try {
+    expected = await hmacSha256(secret, payloadB64);
+  } catch {
+    return null;
+  }
+  let received: Uint8Array;
+  try {
+    received = b64urlDecode(sigB64);
+  } catch {
+    return null;
+  }
+  if (!timingSafeEqual(expected, received)) return null;
 
   // Parse + check expiration.
   let payload: BypassPayload;
   try {
-    const json = b64urlDecode(payloadB64).toString("utf8");
+    const json = new TextDecoder().decode(b64urlDecode(payloadB64));
     payload = JSON.parse(json) as BypassPayload;
   } catch {
     return null;

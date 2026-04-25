@@ -41,7 +41,9 @@ export async function middleware(request: NextRequest) {
   // par le middleware (il reste accepté côté client pour l'UX de
   // `useGamePersistence`, mais ne confère plus d'autorisation).
   const bypassCookie = request.cookies.get(BYPASS_COOKIE_NAME)?.value;
-  const bypassPayload = verifyBypassCookie(bypassCookie);
+  // Edge Runtime fix (2026-04-24) : verifyBypassCookie est maintenant async
+  // (Web Crypto API). On `await` sa Promise — middleware est déjà async.
+  const bypassPayload = await verifyBypassCookie(bypassCookie);
   const hasBypassSession = bypassPayload !== null;
   const hasRoomCode = code !== null;
 
