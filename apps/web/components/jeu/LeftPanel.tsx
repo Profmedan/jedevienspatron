@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   getTotalActif,
   getTotalPassif,
+  calculerCoutCommerciaux,
   CarteDecision,
   Joueur,
   ETAPES,
@@ -91,18 +92,34 @@ interface LeftPanelProps {
   onApplySaleGroup?: (saleGroupId: string) => void;
 }
 
-// B9-A (2026-04-24) — cycle 8 étapes avec insertion REALISATION_METIER(3)
-// et fusion CLOTURE_BILAN(7). Indexé par ETAPES.* (même ordre que STEP_NAMES).
-// Override spécial sur COMMERCIAUX dans le corps du composant (présence de commerciaux).
-const STEP_HELP = [
-  "Une créance, c'est une vente déjà faite mais pas encore payée par le client. Certains clients paient tout de suite ; d'autres paient dans 1 trimestre (C+1, client TPE) ou dans 2 trimestres (C+2, clients grands comptes). Trimestre après trimestre les délais de paiement accordés évoluent vers l'encaissement : C+2 devient C+1, et C+1 entre en trésorerie. Au T1, c'est normal s'il n'y a encore rien à encaisser.", // 0 — ENCAISSEMENTS_CREANCES
-  "Tes commerciaux créent la demande du trimestre. Junior → 2 Particuliers (paiement comptant), Senior → 2 TPE (C+1), Directrice Commerciale → 2 Grand Comptes (C+2). Sans commercial, aucun nouveau client (sauf flux passif Azura/Véloce/Synergia). Avant d'acheter ou de produire, regarde combien de clients t'attendent.", // 1 — COMMERCIAUX (override dynamique en bas)
-  "Tu achètes avant de vendre. Repère : 1 unité = 1 client servi. Regarde combien de clients ton équipe va t'amener (étape précédente). Comptant (trésorerie −) ou crédit (dette fournisseur).", // 2 — ACHATS_STOCK (override dynamique selon secteur en bas)
-  "Étape métier propre à votre entreprise (production, logistique, conseil…). Les écritures spécifiques seront appliquées ici.", // 3 — REALISATION_METIER (B9-A placeholder)
-  "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.", // 4 — FACTURATION_VENTES
-  "Sélection d'une carte de recrutement, d'investissement ou d'emprunt (optionnel).",                     // 5 — DECISION
-  "Une carte Événement sera piochée.",                                                                     // 6 — EVENEMENT
-  "Clôture & bilan : charges fixes, remboursement d'emprunt, intérêts (à partir du T3), dotations aux amortissements et effets récurrents. Le résultat net se révèle, puis le bilan est vérifié.", // 7 — CLOTURE_BILAN (fusion ex-CLOTURE_TRIMESTRE + BILAN)
+// Refonte UX (audit Pierre 2026-04-24) — Architecture pédagogique en 2 niveaux :
+//  • Niveau 1 : badges chiffrés (chiffre dominant, emoji discret, label court)
+//    → calculés dynamiquement depuis l'état du joueur. L'apprenant scanne en 1 sec.
+//  • Niveau 2 : phrase principe (≤15 mots, pas de description procédurale)
+//    → conditionnelle selon le secteur d'activité pour les étapes 2/3/4.
+// La modale "?" reste l'explication détaillée (MODALES_ETAPES inchangé).
+
+interface StepBadge {
+  /** Petit pictogramme discret (1-2 caractères). */
+  emoji: string;
+  /** Valeur chiffrée principale (dominante visuellement). */
+  value: string;
+  /** Label court 1-3 mots. */
+  label: string;
+  /** Variante de couleur (cyan = info, amber = alerte). */
+  tone?: "cyan" | "amber";
+}
+
+/** Phrases principes par étape. Indexées sur ETAPES.* (0-7). */
+const STEP_PHRASES: string[] = [
+  "Les créances arrivées à échéance entrent en trésorerie.",                              // 0 — ENCAISSEMENTS_CREANCES
+  "Tes commerciaux paient les salaires et créent la demande du trimestre.",               // 1 — COMMERCIAUX
+  "Tu achètes avant de vendre — anticipe le nombre de clients à venir.",                  // 2 — ACHATS_STOCK (override par secteur en bas)
+  "Étape métier — chaque entreprise crée la valeur à sa façon.",                          // 3 — REALISATION_METIER (override par secteur)
+  "Une carte client = une vente. Stock −, CA +, encaissement ou créance.",                // 4 — FACTURATION_VENTES
+  "Investir, recruter, emprunter — optionnel mais stratégique.",                          // 5 — DECISION
+  "L'imprévu fait partie du métier — sois prêt à réagir.",                                // 6 — EVENEMENT
+  "Charges fixes + amortissements + intérêts révèlent le résultat net.",                  // 7 — CLOTURE_BILAN
 ];
 
 export function LeftPanel({
@@ -142,57 +159,133 @@ export function LeftPanel({
 
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
 
-  // Audit pédago Pierre (2026-04-24) — overrides dynamiques pour aider l'apprenant :
-  //  • Étape 2 (Commerciaux) : annonce le nombre de clients attendus selon
-  //    les commerciaux actifs + flux passif spécifique de l'entreprise.
-  //  • Étape 3 (Approvisionnement) : adapte le repère "1 unité = 1 client"
-  //    selon le secteur économique de l'entreprise.
-  //
-  // CarteDecision n'expose pas `typeClientRapporte` (typage moteur réservé à
-  // CarteCommercial), donc on déduit le type depuis l'`id` de la carte pour
-  // construire le détail "X Particuliers + Y TPE…". Mapping conservatif :
-  // si l'id n'est pas reconnu, on additionne au total sans détail typé.
+  // ─── Refonte UX 2026-04-24 — Calcul des indicateurs pour les badges ───────
+  // Tous les chiffres dérivés de l'état du joueur, recalculés à chaque rendu.
   const commerciauxActifs = joueur.cartesActives.filter((c) => c.categorie === "commercial");
-  const nbCommercialClients = (typeFilter: (id: string) => boolean) =>
-    commerciauxActifs
-      .filter((c) => typeFilter(c.id))
-      .reduce((s, c) => s + (c.nbClientsParTour ?? 0), 0);
-  const nbParticuliersCommerciaux = nbCommercialClients((id) => id.includes("junior"));
-  const nbTPECommerciaux = nbCommercialClients((id) => id.includes("senior"));
-  const nbGCCommerciaux = nbCommercialClients((id) => id.includes("directrice") || id.includes("expert"));
-  // Flux passif spécifique entreprise (Azura : trafic boutique, Véloce : livraisons, Synergia : abonnements)
+  const nbCommerciaux = commerciauxActifs.length;
+  // `calculerCoutCommerciaux` somme les coûts trésorerie de tous les commerciaux
+  // actifs en passant par le mapping des cartes commerciales (CarteDecision n'expose
+  // pas `coutTresorerie` directement — c'est sur CarteCommercial dans le moteur).
+  const totalSalairesCommerciaux = calculerCoutCommerciaux(joueur);
   const fluxPassifs = joueur.entreprise.clientsPassifsParTour ?? [];
   const nbPassifs = fluxPassifs.reduce((s, f) => s + f.nbParTour, 0);
-  const totalClientsAttendus = nbParticuliersCommerciaux + nbTPECommerciaux + nbGCCommerciaux + nbPassifs;
-  // Détaillé pour l'affichage : "2 Particuliers + 1 abonnement"
-  const detailClients = [
-    nbParticuliersCommerciaux > 0 ? `${nbParticuliersCommerciaux} Particulier${nbParticuliersCommerciaux > 1 ? "s" : ""}` : null,
-    nbTPECommerciaux > 0 ? `${nbTPECommerciaux} TPE` : null,
-    nbGCCommerciaux > 0 ? `${nbGCCommerciaux} Grand${nbGCCommerciaux > 1 ? "s" : ""} Compte${nbGCCommerciaux > 1 ? "s" : ""}` : null,
-    nbPassifs > 0 ? `${nbPassifs} ${fluxPassifs[0]?.source ?? "client passif"}` : null,
-  ].filter(Boolean).join(" + ");
-
-  const hasCommerciaux = commerciauxActifs.length > 0;
+  const totalClientsAttendus =
+    commerciauxActifs.reduce((s, c) => s + (c.nbClientsParTour ?? 0), 0) + nbPassifs;
   const secteur = joueur.entreprise.secteurActivite;
+  const treso = joueur.bilan.actifs.find((a) => a.categorie === "tresorerie")?.valeur ?? 0;
+  const stockMP = joueur.bilan.actifs.find((a) => a.nom === "Stocks matières premières")?.valeur ?? 0;
+  const stockMdse = joueur.bilan.actifs.find((a) => a.nom === "Stocks marchandises")?.valeur ?? 0;
+  const stockPF = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis")?.valeur ?? 0;
+  const creancesPlus1 = joueur.bilan.creancesPlus1 ?? 0;
+  const creancesPlus2 = joueur.bilan.creancesPlus2 ?? 0;
 
-  let stepHelp = STEP_HELP[etapeTour] || "";
-  if (etapeTour === ETAPES.COMMERCIAUX) {
-    if (hasCommerciaux) {
-      stepHelp = `Salaires versés à tes ${commerciauxActifs.length} commercial(aux) actif(s). Ce trimestre, ton équipe apporte : ${detailClients || "aucun client"} → ${totalClientsAttendus} client(s) à servir à l'étape Facturation. Anticipe : il faudra généralement ${totalClientsAttendus} unité(s) de stock ou de produits finis.`;
-    } else {
-      stepHelp = nbPassifs > 0
-        ? `Aucun commercial actif — pas de salaire à payer. Mais ton entreprise capte ${detailClients} (flux passif). Recrute à l'étape Décisions pour générer plus de clients.`
-        : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape Décisions pour générer de nouveaux clients.";
-    }
-  } else if (etapeTour === ETAPES.ACHATS_STOCK) {
-    if (secteur === "production") {
-      stepHelp = `Belvaux achète des matières premières. Elles ne sont pas vendues directement : elles serviront à fabriquer des produits finis à l'étape suivante. **1 unité de matière = 1 produit fini.** Ce trimestre, ${totalClientsAttendus} client(s) attendu(s) → prévois ${totalClientsAttendus} unité(s) de matière minimum.`;
-    } else if (secteur === "negoce") {
-      stepHelp = `Azura achète des marchandises déjà vendables. **1 client servi = 1 marchandise sortie du stock.** Ce trimestre, ${totalClientsAttendus} client(s) attendu(s) → prévois ${totalClientsAttendus} unité(s) en stock.`;
-    } else if (secteur === "logistique" || secteur === "conseil" || secteur === "service") {
-      stepHelp = `Ton entreprise ne constitue pas de stock physique. Tu engages un coût d'approche fixe (préparation tournée pour Véloce, staffing mission pour Synergia) qui s'ajoute aux frais variables par client à la facturation.`;
+  // ─── Badges par étape (max 3, chiffre dominant) ────────────────────────────
+  function getStepBadges(etape: number): StepBadge[] {
+    switch (etape) {
+      case ETAPES.ENCAISSEMENTS_CREANCES: {
+        const total = creancesPlus1 + creancesPlus2;
+        return [
+          { emoji: "💰", value: `${creancesPlus1.toLocaleString("fr-FR")} €`, label: "à encaisser (C+1)", tone: "cyan" },
+          { emoji: "⏳", value: `${creancesPlus2.toLocaleString("fr-FR")} €`, label: "en attente (C+2)", tone: "cyan" },
+          { emoji: "📅", value: total === 0 ? "—" : `${total.toLocaleString("fr-FR")} €`, label: "total créances", tone: total === 0 ? "amber" : "cyan" },
+        ];
+      }
+      case ETAPES.COMMERCIAUX:
+        return [
+          { emoji: "👔", value: String(nbCommerciaux), label: "commerciaux", tone: "cyan" },
+          { emoji: "🤝", value: String(totalClientsAttendus), label: "clients attendus", tone: totalClientsAttendus === 0 ? "amber" : "cyan" },
+          { emoji: "💸", value: `${totalSalairesCommerciaux.toLocaleString("fr-FR")} €`, label: "salaires", tone: "cyan" },
+        ];
+      case ETAPES.ACHATS_STOCK: {
+        if (secteur === "production") {
+          return [
+            { emoji: "🤝", value: String(totalClientsAttendus), label: "clients attendus", tone: "cyan" },
+            { emoji: "📦", value: `${(stockMP / 1000).toFixed(0)}`, label: "matières en stock", tone: stockMP < totalClientsAttendus * 1000 ? "amber" : "cyan" },
+            { emoji: "🎯", value: String(Math.max(0, totalClientsAttendus - Math.floor(stockMP / 1000))), label: "à acheter (mini)", tone: "amber" },
+          ];
+        }
+        if (secteur === "negoce") {
+          return [
+            { emoji: "🤝", value: String(totalClientsAttendus), label: "clients attendus", tone: "cyan" },
+            { emoji: "📦", value: `${(stockMdse / 1000).toFixed(0)}`, label: "marchandises", tone: stockMdse < totalClientsAttendus * 1000 ? "amber" : "cyan" },
+            { emoji: "🎯", value: String(Math.max(0, totalClientsAttendus - Math.floor(stockMdse / 1000))), label: "à acheter (mini)", tone: "amber" },
+          ];
+        }
+        // logistique / conseil / service legacy : pas de stock physique
+        return [
+          { emoji: "🤝", value: String(totalClientsAttendus), label: "clients attendus", tone: "cyan" },
+          { emoji: "🚚", value: secteur === "logistique" ? "300 €" : "400 €", label: "coût d'approche fixe", tone: "cyan" },
+        ];
+      }
+      case ETAPES.REALISATION_METIER:
+        if (secteur === "production") {
+          return [
+            { emoji: "📦", value: `${Math.min(2, Math.floor(stockMP / 1000))}`, label: "matières → PF", tone: "cyan" },
+            { emoji: "🎯", value: "2", label: "capacité / trim", tone: "cyan" },
+          ];
+        }
+        if (secteur === "negoce") {
+          return [{ emoji: "💳", value: "300 €", label: "coût canal", tone: "cyan" }];
+        }
+        return [{ emoji: "🚚", value: secteur === "logistique" ? "300 €" : "400 €", label: "en-cours constaté", tone: "cyan" }];
+      case ETAPES.FACTURATION_VENTES: {
+        const clientsATraiter = joueur.clientsATrait?.length ?? 0;
+        const stockDispo = secteur === "production" ? stockPF : secteur === "negoce" ? stockMdse : Infinity;
+        const pertesPossibles = secteur === "production" || secteur === "negoce"
+          ? Math.max(0, clientsATraiter - Math.floor(stockDispo / 1000))
+          : 0;
+        return [
+          { emoji: "🤝", value: String(clientsATraiter), label: "clients à facturer", tone: "cyan" },
+          ...(secteur === "production" || secteur === "negoce"
+            ? [{ emoji: "📦", value: `${(stockDispo / 1000).toFixed(0)}`, label: secteur === "production" ? "PF dispo" : "marchandises dispo", tone: pertesPossibles > 0 ? ("amber" as const) : ("cyan" as const) }]
+            : []),
+          ...(pertesPossibles > 0
+            ? [{ emoji: "⚠️", value: String(pertesPossibles), label: "client(s) perdu(s)", tone: "amber" as const }]
+            : []),
+        ];
+      }
+      case ETAPES.DECISION:
+        return [
+          { emoji: "🃏", value: String(cartesDisponibles.length + cartesRecrutement.length), label: "cartes dispo", tone: "cyan" },
+          { emoji: "💰", value: `${treso.toLocaleString("fr-FR")} €`, label: "trésorerie", tone: treso < 0 ? "amber" : "cyan" },
+        ];
+      case ETAPES.EVENEMENT:
+        return [{ emoji: "🎲", value: "1", label: "carte aléatoire", tone: "cyan" }];
+      case ETAPES.CLOTURE_BILAN: {
+        const intsActifs = tourActuel >= 3;
+        return [
+          { emoji: "💸", value: "2 000 €", label: "charges fixes", tone: "cyan" },
+          { emoji: "📉", value: "amortis.", label: "dotations", tone: "cyan" },
+          { emoji: "💰", value: intsActifs ? "intérêts" : "—", label: intsActifs ? "à partir T3" : "pas avant T3", tone: "cyan" },
+        ];
+      }
+      default:
+        return [];
     }
   }
+
+  // ─── Phrase principe (override par secteur pour étapes 2 / 3 / 4) ──────────
+  function getStepPhrase(etape: number): string {
+    if (etape === ETAPES.ACHATS_STOCK) {
+      if (secteur === "production") return "1 matière achetée = 1 produit fini = 1 client servi.";
+      if (secteur === "negoce") return "1 marchandise achetée = 1 client servi.";
+      return "Coût d'approche fixe + frais variables à la facturation.";
+    }
+    if (etape === ETAPES.REALISATION_METIER) {
+      if (secteur === "production") return "Tu transformes la matière en produits finis.";
+      if (secteur === "negoce") return "Tu paies tes coûts marketplace e-commerce.";
+      if (secteur === "logistique") return "Tu prépares ta tournée. En-cours constaté.";
+      if (secteur === "conseil" || secteur === "service") return "Tu lances ta mission. En-cours constaté.";
+    }
+    if (etape === ETAPES.COMMERCIAUX && nbCommerciaux === 0 && nbPassifs === 0) {
+      return "Aucun commercial actif. Recrute à l'étape Décisions.";
+    }
+    return STEP_PHRASES[etape] || "";
+  }
+
+  const stepBadges = getStepBadges(etapeTour);
+  const stepPhrase = getStepPhrase(etapeTour);
+  const hasCommerciaux = nbCommerciaux > 0;
   const totalActif = getTotalActif(joueur);
   const totalPassif = getTotalPassif(joueur);
   const balanced = Math.abs(totalActif - totalPassif) < 0.01;
@@ -648,7 +741,39 @@ export function LeftPanel({
           </div>
 
           <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            <p className="text-sm text-slate-300">{stepHelp}</p>
+            {/* Refonte UX 2026-04-24 — Badges chiffrés (chiffre dominant)
+                + phrase principe ≤15 mots. La modale "?" reste l'explication
+                détaillée pour qui veut creuser (MODALES_ETAPES). */}
+            {stepBadges.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {stepBadges.map((b, i) => {
+                  const colorClass = b.tone === "amber"
+                    ? "border-amber-400/40 bg-amber-500/10"
+                    : "border-cyan-400/30 bg-cyan-500/10";
+                  const valueColor = b.tone === "amber" ? "text-amber-200" : "text-cyan-200";
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-baseline gap-1.5 rounded-md border px-2 py-1 ${colorClass}`}
+                    >
+                      <span className="text-[10px] opacity-60" aria-hidden="true">{b.emoji}</span>
+                      <span className={`text-base font-bold tabular-nums leading-tight ${valueColor}`}>
+                        {b.value}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400">
+                        {b.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {stepPhrase && (
+              <p className="text-xs leading-relaxed text-slate-300">
+                <span className="text-amber-300/80 mr-1" aria-hidden="true">💡</span>
+                {stepPhrase}
+              </p>
+            )}
 
             {etapeTour === ETAPES.ACHATS_STOCK && (
               // B9-C (2026-04-24) — Étape 2 polymorphe par mode :

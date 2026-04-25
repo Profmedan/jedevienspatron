@@ -65,6 +65,7 @@ export {
   obtenirCarteRecrutement,
   demanderEmprunt,
   calculerCapaciteLogistique,
+  calculerCoutCommerciaux,
   verifierEquilibreComptable,
   type ResultatFinTour,
 } from "./engine";
