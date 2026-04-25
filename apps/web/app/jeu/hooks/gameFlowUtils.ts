@@ -56,7 +56,7 @@ export const ETAPE_INFO: Record<number, {
   icone: string; titre: string; description: string; principe: string; conseil: string;
 }> = {
   0: {
-    icone: "⏩", titre: "Encaissements des créances clients",
+    icone: "⏩", titre: "Paiements clients à recevoir",
     description: "Les créances arrivées à échéance entrent en trésorerie. Les créances à 2 trimestres passent à 1 trimestre restant.",
     principe: "Tes clients te paient selon leur délai. La trésorerie augmente, les créances clients diminuent du même montant. Le chiffre d'affaires ne bouge pas : il avait été enregistré au moment de la vente.",
     conseil: "Une entreprise peut être rentable et pourtant manquer de trésorerie si ses clients paient trop tard. Surveille tes délais d'encaissement.",

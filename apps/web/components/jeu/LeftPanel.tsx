@@ -19,8 +19,8 @@ import { nomCompte } from "./utils";
 // B9-A (2026-04-24) — cycle 8 étapes avec insertion REALISATION_METIER(3)
 // et fusion CLOTURE_BILAN(7). Ordre aligné sur ETAPES.* du moteur.
 const STEP_NAMES = [
-  "Encaissements créances",    // 0 — ENCAISSEMENTS_CREANCES
-  "Paiement commerciaux",      // 1 — COMMERCIAUX
+  "Paiements clients à recevoir",    // 0 — ENCAISSEMENTS_CREANCES
+  "Paiement commerciaux",            // 1 — COMMERCIAUX
   "Approvisionnement",         // 2 — ACHATS_STOCK
   "Réalisation métier",        // 3 — REALISATION_METIER (B9-A placeholder)
   "Facturation & ventes",      // 4 — FACTURATION_VENTES (ex-VENTES)
@@ -95,7 +95,7 @@ interface LeftPanelProps {
 // et fusion CLOTURE_BILAN(7). Indexé par ETAPES.* (même ordre que STEP_NAMES).
 // Override spécial sur COMMERCIAUX dans le corps du composant (présence de commerciaux).
 const STEP_HELP = [
-  "Vos créances clients avancent d'un trimestre : celles qui arrivent à échéance entrent en trésorerie.", // 0 — ENCAISSEMENTS_CREANCES
+  "Une créance, c'est une vente déjà faite mais pas encore payée par le client. Certains clients paient tout de suite ; d'autres paient dans 1 trimestre (C+1, client TPE) ou dans 2 trimestres (C+2, clients grands comptes). Trimestre après trimestre les délais de paiement accordés évoluent vers l'encaissement : C+2 devient C+1, et C+1 entre en trésorerie. Au T1, c'est normal s'il n'y a encore rien à encaisser.", // 0 — ENCAISSEMENTS_CREANCES
   "Salaires versés. Nouveaux clients générés.",                                                           // 1 — COMMERCIAUX (override en bas)
   "Achat de stocks (optionnel).",                                                                         // 2 — ACHATS_STOCK
   "Étape métier propre à votre entreprise (production, logistique, conseil…). Les écritures spécifiques seront appliquées ici.", // 3 — REALISATION_METIER (B9-A placeholder)
