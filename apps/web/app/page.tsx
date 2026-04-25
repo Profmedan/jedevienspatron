@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -287,7 +287,11 @@ function EntryPanel({
   );
 }
 
-export default function Home() {
+// Next.js 15 SSG (2026-04-24) — `useSearchParams` doit être dans un Suspense
+// boundary pour permettre le prerender statique de la page d'accueil. On extrait
+// la logique dans un composant interne `HomeContent`, lui-même wrappé dans
+// <Suspense> par l'export default `Home` ci-dessous.
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldReduceMotion = useReducedMotion();
@@ -827,5 +831,18 @@ export default function Home() {
         </div>
       </footer>
     </main>
+  );
+}
+
+// Wrapper Suspense exigé par Next.js 15 quand `useSearchParams` est utilisé
+// dans un composant prerendable côté serveur (page racine "/").
+// Sans ce wrapper, le build échoue avec :
+//   "useSearchParams() should be wrapped in a suspense boundary at page '/'"
+// Le fallback `null` est volontaire (rendu vide pendant le bail-out CSR).
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }
