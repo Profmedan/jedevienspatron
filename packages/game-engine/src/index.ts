@@ -65,6 +65,7 @@ export {
   obtenirCarteRecrutement,
   demanderEmprunt,
   calculerCapaciteLogistique,
+  calculerCapaciteProductionBelvaux,
   calculerCoutCommerciaux,
   verifierEquilibreComptable,
   type ResultatFinTour,

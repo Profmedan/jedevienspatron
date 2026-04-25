@@ -86,23 +86,7 @@ export declare function appliquerEffetsRecurrents(etat: EtatJeu, joueurIdx: numb
 export declare function appliquerSpecialiteEntreprise(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /** Dispatcher B9-D — route vers la bonne fonction selon le mode. */
 export declare function appliquerRealisationMetier(etat: EtatJeu, joueurIdx: number): ResultatAction;
-/**
- * Belvaux (production) — consomme 1 unité de matière première (1 000 €)
- * pour produire 1 unité de produit fini (1 000 €). Effet net sur le résultat : 0.
- *
- * Écriture 1 (consommation MP) :
- *   Débit  charges.achats (variation de stock MP)     +1 000
- *   Crédit bilan "Stocks matières premières"          −1 000
- *
- * Écriture 2 (entrée PF) :
- *   Débit  bilan "Stocks produits finis"              +1 000
- *   Crédit produits.productionStockee                 +1 000
- *
- * Garde-fou matière : si le stock MP est < 1 000, aucune production.
- * Retourne alors un ResultatAction avec une ligne informative dans
- * `modifications` (ancienneValeur === nouvelleValeur) pour que l'UI
- * et le journal affichent le message explicite à l'élève.
- */
+export declare function calculerCapaciteProductionBelvaux(joueur: Joueur): number;
 export declare function appliquerRealisationBelvaux(etat: EtatJeu, joueurIdx: number): ResultatAction;
 /**
  * Azura (négoce e-commerce) — coût de canal trimestriel (commissions

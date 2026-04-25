@@ -171,13 +171,15 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(snapApres).toEqual(snapAvant);
   });
 
-  test("Étape 4 (FACTURATION_VENTES) : traitement carte Client Particulier → +2 000 € tréso, +2 000 € ventes, PF −1 000 €", () => {
+  test("Étape 4 (FACTURATION_VENTES) : traitement carte Client Particulier → +2 500 € tréso (barème Belvaux), +2 500 € ventes, PF −1 000 €", () => {
     const etat = initBelvaux();
     // B9-D post (2026-04-24) — la vente consomme maintenant uniquement les
     // produits finis. Il faut donc produire préalablement (étape 3) pour
     // avoir du PF en stock, sinon la vente est rejetée.
     appliquerRealisationBelvaux(etat, 0);
-    // Particulier : 2 000 € comptant, consomme 1 PF (1 000 € de coût).
+    // LOT 2.2 (2026-04-25) — Belvaux applique son barème propre via
+    // `modeleValeur.baremeRevenus` : Particulier = 2 500 € (au lieu de 2 000)
+    // pour refléter le positionnement industriel à valeur ajoutée.
     const particulier = CARTES_CLIENTS.find((c) => c.id === "client-particulier");
     expect(particulier).toBeDefined();
     const tresoAvant = getTresorerie(etat.joueurs[0]);
@@ -185,9 +187,9 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     const pfAvant = etat.joueurs[0].bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur;
     const res = appliquerCarteClient(etat, 0, particulier!, 0);
     expect(res.succes).toBe(true);
-    expect(getTresorerie(etat.joueurs[0]) - tresoAvant).toBe(2000);
-    expect(etat.joueurs[0].compteResultat.produits.ventes - ventesAvant).toBe(2000);
-    // La vente consomme du PF, pas des MP.
+    expect(getTresorerie(etat.joueurs[0]) - tresoAvant).toBe(2500);
+    expect(etat.joueurs[0].compteResultat.produits.ventes - ventesAvant).toBe(2500);
+    // La vente consomme du PF (1 000 € de coût matière, marge contributive 1 500 €).
     expect(pfAvant - etat.joueurs[0].bilan.actifs.find((a) => a.nom === "Stocks produits finis")!.valeur).toBe(1000);
     expect(equilibre(etat.joueurs[0]).ecart).toBe(0);
   });
@@ -217,8 +219,10 @@ describe("Caractérisation B — Effets observables à T1 pour Manufacture Belva
     expect(tresoAvant - tresoApres).toBe(2500);
     // Charges fixes comptabilisées au CR
     expect(etat.joueurs[0].compteResultat.charges.servicesExterieurs).toBe(2000);
-    // Dotations : 2 biens amortissables × 1 000 € = 2 000 €
-    expect(etat.joueurs[0].compteResultat.charges.dotationsAmortissements).toBe(2000);
+    // LOT 2.4 (2026-04-25) — Belvaux : Entrepôt (8 000/12 = 667) + Machine
+    // (8 000/10 = 800) = 1 467 €/trim au lieu des 2 000 € de l'ancien
+    // calcul fixe à −1 000 €/bien. Plus réaliste comptablement.
+    expect(etat.joueurs[0].compteResultat.charges.dotationsAmortissements).toBe(1467);
     // Pas d'intérêts à T1 (gated sur tour >= 3 — T25.B)
     expect(etat.joueurs[0].compteResultat.charges.chargesInteret).toBe(0);
     // B9-D post (2026-04-24) — l'ancien `effetsPassifs` Belvaux (+1 000 € production

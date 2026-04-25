@@ -5,6 +5,7 @@ import {
   getTotalActif,
   getTotalPassif,
   calculerCoutCommerciaux,
+  calculerCapaciteProductionBelvaux,
   CarteDecision,
   Joueur,
   ETAPES,
@@ -219,9 +220,11 @@ export function LeftPanel({
       }
       case ETAPES.REALISATION_METIER:
         if (secteur === "production") {
+          // LOT 2.3 (2026-04-25) — capacité production dynamique : base 2 + 2/robot.
+          const capProd = calculerCapaciteProductionBelvaux(joueur);
           return [
-            { emoji: "📦", value: `${Math.min(2, Math.floor(stockMP / 1000))}`, label: "matières → PF", tone: "cyan" },
-            { emoji: "🎯", value: "2", label: "capacité / trim", tone: "cyan" },
+            { emoji: "📦", value: `${Math.min(capProd, Math.floor(stockMP / 1000))}`, label: "matières → PF", tone: "cyan" },
+            { emoji: "🎯", value: String(capProd), label: "capacité / trim", tone: "cyan" },
           ];
         }
         if (secteur === "negoce") {

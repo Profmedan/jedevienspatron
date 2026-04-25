@@ -23,6 +23,7 @@ exports.appliquerCarteClient = appliquerCarteClient;
 exports.appliquerEffetsRecurrents = appliquerEffetsRecurrents;
 exports.appliquerSpecialiteEntreprise = appliquerSpecialiteEntreprise;
 exports.appliquerRealisationMetier = appliquerRealisationMetier;
+exports.calculerCapaciteProductionBelvaux = calculerCapaciteProductionBelvaux;
 exports.appliquerRealisationBelvaux = appliquerRealisationBelvaux;
 exports.appliquerRealisationAzura = appliquerRealisationAzura;
 exports.appliquerRealisationVeloce = appliquerRealisationVeloce;
@@ -262,7 +263,10 @@ function creerJoueur(id, pseudo, nomEntreprise, customTemplates) {
     if (!template)
         throw new Error(`Entreprise inconnue : ${nomEntreprise}`);
     const bilan = creerBilanVierge();
-    // Actifs avec catégories
+    // Actifs avec catégories — LOT 2.1 (2026-04-25) : propage la durée
+    // d'amortissement optionnelle du template vers le bilan du joueur.
+    // Si absente, l'ancien comportement (−1 000 €/trim par bien) s'applique
+    // dans `appliquerEffetsRecurrents`.
     bilan.actifs = template.actifs.map((a) => ({
         nom: a.nom,
         valeur: a.valeur,
@@ -271,6 +275,7 @@ function creerJoueur(id, pseudo, nomEntreprise, customTemplates) {
             : a.nom.toLowerCase().includes("stock")
                 ? "stocks"
                 : "immobilisations",
+        ...(a.dureeAmortissement !== undefined ? { dureeAmortissement: a.dureeAmortissement } : {}),
     }));
     // Passifs avec catégories
     bilan.passifs = template.passifs.map((p) => ({
@@ -430,30 +435,50 @@ function appliquerEtape0(etat, joueurIdx) {
     // 5. Charges fixes obligatoires (+2 Services ext., -2 Trésorerie)
     push("servicesExterieurs", types_1.CHARGES_FIXES_PAR_TOUR, `Charges fixes trimestrielles (loyer, électricité…) : +${types_1.CHARGES_FIXES_PAR_TOUR}`);
     push("tresorerie", -types_1.CHARGES_FIXES_PAR_TOUR, `Paiement charges fixes : -${types_1.CHARGES_FIXES_PAR_TOUR} Trésorerie`);
-    // 6. Amortissement de chaque bien immobilisé (-1 par bien, Dotations = total)
-    // Règle PCG : DÉBIT Dotations aux amortissements / CRÉDIT Immobilisations nettes
-    // La dotation doit être ÉGALE à la somme des amortissements appliqués à chaque bien.
-    // Post-amortissement (PCG) : les biens dont valeur nette = 0 restent au bilan (VNC = 0)
-    // et continuent de générer leurs effets (clients, entretien) — seule la dotation s'arrête.
-    const immoAmortissables = joueur.bilan.actifs.filter((a) => a.categorie === "immobilisations" && a.valeur > 0);
+    // 6. Amortissement de chaque bien immobilisé
+    //    Règle PCG : DÉBIT Dotations aux amortissements / CRÉDIT Immobilisations nettes.
+    //    Dotation = somme des amortissements de chaque bien.
+    //    Post-amortissement : valeur nette = 0 → le bien reste au bilan (VNC = 0)
+    //    et continue de générer ses effets (clients, entretien) — seule la dotation s'arrête.
+    //
+    //    LOT 2.1 (2026-04-25) — Cadence par bien : si `dureeAmortissement` est
+    //    définie, la dotation = `valeurInitiale / dureeAmortissement`. Sinon,
+    //    fallback historique `AMORTISSEMENT_PAR_BIEN` (= 1 000 €/trim, équivalent
+    //    à une durée implicite `valeurInitiale / 1 000`). La valeur initiale
+    //    est lue depuis `bilan.ref.actifs[idx]`, posée à l'init et figée.
+    //
+    //    Permet à Belvaux d'amortir l'Entrepôt sur 12T (≈ 3 ans) au lieu de 8T
+    //    sans toucher à sa valeur d'inscription au bilan (8 000 €).
+    const immoAmortissables = joueur.bilan.actifs
+        .map((a, idx) => ({ a, idx }))
+        .filter(({ a }) => a.categorie === "immobilisations" && a.valeur > 0);
     if (immoAmortissables.length > 0) {
-        const totalAvant = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
-        // Appliquer -1 000 € directement à chaque bien (mutation directe pour éviter .find() répété)
-        immoAmortissables.forEach((item) => {
-            item.valeur = Math.max(0, item.valeur - types_1.AMORTISSEMENT_PAR_BIEN);
+        const totalAvant = immoAmortissables.reduce((s, { a }) => s + a.valeur, 0);
+        // Pour chaque bien : calculer la dotation propre puis l'appliquer.
+        // On accumule les libellés pour la transparence pédagogique.
+        let totalDotation = 0;
+        const detailLibelles = [];
+        immoAmortissables.forEach(({ a, idx }) => {
+            const valeurInitiale = joueur.entreprise.ref?.actifs?.[idx] ?? a.valeur;
+            const dotation = a.dureeAmortissement
+                ? Math.round(valeurInitiale / a.dureeAmortissement)
+                : types_1.AMORTISSEMENT_PAR_BIEN;
+            const dotationAppliquee = Math.min(dotation, a.valeur); // on ne peut pas amortir plus que la VNC
+            a.valeur = a.valeur - dotationAppliquee;
+            totalDotation += dotationAppliquee;
+            detailLibelles.push(`${a.nom}: −${dotationAppliquee}`);
         });
-        const totalApres = immoAmortissables.reduce((s, a) => s + a.valeur, 0);
-        const totalDotation = totalAvant - totalApres; // = nombre de biens amortis
+        const totalApres = immoAmortissables.reduce((s, { a }) => s + a.valeur, 0);
         // Enregistrer UNE modification agrégée pour les immobilisations (total avant/après)
         modifications.push({
             joueurId: joueur.id,
             poste: "immobilisations",
             ancienneValeur: totalAvant,
             nouvelleValeur: totalApres,
-            explication: `Amortissement de ${immoAmortissables.length} bien(s) immobilisé(s) : −1 000 € par bien, valeur nette ${totalAvant} → ${totalApres}`,
+            explication: `Amortissement de ${immoAmortissables.length} bien(s) immobilisé(s) : ${detailLibelles.join(", ")} — VNC ${totalAvant} → ${totalApres}`,
         });
         // Enregistrer la dotation = total des amortissements (règle de la partie double)
-        push("dotationsAmortissements", totalDotation, `Dotation aux amortissements : +${totalDotation} (1 000 € par bien, ${immoAmortissables.length} bien(s) amortissable(s))`);
+        push("dotationsAmortissements", totalDotation, `Dotation aux amortissements : +${totalDotation} € (${detailLibelles.join(", ")})`);
     }
     // Rebascule trésorerie négative → découvert (idempotente, voir helper plus bas).
     // Placée à la fin du bloc structurel (agios, intérêts, charges fixes, amorts…).
@@ -553,7 +578,22 @@ function appliquerAchatMarchandises(etat, joueurIdx, quantite, modePaiement) {
         push("tresorerie", -montant, `Paiement comptant : −${montant} €`);
     }
     else {
-        push("dettes", montant, `Achat à crédit : dette fournisseur +${montant} €`);
+        // CRIT-2 (2026-04-25) — VRAI crédit fournisseur (BFR fournisseur).
+        //
+        // Avant : push("dettes", ...) → dettes D+1 → payé à la clôture du
+        // MÊME trimestre (cf. appliquerEffetsRecurrents L511). Le mot "crédit"
+        // était trompeur — l'apprenant voyait sa trésorerie diminuer dès
+        // la clôture, sans BFR fournisseur visible.
+        //
+        // Après : push("dettesD2", ...) → la dette est posée en D+2.
+        // À la clôture T : dettesD2 → dettes (cf. L517-521).
+        // À la clôture T+1 : la dette est payée par push("tresorerie", -dettes).
+        //
+        // Effet pédagogique : l'apprenant voit enfin un VRAI décalage
+        // de trésorerie de 1 trimestre — pendant fournisseur du BFR client.
+        // Compatible avec le code mort `dettesD2` déjà présent en L517-521,
+        // désormais activé.
+        push("dettesD2", montant, `Achat à crédit : dette fournisseur +${montant} € (à payer au trimestre suivant)`);
     }
     return { succes: true, modifications };
 }
@@ -801,14 +841,13 @@ function getModeleValeurEntreprise(entreprise) {
 function genererClientsDepuisFlux(flux) {
     if (!flux || flux.length === 0)
         return [];
-    const MAPPING = {
-        particulier: "client-particulier",
-        tpe: "client-tpe",
-        grand_compte: "client-grand-compte",
-    };
+    // CRIT-1 (2026-04-25) — Utilise le mapping central CLIENT_CARD_ID_BY_TYPE
+    // (cartes.ts) au lieu d'un MAPPING local dupliqué. Source unique de vérité
+    // entre `genererClientsDepuisFlux` (flux passifs) et
+    // `genererClientsParCommerciaux` (commerciaux + cartes décision).
     const clients = [];
     for (const f of flux) {
-        const idCarte = MAPPING[f.typeClient];
+        const idCarte = cartes_1.CLIENT_CARD_ID_BY_TYPE[f.typeClient];
         const modele = cartes_1.CARTES_CLIENTS.find((c) => c.id === idCarte);
         if (!modele)
             continue;
@@ -855,7 +894,15 @@ function appliquerCarteClient(etat, joueurIdx, carteClient, saleGroupIndex) {
             };
         }
     }
-    const montant = carteClient.montantVentes;
+    // LOT 2.2 (2026-04-25) — Override prix de vente par entreprise.
+    // Si l'entreprise définit `modeleValeur.baremeRevenus[type]`, on remplace
+    // le prix générique de la carte par celui propre à l'entreprise. Sinon on
+    // garde la grille globale (REVENU_PAR_CLIENT, qui pose les `montantVentes`
+    // dans CARTES_CLIENTS). Permet à Belvaux de vendre 2500/4000/5500 € au lieu
+    // de 2000/3000/4000 € sans toucher Azura/Véloce/Synergia.
+    const typeClient = cartes_1.TYPE_BY_CLIENT_CARD_ID[carteClient.id];
+    const overridePrix = typeClient ? modele.baremeRevenus?.[typeClient] : undefined;
+    const montant = overridePrix?.ventes ?? carteClient.montantVentes;
     const groupId = `vente-${saleGroupIndex ?? 0}`;
     const clientLabel = carteClient.titre;
     // Spécialité Logistique (reducDelaiPaiement) : livraison rapide → délai réduit de 1
@@ -1064,6 +1111,29 @@ function appliquerRealisationMetier(etat, joueurIdx) {
  * `modifications` (ancienneValeur === nouvelleValeur) pour que l'UI
  * et le journal affichent le message explicite à l'élève.
  */
+/**
+ * LOT 2.3 (2026-04-25) — Capacité de production Belvaux dynamique.
+ *
+ * Capacité = capacité de base (PRODUCTION_BELVAUX_PAR_TOUR = 2 unités)
+ * + 2 unités par carte logistique active de production
+ * (`belvaux-robot-n1`, `belvaux-robot-n2`, `belvaux-entrepot`).
+ *
+ * Avant LOT 2.3, ces cartes n'augmentaient que la capacité commerciale
+ * (via BONUS_CAPACITE / CAPACITE_IMMOBILISATION), pas la production.
+ * Conséquence : un Belvaux qui investissait dans 2 robots (10 000 €)
+ * pouvait servir jusqu'à 8 clients/trim mais ne produisait que 2 PF →
+ * 6 clients perdus chaque trimestre, ROI négatif. Pédagogiquement
+ * trompeur (les cartes promettaient "+2 ventes/trim" sans tenir).
+ *
+ * Maintenant : Robot N1 → +2, Robot N2 → +2, Entrepôt → +2.
+ * Capacité max = 2 + 6 = 8 unités/trim si les 3 cartes sont actives.
+ */
+const CARTES_PRODUCTION_BELVAUX = new Set(["belvaux-robot-n1", "belvaux-robot-n2", "belvaux-entrepot"]);
+const BONUS_PRODUCTION_PAR_CARTE = 2;
+function calculerCapaciteProductionBelvaux(joueur) {
+    const nbCartes = joueur.cartesActives.filter((c) => CARTES_PRODUCTION_BELVAUX.has(c.id)).length;
+    return types_1.PRODUCTION_BELVAUX_PAR_TOUR + nbCartes * BONUS_PRODUCTION_PAR_CARTE;
+}
 function appliquerRealisationBelvaux(etat, joueurIdx) {
     const joueur = etat.joueurs[joueurIdx];
     const modifications = [];
@@ -1085,9 +1155,14 @@ function appliquerRealisationBelvaux(etat, joueurIdx) {
     }
     // B9-D post (2026-04-24) — Capacité de production dédiée, distincte de la
     // capacité logistique (calculerCapaciteLogistique). Belvaux fabrique jusqu'à
-    // PRODUCTION_BELVAUX_PAR_TOUR unités par trimestre, limitée par les MP.
+    // `calculerCapaciteProductionBelvaux(joueur)` unités par trimestre, limitée
+    // par les MP.
+    // LOT 2.3 (2026-04-25) — Les cartes Robots/Entrepôt augmentent maintenant
+    // RÉELLEMENT la cadence de production (avant elles n'augmentaient que la
+    // capacité commerciale via BONUS_CAPACITE/CAPACITE_IMMOBILISATION, ce qui
+    // les rendait pédagogiquement trompeuses → cf. dette #7 du backlog B9).
     const coutUnitaire = types_1.PRIX_UNITAIRE_MARCHANDISE; // 1 000 € par unité
-    const capaciteProduction = types_1.PRODUCTION_BELVAUX_PAR_TOUR;
+    const capaciteProduction = calculerCapaciteProductionBelvaux(joueur);
     const capaciteMatiere = Math.floor(ligneMP.valeur / coutUnitaire);
     const quantiteEffective = Math.min(capaciteProduction, capaciteMatiere);
     // Cas 0 production : aucune matière disponible (ou MP < 1 unité).
@@ -1934,11 +2009,21 @@ function calculerCapaciteLogistique(joueur) {
 }
 // ─── PIOCHE CLIENTS (générée par les commerciaux) ───────────
 function genererClientsParCommerciaux(joueur) {
+    // CRIT-1 (2026-04-25) — Bug corrigé : la construction naïve `client-${type}`
+    // ne marchait pas pour `grand_compte` (le typeClient est en snake_case mais
+    // l'ID de carte est en kebab-case → "client-grand-compte"). Conséquence :
+    // la Directrice commerciale (clientParTour: "grand_compte") coûtait
+    // 3 000 €/trim sans générer aucun client.
+    // Fix : passer par CLIENT_CARD_ID_BY_TYPE (cartes.ts), source unique de
+    // vérité partagée avec genererClientsDepuisFlux.
     const clients = [];
     for (const carte of joueur.cartesActives) {
         if (!carte.clientParTour)
             continue;
-        const clientCarte = cartes_1.CARTES_CLIENTS.find((c) => c.id === `client-${carte.clientParTour}`);
+        const idCarte = cartes_1.CLIENT_CARD_ID_BY_TYPE[carte.clientParTour];
+        if (!idCarte)
+            continue;
+        const clientCarte = cartes_1.CARTES_CLIENTS.find((c) => c.id === idCarte);
         if (clientCarte) {
             const nb = carte.nbClientsParTour ?? 1;
             for (let i = 0; i < nb; i++) {

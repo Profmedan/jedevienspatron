@@ -94,6 +94,11 @@ exports.ENTREPRISES = [
         // Le libellé "⚡ Produit à chaque tour" RESTE valable : c'est
         // désormais l'étape 3 qui matérialise cette spécialité.
         // B8-C — Modèle de valeur : producteur industriel
+        // LOT 2.2 (2026-04-25) — `baremeRevenus` ajouté : Belvaux vend plus cher
+        // que le négoce standard pour refléter son positionnement industriel à
+        // valeur ajoutée. Particulier 2 500 € (vs 2 000), TPE 4 000 € (vs 3 000),
+        // Grand Compte 5 500 € (vs 4 000). Marge unitaire passe de 1 000 → 1 500
+        // sur le particulier, ce qui rend Belvaux viable avec ~3 commerciaux.
         modeleValeur: {
             mode: "production",
             ceQueJeVends: "Des pièces métalliques fabriquées à la commande",
@@ -102,15 +107,22 @@ exports.ENTREPRISES = [
             coutVariable: 1000,
             libelleExecution: "Produit fini livré au client",
             libelleContrepartie: "Déstockage du produit fini (baisse de production stockée)",
+            baremeRevenus: {
+                particulier: { ventes: 2500, marge: 1500 },
+                tpe: { ventes: 4000, marge: 3000 },
+                grand_compte: { ventes: 5500, marge: 4500 },
+            },
         },
         actifs: [
             // IMMOBILISATIONS
-            // Entrepôt : bâtiment industriel → vie 8T (≈ 2 ans)
-            { nom: "Entrepôt", valeur: 8000 },
-            // Machine de production : outil industriel cœur du métier → vie 8T
-            // (renommée depuis "Camionnette" en B8-C — une camionnette utilitaire
-            //  n'avait pas de sens comptable pour un pur producteur)
-            { nom: "Machine de production", valeur: 8000 },
+            // LOT 2.4 (2026-04-25) — Amortissements étalés sur des durées plus
+            // réalistes (avant : 8T fixe pour tout bien à 8 000 €, soit 1 000 €/trim).
+            // Entrepôt : bâtiment industriel → 12T (≈ 3 ans), dotation 667 €/trim
+            { nom: "Entrepôt", valeur: 8000, dureeAmortissement: 12 },
+            // Machine de production : outil industriel cœur du métier → 10T (≈ 2,5 ans),
+            // dotation 800 €/trim. Renommée depuis "Camionnette" en B8-C — une
+            // camionnette utilitaire n'avait pas de sens comptable pour un producteur.
+            { nom: "Machine de production", valeur: 8000, dureeAmortissement: 10 },
             // Autres : réservé aux investissements via Cartes Décision
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS — B9-C (2026-04-24) : renommé "Stocks matières premières" (PCG classe 31)

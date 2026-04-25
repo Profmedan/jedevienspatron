@@ -114,10 +114,13 @@ describe("Étape 0 — Charges fixes et amortissements", () => {
 
     appliquerEtape0(etat, 0);
 
-    // Belvaux : 2 biens amortissables → dotation = 2000
+    // LOT 2.4 (2026-04-25) — Belvaux a maintenant des durées d'amortissement
+    // explicites : Entrepôt 12T (dotation 8000/12 = 667 €/trim) et Machine
+    // 10T (dotation 8000/10 = 800 €/trim). Total = 1 467 €/trim au lieu
+    // des 2 000 € avant LOT 2.1 (cadence fixe −1 000 €/trim par bien).
     const immoAfter = getTotalImmobilisations(joueur);
-    expect(immoAfter).toBe(immoBefore - 2000);
-    expect(joueur.compteResultat.charges.dotationsAmortissements).toBe(2000);
+    expect(immoAfter).toBe(immoBefore - 1467);
+    expect(joueur.compteResultat.charges.dotationsAmortissements).toBe(1467);
   });
 
   test("Le remboursement d'emprunt réduit les emprunts de 500", () => {

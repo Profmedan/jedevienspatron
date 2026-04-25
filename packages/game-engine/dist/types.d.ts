@@ -3,6 +3,20 @@ export interface PosteActif {
     valeur: number;
     /** Catégorie comptable pour le rendu */
     categorie: "immobilisations" | "stocks" | "creances" | "tresorerie";
+    /**
+     * LOT 2.1 (2026-04-25) — Durée d'amortissement en trimestres.
+     *
+     * Si présente sur une immobilisation, la dotation trimestrielle vaut
+     * `valeurInitiale / dureeAmortissement` (lecture de `bilan.ref` pour
+     * la valeur initiale). Sinon, le moteur applique le fallback
+     * historique de −1 000 €/trim par bien.
+     *
+     * Permet d'étaler l'amortissement (Belvaux Entrepôt 12T au lieu
+     * de 8T par défaut) sans changer la valeur d'inscription au bilan
+     * — la valeur initiale au bilan reste la valeur d'achat conformément
+     * au PCG, seule la cadence de dotation change.
+     */
+    dureeAmortissement?: number;
 }
 export interface PostePassif {
     nom: string;
@@ -113,6 +127,24 @@ export interface ModeleValeurEntreprise {
     libelleExecution: string;
     /** Libellé pédagogique de l'acte 4 (contrepartie charge / dette) */
     libelleContrepartie: string;
+    /**
+     * LOT 2.2 (2026-04-25) — Barème de prix de vente spécifique à l'entreprise.
+     *
+     * Si présent, override `REVENU_PAR_CLIENT` (constante globale) pour cette
+     * entreprise uniquement. Permet à Belvaux (production) de vendre un peu
+     * plus cher que les négoces standard (positionnement industriel à valeur
+     * ajoutée), sans toucher à la grille de prix d'Azura/Véloce/Synergia.
+     *
+     * Chaque type de client peut être surchargé individuellement (les non
+     * surchargés gardent la valeur globale). `ventes` = CA brut, `marge` =
+     * marge contributive après déduction du coût matière (information
+     * pédagogique, le moteur recalcule lui-même la marge à partir du coût
+     * variable).
+     */
+    baremeRevenus?: Partial<Record<TypeClientEntreprise, {
+        ventes: number;
+        marge: number;
+    }>>;
 }
 export interface EntrepriseTemplate {
     nom: NomEntreprise;

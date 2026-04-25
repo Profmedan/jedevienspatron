@@ -5,6 +5,42 @@
 
 import { CarteCommercial, CarteClient, CarteDecision, CarteEvenement } from "../types";
 
+// ─── MAPPING TYPE CLIENT MÉTIER → ID DE CARTE CLIENT ─────────
+//
+// Le moteur stocke partout le `typeClient` au format métier (snake_case) :
+//   "particulier", "tpe", "grand_compte" — utilisé dans REVENU_PAR_CLIENT,
+//   CarteCommercial.typeClientRapporte, CarteDecision.clientParTour,
+//   FluxClientsEntreprise.typeClient, etc.
+//
+// MAIS les IDs des cartes clients sont en kebab-case :
+//   "client-particulier", "client-tpe", "client-grand-compte".
+//
+// Avant ce mapping, plusieurs sites du moteur construisaient l'ID à la
+// volée via `client-${typeClient}` → cassait dès que le typeClient
+// contenait un underscore. La Directrice commerciale (clientParTour:
+// "grand_compte") ne générait AUCUN client : elle coûtait 3 000 €/trim
+// pour zéro CA. Bug critique invisible — cf. CLAUDE.md backlog #CRIT-1.
+//
+// Règle : tout site qui a besoin de convertir un typeClient en carte
+// passe par CLIENT_CARD_ID_BY_TYPE ou utilise getCarteClientByType().
+export const CLIENT_CARD_ID_BY_TYPE = {
+  particulier: "client-particulier",
+  tpe: "client-tpe",
+  grand_compte: "client-grand-compte",
+} as const;
+
+/**
+ * Mapping inverse : id de carte client → type métier.
+ *
+ * Construit automatiquement à partir de CLIENT_CARD_ID_BY_TYPE pour rester
+ * synchronisé. Utilisé par `appliquerCarteClient` (LOT 2.2) pour appliquer
+ * le `baremeRevenus` propre à chaque entreprise.
+ */
+export const TYPE_BY_CLIENT_CARD_ID: Record<string, "particulier" | "tpe" | "grand_compte"> =
+  Object.fromEntries(
+    Object.entries(CLIENT_CARD_ID_BY_TYPE).map(([type, id]) => [id, type as "particulier" | "tpe" | "grand_compte"]),
+  );
+
 // ─── CARTES COMMERCIAUX ─────────────────────────────────────
 
 export const CARTES_COMMERCIAUX: CarteCommercial[] = [
