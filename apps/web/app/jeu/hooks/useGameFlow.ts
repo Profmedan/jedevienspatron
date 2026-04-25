@@ -31,6 +31,7 @@ import { usePedagogyFlow } from "./usePedagogyFlow";
 import { useLoansFlow } from "./useLoansFlow";
 import { useAchatFlow } from "./useAchatFlow";
 import { useDecisionCards } from "./useDecisionCards";
+import { buildTransitionSummary, getStepLabel, type TransitionContext } from "./buildTransitionSummary";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,19 @@ export interface JournalEntry {
 
 // Re-export pour rétrocompatibilité (page.tsx importe ETAPE_INFO depuis ici)
 export { ETAPE_INFO };
+
+// ─── Transition pédagogique entre 2 étapes (Pierre, 2026-04-25) ────────────
+// État affiché par <TransitionBanner> entre la fin d'une étape et le début
+// de la suivante. Auto-close 2.5 s + clic flèche = `confirmTransition()`.
+// `onConfirm` est la suite du flow (avancerEtape, confirmEndOfTurn, etc.) ;
+// elle est exécutée exactement une fois quand le banner se clôt.
+export interface TransitionPending {
+  fromEtape: number;
+  toEtape: number;
+  message: string;
+  severity: "info" | "alert";
+  onConfirm: () => void;
+}
 
 // ─── Paramètres du hook ────────────────────────────────────────────────────
 
@@ -154,6 +168,12 @@ interface UseGameFlowReturn {
   /** Applique le choix du joueur et libère le flow. Appelé par DefiDirigeantScreen. */
   resoudreDefi: (choixId: string | null) => void;
 
+  // ─── Transition pédagogique entre 2 étapes (Pierre, 2026-04-25) ──
+  /** Bandeau de transition à afficher (null si aucune transition en attente). */
+  transitionPending: TransitionPending | null;
+  /** Confirme manuellement la transition (clic sur la flèche du bandeau). */
+  confirmTransition: () => void;
+
   // ─── B6 : clôture et ouverture d'exercice ────────────────────
   /** Joueur dont la clôture est en attente (null si pas en mode clôture). */
   clotureJoueur: Joueur | null;
@@ -200,6 +220,21 @@ export function useGameFlow({
   const [snapshots, setSnapshots]         = useState<TrimSnapshot[]>([]);
   /** Label de la dernière décision prise ce trimestre (reset à chaque tour) */
   const [lastDecisionLabel, setLastDecisionLabel] = useState<string | null>(null);
+  /**
+   * Titre de la dernière carte événement tirée — capturé dans `launchStep`,
+   * consommé dans `confirmActiveStep` pour bâtir le summary du bandeau de
+   * transition de l'étape EVENEMENT (Pierre, 2026-04-25).
+   */
+  const [lastEvenementTitre, setLastEvenementTitre] = useState<string | null>(null);
+  /**
+   * ─── Transition pédagogique entre 2 étapes ────────────────────────────
+   * État du bandeau <TransitionBanner> affiché entre la fin d'une étape
+   * et le début de la suivante. `null` quand aucune transition n'est en
+   * attente. La fonction `onConfirm` (stockée dans le state lui-même)
+   * porte la suite du flow (avancerEtape, confirmEndOfTurn, …) — elle est
+   * appelée exactement une fois par `confirmTransition()`.
+   */
+  const [transitionPending, setTransitionPending] = useState<TransitionPending | null>(null);
   /** ─── Défis du dirigeant (Tâche 24, Vague 2) ─────────────────────
    *  `defiEnAttente` : défi consulté mais non encore résolu — bloque le flow.
    *  `contexteDefi`  : contexte narratif déjà formaté (tokens résolus). */
@@ -303,6 +338,51 @@ export function useGameFlow({
     }, ...prev.slice(0, 29)]);
   }
 
+  // ─── Transition pédagogique entre 2 étapes ───────────────────────────────
+  //
+  // `startTransition` calcule le résumé via `buildTransitionSummary` puis
+  // empile l'objet `TransitionPending` qui sera consommé par <TransitionBanner>
+  // dans page.tsx. La closure `onConfirm` porte tout ce qui doit être exécuté
+  // au moment où l'utilisateur (ou le timer) déclenche la suite : avancerEtape,
+  // setEtat, maybeShowPedagoModal, confirmEndOfTurn, etc.
+  function startTransition(opts: {
+    fromEtape: number;
+    toEtape: number;
+    etatAvant: EtatJeu;
+    etatApres: EtatJeu;
+    mods: ModificationMoteur[];
+    contexte?: TransitionContext;
+    onConfirm: () => void;
+  }) {
+    const summary = buildTransitionSummary(
+      opts.etatAvant,
+      opts.etatApres,
+      opts.fromEtape,
+      opts.mods,
+      opts.contexte ?? {},
+    );
+    setTransitionPending({
+      fromEtape: opts.fromEtape,
+      toEtape: opts.toEtape,
+      message: summary.message,
+      severity: summary.severity,
+      onConfirm: opts.onConfirm,
+    });
+  }
+
+  // Confirme la transition (appelé par le bouton flèche du bandeau
+  // OU par le timer auto-close). On lit la closure `onConfirm` AVANT de
+  // vider le state pour éviter une race entre le re-render et l'appel.
+  function confirmTransition() {
+    setTransitionPending((prev) => {
+      if (!prev) return null;
+      // Schedule the actual continuation hors du setter pour éviter de
+      // déclencher un setState pendant un setState (warning React).
+      queueMicrotask(prev.onConfirm);
+      return null;
+    });
+  }
+
   // ─ Joueur affiché (avec écritures partiellement appliquées) ───────────────
   function getDisplayJoueur() {
     if (!etat) return null;
@@ -395,18 +475,73 @@ export function useGameFlow({
     // confirmEndOfTurn) au lieu d'avancerEtape, puisque CLOTURE_BILAN
     // est la dernière étape du cycle 8. Évite de passer par un state UI
     // intermédiaire pour la passe « bilan ».
+    //
+    // Pierre 2026-04-25 : on intercale ici le bandeau de transition
+    // « Résultat net X €. Trésorerie Y €. Bilan équilibré. » avant la fin
+    // de tour. Le `confirmEndOfTurn` est différé dans la closure onConfirm.
     if (etapeAvantAvancement === ETAPES.CLOTURE_BILAN) {
-      const fin = verifierFinTour(next, next.joueurActif);
-      confirmEndOfTurn(next, fin);
+      // On capture les `mods` de l'activeStep sous forme de ModificationMoteur[]
+      // pour les passer au summary (utile pour repérer les écritures de clôture).
+      const modsCloture: ModificationMoteur[] = activeStep.entries.map((e, i) => ({
+        joueurId: next.joueurs[next.joueurActif].id,
+        poste: e.poste,
+        ancienneValeur: 0,
+        nouvelleValeur: e.delta,
+        explication: activeStep.entries[i]?.description ?? "",
+      }));
+      startTransition({
+        fromEtape: ETAPES.CLOTURE_BILAN,
+        toEtape: ETAPES.ENCAISSEMENTS_CREANCES, // boucle vers le tour suivant
+        etatAvant: etat,
+        etatApres: next,
+        mods: modsCloture,
+        onConfirm: () => {
+          const fin = verifierFinTour(next, next.joueurActif);
+          confirmEndOfTurn(next, fin);
+        },
+      });
       return;
     }
 
-    avancerEtape(next);
-    pedagogy.maybeShowPedagoModal(next.etapeTour);
-    setEtat({ ...next });
-    setActiveStep(null);
-    setRecentModifications([]);
-    if (etapeAvantAvancement === ETAPES.DECISION) decisions.setSubEtape6("recrutement");
+    // ─── Pierre 2026-04-25 : bandeau de transition pédagogique ─────────
+    // Au lieu d'avancer brutalement, on calcule un résumé court de ce qui
+    // vient d'être fait et on l'affiche dans <TransitionBanner>. Le bouton
+    // « Confirmer l'étape » du LeftPanel devient ainsi un sas pédagogique
+    // de ~2.5 s au lieu d'un saut sec vers la modale de l'étape suivante.
+    const modsActiveStep: ModificationMoteur[] = activeStep.entries.map((e) => ({
+      joueurId: next.joueurs[next.joueurActif].id,
+      poste: e.poste,
+      ancienneValeur: 0,
+      nouvelleValeur: e.delta,
+      explication: e.description,
+    }));
+    const ctx: TransitionContext = {
+      decisionLabel: lastDecisionLabel ?? undefined,
+      evenementTitre: lastEvenementTitre ?? undefined,
+    };
+    // Le `next` est déjà à jour (les écritures ont été appliquées via
+    // activeStep.previewEtat). On va simuler avancerEtape pour calculer
+    // le nom de l'étape suivante, mais on ne l'applique qu'au moment du
+    // `onConfirm` afin de garder l'état UI intermédiaire stable.
+    const previewNext = cloneEtat(next);
+    avancerEtape(previewNext);
+    startTransition({
+      fromEtape: etapeAvantAvancement,
+      toEtape: previewNext.etapeTour,
+      etatAvant: etat,
+      etatApres: next,
+      mods: modsActiveStep,
+      contexte: ctx,
+      onConfirm: () => {
+        avancerEtape(next);
+        pedagogy.maybeShowPedagoModal(next.etapeTour);
+        setEtat({ ...next });
+        setActiveStep(null);
+        setRecentModifications([]);
+        if (etapeAvantAvancement === ETAPES.DECISION) decisions.setSubEtape6("recrutement");
+        if (etapeAvantAvancement === ETAPES.EVENEMENT) setLastEvenementTitre(null);
+      },
+    });
   }
 
   // ─── Défis du dirigeant (Tâche 24, V2) ──────────────────────────────────
@@ -638,6 +773,10 @@ export function useGameFlow({
         if (next.piocheEvenements.length > 0) {
           const carte = next.piocheEvenements[0];
           evenementCapture = { titre: carte.titre, description: carte.description };
+          // On mémorise le titre pour le bandeau de transition affiché par
+          // `confirmActiveStep` (Pierre 2026-04-25). Reset à null à la
+          // sortie de l'étape EVENEMENT dans la closure onConfirm.
+          setLastEvenementTitre(carte.titre);
           const r = appliquerCarteEvenement(next, idx, carte);
           next.piocheEvenements = next.piocheEvenements.slice(1);
           if (r.succes) mods = r.modifications as ModificationMoteur[];
@@ -666,10 +805,25 @@ export function useGameFlow({
     }
 
     if ((etapeActuelle === ETAPES.ENCAISSEMENTS_CREANCES || etapeActuelle === ETAPES.COMMERCIAUX || etapeActuelle === ETAPES.REALISATION_METIER) && modsFiltrees.length === 0) {
-      avancerEtape(next);
-      pedagogy.maybeShowPedagoModal(next.etapeTour);
-      setEtat({ ...next });
-      setActiveStep(null);
+      // Pierre 2026-04-25 : skip-auto → bandeau de transition « rien à
+      // faire » au lieu d'avancer brutalement. On garde `mods` (et non
+      // `modsFiltrees`) pour que `buildTransitionSummary` puisse repérer
+      // les messages informatifs (matière insuffisante Belvaux, etc.).
+      const previewNext = cloneEtat(next);
+      avancerEtape(previewNext);
+      startTransition({
+        fromEtape: etapeActuelle,
+        toEtape: previewNext.etapeTour,
+        etatAvant: workingEtat,
+        etatApres: next,
+        mods,
+        onConfirm: () => {
+          avancerEtape(next);
+          pedagogy.maybeShowPedagoModal(next.etapeTour);
+          setEtat({ ...next });
+          setActiveStep(null);
+        },
+      });
       return;
     }
 
@@ -703,6 +857,57 @@ export function useGameFlow({
     } else {
       dispatchActiveStep({ type: "SET_STEP", step });
     }
+  }
+
+  // ─── Wrappers Pierre 2026-04-25 — interception bandeau pour les skips ─
+  //
+  // `skipAchat` du sub-hook fait `avancerEtape(next); setEtat(next)` direct.
+  // On le wrap pour intercaler un <TransitionBanner> « Pas d'achat ce
+  // trimestre. » avant le saut d'étape. Idem pour `skipDecision` quand on
+  // quitte effectivement DECISION (sub-étape investissement).
+  function skipAchatWithBanner() {
+    if (!etat) return;
+    const etatAvant = etat;
+    const next = cloneEtat(etat);
+    avancerEtape(next); // calcul de l'état post-skip pour connaître toEtape
+    startTransition({
+      fromEtape: ETAPES.ACHATS_STOCK,
+      toEtape: next.etapeTour,
+      etatAvant,
+      etatApres: etatAvant, // état comptable inchangé (rien acheté)
+      mods: [],
+      onConfirm: () => {
+        pedagogy.maybeShowPedagoModal(next.etapeTour);
+        setEtat(next);
+      },
+    });
+  }
+
+  function skipDecisionWithBanner() {
+    if (!etat) return;
+    // Sub-étape "recrutement" → transition silencieuse vers "investissement".
+    // Pas de bandeau (on reste sur l'étape DECISION, juste un sous-écran).
+    if (etat.etapeTour === ETAPES.DECISION && decisions.subEtape6 === "recrutement") {
+      decisions.skipDecision();
+      return;
+    }
+    // Sub-étape "investissement" : on quitte vraiment DECISION → bandeau.
+    const etatAvant = etat;
+    const next = cloneEtat(etat);
+    avancerEtape(next);
+    startTransition({
+      fromEtape: ETAPES.DECISION,
+      toEtape: next.etapeTour,
+      etatAvant,
+      etatApres: etatAvant,
+      mods: [],
+      contexte: { decisionLabel: lastDecisionLabel ?? undefined },
+      onConfirm: () => {
+        pedagogy.maybeShowPedagoModal(next.etapeTour);
+        setEtat(next);
+        decisions.resetDecisionState();
+      },
+    });
   }
 
   // ─ Fin de tour ────────────────────────────────────────────────────────────
@@ -957,14 +1162,18 @@ export function useGameFlow({
     handleQCMTermine: pedagogy.handleQCMTermine,
     handleDemanderEmprunt: loans.handleDemanderEmprunt,
     launchAchat: achat.launchAchat,
-    skipAchat: achat.skipAchat,
+    skipAchat: skipAchatWithBanner,
     launchPreparationVeloce: achat.launchPreparationVeloce,
     launchStaffingSynergia: achat.launchStaffingSynergia,
     launchDecision: decisions.launchDecision,
-    skipDecision: decisions.skipDecision,
+    skipDecision: skipDecisionWithBanner,
     handleInvestirPersonnel: decisions.handleInvestirPersonnel,
     handleVendreImmobilisation: decisions.handleVendreImmobilisation,
     handleLicencierCommercial: decisions.handleLicencierCommercial,
+
+    // ─── Transition pédagogique (Pierre 2026-04-25) ──────────
+    transitionPending,
+    confirmTransition,
 
     // ─── Défis du dirigeant (Tâche 24, V2) ───────────────────
     defiEnAttente,

@@ -13,7 +13,9 @@ import {
   SetupScreen, CompanyIntro, JournalReplay,
   DefiDirigeantScreen, ModalEtape,
   ModalClotureExercice, ModalOuvertureExercice,
+  TransitionBanner,
 } from "@/components/jeu";
+import { getStepLabel } from "./hooks/buildTransitionSummary";
 import { ImpactFlash } from "@/components/ImpactFlash";
 const RightPanel = dynamic(() => import("@/components/jeu/RightPanel"), {
   ssr: false,
@@ -455,6 +457,22 @@ export default function JeuPage() {
       <div className="px-4 py-2 sm:px-6">
         <AlerteDecouvert decouvert={displayJoueur.bilan.decouvert} />
       </div>
+
+      {/* ─── BANDEAU DE TRANSITION PÉDAGOGIQUE (Pierre 2026-04-25) ───
+          Affiché entre la fin d'une étape et le début de la suivante :
+          ✓ message de résumé court + nom de l'étape suivante + flèche.
+          Auto-close 2.5 s par défaut, OU clic sur la flèche pour
+          accélérer. Le state vit dans useGameFlow.transitionPending. */}
+      {flow.transitionPending && (
+        <div className="px-4 sm:px-6">
+          <TransitionBanner
+            message={flow.transitionPending.message}
+            severity={flow.transitionPending.severity}
+            nextStepName={getStepLabel(flow.transitionPending.toEtape)}
+            onConfirm={flow.confirmTransition}
+          />
+        </div>
+      )}
 
       {/* ─── CORPS RESPONSIVE : mobile empilé | laptop 2 colonnes | desktop 3 colonnes ─── */}
       <div className="grid flex-1 gap-4 px-4 pb-4 sm:px-6 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] xl:min-h-0 xl:grid-cols-[minmax(300px,25%)_minmax(420px,50%)_minmax(280px,25%)] xl:overflow-hidden">

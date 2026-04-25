@@ -1180,3 +1180,66 @@ Un smoke test qui échoue pour raison de signature n'est pas un garde-fou — c'
 2. `ModificationMoteur` avec delta=0 — visible dans `activeStep.entries` SEULEMENT si la fonction qui les affiche n'a pas filtré les delta=0.
 
 Choisir le canal 1 (messages) pour les messages qui ne doivent pas polluer la vue "écritures comptables", et le canal 2 pour les messages directement liés à une ligne de bilan/CR. Toujours être explicite : une ligne delta=0 dans une fonction moteur est un message destiné à l'élève, pas un bug — la documenter dans le commentaire de la fonction.
+
+---
+
+## 📅 2026-04-25 — Bandeau de transition pédagogique
+
+### L-TRANS-1 — Un setState pendant un setState : utiliser `queueMicrotask` pour découpler
+
+**Contexte** : `confirmTransition()` doit (1) vider `transitionPending` et (2) exécuter la closure `onConfirm` qui contient elle-même des `setEtat(...)`, `setActiveStep(null)`, etc. Si on fait :
+```ts
+function confirmTransition() {
+  if (!transitionPending) return;
+  transitionPending.onConfirm();      // ⚠️ déclenche setEtat → re-render
+  setTransitionPending(null);          // ⚠️ encore un setState
+}
+```
+React peut warning "Cannot update a component while rendering a different component" si `onConfirm` est appelée depuis un setter (cas du timer dans le useEffect qui appelle `setProgress` puis `onConfirm`).
+
+**Fix** : utiliser le pattern `setState((prev) => { queueMicrotask(prev.onConfirm); return null; })` qui :
+1. Garantit que `prev` est lu de la valeur courante (sans race avec `setProgress` du timer),
+2. Différé l'appel de `onConfirm` au prochain microtask, hors du setter en cours,
+3. Reset le state en une seule passe.
+
+**Règle générale** : quand un state pending porte une callback qui doit s'exécuter au "consume", lire la callback dans le setter `(prev) => …` puis la défiérer dans un microtask. Pattern réutilisable pour tout système d'événements ou de transitions.
+
+### L-TRANS-2 — `firedRef` dans un timer + bouton : éviter le double-fire
+
+**Contexte** : `<TransitionBanner>` a 2 chemins de déclenchement : (1) `setInterval` qui après 2.5 s appelle `onConfirm`, (2) clic sur le bouton flèche qui appelle aussi `onConfirm`. Si le clic se produit pile au moment du dernier tick du timer, les deux peuvent appeler `onConfirm` → double avancement d'étape, état corrompu.
+
+**Fix** : `useRef<boolean>(false)` + helper `fireOnce()` qui check `firedRef.current` avant d'appeler `onConfirm`, set `true` après. Le `useEffect` cleanup `clearInterval` au unmount empêche le timer de continuer après le clic, mais le ref est la garantie idempotence côté composant.
+
+**Règle générale** : tout composant avec auto-close + action manuelle doit utiliser un ref pour garantir l'idempotence. Ne pas se reposer uniquement sur le cleanup de useEffect (qui peut être en retard d'un tick).
+
+### L-TRANS-3 — Override d'un splat dans un retour d'objet : mettre l'override APRÈS
+
+**Contexte** : `useGameFlow` splatte `...achat` (sub-hook) dans son retour, ce qui inclut `skipAchat: achat.skipAchat`. Pour intercaler un wrapper `skipAchatWithBanner`, on l'écrit explicitement APRÈS le splat dans le même objet — JS prend la dernière propriété définie.
+
+```ts
+return {
+  ...achat,                              // contient skipAchat: achat.skipAchat
+  // … autres ↓
+  skipAchat: skipAchatWithBanner,        // ← override gagne
+  …
+};
+```
+
+**Règle générale** : quand on a besoin de remplacer une fonction d'un sub-hook splatté dans un retour, mettre l'override APRÈS le splat dans le même objet. Pas besoin de modifier la signature du sub-hook ni son interface publique. Cohérent avec la sémantique JavaScript des property assignments.
+
+### L-TRANS-4 — Reconstruire des `ModificationMoteur` partielles depuis `activeStep.entries` perd `ancienneValeur/nouvelleValeur` réels
+
+**Contexte** : `activeStep.entries` contient `{ poste, delta, description, applied, sens, … }` mais PAS les `ancienneValeur` et `nouvelleValeur` du moteur d'origine. Quand `confirmActiveStep` veut bâtir un `TransitionSummary`, il doit reconstituer des `ModificationMoteur[]` synthétiques :
+```ts
+const mods: ModificationMoteur[] = activeStep.entries.map((e) => ({
+  joueurId: …,
+  poste: e.poste,
+  ancienneValeur: 0,
+  nouvelleValeur: e.delta,   // delta, pas la valeur réelle
+  explication: e.description,
+}));
+```
+
+**Conséquence** : tout test du type `m.nouvelleValeur - m.ancienneValeur > 0` fonctionne car `delta = nouvelleValeur - ancienneValeur = e.delta`. Mais tout summary qui voudrait l'état réel d'un poste (ex: « solde après ») doit le lire dans `etatApres` directement, pas dans les mods. C'est ce qu'on fait pour la trésorerie (encaissé = `getTresorerie(after) - getTresorerie(before)`), pour le résultat net, pour le total stock.
+
+**Règle générale** : `activeStep.entries` est un canal d'AFFICHAGE (delta visible dans l'écriture), pas un canal de DONNÉES (état complet). Pour reconstituer des données comptables au-delà du delta, lire l'état joueur AVANT et APRÈS et calculer le différentiel — c'est plus fiable que parser des mods reconstruites.

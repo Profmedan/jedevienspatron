@@ -1524,3 +1524,60 @@ Après push de B6-B (commit `ed5f88b` — UI fin d'exercice livrée), Pierre a f
 - L-B7-B — Tout `onCancel` doit libérer TOUT l'état de l'étape, pas seulement une modale locale
 - L-B7-C — `appliquerDeltaPoste` plafonne les passifs à 0 : inadapté aux capitaux propres en situation de crise. Muter directement pour les postes structurels avec contrepartie explicite dans `modifications`
 - Meta — Un subagent peut se tromper de diagnostic. Vérification numérique manuelle obligatoire + test de reproduction qui PASSE seulement après le fix
+
+---
+
+## 🪧 2026-04-25 — Bandeau de transition pédagogique entre étapes (Pierre)
+
+### Déclencheur
+
+Pierre signale qu'à la fin d'une étape, l'apprenant tombe trop brutalement sur la modale « Étape suivante » (ou pire, sur la sous-étape sans aucun feedback) :
+> « ce texte de la modale de l'étape 2/8 arrive alors que l'on vient de cliquer sur commencer l'étape de l'étape 1/8 paiements clients à recevoir. Il faut qu'on lui dise pas de clients on passe à l'étape suivante. »
+
+Demande validée explicitement : **système de transition pédagogique pour TOUTES les étapes**, pas seulement les skips automatiques.
+
+### Architecture livrée
+
+| # | Fichier | Rôle |
+|---|---|---|
+| 1 | `apps/web/components/jeu/TransitionBanner.tsx` | Composant UI pur, auto-close 2.5 s + bouton flèche pour accélérer. Vert (info) / ambre (alert). Barre de progression visible. |
+| 2 | `apps/web/app/jeu/hooks/buildTransitionSummary.ts` | Helper pur (sans React). Construit le message court à partir de `(etatAvant, etatApres, fromEtape, mods, contexte)`. Couvre les 8 étapes du cycle B9-A selon le tableau Pierre. |
+| 3 | `apps/web/app/jeu/hooks/useGameFlow.ts` | Nouveau state `transitionPending`, fonctions `startTransition()` + `confirmTransition()`. Wrappers locaux `skipAchatWithBanner` et `skipDecisionWithBanner` qui interceptent l'avancement. |
+| 4 | `apps/web/app/jeu/page.tsx` | Branche `<TransitionBanner>` au-dessus de la grille principale. Lit le label de l'étape suivante via `getStepLabel(toEtape)`. |
+
+### Couverture par étape (cf. tableau validé Pierre)
+
+| fromEtape | rien fait | action réelle |
+|---|---|---|
+| 0 — Encaissements | T1 « Aucun client ne te doit encore d'argent. » / hors T1 « Aucun paiement client à recevoir ce trimestre. » | « X € encaissés. Y € restent à recevoir. » |
+| 1 — Commerciaux | « Aucun commercial actif : aucun nouveau client ce trimestre. » (severity alert) | « N commerciaux payés. M clients attendus. » |
+| 2 — Approvisionnement | « Pas d'achat ce trimestre. » (alert) | Production/négoce : « X unités achetées. Stock disponible : Y unités. » · Logistique : « Coût d'approche tournée engagé : 300 €. » · Conseil : « Coût staffing mission engagé : 400 €. » |
+| 3 — Réalisation métier | « Aucune réalisation ce trimestre. » (alert) ou message « matière insuffisante » Belvaux | Belvaux : « X matières transformées en Y produits finis. » · Azura : « Coût canal e-commerce comptabilisé : 300 €. » · Véloce : « Tournée préparée. En-cours constaté : 300 €. » · Synergia : « Mission staffée. En-cours constaté : 400 €. » |
+| 4 — Facturation | « Aucun client à facturer. » (alert) | « N ventes enregistrées. CA : X €. Clients perdus : Y. » |
+| 5 — Décision | « Pas de décision ce trimestre. » | « Décision appliquée : [carte]. Impact cash : ±X €. » |
+| 6 — Événement | « Événement sans impact comptable. » | « [Titre événement] — Impact : ±X € sur [poste]. » (severity selon delta) |
+| 7 — Clôture & bilan | jamais vide | « Résultat net : ±X €. Trésorerie : Y €. Bilan équilibré. » (alert si déséquilibre OU perte) |
+
+### Points d'interception
+
+- **Skip-auto** (étapes 0/1/3 sans modifications) : `launchStep()` appelle `startTransition(...)` au lieu de `avancerEtape` direct.
+- **Confirm normal** (n'importe quelle étape avec écritures) : `confirmActiveStep()` calcule un previewNext, appelle `startTransition(...)` et différé `avancerEtape` dans `onConfirm`.
+- **Clôture & bilan** : la 2ᵉ passe (`verifierFinTour` + `confirmEndOfTurn`) est désormais dans le `onConfirm` du bandeau.
+- **Skip Achat / Skip Décision** : wrappers `skipAchatWithBanner` / `skipDecisionWithBanner` remplacent les fonctions des sub-hooks dans le retour. Sub-étape « recrutement → investissement » de DECISION reste silencieuse (pas de bandeau, on ne quitte pas l'étape).
+- **Capture événement** : nouveau state `lastEvenementTitre` setté dans `launchStep` (case EVENEMENT), passé en contexte au summary, reset dans `onConfirm`.
+
+### Vérification
+
+- `npx tsc --noEmit` (apps/web) : **EXIT=0**, aucune erreur
+- `npx tsc --noEmit` (game-engine) : **EXIT=0**, aucune erreur
+- `npx jest` (game-engine) : **220/220 tests verts** (aucune régression)
+
+### Reste à faire côté Pierre
+
+- [ ] Rejouer un trimestre complet pour valider visuellement la palette/durée/wording de chaque transition
+- [ ] Confirmer la durée auto-close : 2.5 s par défaut — ajustable via prop `autoCloseMs`
+- [ ] Pull + commit + push depuis le Mac
+
+### Leçons à capturer
+
+- Voir `tasks/lessons.md` (rubrique 2026-04-25) — patterns de bandeau pédagogique et closure-passing dans le state React.

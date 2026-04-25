@@ -9,6 +9,7 @@ export { MainContent } from "./MainContent";
 export { EntryPanel, type ActiveStep } from "./EntryPanel";
 export { EntryCard, type EntryLine } from "./EntryCard";
 export { OverlayTransition } from "./OverlayTransition";
+export { TransitionBanner } from "./TransitionBanner";
 export { OverlayFaillite } from "./OverlayFaillite";
 export { DefiDirigeantScreen } from "./DefiDirigeantScreen";
 export { SetupScreen, type PlayerSetup } from "./SetupScreen";
