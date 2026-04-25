@@ -96,8 +96,8 @@ interface LeftPanelProps {
 // Override spécial sur COMMERCIAUX dans le corps du composant (présence de commerciaux).
 const STEP_HELP = [
   "Une créance, c'est une vente déjà faite mais pas encore payée par le client. Certains clients paient tout de suite ; d'autres paient dans 1 trimestre (C+1, client TPE) ou dans 2 trimestres (C+2, clients grands comptes). Trimestre après trimestre les délais de paiement accordés évoluent vers l'encaissement : C+2 devient C+1, et C+1 entre en trésorerie. Au T1, c'est normal s'il n'y a encore rien à encaisser.", // 0 — ENCAISSEMENTS_CREANCES
-  "Salaires versés. Nouveaux clients générés.",                                                           // 1 — COMMERCIAUX (override en bas)
-  "Achat de stocks (optionnel).",                                                                         // 2 — ACHATS_STOCK
+  "Tes commerciaux créent la demande du trimestre. Junior → 2 Particuliers (paiement comptant), Senior → 2 TPE (C+1), Directrice Commerciale → 2 Grand Comptes (C+2). Sans commercial, aucun nouveau client (sauf flux passif Azura/Véloce/Synergia). Avant d'acheter ou de produire, regarde combien de clients t'attendent.", // 1 — COMMERCIAUX (override dynamique en bas)
+  "Tu achètes avant de vendre. Repère : 1 unité = 1 client servi. Regarde combien de clients ton équipe va t'amener (étape précédente). Comptant (trésorerie −) ou crédit (dette fournisseur).", // 2 — ACHATS_STOCK (override dynamique selon secteur en bas)
   "Étape métier propre à votre entreprise (production, logistique, conseil…). Les écritures spécifiques seront appliquées ici.", // 3 — REALISATION_METIER (B9-A placeholder)
   "Tes clients passent en caisse : pour chacun, une vente est enregistrée au Compte de Résultat, une marchandise sort du stock, et tu encaisses immédiatement ou crées une créance selon son délai de paiement.", // 4 — FACTURATION_VENTES
   "Sélection d'une carte de recrutement, d'investissement ou d'emprunt (optionnel).",                     // 5 — DECISION
@@ -141,13 +141,58 @@ export function LeftPanel({
   const [pendingConfirm, setPendingConfirm] = useState(false);
 
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
-  const hasCommerciaux = joueur.cartesActives.some((c) => c.categorie === "commercial");
-  const stepHelp =
-    etapeTour === ETAPES.COMMERCIAUX
-      ? hasCommerciaux
-        ? "Les salaires de vos commerciaux seront versés et de nouveaux clients seront générés."
-        : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape 5 (Décision) pour générer de nouveaux clients."
-      : STEP_HELP[etapeTour] || "";
+
+  // Audit pédago Pierre (2026-04-24) — overrides dynamiques pour aider l'apprenant :
+  //  • Étape 2 (Commerciaux) : annonce le nombre de clients attendus selon
+  //    les commerciaux actifs + flux passif spécifique de l'entreprise.
+  //  • Étape 3 (Approvisionnement) : adapte le repère "1 unité = 1 client"
+  //    selon le secteur économique de l'entreprise.
+  //
+  // CarteDecision n'expose pas `typeClientRapporte` (typage moteur réservé à
+  // CarteCommercial), donc on déduit le type depuis l'`id` de la carte pour
+  // construire le détail "X Particuliers + Y TPE…". Mapping conservatif :
+  // si l'id n'est pas reconnu, on additionne au total sans détail typé.
+  const commerciauxActifs = joueur.cartesActives.filter((c) => c.categorie === "commercial");
+  const nbCommercialClients = (typeFilter: (id: string) => boolean) =>
+    commerciauxActifs
+      .filter((c) => typeFilter(c.id))
+      .reduce((s, c) => s + (c.nbClientsParTour ?? 0), 0);
+  const nbParticuliersCommerciaux = nbCommercialClients((id) => id.includes("junior"));
+  const nbTPECommerciaux = nbCommercialClients((id) => id.includes("senior"));
+  const nbGCCommerciaux = nbCommercialClients((id) => id.includes("directrice") || id.includes("expert"));
+  // Flux passif spécifique entreprise (Azura : trafic boutique, Véloce : livraisons, Synergia : abonnements)
+  const fluxPassifs = joueur.entreprise.clientsPassifsParTour ?? [];
+  const nbPassifs = fluxPassifs.reduce((s, f) => s + f.nbParTour, 0);
+  const totalClientsAttendus = nbParticuliersCommerciaux + nbTPECommerciaux + nbGCCommerciaux + nbPassifs;
+  // Détaillé pour l'affichage : "2 Particuliers + 1 abonnement"
+  const detailClients = [
+    nbParticuliersCommerciaux > 0 ? `${nbParticuliersCommerciaux} Particulier${nbParticuliersCommerciaux > 1 ? "s" : ""}` : null,
+    nbTPECommerciaux > 0 ? `${nbTPECommerciaux} TPE` : null,
+    nbGCCommerciaux > 0 ? `${nbGCCommerciaux} Grand${nbGCCommerciaux > 1 ? "s" : ""} Compte${nbGCCommerciaux > 1 ? "s" : ""}` : null,
+    nbPassifs > 0 ? `${nbPassifs} ${fluxPassifs[0]?.source ?? "client passif"}` : null,
+  ].filter(Boolean).join(" + ");
+
+  const hasCommerciaux = commerciauxActifs.length > 0;
+  const secteur = joueur.entreprise.secteurActivite;
+
+  let stepHelp = STEP_HELP[etapeTour] || "";
+  if (etapeTour === ETAPES.COMMERCIAUX) {
+    if (hasCommerciaux) {
+      stepHelp = `Salaires versés à tes ${commerciauxActifs.length} commercial(aux) actif(s). Ce trimestre, ton équipe apporte : ${detailClients || "aucun client"} → ${totalClientsAttendus} client(s) à servir à l'étape Facturation. Anticipe : il faudra généralement ${totalClientsAttendus} unité(s) de stock ou de produits finis.`;
+    } else {
+      stepHelp = nbPassifs > 0
+        ? `Aucun commercial actif — pas de salaire à payer. Mais ton entreprise capte ${detailClients} (flux passif). Recrute à l'étape Décisions pour générer plus de clients.`
+        : "Aucun commercial actif — cette étape est vide. Recrutez à l'étape Décisions pour générer de nouveaux clients.";
+    }
+  } else if (etapeTour === ETAPES.ACHATS_STOCK) {
+    if (secteur === "production") {
+      stepHelp = `Belvaux achète des matières premières. Elles ne sont pas vendues directement : elles serviront à fabriquer des produits finis à l'étape suivante. **1 unité de matière = 1 produit fini.** Ce trimestre, ${totalClientsAttendus} client(s) attendu(s) → prévois ${totalClientsAttendus} unité(s) de matière minimum.`;
+    } else if (secteur === "negoce") {
+      stepHelp = `Azura achète des marchandises déjà vendables. **1 client servi = 1 marchandise sortie du stock.** Ce trimestre, ${totalClientsAttendus} client(s) attendu(s) → prévois ${totalClientsAttendus} unité(s) en stock.`;
+    } else if (secteur === "logistique" || secteur === "conseil" || secteur === "service") {
+      stepHelp = `Ton entreprise ne constitue pas de stock physique. Tu engages un coût d'approche fixe (préparation tournée pour Véloce, staffing mission pour Synergia) qui s'ajoute aux frais variables par client à la facturation.`;
+    }
+  }
   const totalActif = getTotalActif(joueur);
   const totalPassif = getTotalPassif(joueur);
   const balanced = Math.abs(totalActif - totalPassif) < 0.01;

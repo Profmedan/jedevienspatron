@@ -48,39 +48,40 @@ export const MODALES_ETAPES: Record<number, ModalEtape> = {
   1: {
     etape: 1,
     titre: `Tu rémunères ton équipe commerciale`,
-    ceQuiSePasse: `Les commerciaux en poste sont payés ce trimestre. Si tu viens de recruter ou de licencier, l'effectif est ajusté avant paiement. Le coût est prélevé immédiatement sur la trésorerie.`,
-    pourquoi: `Les commerciaux coûtent avant de rapporter. Leur salaire pèse chaque trimestre, mais ils ouvrent le carnet de commandes. Sans eux, la demande reste théorique.`,
+    ceQuiSePasse: `Tes commerciaux créent la demande du trimestre. Chaque commercial actif amène automatiquement 2 clients du type qui correspond à son grade : Commercial Junior → 2 clients Particuliers, Commercial Senior → 2 clients TPE, Directrice Commerciale → 2 Grands Comptes. Chaque carte Client correspond à une vente que tu auras à enregistrer plus tard, à l'étape Facturation. Avant d'acheter ou de produire, regarde donc combien de clients t'attendent et de quel type ils sont. Si tu viens de recruter ou de licencier, l'effectif est ajusté avant paiement. Le coût est prélevé immédiatement sur la trésorerie.`,
+    pourquoi: `Les commerciaux coûtent avant de rapporter. Leur salaire pèse chaque trimestre, mais ils ouvrent le carnet de commandes. Sans commercial actif, aucun nouveau client ne sera généré ce trimestre (sauf flux passif propre à certaines entreprises comme Azura, Véloce ou Synergia).`,
     impactComptes: `Charges de personnel +, trésorerie -. Le résultat se dégrade d'autant. C'est une charge d'exploitation courante — pas une immobilisation, même si l'effet sur les ventes est durable.`,
-    conseil: `Dimensionne ton équipe à ta marge prévue, pas à ton ambition. Un commercial en trop brûle du cash jusqu'à ce qu'il produise ; une équipe trop maigre laisse du chiffre à la concurrence.`,
+    conseil: `Dimensionne ton équipe à ta marge prévue, pas à ton ambition. Un commercial en trop brûle du cash jusqu'à ce qu'il produise ; une équipe trop maigre laisse du chiffre à la concurrence. Repère : Junior = paiement comptant, Senior = paiement à 1 trimestre (C+1), Directrice = paiement à 2 trimestres (C+2). Plus le client est gros, plus il paie tard — et plus tu mobilises de trésorerie en attendant.`,
   },
   // ── étape 2 : Approvisionnement (marchandises / matières / moyens) ──────────
-  // B9-E (2026-04-24) — rewrite pour couvrir les 4 métiers et non plus uniquement
-  // négoce/production. Le texte évoque explicitement "marchandises à revendre,
-  // matières à transformer, moyens pour réaliser une prestation" pour embrasser
-  // Belvaux / Azura / Véloce / Synergia sans jargon comptable prématuré.
+  // B9-E + audit pédago Pierre (2026-04-24) — texte enrichi pour relier achat
+  // et ventes futures, et différencier explicitement les 4 métiers.
   2: {
     etape: 2,
     titre: `Tu achètes ce dont ton activité a besoin`,
-    ceQuiSePasse: `Tu achètes des ressources nécessaires à ton entreprise : des marchandises à revendre, des matières à transformer, ou des moyens pour réaliser une prestation. Le stock ou les moyens disponibles augmentent. En contrepartie, soit tu payes tout de suite, soit tu crées une dette fournisseur.`,
-    pourquoi: `Tu dépenses avant de gagner. Si tu achètes trop, tu bloques de la trésorerie. Si tu n'achètes pas assez, tu ne peux plus produire, livrer ou vendre. Bien gérer cette étape, c'est engager juste ce qu'il faut pour faire tourner l'activité sans mettre le cash en danger.`,
+    ceQuiSePasse: `Tu achètes avant de vendre. Regarde d'abord les clients attendus à l'étape Facturation : chaque vente consomme généralement 1 unité vendable. Si tu attends 2 clients et que tu n'as qu'1 unité disponible, tu risques de perdre une vente. À l'inverse, acheter trop bloque la trésorerie. Le stock ou les moyens disponibles augmentent. En contrepartie, soit tu payes tout de suite (trésorerie −), soit tu crées une dette fournisseur (paiement différé).`,
+    pourquoi: `Tu dépenses avant de gagner. Selon ton métier :\n• **Azura (négoce)** achète des marchandises déjà vendables. 1 client servi = 1 marchandise sortie du stock.\n• **Belvaux (production)** achète des matières premières. Elles ne sont pas vendues directement : elles serviront à fabriquer des produits finis à l'étape suivante. 1 unité de matière = 1 produit fini.\n• **Véloce (logistique)** et **Synergia (conseil)** ne constituent pas de stock. Ils engagent un coût d'approche fixe (préparation tournée, staffing mission) qui s'ajoute aux frais variables par client à la facturation.`,
     impactComptes: `Pour un négoce ou une production, stocks + et trésorerie − (comptant) ou dettes fournisseurs + (crédit) — le coût d'achat ne devient charge qu'au moment de la vente. Pour la logistique ou le conseil, le coût d'approche ou de staffing passe directement en services extérieurs +, avec dettes fournisseurs + en contrepartie (charge immédiate).`,
-    conseil: `Engage juste ce qu'il faut pour servir ton activité. Un stock qui dort, c'est du cash qui ne travaille pas. Un coût d'approche trop élevé, c'est une marge rognée avant même d'avoir facturé.`,
+    conseil: `Engage juste ce qu'il faut pour servir ton activité. Un stock qui dort, c'est du cash qui ne travaille pas. Une rupture de stock, c'est un client perdu. Repère : compte 1 unité par client attendu (visible à l'étape précédente Commerciaux).`,
   },
   // ── étape 3 : Réalisation métier (B9-A — polymorphie par entreprise) ─────────
   3: {
     etape: 3,
     titre: `Tu fais ton métier — la valeur se fabrique ici`,
-    ceQuiSePasse: `Étape propre à votre entreprise : production pour Azura, logistique pour Véloce, mission conseil pour Synergia, négoce pur pour Belvaux. Les écritures spécifiques au modèle d'affaires sont appliquées avant la facturation.`,
+    ceQuiSePasse: `Étape propre à votre entreprise : production pour Belvaux (transformation matières → produits finis), logistique pour Véloce (préparation tournée), mission pour Synergia (réalisation du conseil), coût de canal pour Azura (commissions marketplace). Les écritures spécifiques au modèle d'affaires sont appliquées avant la facturation.`,
     pourquoi: `Deux entreprises qui vendent au même prix n'ont pas la même marge si leurs coûts métier diffèrent. C'est à cette étape que chaque modèle révèle sa signature économique — transformation, canal de distribution, temps consultant, rotation de stock.`,
     impactComptes: `Variable selon le métier : consommation de matières, constatation d'en-cours, coût de canal, charges de sous-traitance ou d'opération. Le bilan et le compte de résultat reflètent alors la création de valeur propre à l'entreprise.`,
     conseil: `Chaque entreprise crée de la valeur différemment. Comprends ce qui distingue ta marge : ce n'est pas toujours le prix qui compte, mais la structure de coûts que tu traînes derrière.`,
   },
   // ── étape 4 : Facturation & ventes (cartes Client) ──────────────────────────
+  // Audit pédago Pierre (2026-04-24) — clarification du compteur "Vente X/N"
+  // qui peut induire en erreur (X ventes successives, pas X écritures pour
+  // un seul client).
   4: {
     etape: 4,
     titre: `Tes clients achètent — chiffre d'affaires et marge`,
-    ceQuiSePasse: `Les cartes Client sont traitées. Le chiffre d'affaires augmente du prix de vente, le stock diminue du coût des marchandises vendues (si applicable). La contrepartie atterrit en banque (comptant) ou en créance (crédit).`,
-    pourquoi: `C'est le moment de vérité commerciale. Mais vendre beaucoup ne suffit pas : ce qui compte, c'est ce qu'il reste quand on a retiré le coût du produit. La marge, pas le volume.`,
+    ceQuiSePasse: `Tu vas enregistrer une vente par client amené ce trimestre. Le compteur affiché en haut ("Vente 1/2", puis "Vente 2/2") signifie que tu as 2 ventes à enregistrer ce trimestre. Ce ne sont pas deux écritures pour un seul client : ce sont deux clients à servir, l'un après l'autre. Chaque vente crée du chiffre d'affaires, puis consomme 1 unité de stock, de produit fini ou de capacité de service selon ton entreprise. La contrepartie atterrit en banque (comptant) ou en créance (paiement différé).`,
+    pourquoi: `C'est le moment de vérité commerciale. Mais vendre beaucoup ne suffit pas : ce qui compte, c'est ce qu'il reste quand on a retiré le coût du produit. La marge, pas le volume. Et si tu n'as pas assez de stock ou de produits finis pour servir tous tes clients, tu en perdras (le jeu te le signalera explicitement).`,
     impactComptes: `Produits d'exploitation +, stocks -, trésorerie ou créances clients +. La marge brute se révèle à cette étape ; c'est elle qui conditionne la capacité à absorber les charges fixes de la clôture.`,
     conseil: `Regarde la marge par type de client, pas seulement le CA. Un gros client peu marginé, surtout s'il paie en retard, peut te faire plus de mal qu'un petit client bien marginé et ponctuel.`,
   },
