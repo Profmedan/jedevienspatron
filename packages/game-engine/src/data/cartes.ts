@@ -1043,11 +1043,14 @@ export const CARTES_LOGISTIQUES: CarteDecision[] = [
 
   // ── Synergia Lab (Innovation) ───────────────────────────────
 
+  // LOT 4 (2026-04-25) — Renommages métier des cartes Synergia.
+  // "ERP logistique" et "Partenariat logistique" ne collent pas au pitch
+  // d'une boîte d'innovation/conseil. IDs inchangés (compat saves).
   {
     type: "decision",
     id: "synergia-erp-n1",
-    titre: "ERP logistique (inclus)",
-    description: "Module de gestion des flux de base — +4 ventes/trim. Investissement initial inclus dans le capital de départ.",
+    titre: "Plateforme logicielle (incluse)",
+    description: "Outil interne de gestion des missions et de la propriété intellectuelle — +4 ventes/trim. Investissement initial inclus dans le capital de départ.",
     categorie: "investissement",
     entrepriseExclusive: "Synergia Lab",
     effetsImmédiats: [],
@@ -1056,8 +1059,8 @@ export const CARTES_LOGISTIQUES: CarteDecision[] = [
   {
     type: "decision",
     id: "synergia-erp-n2",
-    titre: "ERP logistique N2",
-    description: "Activez les modules avancés (prévisions, automatisation) — +4 ventes/trim supplémentaires. Investissement : Immos +5 000 €, Tréso −5 000 €. Nécessite : ERP logistique. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+    titre: "Plateforme logicielle N2",
+    description: "Activez les modules avancés (prévisions, automatisation, IA générative) — +4 ventes/trim supplémentaires. Investissement : Immos +5 000 €, Tréso −5 000 €. Nécessite : Plateforme logicielle. 📉 Amortissement : −1/trim pendant 5 trimestres.",
     categorie: "investissement",
     entrepriseExclusive: "Synergia Lab",
     prerequis: "synergia-erp-n1",
@@ -1070,8 +1073,8 @@ export const CARTES_LOGISTIQUES: CarteDecision[] = [
   {
     type: "decision",
     id: "synergia-partenariat",
-    titre: "Partenariat logistique",
-    description: "Nouez un accord avec un opérateur externe — +4 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
+    titre: "Réseau d'experts",
+    description: "Nouez un accord avec un cabinet partenaire pour mobiliser des consultants seniors à la demande — +4 ventes/trim. Investissement : Immos +5 000 €, Tréso −5 000 €. 📉 Amortissement : −1/trim pendant 5 trimestres.",
     categorie: "investissement",
     entrepriseExclusive: "Synergia Lab",
     effetsImmédiats: [

@@ -638,17 +638,21 @@ describe("genererClientsDepuisFlux & clientsPassifsParTour", () => {
     expect(clients.filter((c) => c.id === "client-grand-compte")).toHaveLength(1);
   });
 
-  test("Azura : 1 Particulier/tour via clientsPassifsParTour (migration propre de clientGratuitParTour)", () => {
+  test("Azura : 2 Particuliers/tour via clientsPassifsParTour (LOT 3 — trafic boutique + web)", () => {
+    // LOT 3 (2026-04-25) — Azura passé de 1 à 2 particuliers passifs/trim
+    // pour saturer la capacité commerciale (8) avec le Commercial Junior offert.
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Azura Commerce" }]);
     const clients = genererClientsSpecialite(etat.joueurs[0]);
     const particuliers = clients.filter((c) => c.id === "client-particulier");
-    expect(particuliers).toHaveLength(1);
+    expect(particuliers).toHaveLength(2);
   });
 
-  test("Véloce : 1 Particulier/tour via clientsPassifsParTour (livraisons courtes récurrentes)", () => {
+  test("Véloce : 2 Particuliers/tour via clientsPassifsParTour (LOT 3 — flotte à plein)", () => {
+    // LOT 3 (2026-04-25) — Véloce passé de 1 à 2 particuliers passifs/trim
+    // pour atteindre 4 clients/trim = capacité logistique de base saturée.
     const etat = initialiserJeu([{ pseudo: "Test", nomEntreprise: "Véloce Transports" }]);
     const clients = genererClientsSpecialite(etat.joueurs[0]);
-    expect(clients.filter((c) => c.id === "client-particulier")).toHaveLength(1);
+    expect(clients.filter((c) => c.id === "client-particulier")).toHaveLength(2);
   });
 
   test("Synergia : 1 Particulier/tour via clientsPassifsParTour (abonnements individuels)", () => {

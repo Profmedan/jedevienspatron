@@ -7,6 +7,8 @@ import {
   CarteDecision,
   Joueur,
   ETAPES,
+  calculerCapaciteLogistique,
+  calculerCapaciteProductionBelvaux,
 } from "@jedevienspatron/game-engine";
 import BilanPanel from "@/components/BilanPanel";
 import CompteResultatPanel from "@/components/CompteResultatPanel";
@@ -261,43 +263,87 @@ export function MainContent({
       </div>
 
       {/* ─── Sous-étape Recrutement (flux classique de l'étape Décisions) ─── */}
-      {etapeTour === ETAPES.DECISION && subEtape6 === "recrutement" && !_activeStep && (
+      {etapeTour === ETAPES.DECISION && subEtape6 === "recrutement" && !_activeStep && (() => {
+        // LOT 6 (2026-04-25) — Alerte capacité non-bloquante.
+        // Pour Belvaux (production), la capacité limitante est la PRODUCTION
+        // (pas la capacité commerciale). Pour les 3 autres, c'est la capacité
+        // logistique (calculerCapaciteLogistique). On compte les clients déjà
+        // attendus (commerciaux actifs + flux passifs) et on signale chaque
+        // carte de recrutement qui ferait franchir le plafond.
+        const secteur = displayJoueur.entreprise.secteurActivite;
+        const capaciteMax = secteur === "production"
+          ? calculerCapaciteProductionBelvaux(displayJoueur)
+          : calculerCapaciteLogistique(displayJoueur);
+        const clientsCommerciaux = displayJoueur.cartesActives
+          .filter((c) => c.categorie === "commercial")
+          .reduce((s, c) => s + (c.nbClientsParTour ?? 0), 0);
+        const clientsPassifs = (displayJoueur.entreprise.clientsPassifsParTour ?? [])
+          .reduce((s, f) => s + f.nbParTour, 0);
+        const clientsDejaAttendus = clientsCommerciaux + clientsPassifs;
+        const capaciteLabel = secteur === "production"
+          ? `${clientsDejaAttendus}/${capaciteMax} produits/trim (production)`
+          : `${clientsDejaAttendus}/${capaciteMax} clients/trim (capacité logistique)`;
+
+        return (
         <div className="flex-shrink-0 border-b border-white/10 px-4 py-3">
           {/* B9 post-audit (2026-04-24) — panneau Recrutement renforcé :
               bordure cyan marquée + accent vertical gauche + titre coloré + emoji,
               pour compenser la discrétion visuelle précédente (slate-500 sur fond
               quasi transparent) signalée par Pierre. */}
           <div className="rounded-xl border-2 border-cyan-500/30 bg-cyan-500/[0.05] p-3 space-y-3 border-l-4 border-l-cyan-400 shadow-lg shadow-cyan-500/5">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300 flex items-center gap-2">
-              <span aria-hidden="true">👔</span>
-              Recrutement
-            </p>
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300 flex items-center gap-2">
+                <span aria-hidden="true">👔</span>
+                Recrutement
+              </p>
+              {/* LOT 6 — jauge synthétique permanente */}
+              <p className="text-[10px] text-slate-400 tabular-nums">
+                {capaciteLabel}
+              </p>
+            </div>
 
             {/* Card list */}
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {cartesRecrutement.map((carte) => (
-                <button
-                  key={carte.id}
-                  onClick={() => setSelectedDecision(selectedDecision?.id === carte.id ? null : carte)}
-                  className={`w-full text-left rounded-lg border p-2 transition-colors ${
-                    selectedDecision?.id === carte.id
-                      ? "border-cyan-400/40 bg-cyan-500/10"
-                      : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-white">{carte.titre}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{carte.description}</p>
-                  {carte.effetsImmédiats.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {carte.effetsImmédiats.map((e, i) => (
-                        <span key={i} className="text-[10px] rounded bg-slate-800 px-1.5 py-0.5 text-slate-300">
-                          {e.poste}: {e.delta > 0 ? "+" : ""}{e.delta.toLocaleString("fr-FR")} €
-                        </span>
-                      ))}
+              {cartesRecrutement.map((carte) => {
+                // LOT 6 — Détecter si ce recrutement ferait dépasser la capacité.
+                const apport = carte.nbClientsParTour ?? 0;
+                const totalApresRecrutement = clientsDejaAttendus + apport;
+                const ferraitDepasser = totalApresRecrutement > capaciteMax;
+                const cartouche = secteur === "production"
+                  ? "Investis dans des Robots avant pour augmenter la production."
+                  : "Investis dans une carte logistique avant pour augmenter la capacité.";
+                return (
+                <div key={carte.id}>
+                  <button
+                    onClick={() => setSelectedDecision(selectedDecision?.id === carte.id ? null : carte)}
+                    className={`w-full text-left rounded-lg border p-2 transition-colors ${
+                      selectedDecision?.id === carte.id
+                        ? "border-cyan-400/40 bg-cyan-500/10"
+                        : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-white">{carte.titre}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{carte.description}</p>
+                    {carte.effetsImmédiats.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {carte.effetsImmédiats.map((e, i) => (
+                          <span key={i} className="text-[10px] rounded bg-slate-800 px-1.5 py-0.5 text-slate-300">
+                            {e.poste}: {e.delta > 0 ? "+" : ""}{e.delta.toLocaleString("fr-FR")} €
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                  {ferraitDepasser && (
+                    <div className="mt-1 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-100 leading-snug">
+                      <span className="font-semibold">⚠ Capacité saturée</span> — ramener
+                      {" "}{totalApresRecrutement} clients avec une capacité de {capaciteMax} fera
+                      perdre {totalApresRecrutement - capaciteMax} client(s)/trim. {cartouche}
                     </div>
                   )}
-                </button>
-              ))}
+                </div>
+                );
+              })}
               {cartesRecrutement.length === 0 && (
                 <p className="text-xs text-slate-500 italic">Aucun candidat disponible</p>
               )}
@@ -323,7 +369,8 @@ export function MainContent({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ─── Sous-étape Investissement (panneau unifié catégorisé) ─────── */}
       {etapeTour === ETAPES.DECISION && subEtape6 === "investissement" && !_activeStep && (

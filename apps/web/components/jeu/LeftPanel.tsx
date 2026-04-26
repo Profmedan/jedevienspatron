@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   getTotalActif,
   getTotalPassif,
@@ -158,6 +158,15 @@ export function LeftPanel({
 }: LeftPanelProps) {
   const [pendingConfirm, setPendingConfirm] = useState(false);
 
+  // LOT 5 (2026-04-25) — Achat dynamique : permet à l'apprenant de révéler
+  // explicitement le panneau Quantité même quand le stock suffit déjà aux
+  // clients attendus (constitution d'un stock de sécurité). Reset à false
+  // à chaque entrée dans une nouvelle étape ou nouveau tour.
+  const [acheterQuandMeme, setAcheterQuandMeme] = useState(false);
+  useEffect(() => {
+    setAcheterQuandMeme(false);
+  }, [etapeTour, tourActuel]);
+
   const stepName = STEP_NAMES[etapeTour] || "Étape inconnue";
 
   // ─── Refonte UX 2026-04-24 — Calcul des indicateurs pour les badges ───────
@@ -179,6 +188,30 @@ export function LeftPanel({
   const stockPF = joueur.bilan.actifs.find((a) => a.nom === "Stocks produits finis")?.valeur ?? 0;
   const creancesPlus1 = joueur.bilan.creancesPlus1 ?? 0;
   const creancesPlus2 = joueur.bilan.creancesPlus2 ?? 0;
+
+  // LOT 5 (2026-04-25) — Calcul dynamique du besoin d'achat conseillé.
+  // Production : MP nécessaires = clients attendus (1 MP = 1 PF = 1 client)
+  // Négoce : marchandises nécessaires = clients attendus (1 unité = 1 client)
+  // Logistique/conseil : pas de stock physique à acheter.
+  const stockUnitesActuel = secteur === "production"
+    ? Math.floor(stockMP / 1000)
+    : secteur === "negoce"
+      ? Math.floor(stockMdse / 1000)
+      : 0;
+  const besoinAchat = (secteur === "production" || secteur === "negoce")
+    ? Math.max(0, totalClientsAttendus - stockUnitesActuel)
+    : 0;
+  // Reset achatQte au besoin recommandé à chaque arrivée sur l'étape
+  // ACHATS_STOCK (changement de tour OU bascule depuis une autre étape).
+  // Évite le piège ergonomique : avant LOT 5, le champ était pré-rempli à 2
+  // même quand le stock suffisait → l'apprenant achetait par défaut sans
+  // raison, brûlait 2 000 € de tréso à perte.
+  useEffect(() => {
+    if (etapeTour === ETAPES.ACHATS_STOCK && (secteur === "production" || secteur === "negoce")) {
+      setAchatQte(besoinAchat);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etapeTour, tourActuel]);
 
   // ─── Badges par étape (max 3, chiffre dominant) ────────────────────────────
   function getStepBadges(etape: number): StepBadge[] {
@@ -830,12 +863,50 @@ export function LeftPanel({
                     Passer cette étape →
                   </button>
                 </div>
+              ) : besoinAchat === 0 && !acheterQuandMeme ? (
+                // LOT 5 (2026-04-25) — Cas "Stock suffisant" : on ne pousse pas
+                // l'apprenant à acheter par défaut. Il peut quand même
+                // constituer un stock de sécurité s'il le souhaite via le
+                // bouton secondaire.
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/30 px-3 py-3 text-center">
+                    <p className="text-sm font-bold text-emerald-100">
+                      ✓ Stock suffisant
+                    </p>
+                    <p className="mt-1 text-xs text-emerald-200/80">
+                      {stockUnitesActuel} {secteur === "production" ? "matière(s)" : "marchandise(s)"} en stock pour {totalClientsAttendus} client(s) attendu(s).
+                    </p>
+                  </div>
+                  <button
+                    onClick={onSkipAchat}
+                    autoFocus
+                    aria-label="Passer l'étape d'achat — stock déjà suffisant"
+                    className="w-full rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300 transition-colors"
+                  >
+                    Passer cette étape →
+                  </button>
+                  <button
+                    onClick={() => setAcheterQuandMeme(true)}
+                    aria-label="Constituer un stock de sécurité supplémentaire"
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 hover:bg-white/10 transition-colors"
+                  >
+                    Acheter quand même (stock de sécurité)
+                  </button>
+                </div>
               ) : (
               <div className="space-y-2">
                 <div>
                   <label htmlFor="qty" className="block text-xs font-semibold text-white mb-1">
                     Quantité <span className="text-slate-400 font-normal">(1 unité = 1 000 €)</span>
                   </label>
+                  {/* LOT 5 (2026-04-25) — Calcul du besoin affiché en clair pour
+                      la pédagogie : l'apprenant comprend POURQUOI cette quantité
+                      est conseillée. */}
+                  {besoinAchat > 0 && (
+                    <p className="mb-2 text-[11px] text-cyan-200/80">
+                      💡 {totalClientsAttendus} client(s) − {stockUnitesActuel} en stock = <span className="font-bold text-cyan-200">{besoinAchat}</span> à acheter (mini)
+                    </p>
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -897,7 +968,7 @@ export function LeftPanel({
                         onChange={() => setAchatMode("dettes")}
                         className="w-3 h-3"
                       />
-                      <span className="text-xs text-slate-300">À crédit</span>
+                      <span className="text-xs text-slate-300">À crédit (payé au trimestre suivant)</span>
                     </label>
                   </div>
                 </div>

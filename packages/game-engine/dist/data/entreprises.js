@@ -175,8 +175,11 @@ exports.ENTREPRISES = [
             libelleContrepartie: "Dette fournisseur pour les frais variables de livraison (règlement au trimestre suivant)",
         },
         // B8-C — Demande passive : flux récurrent de livraisons courtes
+        // LOT 3 (2026-04-25) — Passé de 1 à 2 particuliers/trim pour saturer la
+        // capacité logistique de base (4) avec les 2 clients du Commercial Junior
+        // offert. Le modèle « ma flotte tourne à plein » devient lisible dès T1.
         clientsPassifsParTour: [
-            { typeClient: "particulier", nbParTour: 1, source: "Livraisons courtes récurrentes" },
+            { typeClient: "particulier", nbParTour: 2, source: "Livraisons courtes récurrentes" },
         ],
         actifs: [
             // IMMOBILISATIONS
@@ -231,15 +234,21 @@ exports.ENTREPRISES = [
         // Migration propre de `clientGratuitParTour` vers le mécanisme unifié.
         // Les anciennes parties sauvegardées avec `clientGratuitParTour: true`
         // restent compatibles : `genererClientsSpecialite` cumule les deux sources.
+        // LOT 3 (2026-04-25) — Passé de 1 à 2 particuliers/trim : Azura est un
+        // commerce avec boutique ET web → 2 flux de trafic récurrent. Permet
+        // d'utiliser la capacité commerciale de la marketplace (8) sans devoir
+        // recruter immédiatement un 2e commercial.
         clientsPassifsParTour: [
-            { typeClient: "particulier", nbParTour: 1, source: "Trafic boutique et web" },
+            { typeClient: "particulier", nbParTour: 2, source: "Trafic boutique et web" },
         ],
         actifs: [
             // IMMOBILISATIONS
             // Showroom : agencement commercial → vie 8T (≈ 2 ans)
             { nom: "Showroom", valeur: 8000 },
-            // Voiture de démonstration → vie 8T (≈ 2 ans)
-            { nom: "Voiture", valeur: 8000 },
+            // LOT 3 (2026-04-25) — Renommé "Voiture" → "Plateforme e-commerce".
+            // Plus métier (Azura est un commerce omnicanal boutique + web), aligne
+            // sur le pitch et le flux passif "Trafic boutique et web". Vie 8T (≈ 2 ans)
+            { nom: "Plateforme e-commerce", valeur: 8000 },
             // Autres : réservé aux investissements
             { nom: "Autres Immobilisations", valeur: 0 },
             // STOCKS — B9-C (2026-04-24) : renommé "Stocks marchandises" (PCG classe 37)
